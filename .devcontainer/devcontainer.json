@@ -1,0 +1,58 @@
+{
+  "name": "Clack Track Dev",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "node-dev",
+  "workspaceFolder": "/workspace",
+  "remoteUser": "vscode",
+  "build": {
+    "args": {
+      "INVALIDATE_CACHE": "${localEnv:USER}${localEnv:USERNAME}"
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {}
+  },
+  "forwardPorts": [3000],
+  "postCreateCommand": "/bin/bash .devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-json",
+        "christian-kohler.path-intellisense",
+        "ms-vscode.vscode-typescript-next",
+        "esbenp.prettier-vscode",
+        "anthropic.claude-code",
+        "kaih2o.worktrees",
+        "mikestead.dotenv",
+        "EditorConfig.EditorConfig"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "bash",
+            "args": ["-l"],
+            "icon": "terminal-bash"
+          }
+        },
+        "terminal.integrated.cwd": "/workspace",
+        "terminal.integrated.env.linux": {
+          "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
+          "CLAUDE_CODE_API_KEY": "${localEnv:CLAUDE_CODE_API_KEY:${localEnv:ANTHROPIC_API_KEY}}",
+          "ANTHROPIC_MODEL": "${localEnv:ANTHROPIC_MODEL}",
+          "PATH": "/home/vscode/go/bin:/home/vscode/.local/bin:/home/vscode/.dotnet/tools:/home/vscode/.npm-global/bin:/usr/local/bin:/usr/bin:/bin:/workspace/node_modules/.bin:${env:PATH}",
+          "NPM_CONFIG_PREFIX": "/home/vscode/.npm-global"
+        },
+        "terminal.integrated.fontSize": 14,
+        "terminal.integrated.scrollback": 10000,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "prettier.configPath": ".prettierrc",
+        "git.autofetch": true,
+        "git.confirmSync": false,
+        "git.enableSmartCommit": true,
+        "git.postCommitCommand": "none"
+      }
+    }
+  }
+}

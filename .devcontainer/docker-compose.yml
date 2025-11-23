@@ -1,0 +1,31 @@
+services:
+  node-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/workspace:cached
+      # Host authentication mounts for Claude Code
+      # Cross-platform compatible (works on macOS, Linux, and Windows)
+      - ~/.claude:/home/vscode/.claude
+      - ~/.config/atlassian-cli:/home/vscode/.config/atlassian-cli:ro
+      # Persistent command history and config volumes
+      - command-history-clack-track:/home/vscode/history
+      - claude-config-clack-track:/home/vscode/.config/claude-code
+    command: ['sleep', 'infinity']
+    environment:
+      # Claude Code environment variables
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CLAUDE_CODE_API_KEY=${CLAUDE_CODE_API_KEY:-${ANTHROPIC_API_KEY}}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL}
+      # Node environment
+      - NODE_ENV=development
+    ports:
+      - '3000:3000' # Application server
+    working_dir: /workspace
+
+volumes:
+  # Persistent command history volume
+  command-history-clack-track:
+  # Persistent Claude Code configuration volume
+  claude-config-clack-track:

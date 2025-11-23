@@ -1,0 +1,11 @@
+# Run type checking
+npm run typecheck || exit 1
+
+# Run linting with auto-fix
+npm run lint:fix || exit 1
+
+# Run prettier on staged files
+npx prettier --write --ignore-unknown .
+
+# Re-stage files modified by prettier and linting
+git add -u
