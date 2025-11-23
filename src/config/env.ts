@@ -5,6 +5,14 @@ export interface EnvironmentConfig {
   nodeEnv: string;
   port: number;
 
+  // Web Server
+  web: {
+    port: number;
+    host: string;
+    corsEnabled: boolean;
+    staticPath: string;
+  };
+
   // Vestaboard
   vestaboard: {
     apiKey: string;
@@ -60,10 +68,19 @@ function getOptionalEnv(key: string, defaultValue: string = ''): string {
 
 export function loadConfig(): EnvironmentConfig {
   const aiProvider = getOptionalEnv('AI_PROVIDER', 'openai') as 'openai' | 'anthropic';
+  const nodeEnv = getOptionalEnv('NODE_ENV', 'development');
 
   return {
-    nodeEnv: getOptionalEnv('NODE_ENV', 'development'),
+    nodeEnv,
     port: parseInt(getOptionalEnv('PORT', '3000'), 10),
+
+    web: {
+      port: parseInt(getOptionalEnv('WEB_PORT', '3000'), 10),
+      host: getOptionalEnv('WEB_HOST', '0.0.0.0'),
+      corsEnabled:
+        getOptionalEnv('CORS_ENABLED', nodeEnv === 'development' ? 'true' : 'false') === 'true',
+      staticPath: getOptionalEnv('WEB_STATIC_PATH', './src/web/frontend/dist'),
+    },
 
     vestaboard: {
       apiKey: getRequiredEnv('VESTABOARD_API_KEY'),
