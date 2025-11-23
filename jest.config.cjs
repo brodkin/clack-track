@@ -90,11 +90,28 @@ module.exports = {
       displayName: 'web',
       preset: 'ts-jest',
       testEnvironment: 'jsdom', // Web UI tests need DOM
-      testMatch: ['<rootDir>/tests/web/**/*.test.ts'],
-      extensionsToTreatAsEsm: ['.ts'],
+      testMatch: ['<rootDir>/tests/web/**/*.test.ts', '<rootDir>/tests/web/**/*.test.tsx'],
+      extensionsToTreatAsEsm: ['.ts', '.tsx'],
+      moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@tests/(.*)$': '<rootDir>/tests/$1',
+        '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+      },
+      setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.web.setup.ts'],
+      transform: {
+        '^.+\\.tsx?$': [
+          'ts-jest',
+          {
+            useESM: true,
+            tsconfig: {
+              jsx: 'react-jsx',
+              module: 'esnext',
+              target: 'es2022',
+              types: ['jest', 'node'],
+            },
+          },
+        ],
       },
     },
   ],

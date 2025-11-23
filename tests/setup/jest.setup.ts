@@ -9,6 +9,9 @@
  * - Initializing test utilities
  */
 
+// Import jest-dom matchers for web tests
+import '@testing-library/jest-dom';
+
 // Set test environment variables
 process.env.NODE_ENV = 'test';
 
