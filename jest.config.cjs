@@ -80,6 +80,7 @@ module.exports = {
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@tests/(.*)$': '<rootDir>/tests/$1',
+        '(.+)\\.js$': '$1',
       },
     },
     {
@@ -92,6 +93,7 @@ module.exports = {
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@tests/(.*)$': '<rootDir>/tests/$1',
+        '(.+)\\.js$': '$1',
       },
     },
     {
@@ -105,6 +107,7 @@ module.exports = {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@tests/(.*)$': '<rootDir>/tests/$1',
         '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+        '(.+)\\.js$': '$1',
       },
       setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.web.setup.ts'],
       transform: {

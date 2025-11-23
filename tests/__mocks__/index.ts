@@ -15,4 +15,4 @@ export {
   createMockAnthropicClient,
   isAIProvider,
   type MockAIProviderOptions,
-} from './ai-providers.js';
+} from './ai-providers';
