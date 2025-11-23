@@ -20,6 +20,7 @@ import anthropicResponsesData from './anthropic-responses.json';
  * and content examples for various use cases.
  */
 export const openaiResponses = openaiResponsesData;
+export const openaiFixtures = openaiResponsesData;
 
 /**
  * Anthropic API response fixtures for testing
@@ -28,3 +29,4 @@ export const openaiResponses = openaiResponsesData;
  * and content examples for various use cases.
  */
 export const anthropicResponses = anthropicResponsesData;
+export const anthropicFixtures = anthropicResponsesData;
