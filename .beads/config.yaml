@@ -11,12 +11,13 @@
 # Use no-db mode: load from JSONL, no SQLite, write back after each command
 # When true, bd will use .beads/issues.jsonl as the source of truth
 # instead of SQLite database
-# Enabled for devcontainer to bypass database sync issues
-no-db: true
+# DISABLED: Now using SQLite with global daemon (socket in ~/.beads/)
+no-db: false
 
 # Disable daemon for RPC communication (forces direct database access)
-# Enabled for devcontainer environment to avoid fakeowner filesystem socket chmod issues
-no-daemon: true
+# DISABLED: Now using global daemon to avoid fakeowner filesystem socket chmod issues
+# The global daemon runs with socket at ~/.beads/bd.sock (not in /workspace)
+no-daemon: false
 
 # Disable auto-flush of database to JSONL after mutations
 # no-auto-flush: false

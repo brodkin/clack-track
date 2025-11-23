@@ -12,6 +12,9 @@ services:
       # Persistent command history and config volumes
       - command-history-clack-track:/home/vscode/history
       - claude-config-clack-track:/home/vscode/.config/claude-code
+      # Beads database volume (ext4 mount to support Unix sockets)
+      # Fixes chmod issues on fakeowner filesystem
+      - beads-db-clack-track:/workspace/.beads
     command: ['sleep', 'infinity']
     environment:
       # Claude Code environment variables
@@ -29,3 +32,5 @@ volumes:
   command-history-clack-track:
   # Persistent Claude Code configuration volume
   claude-config-clack-track:
+  # Persistent beads database volume (ext4 for Unix socket support)
+  beads-db-clack-track:

@@ -142,6 +142,22 @@ else
     command -v uvx &> /dev/null && echo "✅ uvx available" || echo "❌ uvx missing"
 fi
 
+# Ensure .beads directory exists and has correct permissions
+echo "🔵 Setting up beads directory with proper filesystem support..."
+if [ ! -d /workspace/.beads ]; then
+    echo "   Creating .beads directory..."
+    mkdir -p /workspace/.beads
+fi
+
+# Check if .beads is on a proper filesystem (not fakeowner)
+BEADS_MOUNT=$(mount | grep "/workspace/.beads" | awk '{print $5}')
+if [ "$BEADS_MOUNT" = "ext4" ] || [ "$BEADS_MOUNT" = "tmpfs" ]; then
+    echo "✅ .beads directory is on $BEADS_MOUNT filesystem (supports Unix sockets)"
+else
+    echo "⚠️  .beads directory is on $BEADS_MOUNT filesystem (may not support Unix sockets)"
+    echo "   If you see socket chmod errors, rebuild the devcontainer to use the Docker volume"
+fi
+
 # Install Beads CLI
 echo "🔵 Installing Beads CLI..."
 if ! command -v bd &> /dev/null; then
