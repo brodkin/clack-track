@@ -1,0 +1,9 @@
+Create an inspiring motivational message for the day.
+
+Include:
+- A powerful quote or original saying
+- Today's date
+- Current time
+- Current weather
+
+Make it uplifting and energizing for anyone who reads it.

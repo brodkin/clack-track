@@ -1,0 +1,8 @@
+Create a concise news summary from the provided RSS feeds.
+
+Include:
+- Top 1-2 headlines (most important/interesting)
+- Current time
+- Keep it informative but brief
+
+Focus on meaningful news that matters to the household.

@@ -93,10 +93,19 @@ clack-track/
 ├── src/                 # Source code
 │   ├── api/            # Vestaboard API client
 │   ├── content/        # AI content generation
+│   ├── types/          # TypeScript type definitions
 │   └── utils/          # Utility functions
-├── tests/               # Test files
+├── tests/               # Test files (see Testing section below)
+│   ├── unit/           # Isolated component tests
+│   ├── integration/    # Multi-component tests
+│   ├── e2e/            # End-to-end system tests
+│   ├── web/            # Web UI tests (debugging interface)
+│   ├── __mocks__/      # Shared mock implementations
+│   ├── fixtures/       # Test data files
+│   └── setup/          # Test configuration
 ├── .env.example         # Environment variables template
 ├── commitlint.config.js # Commit message linting
+├── jest.config.cjs      # Jest testing configuration
 └── README.md
 ```
 
@@ -115,6 +124,120 @@ cd ./trees/PROJ-123-feature-name
 # Clean up after merge
 git worktree remove ./trees/PROJ-123-feature-name
 git branch -d feature/PROJ-123-feature-name
+```
+
+## Testing
+
+Clack Track uses a comprehensive testing strategy with Jest to ensure code quality and reliability. The test suite is organized into four main categories:
+
+### Test Directory Structure
+
+```
+tests/
+├── unit/                    # Isolated component tests
+│   ├── api/                 # VestaboardClient tests
+│   ├── content/             # ContentGenerator tests
+│   ├── utils/               # Logger, helpers tests
+│   └── web/                 # Web UI component tests
+├── integration/             # Multi-component tests
+│   ├── content-to-board/    # ContentGenerator → VestaboardClient flows
+│   └── api-workflows/       # Full API interaction flows
+├── e2e/                     # End-to-end system tests
+│   └── workflows/           # Complete user workflows
+├── web/                     # Web UI debugging interface tests
+│   ├── components/          # UI component tests
+│   ├── pages/               # Page-level tests
+│   └── api-routes/          # Web API endpoint tests
+├── __mocks__/               # Shared mock implementations
+├── fixtures/                # Test data files (JSON)
+└── setup/
+    └── jest.setup.ts        # Global test configuration
+```
+
+### Test Types
+
+1. **Unit Tests** (`tests/unit/`)
+   - Test individual components in isolation
+   - Mock all external dependencies
+   - Fast execution, high coverage
+   - Run with: `npm run test:unit`
+
+2. **Integration Tests** (`tests/integration/`)
+   - Test how components work together
+   - Mock external APIs (Vestaboard, OpenAI, Anthropic)
+   - Verify data flow between modules
+   - Run with: `npm run test:integration`
+
+3. **E2E Tests** (`tests/e2e/`)
+   - Test complete user workflows
+   - Simulate real-world scenarios
+   - Longer execution time (60s timeout)
+   - Run with: `npm run test:e2e`
+
+4. **Web UI Tests** (`tests/web/`)
+   - Test debugging interface components
+   - Uses jsdom environment for DOM testing
+   - Test UI interactions and rendering
+   - Run with: `npm run test:web`
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test suites
+npm run test:unit          # Unit tests only
+npm run test:integration   # Integration tests only
+npm run test:e2e           # E2E tests only
+npm run test:web           # Web UI tests only
+
+# Run all tests with coverage
+npm run test:all
+
+# Watch mode (re-run on file changes)
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+```
+
+### Mocking Strategy
+
+All external dependencies are mocked for reliable, fast testing:
+
+- **Vestaboard API**: HTTP calls mocked in `tests/__mocks__/vestaboard-api.ts`
+- **AI Providers**: OpenAI/Anthropic responses mocked in `tests/__mocks__/ai-providers.ts`
+- **Test Fixtures**: Sample data stored in `tests/fixtures/*.json`
+
+### Coverage Requirements
+
+- **Minimum threshold**: 80% coverage (branches, functions, lines, statements)
+- **Excludes**: Type definition files, index files
+- **Reports**: Generated in `coverage/` directory
+
+### Writing Tests
+
+Tests follow TDD (Test-Driven Development) methodology:
+
+```typescript
+// Example: tests/unit/api/vestaboard.test.ts
+import { VestaboardClient } from '@/api/vestaboard';
+
+describe('VestaboardClient', () => {
+  describe('sendMessage', () => {
+    it('should send message to Vestaboard API', async () => {
+      // Arrange
+      const client = new VestaboardClient({...});
+
+      // Act
+      const result = await client.sendMessage({...});
+
+      // Assert
+      expect(result).toBeDefined();
+    });
+  });
+});
 ```
 
 ## Contributing
@@ -166,11 +289,26 @@ npm start
 ## Development Scripts
 
 ```bash
-npm run dev       # Start development server with hot reload
-npm test          # Run test suite
-npm run lint      # Run linter
-npm run format    # Format code with Prettier
-npm run build     # Build for production
+# Development
+npm run dev                # Start development server with hot reload
+npm run build              # Build for production
+npm start                  # Run production build
+
+# Testing
+npm test                   # Run all tests
+npm run test:unit          # Run unit tests only
+npm run test:integration   # Run integration tests only
+npm run test:e2e           # Run E2E tests only
+npm run test:web           # Run web UI tests only
+npm run test:all           # Run all tests with coverage
+npm run test:watch         # Watch mode (re-run on changes)
+npm run test:coverage      # Generate coverage report
+
+# Code Quality
+npm run lint               # Run linter
+npm run lint:fix           # Run linter and auto-fix issues
+npm run format             # Format code with Prettier
+npm run typecheck          # Type check without building
 ```
 
 ## License

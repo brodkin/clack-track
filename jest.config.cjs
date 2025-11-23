@@ -1,16 +1,15 @@
 /** @type {import('jest').Config} */
 module.exports = {
   preset: 'ts-jest',
-  testEnvironment: 'node',
 
   // ESM support for TypeScript files
   extensionsToTreatAsEsm: ['.ts'],
 
-  // Test file patterns
-  testMatch: ['**/tests/**/*.test.ts'],
-
   // Module file extensions
-  moduleFileExtensions: ['ts', 'js'],
+  moduleFileExtensions: ['ts', 'js', 'json'],
+
+  // Global setup file
+  setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.setup.ts'],
 
   // Coverage configuration
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/**/types.ts', '!src/**/index.ts'],
@@ -36,4 +35,35 @@ module.exports = {
 
   // Restore mocks between tests
   restoreMocks: true,
+
+  // Multi-environment project configuration
+  projects: [
+    {
+      displayName: 'unit',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/tests/unit/**/*.test.ts'],
+    },
+    {
+      displayName: 'integration',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/tests/integration/**/*.test.ts'],
+    },
+    {
+      displayName: 'e2e',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/tests/e2e/**/*.test.ts'],
+      testTimeout: 60000, // E2E tests may take longer
+    },
+    {
+      displayName: 'web',
+      testEnvironment: 'jsdom', // Web UI tests need DOM
+      testMatch: ['<rootDir>/tests/web/**/*.test.ts'],
+    },
+  ],
+
+  // Module name mapping for mocks
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@tests/(.*)$': '<rootDir>/tests/$1',
+  },
 };

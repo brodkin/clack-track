@@ -1,0 +1,9 @@
+Create a weather-focused display message.
+
+Include:
+- Current weather conditions
+- Temperature (high/low for today)
+- Any weather alerts or notable conditions
+- Current time
+
+Make it practical and useful for planning the day.

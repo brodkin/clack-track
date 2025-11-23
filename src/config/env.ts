@@ -1,0 +1,116 @@
+import 'dotenv/config';
+
+export interface EnvironmentConfig {
+  // Application
+  nodeEnv: string;
+  port: number;
+
+  // Vestaboard
+  vestaboard: {
+    apiKey: string;
+    apiUrl: string;
+  };
+
+  // AI Providers
+  ai: {
+    provider: 'openai' | 'anthropic';
+    openai?: {
+      apiKey: string;
+      model: string;
+    };
+    anthropic?: {
+      apiKey: string;
+      model: string;
+    };
+  };
+
+  // Data Sources
+  dataSources: {
+    rss?: {
+      feeds: string[];
+    };
+    rapidApi?: {
+      apiKey: string;
+      host: string;
+    };
+    homeAssistant?: {
+      url: string;
+      token: string;
+    };
+  };
+
+  // Database
+  database: {
+    url?: string;
+    type: 'sqlite' | 'postgres' | 'mongodb';
+  };
+}
+
+function getRequiredEnv(key: string): string {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+  return value;
+}
+
+function getOptionalEnv(key: string, defaultValue: string = ''): string {
+  return process.env[key] || defaultValue;
+}
+
+export function loadConfig(): EnvironmentConfig {
+  const aiProvider = getOptionalEnv('AI_PROVIDER', 'openai') as 'openai' | 'anthropic';
+
+  return {
+    nodeEnv: getOptionalEnv('NODE_ENV', 'development'),
+    port: parseInt(getOptionalEnv('PORT', '3000'), 10),
+
+    vestaboard: {
+      apiKey: getRequiredEnv('VESTABOARD_API_KEY'),
+      apiUrl: getOptionalEnv('VESTABOARD_API_URL', 'https://platform.vestaboard.com'),
+    },
+
+    ai: {
+      provider: aiProvider,
+      openai:
+        aiProvider === 'openai'
+          ? {
+              apiKey: getRequiredEnv('OPENAI_API_KEY'),
+              model: getOptionalEnv('OPENAI_MODEL', 'gpt-4'),
+            }
+          : undefined,
+      anthropic:
+        aiProvider === 'anthropic'
+          ? {
+              apiKey: getRequiredEnv('ANTHROPIC_API_KEY'),
+              model: getOptionalEnv('ANTHROPIC_MODEL', 'claude-sonnet-4'),
+            }
+          : undefined,
+    },
+
+    dataSources: {
+      rss: {
+        feeds: getOptionalEnv('RSS_FEEDS', '').split(',').filter(Boolean),
+      },
+      rapidApi: process.env.RAPIDAPI_KEY
+        ? {
+            apiKey: getRequiredEnv('RAPIDAPI_KEY'),
+            host: getRequiredEnv('RAPIDAPI_HOST'),
+          }
+        : undefined,
+      homeAssistant: process.env.HOME_ASSISTANT_URL
+        ? {
+            url: getRequiredEnv('HOME_ASSISTANT_URL'),
+            token: getRequiredEnv('HOME_ASSISTANT_TOKEN'),
+          }
+        : undefined,
+    },
+
+    database: {
+      url: getOptionalEnv('DATABASE_URL'),
+      type: getOptionalEnv('DATABASE_TYPE', 'sqlite') as 'sqlite' | 'postgres' | 'mongodb',
+    },
+  };
+}
+
+export const config = loadConfig();
