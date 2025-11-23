@@ -1,0 +1,138 @@
+{
+  "chatCompletion": {
+    "success": {
+      "id": "chatcmpl-8vK2nF9x1Y3Zq8w7VbN4mJ2kL5pR",
+      "object": "chat.completion",
+      "created": 1701234567,
+      "model": "gpt-4-0613",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "The future belongs to those who believe in the beauty of their dreams. Make today count!"
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 85,
+        "completion_tokens": 22,
+        "total_tokens": 107
+      }
+    }
+  },
+  "errors": {
+    "rateLimit": {
+      "error": {
+        "message": "Rate limit exceeded. Please try again in 20 seconds.",
+        "type": "rate_limit_exceeded",
+        "code": "rate_limit_exceeded"
+      }
+    },
+    "authentication": {
+      "error": {
+        "message": "Incorrect API key provided. You can find your API key at https://platform.openai.com/account/api-keys.",
+        "type": "invalid_request_error",
+        "code": "invalid_api_key"
+      }
+    },
+    "invalidRequest": {
+      "error": {
+        "message": "Invalid parameter: messages must be an array of message objects",
+        "type": "invalid_request_error",
+        "code": "invalid_parameter"
+      }
+    }
+  },
+  "models": {
+    "list": {
+      "object": "list",
+      "data": [
+        {
+          "id": "gpt-4",
+          "object": "model",
+          "created": 1687882411,
+          "owned_by": "openai"
+        },
+        {
+          "id": "gpt-4-turbo-preview",
+          "object": "model",
+          "created": 1706037612,
+          "owned_by": "openai"
+        },
+        {
+          "id": "gpt-3.5-turbo",
+          "object": "model",
+          "created": 1677610602,
+          "owned_by": "openai"
+        }
+      ]
+    }
+  },
+  "contentExamples": {
+    "motivational": {
+      "id": "chatcmpl-8vK3xG0y2Z4Ar9x8WcO5nK3lM6qS",
+      "object": "chat.completion",
+      "created": 1701234600,
+      "model": "gpt-4-0613",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "BELIEVE IN YOURSELF\nEVERY STEP FORWARD\nIS PROGRESS"
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 92,
+        "completion_tokens": 15,
+        "total_tokens": 107
+      }
+    },
+    "weather": {
+      "id": "chatcmpl-8vK4yH1z3A5Bs0y9XdP6oL4mN7rT",
+      "object": "chat.completion",
+      "created": 1701234620,
+      "model": "gpt-4-0613",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "SUNNY 72F\nPERFECT DAY\nENJOY THE WEATHER"
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 105,
+        "completion_tokens": 14,
+        "total_tokens": 119
+      }
+    },
+    "news": {
+      "id": "chatcmpl-8vK5zI2A4B6Ct1z0YeQ7pM5nO8sU",
+      "object": "chat.completion",
+      "created": 1701234640,
+      "model": "gpt-4-0613",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "TECH NEWS TODAY\nAI ADVANCES\nSTAY INFORMED"
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 145,
+        "completion_tokens": 12,
+        "total_tokens": 157
+      }
+    }
+  }
+}
