@@ -149,6 +149,13 @@ if [ ! -d /workspace/.beads ]; then
     mkdir -p /workspace/.beads
 fi
 
+# Fix ownership if mounted as root (Docker volume)
+BEADS_OWNER=$(stat -c '%U' /workspace/.beads 2>/dev/null || echo "unknown")
+if [ "$BEADS_OWNER" = "root" ]; then
+    echo "   Fixing .beads directory ownership..."
+    sudo chown -R vscode:vscode /workspace/.beads
+fi
+
 # Check if .beads is on a proper filesystem (not fakeowner)
 BEADS_MOUNT=$(mount | grep "/workspace/.beads" | awk '{print $5}')
 if [ "$BEADS_MOUNT" = "ext4" ] || [ "$BEADS_MOUNT" = "tmpfs" ]; then
