@@ -1,6 +1,8 @@
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import eslintConfigPrettier from 'eslint-config-prettier';
+import reactPlugin from 'eslint-plugin-react';
+import reactHooksPlugin from 'eslint-plugin-react-hooks';
 
 export default [
   {
@@ -18,6 +20,35 @@ export default [
     },
     rules: {
       ...typescriptEslint.configs.recommended.rules,
+    },
+  },
+  {
+    files: ['**/*.tsx'],
+    languageOptions: {
+      parser: typescriptParser,
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+    },
+    plugins: {
+      '@typescript-eslint': typescriptEslint,
+      react: reactPlugin,
+      'react-hooks': reactHooksPlugin,
+    },
+    rules: {
+      ...typescriptEslint.configs.recommended.rules,
+      ...reactPlugin.configs.recommended.rules,
+      ...reactPlugin.configs['jsx-runtime'].rules,
+      ...reactHooksPlugin.configs.recommended.rules,
+    },
+    settings: {
+      react: {
+        version: 'detect',
+      },
     },
   },
   eslintConfigPrettier,

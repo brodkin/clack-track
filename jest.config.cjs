@@ -42,22 +42,60 @@ module.exports = {
       displayName: 'unit',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/unit/**/*.test.ts'],
+      transform: {
+        '^.+\\.ts$': [
+          'ts-jest',
+          {
+            isolatedModules: true,
+            diagnostics: {
+              ignoreCodes: [151002, 2339, 2307],
+            },
+            tsconfig: {
+              module: 'commonjs',
+              esModuleInterop: true,
+            },
+          },
+        ],
+      },
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@tests/(.*)$': '<rootDir>/tests/$1',
+        '(.+)\\.js$': '$1',
+      },
     },
     {
       displayName: 'integration',
+      preset: 'ts-jest',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/integration/**/*.test.ts'],
+      extensionsToTreatAsEsm: ['.ts'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@tests/(.*)$': '<rootDir>/tests/$1',
+      },
     },
     {
       displayName: 'e2e',
+      preset: 'ts-jest',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/e2e/**/*.test.ts'],
       testTimeout: 60000, // E2E tests may take longer
+      extensionsToTreatAsEsm: ['.ts'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@tests/(.*)$': '<rootDir>/tests/$1',
+      },
     },
     {
       displayName: 'web',
+      preset: 'ts-jest',
       testEnvironment: 'jsdom', // Web UI tests need DOM
       testMatch: ['<rootDir>/tests/web/**/*.test.ts'],
+      extensionsToTreatAsEsm: ['.ts'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@tests/(.*)$': '<rootDir>/tests/$1',
+      },
     },
   ],
 
