@@ -4,25 +4,108 @@
 
 ## Overview
 
-Clack Track is a smart display manager for Vestaboard that leverages AI to generate and push engaging content to your Vestaboard device via its local API. Perfect for displaying dynamic messages, information, and creative content on your Vestaboard.
+Clack Track is a smart display manager for Vestaboard split-flap displays that creates engaging, AI-powered content and displays it via the Vestaboard local API. The system intelligently manages content updates through two modes:
+
+- **Major Updates**: Full content refreshes triggered by Home Assistant events or manual CLI commands, generating fresh quotes, news, weather, and custom content
+- **Minor Updates**: Every-minute time and weather updates that preserve the main content while keeping information current
+
+The application provides a web debugging interface for content management, quality voting, and system logs.
 
 ## Features
 
 - 📺 **Vestaboard Local API Integration** - Direct communication with your Vestaboard device
-- 🤖 **AI-Powered Content Generation** - Automatically creates engaging messages and content
-- 🔄 **Dynamic Updates** - Push new content to your board on demand or on a schedule
-- 🚀 **Built with Node.js 20** - Modern JavaScript runtime
+- 🤖 **AI-Powered Content Generation** - Support for OpenAI GPT and Anthropic Claude Sonnet
+- 🔄 **Dual Update System** - Major updates for new content, minor updates for time/weather
+- 🏠 **Home Assistant Integration** - Event-driven content triggers from your smart home
+- 📰 **Rich Data Sources** - RSS feeds, RapidAPI integrations, and weather data
+- 🎯 **Prompt Management** - Organized system and user prompts for customizable AI behavior
+- 🌐 **Web Debugging Interface** - View content, vote on quality, and access debug logs
+- 🚀 **Built with Node.js 20** - Modern JavaScript runtime with TypeScript
 - 🐳 **Devcontainer Support** - Consistent development environments
 - 🌲 **Git Worktree Workflow** - Parallel development made easy
 - ✨ **Code Quality** - Prettier formatting, commitlint, and TDD methodology
+
+## System Architecture
+
+### AI Providers
+
+Clack Track supports multiple AI providers for flexible content generation:
+
+- **OpenAI GPT** - GPT-4 and GPT-3.5-turbo models for creative content
+- **Anthropic Claude Sonnet** - Claude 3.5 Sonnet for nuanced, contextual responses
+
+Configure your preferred provider via environment variables. The system uses structured prompts from the `prompts/` directory to guide AI content generation.
+
+### Data Sources
+
+Content is enriched with real-time data from multiple sources:
+
+- **RSS Feeds** - News summaries and headlines from configured RSS sources
+- **RapidAPI** - Weather, events, and other third-party API data
+- **Home Assistant API** - Smart home event triggers and sensor data
+
+### Update Mechanism
+
+The system operates in two distinct modes:
+
+#### Major Updates
+
+Triggered by:
+
+- Home Assistant events (e.g., "person arrived home", "door opened")
+- Manual CLI commands
+- Scheduled intervals (configurable)
+
+Generates completely new content including:
+
+- Motivational quotes
+- News summaries
+- Weather forecasts
+- Custom content types
+
+#### Minor Updates
+
+- Runs every minute on the minute
+- Updates only time and current weather
+- Preserves the main content from the last major update
+- Minimal API calls for efficiency
+
+### Prompts System
+
+AI behavior is controlled through organized text file prompts in the `prompts/` directory:
+
+```
+prompts/
+├── system/              # System-level prompts (role, constraints)
+│   ├── major-update-base.txt
+│   └── minor-update-base.txt
+└── user/                # Content type prompts
+    ├── motivational.txt
+    ├── news-summary.txt
+    ├── weather-focus.txt
+    └── custom.txt
+```
+
+System prompts define the AI's role and Vestaboard formatting constraints (6 rows × 22 characters). User prompts specify content types and requirements.
+
+### Web Interface
+
+A debugging web interface provides:
+
+- **Latest Content View** - See what's currently on your Vestaboard
+- **Quality Voting** - Flag content as good or bad for AI training
+- **Debug Logs** - System logs, API calls, and error tracking
+- **Content History** - Review past generated content
 
 ## Prerequisites
 
 - **Vestaboard Device** with local API enabled
 - **Vestaboard Local API Key** - Obtain from your Vestaboard settings
+- **AI Provider API Key** - OpenAI or Anthropic account (or both)
 - Node.js 20 or higher
 - npm or yarn
 - Docker Desktop (optional, for devcontainer development)
+- Home Assistant instance (optional, for event-driven updates)
 
 ## Installation
 
@@ -55,6 +138,32 @@ cp .env.example .env
    VESTABOARD_LOCAL_API_KEY=your-api-key-here
    VESTABOARD_LOCAL_API_URL=http://your-board-ip:7000
    ```
+
+### AI Provider Configuration
+
+Choose at least one AI provider and add the corresponding API key to your `.env` file:
+
+**OpenAI:**
+
+```
+OPENAI_API_KEY=sk-...
+```
+
+**Anthropic:**
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### Additional Configuration
+
+Configure update behavior and content preferences in `.env`:
+
+```
+UPDATE_INTERVAL=60              # Minutes between major updates
+DEFAULT_CONTENT_TYPE=quote      # quote, weather, news, custom
+HOME_ASSISTANT_URL=http://...   # Optional: Home Assistant instance
+```
 
 ## Development
 
@@ -91,10 +200,22 @@ clack-track/
 ├── .husky/              # Git hooks (commitlint, prettier)
 ├── trees/               # Git worktrees for parallel development
 ├── src/                 # Source code
-│   ├── api/            # Vestaboard API client
+│   ├── api/            # Vestaboard and AI API clients
+│   │   ├── ai/         # OpenAI and Anthropic integrations
+│   │   └── data-sources/ # RSS, RapidAPI, Home Assistant
 │   ├── content/        # AI content generation
+│   │   ├── generators/ # Major and minor update strategies
+│   │   └── formatters/ # Vestaboard text layout
+│   ├── scheduler/      # Cron and event-based updates
+│   ├── storage/        # Database and data persistence
+│   ├── web/            # Debugging web interface
+│   │   ├── routes/     # API endpoints
+│   │   └── pages/      # HTML pages
 │   ├── types/          # TypeScript type definitions
 │   └── utils/          # Utility functions
+├── prompts/             # AI prompt templates
+│   ├── system/         # System prompts (role, constraints)
+│   └── user/           # Content type prompts
 ├── tests/               # Test files (see Testing section below)
 │   ├── unit/           # Isolated component tests
 │   ├── integration/    # Multi-component tests
@@ -116,14 +237,14 @@ This project uses git worktrees for isolated feature development:
 ```bash
 # Create a new worktree for a feature
 mkdir -p trees
-git worktree add ./trees/PROJ-123-feature-name -b feature/PROJ-123-feature-name develop
+git worktree add ./trees/feature-name -b feature/feature-name main
 
 # Work in the worktree
-cd ./trees/PROJ-123-feature-name
+cd ./trees/feature-name
 
 # Clean up after merge
-git worktree remove ./trees/PROJ-123-feature-name
-git branch -d feature/PROJ-123-feature-name
+git worktree remove ./trees/feature-name
+git branch -d feature/feature-name
 ```
 
 ## Testing
@@ -248,7 +369,7 @@ We welcome contributions! This project follows the SPICE development standards:
 
    ```bash
    mkdir -p trees
-   git worktree add ./trees/feature-name -b feature/feature-name develop
+   git worktree add ./trees/feature-name -b feature/feature-name main
    ```
 
 2. **Follow TDD methodology** (Red-Green-Refactor)
@@ -269,9 +390,10 @@ We welcome contributions! This project follows the SPICE development standards:
    Optional body text
    ```
 
-5. **Merge to develop** (not main)
-   - All PRs should target the `develop` branch
-   - Main branch is for releases only
+5. **Create a Pull Request**
+   - Provide clear description of changes
+   - Ensure all tests and linting pass
+   - Include screenshots for UI changes
 
 ## Usage
 
