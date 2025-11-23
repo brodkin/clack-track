@@ -141,19 +141,48 @@ cp .env.example .env
 
 ### AI Provider Configuration
 
-Choose at least one AI provider and add the corresponding API key to your `.env` file:
+Clack Track supports multiple AI providers for content generation. Configure your preferred provider in `.env`:
 
-**OpenAI:**
+**OpenAI Setup:**
 
-```
-OPENAI_API_KEY=sk-...
+1. Sign up at [OpenAI Platform](https://platform.openai.com/)
+2. Generate an API key at https://platform.openai.com/api-keys
+3. Add to `.env`:
+   ```
+   AI_PROVIDER=openai
+   OPENAI_API_KEY=sk-...
+   ```
+4. Test connectivity: `npm run test:ai:openai`
+
+**Anthropic Setup:**
+
+1. Sign up at [Anthropic Console](https://console.anthropic.com/)
+2. Generate an API key at https://console.anthropic.com/settings/keys
+3. Add to `.env`:
+   ```
+   AI_PROVIDER=anthropic
+   ANTHROPIC_API_KEY=sk-ant-...
+   ```
+4. Test connectivity: `npm run test:ai:anthropic`
+
+**Testing Your Setup:**
+
+```bash
+# Test all configured providers
+npm run test:ai
+
+# Test specific provider
+npm run test:ai:openai
+npm run test:ai:anthropic
 ```
 
-**Anthropic:**
+For detailed usage examples, see [AI Provider Usage Guide](docs/ai-providers.md).
 
-```
-ANTHROPIC_API_KEY=sk-ant-...
-```
+**Troubleshooting:**
+
+- **"API key is required"**: Verify API key is set in `.env` and matches your provider selection
+- **Rate limit errors**: Wait 60 seconds between requests or upgrade your account tier
+- **Authentication failures**: Check that your API key is valid and has available credits
 
 ### Additional Configuration
 
