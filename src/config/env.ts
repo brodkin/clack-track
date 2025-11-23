@@ -1,4 +1,6 @@
-import 'dotenv/config';
+// Load environment variables FIRST before any config access
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 
 export interface EnvironmentConfig {
   // Application
@@ -14,7 +16,7 @@ export interface EnvironmentConfig {
   };
 
   // Vestaboard
-  vestaboard: {
+  vestaboard?: {
     apiKey: string;
     apiUrl: string;
   };
@@ -82,10 +84,12 @@ export function loadConfig(): EnvironmentConfig {
       staticPath: getOptionalEnv('WEB_STATIC_PATH', './src/web/frontend/dist'),
     },
 
-    vestaboard: {
-      apiKey: getRequiredEnv('VESTABOARD_LOCAL_API_KEY'),
-      apiUrl: getOptionalEnv('VESTABOARD_LOCAL_API_URL', 'http://localhost:7000'),
-    },
+    vestaboard: process.env.VESTABOARD_LOCAL_API_KEY
+      ? {
+          apiKey: getRequiredEnv('VESTABOARD_LOCAL_API_KEY'),
+          apiUrl: getOptionalEnv('VESTABOARD_LOCAL_API_URL', 'http://localhost:7000'),
+        }
+      : undefined,
 
     ai: {
       provider: aiProvider,
