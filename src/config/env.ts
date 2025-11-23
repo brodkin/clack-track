@@ -83,8 +83,8 @@ export function loadConfig(): EnvironmentConfig {
     },
 
     vestaboard: {
-      apiKey: getRequiredEnv('VESTABOARD_API_KEY'),
-      apiUrl: getOptionalEnv('VESTABOARD_API_URL', 'https://platform.vestaboard.com'),
+      apiKey: getRequiredEnv('VESTABOARD_LOCAL_API_KEY'),
+      apiUrl: getOptionalEnv('VESTABOARD_LOCAL_API_URL', 'http://localhost:7000'),
     },
 
     ai: {
