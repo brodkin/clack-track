@@ -104,6 +104,15 @@ ContentGenerator → AI Providers → Formatters → VestaboardClient → Vestab
 - `routes/` - HTTP endpoints for content management, voting, logs
 - `pages/` - Static HTML pages for debugging UI
 
+**6. AI Provider Layer** (`src/api/ai/`)
+
+- `openai.ts` - OpenAIClient implements AIProvider interface for GPT models
+- `anthropic.ts` - AnthropicClient implements AIProvider interface for Claude models
+- `index.ts` - Factory pattern (createAIProvider) for dependency injection
+- Error types: `RateLimitError`, `AuthenticationError`, `InvalidRequestError`
+- Connection validation: `validateConnection()` method tests API connectivity
+- Token tracking: All responses include usage metrics
+
 ### Environment Configuration
 
 Required variables in `.env`:
@@ -113,6 +122,16 @@ Required variables in `.env`:
 - `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` - AI provider credentials
 - `UPDATE_INTERVAL` - Content refresh interval in minutes (default: 60)
 - `DEFAULT_CONTENT_TYPE` - quote, weather, news, or custom
+
+### AI Provider Configuration
+
+- `AI_PROVIDER` - Select provider: `openai` or `anthropic`
+- `OPENAI_API_KEY` - OpenAI API key (required if provider=openai)
+- `ANTHROPIC_API_KEY` - Anthropic API key (required if provider=anthropic)
+- `OPENAI_MODEL` - Override default GPT model (optional)
+- `ANTHROPIC_MODEL` - Override default Claude model (optional)
+
+Test connectivity: `npm run test:ai`
 
 ### Prompts System
 
@@ -236,3 +255,8 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`
 - **Test setup**: `tests/setup/jest.setup.ts` (global test configuration)
 - **Commitlint config**: `commitlint.config.cjs` (commit message rules)
 - **Jest config**: `jest.config.cjs` (multi-environment test setup)
+- **AI Providers**: `src/api/ai/openai.ts`, `src/api/ai/anthropic.ts` (AI client implementations)
+- **AI Factory**: `src/api/ai/index.ts` (createAIProvider factory function)
+- **AI Mocks**: `tests/__mocks__/ai-providers.ts` (test mock factories)
+- **AI Fixtures**: `tests/fixtures/openai-responses.json`, `tests/fixtures/anthropic-responses.json`
+- **CLI Tools**: `src/cli/commands/test-ai.ts` (AI connectivity testing command)

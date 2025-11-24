@@ -1,0 +1,121 @@
+{
+  "message": {
+    "success": {
+      "id": "msg_01XyZ9aB3cD4eF5gH6iJ7kL8m",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Success is not final, failure is not fatal: it is the courage to continue that counts."
+        }
+      ],
+      "model": "claude-sonnet-4-20250514",
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 95,
+        "output_tokens": 23
+      }
+    }
+  },
+  "errors": {
+    "rateLimit": {
+      "type": "error",
+      "error": {
+        "type": "rate_limit_error",
+        "message": "Rate limit exceeded. Please reduce your request rate."
+      }
+    },
+    "authentication": {
+      "type": "error",
+      "error": {
+        "type": "authentication_error",
+        "message": "Invalid API key. Please check your authentication credentials."
+      }
+    },
+    "invalidRequest": {
+      "type": "error",
+      "error": {
+        "type": "invalid_request_error",
+        "message": "Invalid request: max_tokens must be a positive integer"
+      }
+    }
+  },
+  "models": {
+    "validation": {
+      "id": "msg_01AbC2dE3fG4hI5jK6lM7nO8p",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Connection validated successfully."
+        }
+      ],
+      "model": "claude-sonnet-4-20250514",
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 12,
+        "output_tokens": 8
+      }
+    }
+  },
+  "contentExamples": {
+    "motivational": {
+      "id": "msg_01QrS2tU3vW4xY5zA6bC7dE8f",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "DREAM BIG\nWORK HARD\nSTAY FOCUSED"
+        }
+      ],
+      "model": "claude-sonnet-4-20250514",
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 102,
+        "output_tokens": 14
+      }
+    },
+    "weather": {
+      "id": "msg_01GhI2jK3lM4nO5pQ6rS7tU8v",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "PARTLY CLOUDY 68F\nLIGHT BREEZE\nNICE AFTERNOON"
+        }
+      ],
+      "model": "claude-sonnet-4-20250514",
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 118,
+        "output_tokens": 16
+      }
+    },
+    "news": {
+      "id": "msg_01WxY2zA3bC4dE5fG6hI7jK8l",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "BREAKING NEWS\nCLIMATE SUMMIT\nGLOBAL AGREEMENT"
+        }
+      ],
+      "model": "claude-sonnet-4-20250514",
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 156,
+        "output_tokens": 13
+      }
+    }
+  }
+}

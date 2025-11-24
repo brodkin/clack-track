@@ -1,8 +1,23 @@
-import 'dotenv/config';
+// CRITICAL: Load dotenv FIRST before any other imports that might use process.env
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
+
 import { WebServer } from './web/server.js';
 import { config } from './config/env.js';
+import { runCLI } from './cli/index.js';
 
 async function main() {
+  // Check if running as CLI command
+  const args = process.argv;
+  const command = args[2];
+
+  // If a CLI command is provided, run CLI mode
+  if (command && ['generate', 'test-board', 'test-ai'].includes(command)) {
+    await runCLI(args);
+    return;
+  }
+
+  // Otherwise, start web server
   console.log('Clack Track starting...');
 
   // Initialize web server
