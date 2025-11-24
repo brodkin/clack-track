@@ -21,4 +21,5 @@ export * from './ai.js';
 export * from './content.js';
 export * from './data-sources.js';
 export * from './errors.js';
+export * from './home-assistant.js';
 export * from './web.js';
