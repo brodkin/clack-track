@@ -15,4 +15,15 @@ export {
   createMockAnthropicClient,
   isAIProvider,
   type MockAIProviderOptions,
-} from './ai-providers';
+} from './ai-providers.js';
+
+export {
+  createMockConnection,
+  createMockAuth,
+  mockGetStates,
+  mockCallService,
+  mockCreateConnection,
+  triggerMockEvent,
+  isConnection,
+  type MockHomeAssistantOptions,
+} from './home-assistant.js';
