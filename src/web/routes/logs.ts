@@ -1,15 +1,28 @@
 import { Request, Response } from '../types.js';
 import { LogModel, LogLevel } from '../../storage/models/log.js';
+import { Database } from '../../storage/database.js';
 
 // Singleton model instance
 let logModel: LogModel | null = null;
+let database: Database | null = null;
+
+/**
+ * Get or create Database instance
+ */
+function getDatabase(): Database {
+  if (!database) {
+    database = new Database();
+  }
+  return database;
+}
 
 /**
  * Get or create LogModel instance
  */
 function getLogModel(): LogModel {
   if (!logModel) {
-    logModel = new LogModel();
+    const db = getDatabase();
+    logModel = new LogModel(db);
   }
   return logModel;
 }
