@@ -1,9 +1,21 @@
 import { Request, Response } from '../types.js';
 import { ContentRepository } from '../../storage/repositories/content-repo.js';
 import { ContentModel } from '../../storage/models/content.js';
+import { Database } from '../../storage/database.js';
 
 // Singleton repository instance
 let contentRepository: ContentRepository | null = null;
+let database: Database | null = null;
+
+/**
+ * Get or create Database instance
+ */
+function getDatabase(): Database {
+  if (!database) {
+    database = new Database();
+  }
+  return database;
+}
 
 /**
  * Get or create ContentRepository instance
@@ -11,7 +23,8 @@ let contentRepository: ContentRepository | null = null;
  */
 function getContentRepository(): ContentRepository {
   if (!contentRepository) {
-    const model = new ContentModel();
+    const db = getDatabase();
+    const model = new ContentModel(db);
     contentRepository = new ContentRepository(model);
   }
   return contentRepository;

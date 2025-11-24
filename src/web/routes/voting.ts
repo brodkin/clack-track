@@ -1,9 +1,21 @@
 import { Request, Response } from '../types.js';
 import { VoteRepository } from '../../storage/repositories/vote-repo.js';
 import { VoteModel } from '../../storage/models/vote.js';
+import { Database } from '../../storage/database.js';
 
 // Singleton repository instance
 let voteRepository: VoteRepository | null = null;
+let database: Database | null = null;
+
+/**
+ * Get or create Database instance
+ */
+function getDatabase(): Database {
+  if (!database) {
+    database = new Database();
+  }
+  return database;
+}
 
 /**
  * Get or create VoteRepository instance
@@ -11,7 +23,8 @@ let voteRepository: VoteRepository | null = null;
  */
 function getVoteRepository(): VoteRepository {
   if (!voteRepository) {
-    const model = new VoteModel();
+    const db = getDatabase();
+    const model = new VoteModel(db);
     voteRepository = new VoteRepository(model);
   }
   return voteRepository;
