@@ -77,6 +77,21 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/integration/**/*.test.ts'],
       extensionsToTreatAsEsm: ['.ts'],
+      transform: {
+        '^.+\\.ts$': [
+          'ts-jest',
+          {
+            isolatedModules: true,
+            diagnostics: {
+              ignoreCodes: [151002, 2339, 2307, 7016, 2322, 2345],
+            },
+            tsconfig: {
+              module: 'commonjs',
+              esModuleInterop: true,
+            },
+          },
+        ],
+      },
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@tests/(.*)$': '<rootDir>/tests/$1',

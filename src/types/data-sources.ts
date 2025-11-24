@@ -35,18 +35,6 @@ export interface HomeAssistantConfig {
   maxReconnectAttempts?: number;
 }
 
-export interface HomeAssistantEvent {
-  event_type: string;
-  data: Record<string, unknown>;
-  time_fired: Date;
-  origin: string;
-  context?: {
-    id: string;
-    parent_id?: string | null;
-    user_id?: string | null;
-  };
-}
-
 export interface HomeAssistantEntityState {
   entity_id: string;
   state: string;
@@ -61,26 +49,25 @@ export interface HomeAssistantEntityState {
 }
 
 // State changed event type
-export interface StateChangedEvent extends HomeAssistantEvent {
+// Note: HomeAssistantEvent is defined in home-assistant.ts
+export interface StateChangedEvent {
   event_type: 'state_changed';
   data: {
     entity_id: string;
     old_state: HomeAssistantEntityState | null;
     new_state: HomeAssistantEntityState | null;
   };
+  origin?: string;
+  time_fired?: string;
+  context?: {
+    id: string;
+    parent_id?: string | null;
+    user_id?: string | null;
+  };
 }
 
 // Unsubscribe function type
 export type UnsubscribeFunc = () => void | Promise<void>;
-
-// Service call response type
-export interface ServiceCallResponse {
-  context: {
-    id: string;
-    parent_id: string | null;
-    user_id: string | null;
-  };
-}
 
 // Home Assistant Error Types
 export interface HomeAssistantConnectionError extends Error {

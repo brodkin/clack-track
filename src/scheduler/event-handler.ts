@@ -2,7 +2,7 @@ import { HomeAssistantClient } from '../api/data-sources/index.js';
 import { MajorUpdateGenerator } from '../content/generators/index.js';
 import { MinorUpdateGenerator } from '../content/generators/index.js';
 import { VestaboardClient } from '../api/vestaboard.js';
-import { HomeAssistantEvent } from '../types/data-sources.js';
+import { HomeAssistantEvent } from '../types/home-assistant.js';
 import { log, warn } from '../utils/logger.js';
 
 export class EventHandler {
@@ -24,9 +24,14 @@ export class EventHandler {
   }
 
   async initialize(): Promise<void> {
-    // TODO: Register event handlers for Home Assistant events
-    this.homeAssistant.on('content_trigger', event => this.handleContentTrigger(event));
+    // Connect to Home Assistant
     await this.homeAssistant.connect();
+
+    // Subscribe to events using subscribeToEvents method
+    await this.homeAssistant.subscribeToEvents('content_trigger', event => {
+      void this.handleContentTrigger(event);
+    });
+
     log('Event handler initialized and connected to Home Assistant');
   }
 
