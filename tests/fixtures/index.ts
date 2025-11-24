@@ -12,6 +12,7 @@
 
 import openaiResponsesData from './openai-responses.json';
 import anthropicResponsesData from './anthropic-responses.json';
+import homeAssistantResponsesData from './home-assistant-responses.json';
 
 /**
  * OpenAI API response fixtures for testing
@@ -30,3 +31,12 @@ export const openaiFixtures = openaiResponsesData;
  */
 export const anthropicResponses = anthropicResponsesData;
 export const anthropicFixtures = anthropicResponsesData;
+
+/**
+ * Home Assistant WebSocket response fixtures for testing
+ *
+ * Includes auth messages, entity states, events, service call responses,
+ * and error responses for various scenarios.
+ */
+export const homeAssistantResponses = homeAssistantResponsesData;
+export const homeAssistantFixtures = homeAssistantResponsesData;

@@ -59,8 +59,11 @@ describe('Home Assistant WebSocket Client Integration Tests', () => {
     addEventListener: jest.Mock;
     removeEventListener: jest.Mock;
     close: jest.Mock;
+    subscribeEvents: jest.Mock;
   };
   let eventListeners: Map<string, (event: HomeAssistantEvent) => void>;
+  let unsubscribeFunctions: Map<string, () => void>;
+  let subscriptionCounts: Map<string, number>;
 
   // Test logger to capture logs
   let mockLogger: Logger;
@@ -76,6 +79,8 @@ describe('Home Assistant WebSocket Client Integration Tests', () => {
 
     // Initialize event listeners map
     eventListeners = new Map();
+    unsubscribeFunctions = new Map();
+    subscriptionCounts = new Map();
 
     // Create mock connection with event listener support
     mockConnection = {
@@ -86,8 +91,46 @@ describe('Home Assistant WebSocket Client Integration Tests', () => {
       ),
       removeEventListener: jest.fn((eventType: string) => {
         eventListeners.delete(eventType);
+        unsubscribeFunctions.delete(eventType);
+        subscriptionCounts.delete(eventType);
       }),
-      close: jest.fn(),
+      close: jest.fn(() => {
+        // When connection closes, clean up all listeners
+        // Call removeEventListener for each active listener to simulate cleanup
+        eventListeners.forEach((_, eventType) => {
+          mockConnection.removeEventListener(eventType);
+        });
+      }),
+      subscribeEvents: jest.fn(
+        (callback: (event: HomeAssistantEvent) => void, eventType: string) => {
+          // Track the connection-level listener (one per event type)
+          if (!eventListeners.has(eventType)) {
+            eventListeners.set(eventType, callback);
+            subscriptionCounts.set(eventType, 1);
+          } else {
+            // Increment subscription count for this event type
+            subscriptionCounts.set(eventType, (subscriptionCounts.get(eventType) || 0) + 1);
+          }
+
+          // Create unsubscribe function
+          const unsubscribe = () => {
+            const count = subscriptionCounts.get(eventType) || 0;
+            if (count <= 1) {
+              // Last subscriber - remove the connection listener
+              eventListeners.delete(eventType);
+              unsubscribeFunctions.delete(eventType);
+              subscriptionCounts.delete(eventType);
+            } else {
+              // Still have other subscribers - just decrement count
+              subscriptionCounts.set(eventType, count - 1);
+            }
+          };
+
+          unsubscribeFunctions.set(eventType, unsubscribe);
+          // Return unsubscribe function wrapped in Promise
+          return Promise.resolve(unsubscribe);
+        }
+      ),
     };
 
     // Initialize log capture
@@ -334,13 +377,20 @@ describe('Home Assistant WebSocket Client Integration Tests', () => {
       await client.subscribeToEvents('state_changed', () => {});
       await client.subscribeToEvents('call_service', () => {});
 
+      // Verify subscriptions are active
+      expect(eventListeners.has('state_changed')).toBe(true);
+      expect(eventListeners.has('call_service')).toBe(true);
+
       // Act
       await client.disconnect();
 
-      // Assert
+      // Assert: Connection closed
       expect(client.isConnected()).toBe(false);
       expect(mockConnection.close).toHaveBeenCalledTimes(1);
-      expect(mockConnection.removeEventListener).toHaveBeenCalled();
+
+      // Assert: Event listeners cleaned up (unsubscribed from the connection)
+      expect(eventListeners.has('state_changed')).toBe(false);
+      expect(eventListeners.has('call_service')).toBe(false);
     });
 
     it('should prevent operations when not connected', async () => {

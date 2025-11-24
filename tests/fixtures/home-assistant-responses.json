@@ -1,0 +1,347 @@
+{
+  "auth": {
+    "success": {
+      "type": "auth_required",
+      "ha_version": "2024.1.0"
+    },
+    "authOk": {
+      "type": "auth_ok",
+      "ha_version": "2024.1.0"
+    },
+    "authInvalid": {
+      "type": "auth_invalid",
+      "message": "Invalid access token or password"
+    },
+    "authTimeout": {
+      "type": "auth_invalid",
+      "message": "Connection timeout"
+    }
+  },
+  "entities": {
+    "light": {
+      "entity_id": "light.living_room",
+      "state": "on",
+      "attributes": {
+        "brightness": 255,
+        "color_mode": "xy",
+        "color_temp": 370,
+        "friendly_name": "Living Room Light",
+        "supported_features": 63
+      },
+      "last_changed": "2024-01-15T10:30:00.000Z",
+      "last_updated": "2024-01-15T10:30:00.000Z",
+      "context": {
+        "id": "01HM8QZXK3YJ7W5VBNTPQR4STU",
+        "parent_id": null,
+        "user_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+      }
+    },
+    "sensor": {
+      "entity_id": "sensor.temperature_living_room",
+      "state": "22.5",
+      "attributes": {
+        "unit_of_measurement": "°C",
+        "device_class": "temperature",
+        "friendly_name": "Living Room Temperature",
+        "state_class": "measurement"
+      },
+      "last_changed": "2024-01-15T10:35:00.000Z",
+      "last_updated": "2024-01-15T10:35:00.000Z",
+      "context": {
+        "id": "01HM8R0YL4ZK8X6WCOUPRS5TUV",
+        "parent_id": null,
+        "user_id": null
+      }
+    },
+    "automation": {
+      "entity_id": "automation.morning_routine",
+      "state": "on",
+      "attributes": {
+        "id": "1234567890",
+        "last_triggered": "2024-01-15T07:00:00.000Z",
+        "mode": "single",
+        "current": 0,
+        "max": 10,
+        "friendly_name": "Morning Routine"
+      },
+      "last_changed": "2024-01-15T07:00:00.000Z",
+      "last_updated": "2024-01-15T07:00:00.000Z",
+      "context": {
+        "id": "01HM8R1ZM5AN9Y7XDPVQST6UVW",
+        "parent_id": null,
+        "user_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+      }
+    },
+    "switch": {
+      "entity_id": "switch.coffee_maker",
+      "state": "off",
+      "attributes": {
+        "friendly_name": "Coffee Maker",
+        "icon": "mdi:coffee"
+      },
+      "last_changed": "2024-01-15T06:30:00.000Z",
+      "last_updated": "2024-01-15T06:30:00.000Z",
+      "context": {
+        "id": "01HM8R2AN6BO0Z8YEQWRTU7VWX",
+        "parent_id": null,
+        "user_id": null
+      }
+    },
+    "binary_sensor": {
+      "entity_id": "binary_sensor.front_door",
+      "state": "off",
+      "attributes": {
+        "device_class": "door",
+        "friendly_name": "Front Door"
+      },
+      "last_changed": "2024-01-15T08:00:00.000Z",
+      "last_updated": "2024-01-15T08:00:00.000Z",
+      "context": {
+        "id": "01HM8R3BP7CP1A9ZFRXSUV8WXY",
+        "parent_id": null,
+        "user_id": null
+      }
+    }
+  },
+  "events": {
+    "stateChanged": {
+      "event_type": "state_changed",
+      "data": {
+        "entity_id": "light.living_room",
+        "old_state": {
+          "entity_id": "light.living_room",
+          "state": "off",
+          "attributes": {
+            "brightness": 0,
+            "friendly_name": "Living Room Light"
+          },
+          "last_changed": "2024-01-15T10:29:00.000Z",
+          "last_updated": "2024-01-15T10:29:00.000Z"
+        },
+        "new_state": {
+          "entity_id": "light.living_room",
+          "state": "on",
+          "attributes": {
+            "brightness": 255,
+            "friendly_name": "Living Room Light"
+          },
+          "last_changed": "2024-01-15T10:30:00.000Z",
+          "last_updated": "2024-01-15T10:30:00.000Z"
+        }
+      },
+      "origin": "LOCAL",
+      "time_fired": "2024-01-15T10:30:00.000Z",
+      "context": {
+        "id": "01HM8QZXK3YJ7W5VBNTPQR4STU",
+        "parent_id": null,
+        "user_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+      }
+    },
+    "automationTriggered": {
+      "event_type": "automation_triggered",
+      "data": {
+        "name": "Morning Routine",
+        "entity_id": "automation.morning_routine",
+        "source": "time"
+      },
+      "origin": "LOCAL",
+      "time_fired": "2024-01-15T07:00:00.000Z",
+      "context": {
+        "id": "01HM8R1ZM5AN9Y7XDPVQST6UVW",
+        "parent_id": null,
+        "user_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+      }
+    },
+    "callService": {
+      "event_type": "call_service",
+      "data": {
+        "domain": "light",
+        "service": "turn_on",
+        "service_data": {
+          "entity_id": "light.living_room",
+          "brightness": 255
+        }
+      },
+      "origin": "LOCAL",
+      "time_fired": "2024-01-15T10:30:00.000Z",
+      "context": {
+        "id": "01HM8QZXK3YJ7W5VBNTPQR4STU",
+        "parent_id": null,
+        "user_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+      }
+    },
+    "customEvent": {
+      "event_type": "custom_event",
+      "data": {
+        "message": "Custom event triggered",
+        "severity": "info"
+      },
+      "origin": "LOCAL",
+      "time_fired": "2024-01-15T11:00:00.000Z",
+      "context": {
+        "id": "01HM8R4CQ8DQ2BAZGSYTVW9XYZ",
+        "parent_id": null,
+        "user_id": null
+      }
+    },
+    "personHome": {
+      "event_type": "state_changed",
+      "data": {
+        "entity_id": "person.john_doe",
+        "old_state": {
+          "entity_id": "person.john_doe",
+          "state": "away",
+          "attributes": {
+            "friendly_name": "John Doe"
+          },
+          "last_changed": "2024-01-15T09:00:00.000Z",
+          "last_updated": "2024-01-15T09:00:00.000Z"
+        },
+        "new_state": {
+          "entity_id": "person.john_doe",
+          "state": "home",
+          "attributes": {
+            "friendly_name": "John Doe"
+          },
+          "last_changed": "2024-01-15T17:30:00.000Z",
+          "last_updated": "2024-01-15T17:30:00.000Z"
+        }
+      },
+      "origin": "LOCAL",
+      "time_fired": "2024-01-15T17:30:00.000Z",
+      "context": {
+        "id": "01HM8R5DR9EQ3CBAHTVUWX0YZA",
+        "parent_id": null,
+        "user_id": null
+      }
+    }
+  },
+  "serviceResponses": {
+    "success": {
+      "context": {
+        "id": "01HM8QZXK3YJ7W5VBNTPQR4STU",
+        "parent_id": "01HM8QZXJ2YI6V4UAMSOPQ3RST",
+        "user_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+      }
+    },
+    "lightTurnOn": {
+      "context": {
+        "id": "01HM8R6ES0FR4DCBITXVXY1ZAB",
+        "parent_id": null,
+        "user_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+      }
+    },
+    "automationTrigger": {
+      "context": {
+        "id": "01HM8R7FT1GS5EDCJUYWYZ2ABC",
+        "parent_id": null,
+        "user_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+      }
+    }
+  },
+  "errors": {
+    "connectionFailed": {
+      "type": "error",
+      "code": "ECONNREFUSED",
+      "message": "Connection refused"
+    },
+    "authenticationFailed": {
+      "type": "auth_invalid",
+      "message": "Authentication failed: Invalid token"
+    },
+    "timeout": {
+      "type": "error",
+      "code": "ETIMEDOUT",
+      "message": "Connection timeout"
+    },
+    "entityNotFound": {
+      "type": "error",
+      "code": "not_found",
+      "message": "Entity not found"
+    },
+    "serviceCallFailed": {
+      "type": "error",
+      "code": "service_not_found",
+      "message": "Service not found"
+    },
+    "subscriptionFailed": {
+      "type": "error",
+      "code": "subscription_error",
+      "message": "Failed to subscribe to event type"
+    }
+  },
+  "allStates": [
+    {
+      "entity_id": "light.living_room",
+      "state": "on",
+      "attributes": {
+        "brightness": 255,
+        "friendly_name": "Living Room Light"
+      },
+      "last_changed": "2024-01-15T10:30:00.000Z",
+      "last_updated": "2024-01-15T10:30:00.000Z",
+      "context": {
+        "id": "01HM8QZXK3YJ7W5VBNTPQR4STU",
+        "parent_id": null,
+        "user_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+      }
+    },
+    {
+      "entity_id": "sensor.temperature_living_room",
+      "state": "22.5",
+      "attributes": {
+        "unit_of_measurement": "°C",
+        "friendly_name": "Living Room Temperature"
+      },
+      "last_changed": "2024-01-15T10:35:00.000Z",
+      "last_updated": "2024-01-15T10:35:00.000Z",
+      "context": {
+        "id": "01HM8R0YL4ZK8X6WCOUPRS5TUV",
+        "parent_id": null,
+        "user_id": null
+      }
+    },
+    {
+      "entity_id": "automation.morning_routine",
+      "state": "on",
+      "attributes": {
+        "friendly_name": "Morning Routine"
+      },
+      "last_changed": "2024-01-15T07:00:00.000Z",
+      "last_updated": "2024-01-15T07:00:00.000Z",
+      "context": {
+        "id": "01HM8R1ZM5AN9Y7XDPVQST6UVW",
+        "parent_id": null,
+        "user_id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+      }
+    },
+    {
+      "entity_id": "switch.coffee_maker",
+      "state": "off",
+      "attributes": {
+        "friendly_name": "Coffee Maker"
+      },
+      "last_changed": "2024-01-15T06:30:00.000Z",
+      "last_updated": "2024-01-15T06:30:00.000Z",
+      "context": {
+        "id": "01HM8R2AN6BO0Z8YEQWRTU7VWX",
+        "parent_id": null,
+        "user_id": null
+      }
+    },
+    {
+      "entity_id": "binary_sensor.front_door",
+      "state": "off",
+      "attributes": {
+        "friendly_name": "Front Door"
+      },
+      "last_changed": "2024-01-15T08:00:00.000Z",
+      "last_updated": "2024-01-15T08:00:00.000Z",
+      "context": {
+        "id": "01HM8R3BP7CP1A9ZFRXSUV8WXY",
+        "parent_id": null,
+        "user_id": null
+      }
+    }
+  ]
+}

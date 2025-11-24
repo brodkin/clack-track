@@ -31,6 +31,20 @@ describe('HomeAssistantClient - Connection Management', () => {
     close: jest.Mock;
     addEventListener: jest.Mock;
     removeEventListener: jest.Mock;
+    subscribeEvents: jest.Mock;
+  };
+
+  // Helper to capture event callbacks for testing
+  let eventCallbacks: Record<string, (event: HomeAssistantEvent) => void> = {};
+
+  const setupEventCallbackCapture = () => {
+    eventCallbacks = {};
+    mockConnection.subscribeEvents.mockImplementation(
+      (cb: (event: HomeAssistantEvent) => void, eventType: string) => {
+        eventCallbacks[eventType] = cb;
+        return Promise.resolve(() => {});
+      }
+    );
   };
 
   beforeEach(() => {
@@ -43,12 +57,14 @@ describe('HomeAssistantClient - Connection Management', () => {
       token: 'test-long-lived-token',
     };
 
-    // Setup mock connection object
+    // Setup mock connection object with subscribeEvents method
     mockConnection = {
       close: jest.fn(),
       addEventListener: jest.fn(),
       removeEventListener: jest.fn(),
-    };
+      subscribeEvents: jest.fn().mockResolvedValue(() => {}),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any;
 
     // Mock createConnection to return our mock connection
     (haWebsocket.createConnection as jest.Mock).mockResolvedValue(mockConnection);
@@ -313,20 +329,27 @@ describe('HomeAssistantClient - Connection Management', () => {
       await client.connect();
 
       const callback = jest.fn();
+
+      // Mock subscribeEvents to capture the callback and return unsubscribe function
+      let eventCallback: ((event: HomeAssistantEvent) => void) | null = null;
+      mockConnection.subscribeEvents.mockImplementation(
+        (cb: (event: HomeAssistantEvent) => void) => {
+          eventCallback = cb;
+          return Promise.resolve(() => {});
+        }
+      );
+
       await client.subscribeToEvents('state_changed', callback);
 
       // Simulate event from WebSocket connection
-      const mockEvent = {
+      const mockEvent: HomeAssistantEvent = {
         event_type: 'state_changed',
         data: { entity_id: 'light.living_room', state: 'on' },
       };
 
-      // Trigger the event through the mock connection's addEventListener
-      const addEventListenerCall = mockConnection.addEventListener.mock.calls.find(
-        call => call[0] === 'state_changed'
-      );
-      if (addEventListenerCall) {
-        addEventListenerCall[1](mockEvent);
+      // Trigger the event through the captured callback
+      if (eventCallback) {
+        eventCallback(mockEvent);
       }
 
       expect(callback).toHaveBeenCalledWith(mockEvent);
@@ -338,20 +361,27 @@ describe('HomeAssistantClient - Connection Management', () => {
       const stateChangedCallback = jest.fn();
       const automationCallback = jest.fn();
 
+      // Capture callbacks for each event type
+      const callbacks: Record<string, (event: HomeAssistantEvent) => void> = {};
+      mockConnection.subscribeEvents.mockImplementation(
+        (cb: (event: HomeAssistantEvent) => void, eventType: string) => {
+          callbacks[eventType] = cb;
+          return Promise.resolve(() => {});
+        }
+      );
+
       await client.subscribeToEvents('state_changed', stateChangedCallback);
       await client.subscribeToEvents('automation_triggered', automationCallback);
 
       // Simulate state_changed event
-      const stateEvent = {
+      const stateEvent: HomeAssistantEvent = {
         event_type: 'state_changed',
         data: { entity_id: 'light.living_room' },
       };
 
-      const addEventListenerCall = mockConnection.addEventListener.mock.calls.find(
-        call => call[0] === 'state_changed'
-      );
-      if (addEventListenerCall) {
-        addEventListenerCall[1](stateEvent);
+      // Trigger only the state_changed callback
+      if (callbacks['state_changed']) {
+        callbacks['state_changed'](stateEvent);
       }
 
       // Only state_changed callback should be called
@@ -361,6 +391,8 @@ describe('HomeAssistantClient - Connection Management', () => {
 
     it('should return unsubscribe function that removes specific subscriber', async () => {
       await client.connect();
+
+      setupEventCallbackCapture();
 
       const callback = jest.fn();
       const unsubscribe = await client.subscribeToEvents('state_changed', callback);
@@ -374,11 +406,8 @@ describe('HomeAssistantClient - Connection Management', () => {
         data: { entity_id: 'light.living_room' },
       };
 
-      const addEventListenerCall = mockConnection.addEventListener.mock.calls.find(
-        call => call[0] === 'state_changed'
-      );
-      if (addEventListenerCall) {
-        addEventListenerCall[1](mockEvent);
+      if (eventCallbacks['state_changed']) {
+        eventCallbacks['state_changed'](mockEvent);
       }
 
       // Callback should NOT be called after unsubscribe
@@ -387,6 +416,8 @@ describe('HomeAssistantClient - Connection Management', () => {
 
     it('should only remove specified subscriber when multiple exist', async () => {
       await client.connect();
+
+      setupEventCallbackCapture();
 
       const callback1 = jest.fn();
       const callback2 = jest.fn();
@@ -403,11 +434,8 @@ describe('HomeAssistantClient - Connection Management', () => {
         data: { entity_id: 'light.living_room' },
       };
 
-      const addEventListenerCall = mockConnection.addEventListener.mock.calls.find(
-        call => call[0] === 'state_changed'
-      );
-      if (addEventListenerCall) {
-        addEventListenerCall[1](mockEvent);
+      if (eventCallbacks['state_changed']) {
+        eventCallbacks['state_changed'](mockEvent);
       }
 
       // Only callback2 should be called
@@ -419,6 +447,8 @@ describe('HomeAssistantClient - Connection Management', () => {
   describe('unsubscribeFromEvents()', () => {
     it('should unsubscribe all callbacks for a specific event type', async () => {
       await client.connect();
+
+      setupEventCallbackCapture();
 
       const callback1 = jest.fn();
       const callback2 = jest.fn();
@@ -435,11 +465,8 @@ describe('HomeAssistantClient - Connection Management', () => {
         data: { entity_id: 'light.living_room' },
       };
 
-      const addEventListenerCall = mockConnection.addEventListener.mock.calls.find(
-        call => call[0] === 'state_changed'
-      );
-      if (addEventListenerCall) {
-        addEventListenerCall[1](mockEvent);
+      if (eventCallbacks['state_changed']) {
+        eventCallbacks['state_changed'](mockEvent);
       }
 
       // Neither callback should be called
@@ -449,6 +476,8 @@ describe('HomeAssistantClient - Connection Management', () => {
 
     it('should not affect other event types', async () => {
       await client.connect();
+
+      setupEventCallbackCapture();
 
       const stateCallback = jest.fn();
       const automationCallback = jest.fn();
@@ -465,11 +494,8 @@ describe('HomeAssistantClient - Connection Management', () => {
         data: { name: 'test_automation' },
       };
 
-      const addEventListenerCall = mockConnection.addEventListener.mock.calls.find(
-        call => call[0] === 'automation_triggered'
-      );
-      if (addEventListenerCall) {
-        addEventListenerCall[1](automationEvent);
+      if (eventCallbacks['automation_triggered']) {
+        eventCallbacks['automation_triggered'](automationEvent);
       }
 
       // Automation callback should still work
@@ -487,6 +513,8 @@ describe('HomeAssistantClient - Connection Management', () => {
     it('should maintain subscriptions across validation checks', async () => {
       await client.connect();
 
+      setupEventCallbackCapture();
+
       const callback = jest.fn();
       await client.subscribeToEvents('state_changed', callback);
 
@@ -499,11 +527,8 @@ describe('HomeAssistantClient - Connection Management', () => {
         data: { entity_id: 'light.living_room' },
       };
 
-      const addEventListenerCall = mockConnection.addEventListener.mock.calls.find(
-        call => call[0] === 'state_changed'
-      );
-      if (addEventListenerCall) {
-        addEventListenerCall[1](mockEvent);
+      if (eventCallbacks['state_changed']) {
+        eventCallbacks['state_changed'](mockEvent);
       }
 
       // Callback should still be called
@@ -512,6 +537,8 @@ describe('HomeAssistantClient - Connection Management', () => {
 
     it('should clean up subscriptions on disconnect', async () => {
       await client.connect();
+
+      setupEventCallbackCapture();
 
       const callback = jest.fn();
       await client.subscribeToEvents('state_changed', callback);
@@ -526,11 +553,8 @@ describe('HomeAssistantClient - Connection Management', () => {
       };
 
       // Try to call the listener (simulating race condition)
-      const addEventListenerCall = mockConnection.addEventListener.mock.calls.find(
-        call => call[0] === 'state_changed'
-      );
-      if (addEventListenerCall) {
-        addEventListenerCall[1](mockEvent);
+      if (eventCallbacks['state_changed']) {
+        eventCallbacks['state_changed'](mockEvent);
       }
 
       // Callback should not be called after disconnect
@@ -539,6 +563,8 @@ describe('HomeAssistantClient - Connection Management', () => {
 
     it('should allow resubscribing after disconnect and reconnect', async () => {
       await client.connect();
+
+      setupEventCallbackCapture();
 
       const callback1 = jest.fn();
       await client.subscribeToEvents('state_changed', callback1);
@@ -549,6 +575,9 @@ describe('HomeAssistantClient - Connection Management', () => {
       // Reconnect
       await client.connect();
 
+      // Reset event callback capture for new connection
+      setupEventCallbackCapture();
+
       const callback2 = jest.fn();
       await client.subscribeToEvents('state_changed', callback2);
 
@@ -558,11 +587,8 @@ describe('HomeAssistantClient - Connection Management', () => {
         data: { entity_id: 'light.living_room' },
       };
 
-      const addEventListenerCall = mockConnection.addEventListener.mock.calls.find(
-        call => call[0] === 'state_changed'
-      );
-      if (addEventListenerCall) {
-        addEventListenerCall[1](mockEvent);
+      if (eventCallbacks['state_changed']) {
+        eventCallbacks['state_changed'](mockEvent);
       }
 
       // Only callback2 should be called (callback1 was from previous connection)
@@ -956,12 +982,10 @@ describe('HomeAssistantClient - Connection Management', () => {
         (clientWithReconnect as any).connection = null;
         (clientWithReconnect as any).state = 'disconnected';
 
-        // Mock successful reconnection but addEventListener throws
+        // Mock successful reconnection but subscribeEvents throws
         const mockBadConnection = {
           ...mockConnection,
-          addEventListener: jest.fn().mockImplementation(() => {
-            throw new Error('addEventListener failed');
-          }),
+          subscribeEvents: jest.fn().mockRejectedValue(new Error('subscribeEvents failed')),
         };
         (haWebsocket.createConnection as jest.Mock).mockResolvedValueOnce(mockBadConnection);
 
@@ -1084,9 +1108,7 @@ describe('HomeAssistantClient - Connection Management', () => {
       it('should throw SubscriptionError when subscribing fails', async () => {
         await client.connect();
 
-        mockConnection.addEventListener.mockImplementation(() => {
-          throw new Error('Subscription failed');
-        });
+        mockConnection.subscribeEvents.mockRejectedValue(new Error('Subscription failed'));
 
         await expect(client.subscribeToEvents('state_changed', jest.fn())).rejects.toThrow(
           SubscriptionError
@@ -1442,9 +1464,7 @@ describe('HomeAssistantClient - Connection Management', () => {
       it('should handle subscription failures gracefully', async () => {
         await client.connect();
 
-        mockConnection.addEventListener.mockImplementation(() => {
-          throw new Error('Failed to subscribe');
-        });
+        mockConnection.subscribeEvents.mockRejectedValue(new Error('Failed to subscribe'));
 
         try {
           await client.subscribeToEvents('state_changed', jest.fn());
@@ -1458,9 +1478,7 @@ describe('HomeAssistantClient - Connection Management', () => {
         await client.connect();
         expect(client.isConnected()).toBe(true);
 
-        mockConnection.addEventListener.mockImplementation(() => {
-          throw new Error('Failed to subscribe');
-        });
+        mockConnection.subscribeEvents.mockRejectedValue(new Error('Failed to subscribe'));
 
         try {
           await client.subscribeToEvents('state_changed', jest.fn());
@@ -1475,9 +1493,7 @@ describe('HomeAssistantClient - Connection Management', () => {
       it('should include event type in SubscriptionError', async () => {
         await client.connect();
 
-        mockConnection.addEventListener.mockImplementation(() => {
-          throw new Error('Failed to subscribe');
-        });
+        mockConnection.subscribeEvents.mockRejectedValue(new Error('Failed to subscribe'));
 
         try {
           await client.subscribeToEvents('state_changed', jest.fn());
