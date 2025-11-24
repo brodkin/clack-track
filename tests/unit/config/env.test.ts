@@ -425,6 +425,66 @@ describe('Environment Configuration', () => {
 
         expect(config.dataSources.homeAssistant).toBeUndefined();
       });
+
+      it('should load Home Assistant reconnection settings when provided', () => {
+        process.env.HOME_ASSISTANT_URL = 'http://homeassistant.local:8123';
+        process.env.HOME_ASSISTANT_TOKEN = 'test-ha-token';
+        process.env.HOME_ASSISTANT_RECONNECT_DELAY = '3000';
+        process.env.HOME_ASSISTANT_MAX_RECONNECT_ATTEMPTS = '5';
+
+        const envModule = require('@/config/env');
+        const config = envModule.loadConfig();
+
+        expect(config.dataSources.homeAssistant).toBeDefined();
+        expect(config.dataSources.homeAssistant?.reconnectDelayMs).toBe(3000);
+        expect(config.dataSources.homeAssistant?.maxReconnectAttempts).toBe(5);
+      });
+
+      it('should use default reconnectDelayMs of 5000 when not provided', () => {
+        process.env.HOME_ASSISTANT_URL = 'http://homeassistant.local:8123';
+        process.env.HOME_ASSISTANT_TOKEN = 'test-ha-token';
+        delete process.env.HOME_ASSISTANT_RECONNECT_DELAY;
+
+        const envModule = require('@/config/env');
+        const config = envModule.loadConfig();
+
+        expect(config.dataSources.homeAssistant?.reconnectDelayMs).toBe(5000);
+      });
+
+      it('should use default maxReconnectAttempts of 10 when not provided', () => {
+        process.env.HOME_ASSISTANT_URL = 'http://homeassistant.local:8123';
+        process.env.HOME_ASSISTANT_TOKEN = 'test-ha-token';
+        delete process.env.HOME_ASSISTANT_MAX_RECONNECT_ATTEMPTS;
+
+        const envModule = require('@/config/env');
+        const config = envModule.loadConfig();
+
+        expect(config.dataSources.homeAssistant?.maxReconnectAttempts).toBe(10);
+      });
+
+      it('should construct WebSocket URL from HTTP URL', () => {
+        process.env.HOME_ASSISTANT_URL = 'http://homeassistant.local:8123';
+        process.env.HOME_ASSISTANT_TOKEN = 'test-ha-token';
+
+        const envModule = require('@/config/env');
+        const config = envModule.loadConfig();
+
+        expect(config.dataSources.homeAssistant?.websocketUrl).toBe(
+          'ws://homeassistant.local:8123/api/websocket'
+        );
+      });
+
+      it('should construct WebSocket URL from HTTPS URL', () => {
+        process.env.HOME_ASSISTANT_URL = 'https://homeassistant.local:8123';
+        process.env.HOME_ASSISTANT_TOKEN = 'test-ha-token';
+
+        const envModule = require('@/config/env');
+        const config = envModule.loadConfig();
+
+        expect(config.dataSources.homeAssistant?.websocketUrl).toBe(
+          'wss://homeassistant.local:8123/api/websocket'
+        );
+      });
     });
 
     describe('Database configuration', () => {

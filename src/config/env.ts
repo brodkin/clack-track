@@ -46,6 +46,9 @@ export interface EnvironmentConfig {
     homeAssistant?: {
       url: string;
       token: string;
+      websocketUrl?: string;
+      reconnectDelayMs?: number;
+      maxReconnectAttempts?: number;
     };
   };
 
@@ -120,10 +123,32 @@ export function loadConfig(): EnvironmentConfig {
           }
         : undefined,
       homeAssistant: process.env.HOME_ASSISTANT_URL
-        ? {
-            url: getRequiredEnv('HOME_ASSISTANT_URL'),
-            token: getRequiredEnv('HOME_ASSISTANT_TOKEN'),
-          }
+        ? (() => {
+            const url = getRequiredEnv('HOME_ASSISTANT_URL');
+            const token = getRequiredEnv('HOME_ASSISTANT_TOKEN');
+            const reconnectDelayMs = parseInt(
+              getOptionalEnv('HOME_ASSISTANT_RECONNECT_DELAY', '5000'),
+              10
+            );
+            const maxReconnectAttempts = parseInt(
+              getOptionalEnv('HOME_ASSISTANT_MAX_RECONNECT_ATTEMPTS', '10'),
+              10
+            );
+
+            // Construct WebSocket URL from HTTP/HTTPS URL
+            const websocketUrl = url
+              .replace(/^http:/, 'ws:')
+              .replace(/^https:/, 'wss:')
+              .concat('/api/websocket');
+
+            return {
+              url,
+              token,
+              websocketUrl,
+              reconnectDelayMs,
+              maxReconnectAttempts,
+            };
+          })()
         : undefined,
     },
 
