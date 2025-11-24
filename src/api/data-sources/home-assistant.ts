@@ -162,6 +162,12 @@ export class HomeAssistantClient {
    */
   private connectionListeners: Map<string, (event: HomeAssistantEvent) => void> = new Map();
   /**
+   * Connection unsubscribe functions map: eventType -> unsubscribe function
+   * Stores the unsubscribe functions returned by connection.subscribeEvents()
+   * These must be called to properly clean up WebSocket subscriptions
+   */
+  private connectionUnsubscribers: Map<string, UnsubscribeFunction> = new Map();
+  /**
    * Reconnection configuration with defaults
    */
   private reconnectionConfig: ReconnectionConfig;
@@ -334,6 +340,7 @@ export class HomeAssistantClient {
       // Clean up all event handlers and listeners
       this.eventHandlers.clear();
       this.connectionListeners.clear();
+      this.connectionUnsubscribers.clear();
       // Clear state cache
       this.stateCache.clear();
       this.allStatesCache = null;
@@ -494,7 +501,9 @@ export class HomeAssistantClient {
     // Subscribe to events using the connection's subscribeEvents method
     // The library's subscribeEvents returns a promise that resolves to an unsubscribe function
     try {
-      await this.connection.subscribeEvents(listener, eventType);
+      const unsubscribe = await this.connection.subscribeEvents(listener, eventType);
+      // Store the unsubscribe function for later cleanup
+      this.connectionUnsubscribers.set(eventType, unsubscribe);
     } catch (error) {
       // Remove the listener from our map if subscription fails
       this.connectionListeners.delete(eventType);
@@ -506,12 +515,15 @@ export class HomeAssistantClient {
    * Remove a connection listener for a specific event type
    */
   private removeConnectionListener(eventType: string): void {
-    const listener = this.connectionListeners.get(eventType);
-    if (listener && this.connection) {
-      // Note: Connection.removeEventListener only accepts 'ready' | 'disconnected' | 'reconnect-error'
-      // For custom event types, unsubscribe is handled separately
-      this.connectionListeners.delete(eventType);
+    // Call the unsubscribe function to clean up the WebSocket subscription
+    const unsubscribe = this.connectionUnsubscribers.get(eventType);
+    if (unsubscribe) {
+      unsubscribe();
+      this.connectionUnsubscribers.delete(eventType);
     }
+
+    // Clean up listener reference
+    this.connectionListeners.delete(eventType);
   }
 
   /**
@@ -538,9 +550,13 @@ export class HomeAssistantClient {
       return;
     }
 
-    // Clear all registered connection listeners
-    // Note: Connection.removeEventListener only accepts 'ready' | 'disconnected' | 'reconnect-error'
-    // For custom event types, unsubscribe is handled via subscribeEvents return value
+    // Call all unsubscribe functions to clean up WebSocket subscriptions
+    for (const unsubscribe of this.connectionUnsubscribers.values()) {
+      unsubscribe();
+    }
+
+    // Clear all maps
+    this.connectionUnsubscribers.clear();
     this.connectionListeners.clear();
   }
 

@@ -1,4 +1,9 @@
-import { generateCommand, testBoardCommand, testAICommand } from './commands/index.js';
+import {
+  generateCommand,
+  testBoardCommand,
+  testAICommand,
+  testHACommand,
+} from './commands/index.js';
 
 export async function runCLI(args: string[]): Promise<void> {
   const command = args[2]; // First two args are node and script path
@@ -34,6 +39,15 @@ export async function runCLI(args: string[]): Promise<void> {
       });
       break;
     }
+    case 'test-ha': {
+      const options = parseOptions(args);
+      await testHACommand({
+        list: typeof options.list === 'boolean' ? options.list : false,
+        entity: typeof options.entity === 'string' ? options.entity : undefined,
+        watch: typeof options.watch === 'string' ? options.watch : undefined,
+      });
+      break;
+    }
     default:
       console.log(`
 Clack Track CLI
@@ -42,16 +56,23 @@ Usage:
   npm run generate                  Generate and send major content update
   npm run test-board                Test Vestaboard connection
   npm run test:ai [options]         Test AI provider connectivity
+  npm run test:ha [options]         Test Home Assistant connectivity
 
 Available commands:
   generate      Generate new content and send to Vestaboard
   test-board    Test connection to Vestaboard
   test-ai       Test AI provider connectivity
+  test-ha       Test Home Assistant connectivity
 
 Test AI Options:
   --provider <name>    Provider to test: openai, anthropic, or all (default: all)
   --interactive        Enable interactive mode
   --prompt <text>      Custom prompt to test with
+
+Test HA Options:
+  --list               List all entities
+  --entity <id>        Get specific entity state (e.g., light.living_room)
+  --watch <event>      Subscribe to events for 30 seconds (e.g., state_changed)
       `);
   }
 }
