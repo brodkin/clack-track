@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 
-// Mock dotenv before importing env module
-jest.mock('dotenv/config', () => ({}));
+// Mock dotenv module to prevent loading real .env file during tests
+jest.mock('dotenv', () => ({
+  config: jest.fn(() => ({ parsed: {} })),
+}));
 
 describe('Environment Configuration', () => {
   // Clear module cache and reset environment before each test
@@ -36,13 +38,15 @@ describe('Environment Configuration', () => {
 
   describe('loadConfig function', () => {
     describe('Required environment variables', () => {
-      it('should throw error when VESTABOARD_LOCAL_API_KEY is missing', () => {
+      it('should load successfully when VESTABOARD_LOCAL_API_KEY is missing (optional)', () => {
         process.env.OPENAI_API_KEY = 'sk-test-key';
 
-        // Importing the module will throw because config is exported (line 133: export const config = loadConfig())
-        expect(() => {
-          require('@/config/env');
-        }).toThrow('Missing required environment variable: VESTABOARD_LOCAL_API_KEY');
+        // VESTABOARD is optional - should not throw even when missing
+        const envModule = require('@/config/env');
+        const config = envModule.loadConfig();
+
+        expect(config.vestaboard).toBeUndefined();
+        expect(config.ai.openai?.apiKey).toBe('sk-test-key');
       });
 
       it('should throw error when OpenAI provider is selected but OPENAI_API_KEY is missing', () => {
