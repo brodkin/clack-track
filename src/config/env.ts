@@ -1,6 +1,4 @@
-// Load environment variables FIRST before any config access
 import dotenv from 'dotenv';
-dotenv.config({ override: true });
 
 export interface EnvironmentConfig {
   // Application
@@ -72,6 +70,9 @@ function getOptionalEnv(key: string, defaultValue: string = ''): string {
 }
 
 export function loadConfig(): EnvironmentConfig {
+  // Load environment variables FIRST (lazy initialization)
+  dotenv.config({ override: true });
+
   const aiProvider = getOptionalEnv('AI_PROVIDER', 'openai') as 'openai' | 'anthropic';
   const nodeEnv = getOptionalEnv('NODE_ENV', 'development');
 
