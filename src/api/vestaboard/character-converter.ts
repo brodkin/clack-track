@@ -1,3 +1,22 @@
+/**
+ * Color codes for Vestaboard display
+ * Each code represents a specific color that can be displayed on the split-flap board
+ */
+export const COLOR_CODES = {
+  RED: 63,
+  ORANGE: 64,
+  YELLOW: 65,
+  GREEN: 66,
+  BLUE: 67,
+  VIOLET: 68,
+  WHITE: 69,
+} as const;
+
+/**
+ * Type representing a valid Vestaboard color code
+ */
+export type ColorCode = (typeof COLOR_CODES)[keyof typeof COLOR_CODES];
+
 const CHARACTER_MAP: Record<string, number> = {
   ' ': 0,
   A: 1,
@@ -94,12 +113,36 @@ function codeToChar(code: number): string {
 }
 
 /**
+ * Convert a numeric color code to its color name
+ *
+ * @param code - The numeric color code (63-69)
+ * @returns The color name (e.g., 'RED', 'BLUE') or null if invalid
+ *
+ * @example
+ * codeToColorName(63) // 'RED'
+ * codeToColorName(67) // 'BLUE'
+ * codeToColorName(99) // null
+ */
+export function codeToColorName(code: number): string | null {
+  const reverseMap: Record<number, string> = {
+    63: 'RED',
+    64: 'ORANGE',
+    65: 'YELLOW',
+    66: 'GREEN',
+    67: 'BLUE',
+    68: 'VIOLET',
+    69: 'WHITE',
+  };
+  return reverseMap[code] ?? null;
+}
+
+/**
  * Wraps text at word boundaries to fit within the specified width
  * @param text - Text to wrap
  * @param maxWidth - Maximum width of each line
  * @returns Array of wrapped lines
  */
-function wrapText(text: string, maxWidth: number): string[] {
+export function wrapText(text: string, maxWidth: number): string[] {
   if (!text || text.trim() === '') {
     return [''];
   }

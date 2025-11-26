@@ -17,6 +17,7 @@
     "test:ai": "node dist/index.js test-ai",
     "test:ai:openai": "node dist/index.js test-ai --provider openai",
     "test:ai:anthropic": "node dist/index.js test-ai --provider anthropic",
+    "frame": "node dist/index.js frame",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

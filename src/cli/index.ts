@@ -4,6 +4,7 @@ import {
   testAICommand,
   testHACommand,
 } from './commands/index.js';
+import { frameCommand } from './commands/frame.js';
 
 export async function runCLI(args: string[]): Promise<void> {
   const command = args[2]; // First two args are node and script path
@@ -48,6 +49,16 @@ export async function runCLI(args: string[]): Promise<void> {
       });
       break;
     }
+    case 'frame': {
+      const options = parseOptions(args);
+      const textArg = args[3] && !args[3].startsWith('--') ? args[3] : undefined;
+      await frameCommand({
+        text: typeof options.text === 'string' ? options.text : textArg,
+        skipWeather: options['skip-weather'] === true,
+        skipColors: options['skip-colors'] === true,
+      });
+      break;
+    }
     default:
       console.log(`
 Clack Track CLI
@@ -57,12 +68,14 @@ Usage:
   npm run test-board                Test Vestaboard connection
   npm run test:ai [options]         Test AI provider connectivity
   npm run test:ha [options]         Test Home Assistant connectivity
+  npm run frame [text] [options]    Generate and preview a Vestaboard frame
 
 Available commands:
   generate      Generate new content and send to Vestaboard
   test-board    Test connection to Vestaboard
   test-ai       Test AI provider connectivity
   test-ha       Test Home Assistant connectivity
+  frame         Generate and preview a Vestaboard frame
 
 Test AI Options:
   --provider <name>    Provider to test: openai, anthropic, or all (default: all)
@@ -73,6 +86,10 @@ Test HA Options:
   --list               List all entities
   --entity <id>        Get specific entity state (e.g., light.living_room)
   --watch <event>      Subscribe to events for 30 seconds (e.g., state_changed)
+
+Frame Options:
+  --skip-weather       Skip weather/HA integration
+  --skip-colors        Skip AI color selection
       `);
   }
 }
