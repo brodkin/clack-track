@@ -52,6 +52,12 @@ export class VestaboardHTTPClient {
         if (!response.ok) {
           throw await this.handleErrorResponse(response);
         }
+
+        // Vestaboard API quirk: POST returns 201 with error message in body
+        const text = await response.text();
+        if (text.toLowerCase().includes('invalid api key')) {
+          throw new VestaboardAuthenticationError('Authentication failed: Invalid API key', 401);
+        }
       } catch (error) {
         clearTimeout(timeoutId);
         throw this.handleRequestError(error);
@@ -91,6 +97,12 @@ export class VestaboardHTTPClient {
 
         if (!response.ok) {
           throw await this.handleErrorResponse(response);
+        }
+
+        // Vestaboard API quirk: POST returns 201 with error message in body
+        const text = await response.text();
+        if (text.toLowerCase().includes('invalid api key')) {
+          throw new VestaboardAuthenticationError('Authentication failed: Invalid API key', 401);
         }
       } catch (error) {
         clearTimeout(timeoutId);

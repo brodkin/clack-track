@@ -62,6 +62,7 @@ describe('VestaboardHTTPClient', () => {
     it('should send POST request with correct headers and body', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(''),
         status: 200,
       });
 
@@ -83,6 +84,7 @@ describe('VestaboardHTTPClient', () => {
     it('should include AbortSignal for timeout', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(''),
         status: 200,
       });
 
@@ -176,6 +178,7 @@ describe('VestaboardHTTPClient', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
+          text: () => Promise.resolve(''),
           status: 200,
         });
 
@@ -254,6 +257,7 @@ describe('VestaboardHTTPClient', () => {
     it('should send POST request with animation payload', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(''),
         status: 200,
       });
 
@@ -276,6 +280,7 @@ describe('VestaboardHTTPClient', () => {
     it('should use default animation values if not provided', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(''),
         status: 200,
       });
 
@@ -301,6 +306,7 @@ describe('VestaboardHTTPClient', () => {
       for (const strategy of strategies) {
         mockFetch.mockResolvedValueOnce({
           ok: true,
+          text: () => Promise.resolve(''),
           status: 200,
         });
 
@@ -326,6 +332,7 @@ describe('VestaboardHTTPClient', () => {
     it('should send GET request with correct headers', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(''),
         status: 200,
         json: async () => mockResponseLayout,
       });
@@ -346,6 +353,7 @@ describe('VestaboardHTTPClient', () => {
     it('should return parsed layout', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
+        text: () => Promise.resolve(''),
         status: 200,
         json: async () => mockResponseLayout,
       });
@@ -374,6 +382,7 @@ describe('VestaboardHTTPClient', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
+          text: () => Promise.resolve(''),
           status: 200,
           json: async () => mockResponseLayout,
         });
