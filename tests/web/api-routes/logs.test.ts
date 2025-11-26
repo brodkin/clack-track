@@ -44,13 +44,13 @@ describe('Logs API Routes', () => {
     it('should return recent logs with default limit', async () => {
       const mockLogs: LogRecord[] = [
         {
-          id: 'log-1',
+          id: 1,
           level: 'info',
           message: 'Content generated successfully',
           timestamp: new Date('2025-01-15T10:00:00Z'),
         },
         {
-          id: 'log-2',
+          id: 2,
           level: 'error',
           message: 'Failed to connect to API',
           timestamp: new Date('2025-01-15T09:55:00Z'),
@@ -80,7 +80,7 @@ describe('Logs API Routes', () => {
       mockRequest.query = { level: 'error' };
       const mockLogs: LogRecord[] = [
         {
-          id: 'log-1',
+          id: 1,
           level: 'error',
           message: 'API connection failed',
           timestamp: new Date('2025-01-15T10:00:00Z'),
@@ -177,7 +177,7 @@ describe('Logs API Routes', () => {
       mockRequest.query = { level: 'warn', limit: '25' };
       const mockLogs: LogRecord[] = [
         {
-          id: 'log-1',
+          id: 1,
           level: 'warn',
           message: 'Rate limit approaching',
           timestamp: new Date('2025-01-15T10:00:00Z'),

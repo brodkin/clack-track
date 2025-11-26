@@ -44,7 +44,7 @@ describe('Voting API Routes', () => {
   describe('POST /api/vote', () => {
     it('should submit a good vote successfully', async () => {
       const mockVote: VoteRecord = {
-        id: 'vote-123',
+        id: 123,
         contentId: 'content-456',
         vote: 'good',
         votedAt: new Date('2025-01-15T10:00:00Z'),
@@ -74,7 +74,7 @@ describe('Voting API Routes', () => {
 
     it('should submit a bad vote successfully', async () => {
       const mockVote: VoteRecord = {
-        id: 'vote-789',
+        id: 789,
         contentId: 'content-456',
         vote: 'bad',
         votedAt: new Date('2025-01-15T10:05:00Z'),

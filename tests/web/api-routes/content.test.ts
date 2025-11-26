@@ -44,7 +44,7 @@ describe('Content API Routes', () => {
   describe('GET /api/content/latest', () => {
     it('should return latest content when available', async () => {
       const mockContent: ContentRecord = {
-        id: 'content-123',
+        id: 123,
         text: 'Test content',
         type: 'major',
         generatedAt: new Date('2025-01-15T10:00:00Z'),
@@ -110,7 +110,7 @@ describe('Content API Routes', () => {
     it('should return content history with default limit', async () => {
       const mockHistory: ContentRecord[] = [
         {
-          id: 'content-1',
+          id: 1,
           text: 'Content 1',
           type: 'major',
           generatedAt: new Date('2025-01-15T10:00:00Z'),

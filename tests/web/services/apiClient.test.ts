@@ -21,7 +21,7 @@ describe('API Client', () => {
   describe('getLatestContent', () => {
     it('should fetch the latest content successfully', async () => {
       const mockContent: ContentRecord = {
-        id: 'content-123',
+        id: 123,
         text: 'Motivational Quote',
         type: 'major',
         generatedAt: new Date('2025-01-01T12:00:00Z'),
@@ -93,7 +93,7 @@ describe('API Client', () => {
     it('should fetch content history with default params', async () => {
       const mockContents: ContentRecord[] = [
         {
-          id: 'content-1',
+          id: 1,
           text: 'Quote 1',
           type: 'major',
           generatedAt: new Date('2025-01-01T12:00:00Z'),
@@ -101,7 +101,7 @@ describe('API Client', () => {
           aiProvider: 'openai',
         },
         {
-          id: 'content-2',
+          id: 2,
           text: 'Quote 2',
           type: 'minor',
           generatedAt: new Date('2025-01-01T13:00:00Z'),
@@ -213,7 +213,7 @@ describe('API Client', () => {
   describe('submitVote', () => {
     it('should submit a good vote successfully', async () => {
       const mockVote: VoteRecord = {
-        id: 'vote-123',
+        id: 123,
         contentId: 'content-123',
         vote: 'good',
         votedAt: new Date('2025-01-01T12:00:00Z'),
@@ -249,7 +249,7 @@ describe('API Client', () => {
 
     it('should submit a bad vote successfully', async () => {
       const mockVote: VoteRecord = {
-        id: 'vote-456',
+        id: 456,
         contentId: 'content-123',
         vote: 'bad',
         votedAt: new Date('2025-01-01T12:00:00Z'),
@@ -310,13 +310,13 @@ describe('API Client', () => {
     it('should fetch logs with default params', async () => {
       const mockLogs: LogRecord[] = [
         {
-          id: 'log-1',
+          id: 1,
           level: 'info',
           message: 'Content generated successfully',
           timestamp: new Date('2025-01-01T12:00:00Z'),
         },
         {
-          id: 'log-2',
+          id: 2,
           level: 'error',
           message: 'Failed to send to Vestaboard',
           timestamp: new Date('2025-01-01T12:01:00Z'),
