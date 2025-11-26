@@ -247,9 +247,12 @@ describe('generateFrame', () => {
         COLOR_CODES.VIOLET,
       ];
 
-      // Mock ColorBarService.getInstance to return mock instance
+      // Mock ColorBarService.getInstance to return ColorResult
       (ColorBarService.getInstance as jest.Mock).mockReturnValue({
-        getColors: jest.fn().mockResolvedValue(mockColors),
+        getColors: jest.fn().mockResolvedValue({
+          colors: mockColors,
+          cacheHit: false,
+        }),
       });
 
       const options: FrameOptions = {
@@ -319,6 +322,154 @@ describe('generateFrame', () => {
     });
   });
 
+  describe('debug timing output', () => {
+    it('should not include timing when debug is false', async () => {
+      const result = await generateFrame({ text: 'TEST', debug: false });
+      expect(result.timing).toBeUndefined();
+      expect(result.totalMs).toBeUndefined();
+    });
+
+    it('should not include timing when debug is undefined', async () => {
+      const result = await generateFrame({ text: 'TEST' });
+      expect(result.timing).toBeUndefined();
+      expect(result.totalMs).toBeUndefined();
+    });
+
+    it('should include timing when debug is true', async () => {
+      const result = await generateFrame({ text: 'TEST', debug: true });
+      expect(result.timing).toBeDefined();
+      expect(result.totalMs).toBeDefined();
+      expect(Array.isArray(result.timing)).toBe(true);
+      expect(result.timing!.length).toBeGreaterThan(0);
+    });
+
+    it('should include ColorBarService timing with cacheHit status', async () => {
+      const mockColors = [
+        COLOR_CODES.RED,
+        COLOR_CODES.ORANGE,
+        COLOR_CODES.YELLOW,
+        COLOR_CODES.GREEN,
+        COLOR_CODES.BLUE,
+        COLOR_CODES.VIOLET,
+      ];
+
+      // Mock ColorBarService to return ColorResult with cacheHit
+      (ColorBarService.getInstance as jest.Mock).mockReturnValue({
+        getColors: jest.fn().mockResolvedValue({
+          colors: mockColors,
+          cacheHit: true,
+        }),
+      });
+
+      const result = await generateFrame({
+        text: 'TEST',
+        aiProvider: mockAIProvider,
+        debug: true,
+      });
+
+      const colorTiming = result.timing?.find(t => t.operation.includes('ColorBar'));
+      expect(colorTiming).toBeDefined();
+      expect(colorTiming?.durationMs).toBeGreaterThanOrEqual(0);
+      expect(colorTiming?.cacheHit).toBe(true);
+    });
+
+    it('should include WeatherService timing', async () => {
+      const mockWeatherData: WeatherData = {
+        temperature: 72,
+        temperatureUnit: '°F',
+        condition: 'sunny',
+        colorCode: COLOR_CODES.GREEN,
+      };
+
+      (WeatherService as jest.MockedClass<typeof WeatherService>).mockImplementation(
+        () =>
+          ({
+            getWeather: jest.fn().mockResolvedValue(mockWeatherData),
+          }) as unknown as InstanceType<typeof WeatherService>
+      );
+
+      const result = await generateFrame({
+        text: 'TEST',
+        homeAssistant: mockHAClient,
+        debug: true,
+      });
+
+      const weatherTiming = result.timing?.find(t => t.operation.includes('Weather'));
+      expect(weatherTiming).toBeDefined();
+      expect(weatherTiming?.durationMs).toBeGreaterThanOrEqual(0);
+      expect(weatherTiming?.cacheHit).toBeUndefined(); // Weather doesn't have cache
+    });
+
+    it('should include info bar formatting timing', async () => {
+      const result = await generateFrame({ text: 'TEST', debug: true });
+      const infoBarTiming = result.timing?.find(t => t.operation.includes('info bar'));
+      expect(infoBarTiming).toBeDefined();
+      expect(infoBarTiming?.durationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should include frame assembly timing', async () => {
+      const result = await generateFrame({ text: 'TEST', debug: true });
+      const assemblyTiming = result.timing?.find(t => t.operation.includes('assembled'));
+      expect(assemblyTiming).toBeDefined();
+      expect(assemblyTiming?.durationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should calculate correct total time', async () => {
+      const result = await generateFrame({ text: 'TEST', debug: true });
+      expect(result.totalMs).toBeGreaterThanOrEqual(0);
+
+      // Total should be >= sum of individual operations
+      const sum = result.timing!.reduce((acc, t) => acc + t.durationMs, 0);
+      expect(result.totalMs).toBeGreaterThanOrEqual(sum);
+    });
+
+    it('should track timing for all operations when all features enabled', async () => {
+      const mockWeatherData: WeatherData = {
+        temperature: 72,
+        temperatureUnit: '°F',
+        condition: 'sunny',
+        colorCode: COLOR_CODES.GREEN,
+      };
+
+      const mockColors = [
+        COLOR_CODES.RED,
+        COLOR_CODES.ORANGE,
+        COLOR_CODES.YELLOW,
+        COLOR_CODES.GREEN,
+        COLOR_CODES.BLUE,
+        COLOR_CODES.VIOLET,
+      ];
+
+      (WeatherService as jest.MockedClass<typeof WeatherService>).mockImplementation(
+        () =>
+          ({
+            getWeather: jest.fn().mockResolvedValue(mockWeatherData),
+          }) as unknown as InstanceType<typeof WeatherService>
+      );
+
+      (ColorBarService.getInstance as jest.Mock).mockReturnValue({
+        getColors: jest.fn().mockResolvedValue({
+          colors: mockColors,
+          cacheHit: false,
+        }),
+      });
+
+      const result = await generateFrame({
+        text: 'TEST',
+        homeAssistant: mockHAClient,
+        aiProvider: mockAIProvider,
+        debug: true,
+      });
+
+      // Should have timing for all operations
+      expect(result.timing!.length).toBe(4); // Weather, ColorBar, InfoBar, Assembly
+      expect(result.timing!.find(t => t.operation.includes('Weather'))).toBeDefined();
+      expect(result.timing!.find(t => t.operation.includes('ColorBar'))).toBeDefined();
+      expect(result.timing!.find(t => t.operation.includes('info bar'))).toBeDefined();
+      expect(result.timing!.find(t => t.operation.includes('assembled'))).toBeDefined();
+    });
+  });
+
   describe('full integration', () => {
     it('should generate complete frame with all features', async () => {
       const mockWeatherData: WeatherData = {
@@ -346,7 +497,10 @@ describe('generateFrame', () => {
       );
 
       (ColorBarService.getInstance as jest.Mock).mockReturnValue({
-        getColors: jest.fn().mockResolvedValue(mockColors),
+        getColors: jest.fn().mockResolvedValue({
+          colors: mockColors,
+          cacheHit: false,
+        }),
       });
 
       const options: FrameOptions = {

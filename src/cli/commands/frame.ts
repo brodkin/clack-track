@@ -29,6 +29,7 @@ export interface FrameCommandOptions {
   text?: string;
   skipWeather?: boolean;
   skipColors?: boolean;
+  verbose?: boolean;
 }
 
 /**
@@ -63,6 +64,7 @@ export async function frameCommand(options: FrameCommandOptions): Promise<void> 
       text,
       homeAssistant: haClient,
       aiProvider,
+      debug: options.verbose,
     });
 
     // Display warnings
@@ -72,6 +74,20 @@ export async function frameCommand(options: FrameCommandOptions): Promise<void> 
         console.log(`  ⚠ ${warning}`);
       }
       console.log('');
+    }
+
+    // Display timing when verbose is enabled and timing data exists
+    if (options.verbose && result.timing) {
+      console.log('\nTiming:');
+      for (const entry of result.timing) {
+        const cacheStatus =
+          entry.cacheHit !== undefined ? ` [CACHE ${entry.cacheHit ? 'HIT' : 'MISS'}]` : '';
+        const prefix = entry === result.timing[result.timing.length - 1] ? '└─' : '├─';
+        console.log(
+          `${prefix} ${entry.operation}${cacheStatus} ... ${entry.durationMs.toLocaleString()}ms`
+        );
+      }
+      console.log(`Total: ${result.totalMs?.toLocaleString()}ms\n`);
     }
 
     // Display ASCII preview

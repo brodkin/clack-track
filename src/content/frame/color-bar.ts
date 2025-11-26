@@ -18,6 +18,14 @@ export interface ColorBarServiceConfig {
 }
 
 /**
+ * Result from ColorBarService.getColors()
+ */
+export interface ColorResult {
+  colors: number[]; // Array of 6 color codes (63-69)
+  cacheHit: boolean; // True if returned from cache, false if fetched from AI
+}
+
+/**
  * Default fallback colors when AI is unavailable
  * Order: BLUE, GREEN, YELLOW, ORANGE, RED, VIOLET
  * Represents a cool-to-warm gradient suitable for all seasons
@@ -74,20 +82,29 @@ export class ColorBarService {
    * Returns cached colors if valid, otherwise fetches from AI
    * Falls back to FALLBACK_COLORS on error
    */
-  async getColors(): Promise<number[]> {
+  async getColors(): Promise<ColorResult> {
     // Return cached colors if valid
     if (this.isCacheValid()) {
-      return this.cache!.colors;
+      return {
+        colors: this.cache!.colors,
+        cacheHit: true,
+      };
     }
 
     // Otherwise fetch from Haiku
     try {
       const seasonalColors = await this.fetchFromHaiku();
       this.cache = seasonalColors;
-      return seasonalColors.colors;
+      return {
+        colors: seasonalColors.colors,
+        cacheHit: false,
+      };
     } catch (error) {
       console.error('Failed to fetch colors from AI, using fallback:', error);
-      return FALLBACK_COLORS;
+      return {
+        colors: FALLBACK_COLORS,
+        cacheHit: false,
+      };
     }
   }
 

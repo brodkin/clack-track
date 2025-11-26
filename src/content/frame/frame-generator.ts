@@ -10,11 +10,20 @@ export interface FrameOptions {
   homeAssistant?: HomeAssistantClient;
   aiProvider?: AIProvider;
   dateTime?: Date; // For testing - defaults to new Date()
+  debug?: boolean; // Enable timing output
+}
+
+export interface TimingEntry {
+  operation: string;
+  durationMs: number;
+  cacheHit?: boolean; // Only for ColorBarService
 }
 
 export interface FrameResult {
   layout: number[][]; // 6 rows × 22 columns
   warnings: string[];
+  timing?: TimingEntry[]; // Only present when debug: true
+  totalMs?: number; // Only present when debug: true
 }
 
 /**
@@ -28,7 +37,9 @@ export interface FrameResult {
  * @returns Complete frame layout with any warnings
  */
 export async function generateFrame(options: FrameOptions): Promise<FrameResult> {
+  const startTime = performance.now();
   const warnings: string[] = [];
+  const timing: TimingEntry[] = [];
 
   // 1. Process and validate text content
   const { lines, contentWarnings } = processContent(options.text);
@@ -39,7 +50,16 @@ export async function generateFrame(options: FrameOptions): Promise<FrameResult>
   if (options.homeAssistant) {
     try {
       const weatherService = new WeatherService(options.homeAssistant);
+      const weatherStart = performance.now();
       weatherData = await weatherService.getWeather();
+      const weatherDuration = Math.round(performance.now() - weatherStart);
+
+      if (options.debug) {
+        timing.push({
+          operation: 'WeatherService.getWeather()',
+          durationMs: weatherDuration,
+        });
+      }
     } catch (error) {
       warnings.push(
         'Weather unavailable: ' + (error instanceof Error ? error.message : 'Unknown error')
@@ -52,7 +72,19 @@ export async function generateFrame(options: FrameOptions): Promise<FrameResult>
   if (options.aiProvider) {
     try {
       const colorService = ColorBarService.getInstance(options.aiProvider);
-      colorBar = await colorService.getColors();
+      const colorStart = performance.now();
+      const colorResult = await colorService.getColors();
+      const colorDuration = Math.round(performance.now() - colorStart);
+
+      colorBar = colorResult.colors;
+
+      if (options.debug) {
+        timing.push({
+          operation: 'ColorBarService.getColors()',
+          durationMs: colorDuration,
+          cacheHit: colorResult.cacheHit,
+        });
+      }
     } catch (error) {
       warnings.push(
         'Color bar unavailable: ' + (error instanceof Error ? error.message : 'Unknown error')
@@ -61,13 +93,38 @@ export async function generateFrame(options: FrameOptions): Promise<FrameResult>
   }
 
   // 4. Generate info bar
+  const infoBarStart = performance.now();
   const infoBar = formatInfoBar({
     weatherData: weatherData ?? undefined,
     dateTime: options.dateTime,
   });
+  const infoBarDuration = Math.round(performance.now() - infoBarStart);
+
+  if (options.debug) {
+    timing.push({
+      operation: 'Format info bar',
+      durationMs: infoBarDuration,
+    });
+  }
 
   // 5. Compose the complete 6×22 layout
+  const layoutStart = performance.now();
   const layout = composeLayout(lines, infoBar, colorBar);
+  const layoutDuration = Math.round(performance.now() - layoutStart);
+
+  if (options.debug) {
+    timing.push({
+      operation: 'Frame assembled',
+      durationMs: layoutDuration,
+    });
+  }
+
+  const totalMs = Math.round(performance.now() - startTime);
+
+  // Return with optional timing data
+  if (options.debug) {
+    return { layout, warnings, timing, totalMs };
+  }
 
   return { layout, warnings };
 }

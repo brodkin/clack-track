@@ -56,6 +56,7 @@ export async function runCLI(args: string[]): Promise<void> {
         text: typeof options.text === 'string' ? options.text : textArg,
         skipWeather: options['skip-weather'] === true,
         skipColors: options['skip-colors'] === true,
+        verbose: options.verbose === true || options.v === true,
       });
       break;
     }
@@ -90,6 +91,7 @@ Test HA Options:
 Frame Options:
   --skip-weather       Skip weather/HA integration
   --skip-colors        Skip AI color selection
+  --verbose, -v        Show timing breakdown for service calls
       `);
   }
 }

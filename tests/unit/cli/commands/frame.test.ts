@@ -382,4 +382,139 @@ describe('CLI frame command', () => {
       expect(previewCalls[0]).toMatch(/[0-9]+/);
     });
   });
+
+  describe('verbose flag', () => {
+    it('should not display timing when verbose is false', async () => {
+      await frameCommand({ verbose: false });
+
+      expect(consoleLogSpy).not.toHaveBeenCalledWith(expect.stringContaining('Timing:'));
+    });
+
+    it('should not display timing when verbose is undefined', async () => {
+      await frameCommand({});
+
+      expect(consoleLogSpy).not.toHaveBeenCalledWith(expect.stringContaining('Timing:'));
+    });
+
+    it('should display timing when verbose is true and timing data exists', async () => {
+      const { generateFrame } = await import('../../../../src/content/frame/index.js');
+      jest.mocked(generateFrame).mockResolvedValueOnce({
+        layout: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+        warnings: [],
+        timing: [
+          { operation: 'ColorBarService.getColors()', durationMs: 100, cacheHit: false },
+          { operation: 'Frame assembled', durationMs: 5 },
+        ],
+        totalMs: 105,
+      });
+
+      await frameCommand({ verbose: true });
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Timing:'));
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('ColorBarService'));
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('CACHE MISS'));
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Total:'));
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('105'));
+    });
+
+    it('should pass debug flag to generateFrame when verbose is true', async () => {
+      const { generateFrame } = await import('../../../../src/content/frame/index.js');
+
+      await frameCommand({ verbose: true });
+
+      expect(generateFrame).toHaveBeenCalledWith(expect.objectContaining({ debug: true }));
+    });
+
+    it('should not pass debug flag to generateFrame when verbose is false', async () => {
+      const { generateFrame } = await import('../../../../src/content/frame/index.js');
+
+      await frameCommand({ verbose: false });
+
+      expect(generateFrame).toHaveBeenCalledWith(expect.objectContaining({ debug: false }));
+    });
+
+    it('should display CACHE HIT when cacheHit is true', async () => {
+      const { generateFrame } = await import('../../../../src/content/frame/index.js');
+      jest.mocked(generateFrame).mockResolvedValueOnce({
+        layout: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+        warnings: [],
+        timing: [{ operation: 'ColorBarService.getColors()', durationMs: 5, cacheHit: true }],
+        totalMs: 5,
+      });
+
+      await frameCommand({ verbose: true });
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('CACHE HIT'));
+    });
+
+    it('should display timing without cache status when cacheHit is undefined', async () => {
+      const { generateFrame } = await import('../../../../src/content/frame/index.js');
+      jest.mocked(generateFrame).mockResolvedValueOnce({
+        layout: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+        warnings: [],
+        timing: [{ operation: 'WeatherService.getWeather()', durationMs: 156 }],
+        totalMs: 156,
+      });
+
+      await frameCommand({ verbose: true });
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('WeatherService'));
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('156'));
+      expect(consoleLogSpy).not.toHaveBeenCalledWith(expect.stringContaining('CACHE'));
+    });
+
+    it('should use correct tree characters for timing entries', async () => {
+      const { generateFrame } = await import('../../../../src/content/frame/index.js');
+      jest.mocked(generateFrame).mockResolvedValueOnce({
+        layout: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+        warnings: [],
+        timing: [
+          { operation: 'ColorBarService.getColors()', durationMs: 2341, cacheHit: false },
+          { operation: 'WeatherService.getWeather()', durationMs: 156 },
+          { operation: 'formatInfoBar()', durationMs: 2 },
+          { operation: 'Frame assembled', durationMs: 12 },
+        ],
+        totalMs: 2511,
+      });
+
+      await frameCommand({ verbose: true });
+
+      // Should use ├─ for all entries except the last
+      const logCalls = consoleLogSpy.mock.calls.map(call => call[0]).join('\n');
+      expect(logCalls).toContain('├─ ColorBarService');
+      expect(logCalls).toContain('├─ WeatherService');
+      expect(logCalls).toContain('├─ formatInfoBar');
+      // Last entry should use └─
+      expect(logCalls).toContain('└─ Frame assembled');
+    });
+
+    it('should format numbers with locale string (thousands separator)', async () => {
+      const { generateFrame } = await import('../../../../src/content/frame/index.js');
+      jest.mocked(generateFrame).mockResolvedValueOnce({
+        layout: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+        warnings: [],
+        timing: [{ operation: 'ColorBarService.getColors()', durationMs: 2341, cacheHit: false }],
+        totalMs: 2511,
+      });
+
+      await frameCommand({ verbose: true });
+
+      // Should format 2341 with comma (2,341)
+      const logCalls = consoleLogSpy.mock.calls.map(call => call[0]).join('\n');
+      expect(logCalls).toMatch(/2,341|2\.341/); // Different locales use different separators
+      expect(logCalls).toMatch(/2,511|2\.511/);
+    });
+
+    it('should not display timing when verbose is true but timing data is missing', async () => {
+      const { generateFrame } = await import('../../../../src/content/frame/index.js');
+      jest.mocked(generateFrame).mockResolvedValueOnce({
+        layout: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+        warnings: [],
+      });
+
+      await frameCommand({ verbose: true });
+
+      expect(consoleLogSpy).not.toHaveBeenCalledWith(expect.stringContaining('Timing:'));
+    });
+  });
 });

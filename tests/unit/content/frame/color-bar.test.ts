@@ -42,21 +42,21 @@ describe('ColorBarService', () => {
   describe('getColors', () => {
     it('should return cached colors when cache is valid', async () => {
       // First call - fetches from AI
-      const firstColors = await service.getColors();
-      expect(firstColors).toEqual([67, 66, 65, 64, 63, 68]);
+      const firstResult = await service.getColors();
+      expect(firstResult.colors).toEqual([67, 66, 65, 64, 63, 68]);
 
       // Change mock response
       mockProvider.mockResponse = JSON.stringify([63, 64, 65, 66, 67, 68]);
 
       // Second call - should return cached colors, not new ones
-      const secondColors = await service.getColors();
-      expect(secondColors).toEqual([67, 66, 65, 64, 63, 68]); // Original cached colors
+      const secondResult = await service.getColors();
+      expect(secondResult.colors).toEqual([67, 66, 65, 64, 63, 68]); // Original cached colors
     });
 
     it('should fetch from Haiku when cache is expired', async () => {
       // First call
-      const firstColors = await service.getColors();
-      expect(firstColors).toEqual([67, 66, 65, 64, 63, 68]);
+      const firstResult = await service.getColors();
+      expect(firstResult.colors).toEqual([67, 66, 65, 64, 63, 68]);
 
       // Advance time by 25 hours (beyond 24-hour cache TTL)
       jest.advanceTimersByTime(25 * 60 * 60 * 1000);
@@ -65,36 +65,36 @@ describe('ColorBarService', () => {
       mockProvider.mockResponse = JSON.stringify([63, 64, 65, 66, 67, 68]);
 
       // Second call - should fetch new colors
-      const secondColors = await service.getColors();
-      expect(secondColors).toEqual([63, 64, 65, 66, 67, 68]);
+      const secondResult = await service.getColors();
+      expect(secondResult.colors).toEqual([63, 64, 65, 66, 67, 68]);
     });
 
     it('should return FALLBACK_COLORS on AI error', async () => {
       mockProvider.shouldFail = true;
 
-      const colors = await service.getColors();
-      expect(colors).toEqual(FALLBACK_COLORS);
+      const result = await service.getColors();
+      expect(result.colors).toEqual(FALLBACK_COLORS);
     });
 
     it('should return FALLBACK_COLORS when AI returns invalid JSON', async () => {
       mockProvider.mockResponse = 'invalid json';
 
-      const colors = await service.getColors();
-      expect(colors).toEqual(FALLBACK_COLORS);
+      const result = await service.getColors();
+      expect(result.colors).toEqual(FALLBACK_COLORS);
     });
 
     it('should return FALLBACK_COLORS when AI returns invalid array length', async () => {
       mockProvider.mockResponse = JSON.stringify([67, 66, 65]); // Only 3 colors
 
-      const colors = await service.getColors();
-      expect(colors).toEqual(FALLBACK_COLORS);
+      const result = await service.getColors();
+      expect(result.colors).toEqual(FALLBACK_COLORS);
     });
 
     it('should return FALLBACK_COLORS when AI returns non-numeric values', async () => {
       mockProvider.mockResponse = JSON.stringify([67, 'blue', 65, 64, 63, 68]);
 
-      const colors = await service.getColors();
-      expect(colors).toEqual(FALLBACK_COLORS);
+      const result = await service.getColors();
+      expect(result.colors).toEqual(FALLBACK_COLORS);
     });
 
     it('should use custom cache TTL from config', async () => {
@@ -111,8 +111,8 @@ describe('ColorBarService', () => {
       mockProvider.mockResponse = JSON.stringify([63, 64, 65, 66, 67, 68]);
 
       // Should still use cache
-      const colors = await customService.getColors();
-      expect(colors).toEqual([67, 66, 65, 64, 63, 68]); // Original cached colors
+      const result = await customService.getColors();
+      expect(result.colors).toEqual([67, 66, 65, 64, 63, 68]); // Original cached colors
     });
   });
 
@@ -126,8 +126,8 @@ describe('ColorBarService', () => {
       mockProvider.mockResponse = JSON.stringify([63, 64, 65, 66, 67, 68]);
 
       // Should use cache
-      const colors = await service.getColors();
-      expect(colors).toEqual([67, 66, 65, 64, 63, 68]); // Cached colors
+      const result = await service.getColors();
+      expect(result.colors).toEqual([67, 66, 65, 64, 63, 68]); // Cached colors
     });
 
     it('should treat cache as invalid when expired', async () => {
@@ -139,14 +139,14 @@ describe('ColorBarService', () => {
       mockProvider.mockResponse = JSON.stringify([63, 64, 65, 66, 67, 68]);
 
       // Should fetch new colors
-      const colors = await service.getColors();
-      expect(colors).toEqual([63, 64, 65, 66, 67, 68]); // New colors
+      const result = await service.getColors();
+      expect(result.colors).toEqual([63, 64, 65, 66, 67, 68]); // New colors
     });
 
     it('should treat cache as invalid when null (initial state)', async () => {
       // First call ever - no cache
-      const colors = await service.getColors();
-      expect(colors).toEqual([67, 66, 65, 64, 63, 68]);
+      const result = await service.getColors();
+      expect(result.colors).toEqual([67, 66, 65, 64, 63, 68]);
       expect(mockProvider.mockResponse).toBeTruthy(); // AI was called
     });
   });
@@ -163,8 +163,8 @@ describe('ColorBarService', () => {
       mockProvider.mockResponse = JSON.stringify([63, 64, 65, 66, 67, 68]);
 
       // Should fetch new colors
-      const colors = await service.getColors();
-      expect(colors).toEqual([63, 64, 65, 66, 67, 68]);
+      const result = await service.getColors();
+      expect(result.colors).toEqual([63, 64, 65, 66, 67, 68]);
     });
   });
 
@@ -294,21 +294,21 @@ describe('ColorBarService', () => {
 
       // First call - creates instance and fetches colors
       const instance1 = ColorBarService.getInstance(mockProvider);
-      const firstColors = await instance1.getColors();
-      expect(firstColors).toEqual([67, 66, 65, 64, 63, 68]);
+      const firstResult = await instance1.getColors();
+      expect(firstResult.colors).toEqual([67, 66, 65, 64, 63, 68]);
 
       // Change mock response
       mockProvider.mockResponse = JSON.stringify([63, 64, 65, 66, 67, 68]);
 
       // Second call - gets same instance, should return cached colors
       const instance2 = ColorBarService.getInstance(mockProvider);
-      const secondColors = await instance2.getColors();
+      const secondResult = await instance2.getColors();
 
       // Should be same instance
       expect(instance1).toBe(instance2);
 
       // Should return cached colors, not new ones
-      expect(secondColors).toEqual([67, 66, 65, 64, 63, 68]);
+      expect(secondResult.colors).toEqual([67, 66, 65, 64, 63, 68]);
     });
 
     it('should clear cache when clearInstance is called', async () => {
@@ -326,13 +326,13 @@ describe('ColorBarService', () => {
 
       // New call - should create new instance and fetch new colors
       const instance2 = ColorBarService.getInstance(mockProvider);
-      const colors = await instance2.getColors();
+      const result = await instance2.getColors();
 
       // Should be different instances
       expect(instance1).not.toBe(instance2);
 
       // Should fetch new colors
-      expect(colors).toEqual([63, 64, 65, 66, 67, 68]);
+      expect(result.colors).toEqual([63, 64, 65, 66, 67, 68]);
     });
 
     it('should maintain cache state across multiple getInstance calls within TTL', async () => {
@@ -353,6 +353,56 @@ describe('ColorBarService', () => {
       expect(generateSpy).toHaveBeenCalledTimes(1); // Still only 1 call
 
       // Same instance
+      expect(instance1).toBe(instance2);
+    });
+  });
+
+  describe('getColors cache status', () => {
+    it('should return cacheHit: false on first call (cache miss)', async () => {
+      const result = await service.getColors();
+      expect(result.cacheHit).toBe(false);
+      expect(result.colors).toEqual([67, 66, 65, 64, 63, 68]);
+    });
+
+    it('should return cacheHit: true on subsequent calls within TTL', async () => {
+      await service.getColors(); // First call - cache miss
+      const result = await service.getColors(); // Second call - cache hit
+      expect(result.cacheHit).toBe(true);
+      expect(result.colors).toEqual([67, 66, 65, 64, 63, 68]);
+    });
+
+    it('should return cacheHit: false after cache expires', async () => {
+      await service.getColors();
+      jest.advanceTimersByTime(25 * 60 * 60 * 1000); // 25 hours
+      mockProvider.mockResponse = JSON.stringify([63, 64, 65, 66, 67, 68]);
+      const result = await service.getColors();
+      expect(result.cacheHit).toBe(false);
+      expect(result.colors).toEqual([63, 64, 65, 66, 67, 68]);
+    });
+
+    it('should return cacheHit: false after clearCache()', async () => {
+      await service.getColors();
+      service.clearCache();
+      const result = await service.getColors();
+      expect(result.cacheHit).toBe(false);
+      expect(result.colors).toEqual([67, 66, 65, 64, 63, 68]);
+    });
+
+    it('should return cacheHit: false when AI fails and returns fallback', async () => {
+      mockProvider.shouldFail = true;
+      const result = await service.getColors();
+      expect(result.cacheHit).toBe(false);
+      expect(result.colors).toEqual(FALLBACK_COLORS);
+    });
+
+    it('should return cacheHit: true even after singleton getInstance calls', async () => {
+      ColorBarService.clearInstance();
+      const instance1 = ColorBarService.getInstance(mockProvider);
+      await instance1.getColors(); // Cache miss
+
+      const instance2 = ColorBarService.getInstance(mockProvider);
+      const result = await instance2.getColors(); // Cache hit
+      expect(result.cacheHit).toBe(true);
       expect(instance1).toBe(instance2);
     });
   });
