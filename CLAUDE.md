@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with code in this repository.
 
 ## Project Overview
 
-Clack Track creates engaging content for Vestaboard split-flap displays using AI-powered generation. The system operates with two distinct update modes:
+Clack Track creates AI-powered content for Vestaboard split-flap displays. The system operates with two distinct update modes:
 
 **Major Updates** - Full content refreshes generating new quotes, news, weather, or custom content. Triggered by:
 
@@ -16,213 +16,81 @@ Clack Track creates engaging content for Vestaboard split-flap displays using AI
 
 **Web Interface** - Provides a debugging interface to view latest content, vote on quality (good/bad for AI training), and access debug logs.
 
+**Headless Mode** - Set `WEB_SERVER_ENABLED=false` to run CLI commands without web server (useful for testing, CI/CD, Docker containers).
+
 **Tech Stack**: Node.js 20, TypeScript with ES modules (Node16 module resolution), TDD methodology with 80%+ test coverage requirements.
 
-## Essential Commands
-
-### Development
-
-```bash
-npm run dev           # Start development server with nodemon hot reload
-npm run build         # Compile TypeScript to ./dist
-npm start             # Run production build from ./dist/index.js
-```
-
-### Testing
-
-```bash
-npm test                   # Run all tests
-npm run test:unit          # Unit tests only (tests/unit/**)
-npm run test:integration   # Integration tests only (tests/integration/**)
-npm run test:e2e           # End-to-end tests (tests/e2e/**) with 60s timeout
-npm run test:web           # Web UI tests with jsdom environment
-npm run test:all           # All tests with coverage report
-npm run test:watch         # Watch mode for development
-npm run test:coverage      # Generate detailed coverage report
-```
-
-**IMPORTANT**: All tests MUST be run from worktrees under `./trees/`, never from the root directory. The project enforces 80% coverage thresholds for branches, functions, lines, and statements.
-
-### Code Quality
-
-```bash
-npm run lint          # Run ESLint
-npm run lint:fix      # Auto-fix linting issues
-npm run format        # Format with Prettier
-npm run typecheck     # TypeScript type checking without building
-```
-
-**CRITICAL**: Always run `npm run lint:fix` before committing to prevent hook failures. Husky pre-commit hooks enforce linting and commitlint standards.
+**Note:** This project uses Beads for issue tracking, not Jira.
 
 ## Architecture Overview
 
 ### Core Component Flow
 
 ```
+EventHandler ← HomeAssistantClient (WebSocket)
+     ↓
 ContentGenerator → AI Providers → Formatters → VestaboardClient → Vestaboard Device
                 ↗ Data Sources ↗
               ↗ PromptLoader ↗
+
+CronScheduler → EventHandler → ContentGenerator (scheduled updates)
 ```
 
-### Key Architectural Layers
+### Layer Purposes
 
-**1. API Layer** (`src/api/`)
+- **API Layer** - Vestaboard HTTP client, AI provider abstraction (factory pattern), data sources (RSS, RapidAPI, Home Assistant WebSocket)
+- **Content Layer** - Generator orchestration, prompt loading from `prompts/`, text formatting for 6×22 character display
+- **Storage Layer** - Database connection, models, repositories for content/votes/logs
+- **Scheduler Layer** - Cron scheduling for periodic updates, event-driven update triggers
+- **Web Layer** - Express server with security middleware (Helmet.js, rate limiting, compression, CORS)
 
-- `vestaboard.ts` - VestaboardClient handles local API communication (HTTP to board)
-- `ai/` - AI provider abstractions (OpenAI, Anthropic)
-  - `openai.ts` - GPT model integration
-  - `anthropic.ts` - Claude model integration
-- `data-sources/` - External data integrations
-  - `rss.ts` - RSS feed parsing for news
-  - `rapidapi.ts` - RapidAPI service wrapper
-  - `home-assistant.ts` - Home Assistant integration
+## Key Application Concepts
 
-**2. Content Layer** (`src/content/`)
+### Vestaboard Display Constraints
 
-- `generator.ts` - ContentGenerator orchestrates AI content creation
-- `prompt-loader.ts` - Loads system/user prompts from `prompts/` directory
-- `generators/` - Content generation strategies
-  - `major-update.ts` - Full content refreshes (quotes, news, etc.)
-  - `minor-update.ts` - Time/weather-only updates
-- `formatters/` - Vestaboard layout formatting
-  - `text-layout.ts` - Formats text for 6 rows × 22 chars display constraint
-
-**3. Storage Layer** (`src/storage/`)
-
-- `database.ts` - Database connection management
-- `models/` - Data models (content, logs, votes)
-- `repositories/` - Data access patterns (content-repo, vote-repo)
-
-**4. Scheduler Layer** (`src/scheduler/`)
-
-- `cron.ts` - CronScheduler for periodic content updates
-- `event-handler.ts` - Event-driven update triggers
-
-**5. Web Layer** (`src/web/`)
-
-- `server.ts` - WebServer debugging interface (planned, not implemented)
-- `routes/` - HTTP endpoints for content management, voting, logs
-- `pages/` - Static HTML pages for debugging UI
-
-**6. AI Provider Layer** (`src/api/ai/`)
-
-- `openai.ts` - OpenAIClient implements AIProvider interface for GPT models
-- `anthropic.ts` - AnthropicClient implements AIProvider interface for Claude models
-- `index.ts` - Factory pattern (createAIProvider) for dependency injection
-- Error types: `RateLimitError`, `AuthenticationError`, `InvalidRequestError`
-- Connection validation: `validateConnection()` method tests API connectivity
-- Token tracking: All responses include usage metrics
-
-### Environment Configuration
-
-Required variables in `.env`:
-
-- `VESTABOARD_LOCAL_API_KEY` - From Vestaboard app Settings → Local API
-- `VESTABOARD_LOCAL_API_URL` - Board IP (typically `http://192.168.1.x:7000`)
-- `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` - AI provider credentials
-- `UPDATE_INTERVAL` - Content refresh interval in minutes (default: 60)
-- `DEFAULT_CONTENT_TYPE` - quote, weather, news, or custom
-
-### AI Provider Configuration
-
-- `AI_PROVIDER` - Select provider: `openai` or `anthropic`
-- `OPENAI_API_KEY` - OpenAI API key (required if provider=openai)
-- `ANTHROPIC_API_KEY` - Anthropic API key (required if provider=anthropic)
-- `OPENAI_MODEL` - Override default GPT model (optional)
-- `ANTHROPIC_MODEL` - Override default Claude model (optional)
-
-Test connectivity: `npm run test:ai`
+- 6 rows × 22 characters = 132 total characters
+- Limited character set (uppercase letters, numbers, symbols)
+- All content formatted via `text-layout.ts` before sending
 
 ### Prompts System
 
-The `prompts/` directory contains AI prompt templates:
+- `prompts/system/` - Role and constraint definitions (major/minor update base prompts)
+- `prompts/user/` - Content type specifications (motivational, news-summary, weather-focus)
+- Loaded by `PromptLoader`, combined into templates for AI providers
 
-- `system/` - Role and constraint definitions
-  - `major-update-base.txt` - System prompt for full content updates
-  - `minor-update-base.txt` - System prompt for time/weather updates
-- `user/` - Content type specifications
-  - `motivational.txt` - Quotes and inspiration
-  - `news-summary.txt` - RSS feed summaries
-  - `weather-focus.txt` - Weather-centric displays
+### AI Provider Abstraction
 
-Prompts are loaded via `PromptLoader` and combined into templates for AI providers.
+- Factory pattern: `createAIProvider()` in `src/api/ai/index.ts`
+- Implementations: `OpenAIClient` (GPT models), `AnthropicClient` (Claude models)
+- Common interface: `generate()` method and `validateConnection()`
+- Config-driven selection via `AI_PROVIDER` environment variable
+- Error types: `RateLimitError`, `AuthenticationError`, `InvalidRequestError`
+
+### Home Assistant Integration
+
+WebSocket client for event-driven content updates. Supports:
+
+- Event subscriptions with multiple subscribers per event type
+- State queries with optional TTL-based caching
+- Service calls to control HA devices/automations
+- Automatic reconnection with exponential backoff
+- Connection validation with latency measurement
+
+**For detailed API documentation**, see `src/api/data-sources/CLAUDE.md` (loaded on-demand when working with HA integration).
+
+### Security Features
+
+- **Helmet.js** - Security headers (CSP, X-Frame-Options, HSTS, etc.)
+- **Rate Limiting** - 100 requests per 15 minutes on `/api/*` routes
+  - Configurable via `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX_REQUESTS`
+  - Returns 429 status with `RateLimit-*` headers
+- **Middleware Order** - Helmet → Compression → CORS → Rate Limit → Static → JSON → Routes
 
 ### Module Resolution
 
-- **Path Aliases**: `@/` maps to `src/`, `@tests/` maps to `tests/`
-- **Module System**: ES modules with `.js` extensions in imports (TypeScript requirement)
-- **Type Definitions**: Centralized in `src/types/` with `index.ts` aggregation
-
-### Test Architecture
-
-Four isolated test environments configured in `jest.config.cjs`:
-
-1. **unit** - Node environment, mocks all externals
-2. **integration** - Node environment, mocks only external APIs
-3. **e2e** - Node environment, 60s timeout for full workflows
-4. **web** - jsdom environment for DOM testing
-
-All external dependencies (Vestaboard API, OpenAI, Anthropic) MUST be mocked in tests. Fixtures stored in `tests/fixtures/*.json`. Shared mocks in `tests/__mocks__/`.
-
-## Development Workflow
-
-### Git Worktree Pattern (Mandatory)
-
-```bash
-# Create worktree for feature (NOT Jira-based - this project doesn't use Jira)
-mkdir -p trees
-git worktree add ./trees/feature-name -b feature/feature-name main
-
-# All development work happens in worktree
-cd ./trees/feature-name
-npm install  # Install dependencies in worktree
-
-# Run tests from worktree
-npm test
-
-# After merge to main
-git worktree remove ./trees/feature-name
-git branch -d feature/feature-name
-```
-
-**CRITICAL**: LLMs must NEVER work in the root directory. All edits, tests, and builds occur in worktrees under `./trees/`.
-
-### Commit Message Standards
-
-Enforced by commitlint (husky pre-commit hook):
-
-```
-<type>(<scope>): <subject> (max 72 chars)
-
-<body>
-```
-
-Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`
-
-**Note**: This project does NOT require Jira references in commits (unlike standard SPICE workflow).
-
-## Important Constraints
-
-### Vestaboard Display Limits
-
-- 6 rows × 22 characters per row = 132 total characters
-- Limited character set (uppercase letters, numbers, symbols)
-- Content must be formatted by `text-layout.ts` before sending
-
-### TypeScript Configuration
-
-- Target: ES2022
-- Module: Node16 (ES modules with `.js` imports)
-- Strict mode enabled
-- Output: `./dist` directory
-- Source maps enabled for debugging
-
-### Testing Requirements
-
-- 80% minimum coverage (enforced by Jest)
-- All external APIs mocked (no real HTTP calls)
-- Tests isolated in `tests/` directory (excluded from build)
-- Coverage reports in `coverage/` directory
+- Path aliases: `@/` → `src/`, `@tests/` → `tests/`
+- ES modules with `.js` extensions in imports (TypeScript requirement)
+- Type definitions: Centralized in `src/types/` with `index.ts` aggregation
 
 ## Common Development Tasks
 
@@ -242,21 +110,36 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`
 
 ### Adding a New AI Provider
 
-1. Implement client in `src/api/ai/<provider>.ts`
+1. Implement `AIProvider` interface in `src/api/ai/<provider>.ts`
 2. Export from `src/api/ai/index.ts`
 3. Add API key to `.env.example`
 4. Create mock responses in `tests/__mocks__/ai-providers.ts`
 
-## Key Files to Reference
+## Important Constraints
 
-- **Entry point**: `src/index.ts` (minimal stub, calls `main()`)
-- **Type definitions**: `src/types/index.ts` (central type exports)
-- **Configuration**: `src/config/env.ts` (environment variable loading)
-- **Test setup**: `tests/setup/jest.setup.ts` (global test configuration)
-- **Commitlint config**: `commitlint.config.cjs` (commit message rules)
-- **Jest config**: `jest.config.cjs` (multi-environment test setup)
-- **AI Providers**: `src/api/ai/openai.ts`, `src/api/ai/anthropic.ts` (AI client implementations)
-- **AI Factory**: `src/api/ai/index.ts` (createAIProvider factory function)
-- **AI Mocks**: `tests/__mocks__/ai-providers.ts` (test mock factories)
-- **AI Fixtures**: `tests/fixtures/openai-responses.json`, `tests/fixtures/anthropic-responses.json`
-- **CLI Tools**: `src/cli/commands/test-ai.ts` (AI connectivity testing command)
+### Testing Requirements
+
+- 80% minimum coverage enforced by Jest (branches, functions, lines, statements)
+- All external APIs mocked (no real HTTP calls)
+- Four isolated test environments: unit, integration, e2e (60s timeout), web (jsdom)
+- Tests MUST run in worktrees under `./trees/`, never from root directory
+- Coverage reports in `coverage/` directory
+
+### TypeScript Configuration
+
+- Target: ES2022, Module: Node16 (ES modules)
+- Strict mode enabled, output: `./dist`
+- Source maps enabled for debugging
+
+## Quick Reference
+
+| Need              | Source                                                                            |
+| ----------------- | --------------------------------------------------------------------------------- |
+| npm scripts       | `npm run` or `package.json`                                                       |
+| Environment vars  | `.env.example`                                                                    |
+| TypeScript config | `tsconfig.json`                                                                   |
+| Test config       | `jest.config.cjs`                                                                 |
+| Commit rules      | `commitlint.config.cjs`                                                           |
+| HA API docs       | `src/api/data-sources/CLAUDE.md`                                                  |
+| AI fixtures       | `tests/fixtures/openai-responses.json`, `tests/fixtures/anthropic-responses.json` |
+| Test mocks        | `tests/__mocks__/`                                                                |

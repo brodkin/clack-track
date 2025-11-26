@@ -20,6 +20,7 @@ The application provides a web debugging interface for content management, quali
 - 📰 **Rich Data Sources** - RSS feeds, RapidAPI integrations, and weather data
 - 🎯 **Prompt Management** - Organized system and user prompts for customizable AI behavior
 - 🌐 **Web Debugging Interface** - View content, vote on quality, and access debug logs
+- 🛡️ **Rate Limiting** - API rate limiting (100 req/15min) with configurable thresholds
 - 🚀 **Built with Node.js 20** - Modern JavaScript runtime with TypeScript
 - 🐳 **Devcontainer Support** - Consistent development environments
 - 🌲 **Git Worktree Workflow** - Parallel development made easy
@@ -96,6 +97,42 @@ A debugging web interface provides:
 - **Quality Voting** - Flag content as good or bad for AI training
 - **Debug Logs** - System logs, API calls, and error tracking
 - **Content History** - Review past generated content
+
+### API Rate Limiting
+
+The web API is protected with rate limiting to prevent abuse and ensure fair usage:
+
+- **Default Policy**: 100 requests per 15 minutes per IP address
+- **Scope**: Applied to all `/api/*` routes
+- **Response**: Returns `429 Too Many Requests` when limit exceeded
+- **Headers**: Includes `Retry-After` header indicating when to retry
+- **Configuration**: Customizable via environment variables
+
+#### Rate Limit Configuration
+
+Configure rate limits in your `.env` file:
+
+```bash
+# Rate limiting (optional)
+RATE_LIMIT_WINDOW_MS=900000      # Time window in milliseconds (default: 15 minutes)
+RATE_LIMIT_MAX_REQUESTS=100       # Maximum requests per window (default: 100)
+```
+
+#### Rate Limit Response Format
+
+When rate limit is exceeded, the API returns:
+
+```json
+HTTP/1.1 429 Too Many Requests
+Retry-After: 897
+Content-Type: application/json
+
+{
+  "error": "Too many requests from this IP, please try again later"
+}
+```
+
+The `Retry-After` header indicates seconds until the rate limit window resets.
 
 ## Prerequisites
 

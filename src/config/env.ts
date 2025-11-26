@@ -1,6 +1,4 @@
-// Load environment variables FIRST before any config access
 import dotenv from 'dotenv';
-dotenv.config({ override: true });
 
 export interface EnvironmentConfig {
   // Application
@@ -9,6 +7,7 @@ export interface EnvironmentConfig {
 
   // Web Server
   web: {
+    enabled: boolean;
     port: number;
     host: string;
     corsEnabled: boolean;
@@ -72,6 +71,9 @@ function getOptionalEnv(key: string, defaultValue: string = ''): string {
 }
 
 export function loadConfig(): EnvironmentConfig {
+  // Load environment variables FIRST (lazy initialization)
+  dotenv.config({ override: true });
+
   const aiProvider = getOptionalEnv('AI_PROVIDER', 'openai') as 'openai' | 'anthropic';
   const nodeEnv = getOptionalEnv('NODE_ENV', 'development');
 
@@ -80,6 +82,7 @@ export function loadConfig(): EnvironmentConfig {
     port: parseInt(getOptionalEnv('PORT', '3000'), 10),
 
     web: {
+      enabled: getOptionalEnv('WEB_SERVER_ENABLED', 'true') !== 'false',
       port: parseInt(getOptionalEnv('WEB_PORT', '3000'), 10),
       host: getOptionalEnv('WEB_HOST', '0.0.0.0'),
       corsEnabled:

@@ -33,7 +33,7 @@
  * @example
  * ```typescript
  * const client = new HomeAssistantClient({
- *   url: 'ws://homeassistant.local:8123/api/websocket',
+ *   url: 'wss://homeassistant.local:8123/api/websocket',
  *   token: 'your-long-lived-token',
  *   reconnection: {
  *     enabled: true,
@@ -59,7 +59,18 @@
  *
  * await client.disconnect();
  * ```
+ *
+ * @remarks
+ * **Security**: Use `wss://` (WebSocket Secure) instead of `ws://` in production to encrypt
+ * WebSocket traffic over TLS. This prevents man-in-the-middle attacks and protects your
+ * long-lived access token. Requires a valid TLS/SSL certificate on your Home Assistant server.
+ * For local development without HTTPS, `ws://` may be used but is not recommended.
  */
+
+// Polyfill WebSocket for Node.js (required by home-assistant-js-websocket)
+import WebSocket from 'ws';
+// @ts-expect-error - Polyfill globalThis.WebSocket for home-assistant-js-websocket library
+globalThis.WebSocket = WebSocket;
 
 import {
   createConnection,

@@ -12,13 +12,20 @@ async function main() {
   const command = args[2];
 
   // If a CLI command is provided, run CLI mode
-  if (command && ['generate', 'test-board', 'test-ai'].includes(command)) {
+  if (command && ['generate', 'test-board', 'test-ai', 'test-ha', 'frame'].includes(command)) {
     await runCLI(args);
     return;
   }
 
   // Otherwise, start web server
   console.log('Clack Track starting...');
+
+  // Check if web server is enabled
+  if (!config.web.enabled) {
+    console.log('Web server disabled via WEB_SERVER_ENABLED=false');
+    console.log('Running in headless mode (CLI commands only)');
+    return;
+  }
 
   // Initialize web server
   const webServer = new WebServer({
