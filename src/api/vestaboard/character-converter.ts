@@ -108,7 +108,7 @@ export function charToCode(char: string): number {
  * @param code - Character code
  * @returns Character (space for unknown codes)
  */
-function codeToChar(code: number): string {
+export function codeToChar(code: number): string {
   return CODE_TO_CHAR_MAP[code] ?? ' ';
 }
 

@@ -46,6 +46,14 @@ function codesToString(codes: number[]): string {
     36: '0',
     44: '-',
     50: ':',
+    // Color codes render as symbols in test output
+    63: '[R]',
+    64: '[O]',
+    65: '[Y]',
+    66: '[G]',
+    67: '[B]',
+    68: '[V]',
+    69: '[W]',
   };
   return codes.map(code => codeToChar[code] || '?').join('');
 }
@@ -78,8 +86,8 @@ describe('Info Bar Formatter', () => {
       const result = formatInfoBar(data);
 
       // Verify presence of weather data by checking character codes
-      // G=7, 7=33, 2=28, F=6
-      expect(result).toContain(charToCode('G')); // Color indicator
+      // Color code 66 (GREEN), 7=33, 2=28, F=6
+      expect(result).toContain(66); // Actual GREEN color code
       expect(result).toContain(charToCode('7')); // Temperature digit
       expect(result).toContain(charToCode('2')); // Temperature digit
       expect(result).toContain(charToCode('F')); // Unit
@@ -217,7 +225,7 @@ describe('Info Bar Formatter', () => {
   });
 
   describe('color character mapping', () => {
-    it('should map RED color code correctly', () => {
+    it('should output RED color code correctly', () => {
       const weatherData: WeatherData = {
         temperature: 95,
         temperatureUnit: '°F',
@@ -230,12 +238,14 @@ describe('Info Bar Formatter', () => {
       };
 
       const result = formatInfoBar(data);
-      const resultStr = codesToString(result);
 
-      expect(resultStr).toContain('R95F');
+      // Should contain actual color code 63 (RED)
+      expect(result).toContain(63);
+      const resultStr = codesToString(result);
+      expect(resultStr).toContain('[R]95F');
     });
 
-    it('should map ORANGE color code correctly', () => {
+    it('should output ORANGE color code correctly', () => {
       const weatherData: WeatherData = {
         temperature: 85,
         temperatureUnit: '°F',
@@ -248,12 +258,14 @@ describe('Info Bar Formatter', () => {
       };
 
       const result = formatInfoBar(data);
-      const resultStr = codesToString(result);
 
-      expect(resultStr).toContain('O85F');
+      // Should contain actual color code 64 (ORANGE)
+      expect(result).toContain(64);
+      const resultStr = codesToString(result);
+      expect(resultStr).toContain('[O]85F');
     });
 
-    it('should map YELLOW color code correctly', () => {
+    it('should output YELLOW color code correctly', () => {
       const weatherData: WeatherData = {
         temperature: 75,
         temperatureUnit: '°F',
@@ -266,16 +278,18 @@ describe('Info Bar Formatter', () => {
       };
 
       const result = formatInfoBar(data);
-      const resultStr = codesToString(result);
 
-      expect(resultStr).toContain('Y75F');
+      // Should contain actual color code 65 (YELLOW)
+      expect(result).toContain(65);
+      const resultStr = codesToString(result);
+      expect(resultStr).toContain('[Y]75F');
     });
 
-    it('should return space for invalid color code', () => {
+    it('should output invalid color code as-is', () => {
       const weatherData: WeatherData = {
         temperature: 72,
         temperatureUnit: '°F',
-        colorCode: 99, // Invalid
+        colorCode: 99, // Invalid - not a valid Vestaboard color
         description: 'Sunny',
       };
       const data: InfoBarData = {
@@ -284,12 +298,11 @@ describe('Info Bar Formatter', () => {
       };
 
       const result = formatInfoBar(data);
-      const resultStr = codesToString(result);
 
-      // Should have space before temperature
-      expect(resultStr).toContain(' 72F');
-      expect(resultStr).not.toContain('R72F');
-      expect(resultStr).not.toContain('G72F');
+      // Invalid color code 99 is inserted as-is (shows as ? in string conversion)
+      expect(result).toContain(99);
+      const resultStr = codesToString(result);
+      expect(resultStr).toContain('?72F');
     });
   });
 

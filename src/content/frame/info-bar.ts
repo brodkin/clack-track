@@ -9,8 +9,12 @@ export interface InfoBarData {
 /**
  * Format the info bar for the bottom row of the Vestaboard frame.
  *
- * Format: "{DAY} {DATE}{MONTH} {TIME}   {WEATHER_COLOR}{TEMP}"
- * Example: "WED 26NOV 10:30   G72F" (22 characters total)
+ * Format: "{DAY} {DATE}{MONTH} {TIME} {WEATHER_COLOR}{TEMP}"
+ * Example: "WED 26NOV 10:30 [G]72F " (21 chars + 1 color bar = 22 total)
+ * Where [G] is an actual color code (66) that renders as a colored block.
+ *
+ * Uses single space between all components. Trailing padding reserves
+ * space for triple-digit temperatures (e.g., 100F).
  *
  * The last character (column 21) is reserved for the color bar,
  * so this function returns 21 character codes for columns 0-20.
@@ -24,30 +28,33 @@ export function formatInfoBar(data: InfoBarData): number[] {
 
   // Format components
   const day = formatDay(now); // "WED" (3 chars)
-  const dateMonth = formatDateMonth(now); // "26NOV" (5 chars)
+  const dateMonth = formatDateMonth(now); // "26NOV" (5 chars) or "5NOV" (4 chars)
   const time = formatTime(now); // "10:30" (5 chars)
 
-  // Build info string without weather
-  // Format: "WED 26NOV 10:30   " = 18 chars (with padding)
+  // Build info string with single space separators
   let infoStr = `${day} ${dateMonth} ${time}`;
+  let colorCodePosition = -1; // Track where to insert actual color code
 
   if (data.weatherData) {
-    // Add weather: "  G72F" or "  O85F" etc.
-    const colorChar = getColorChar(data.weatherData.colorCode);
+    // Add weather with single space and placeholder for color
+    // Use space as placeholder, we'll replace with actual color code after
     const tempStr = formatTemperature(data.weatherData);
-    // Pad to position weather at right side
-    // Total width: 21 chars (column 21 is color bar)
-    // Weather portion: colorChar + temp = 1 + 3-4 chars
-    const weatherStr = `${colorChar}${tempStr}`;
-    const paddingNeeded = 21 - infoStr.length - weatherStr.length;
-    infoStr = infoStr + ' '.repeat(Math.max(0, paddingNeeded)) + weatherStr;
+    colorCodePosition = infoStr.length + 1; // Position after the space separator
+    infoStr = `${infoStr}  ${tempStr}`; // Two spaces: separator + placeholder for color
   }
 
-  // Ensure exactly 21 characters
+  // Pad to exactly 21 characters (trailing padding reserves space for 100F temps)
   infoStr = infoStr.padEnd(21, ' ').substring(0, 21);
 
   // Convert to character codes
-  return [...infoStr].map(char => charToCode(char));
+  const codes = [...infoStr].map(char => charToCode(char));
+
+  // Replace placeholder with actual color code for colored display
+  if (data.weatherData && colorCodePosition >= 0 && colorCodePosition < 21) {
+    codes[colorCodePosition] = data.weatherData.colorCode;
+  }
+
+  return codes;
 }
 
 function formatDay(date: Date): string {
@@ -67,21 +74,6 @@ function formatTime(date: Date): string {
   const hours = date.getHours().toString().padStart(2, '0');
   const minutes = date.getMinutes().toString().padStart(2, '0');
   return `${hours}:${minutes}`;
-}
-
-function getColorChar(colorCode: number): string {
-  // Map color code to single-letter display character
-  // These will render as colored tiles on the Vestaboard
-  const colorChars: Record<number, string> = {
-    63: 'R', // RED
-    64: 'O', // ORANGE
-    65: 'Y', // YELLOW
-    66: 'G', // GREEN
-    67: 'B', // BLUE
-    68: 'V', // VIOLET
-    69: 'W', // WHITE
-  };
-  return colorChars[colorCode] ?? ' ';
 }
 
 function formatTemperature(weather: WeatherData): string {

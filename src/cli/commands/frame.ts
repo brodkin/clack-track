@@ -3,7 +3,7 @@
  */
 
 import { generateFrame } from '../../content/frame/index.js';
-import { codeToColorName } from '../../api/vestaboard/character-converter.js';
+import { codeToColorName, codeToChar } from '../../api/vestaboard/character-converter.js';
 import { HomeAssistantClient } from '../../api/data-sources/home-assistant.js';
 import { createAIProvider, AIProviderType } from '../../api/ai/index.js';
 import type { AIProvider } from '../../types/index.js';
@@ -188,13 +188,4 @@ function renderColorBlock(colorName: string): string {
 
   const bg = bgColors[colorName] ?? '';
   return `${bg} ${colors.reset}`;
-}
-
-function codeToChar(code: number): string {
-  // Map Vestaboard codes back to characters
-  if (code === 0) return ' ';
-  if (code >= 1 && code <= 26) return String.fromCharCode(64 + code); // A-Z
-  if (code >= 27 && code <= 36) return String.fromCharCode(code === 36 ? 48 : 48 + code - 26); // 0-9
-  // Punctuation and special chars would need more mapping
-  return '?';
 }
