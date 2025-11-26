@@ -7,6 +7,7 @@ export interface EnvironmentConfig {
 
   // Web Server
   web: {
+    enabled: boolean;
     port: number;
     host: string;
     corsEnabled: boolean;
@@ -81,6 +82,7 @@ export function loadConfig(): EnvironmentConfig {
     port: parseInt(getOptionalEnv('PORT', '3000'), 10),
 
     web: {
+      enabled: getOptionalEnv('WEB_SERVER_ENABLED', 'true') !== 'false',
       port: parseInt(getOptionalEnv('WEB_PORT', '3000'), 10),
       host: getOptionalEnv('WEB_HOST', '0.0.0.0'),
       corsEnabled:

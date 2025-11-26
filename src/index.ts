@@ -20,6 +20,13 @@ async function main() {
   // Otherwise, start web server
   console.log('Clack Track starting...');
 
+  // Check if web server is enabled
+  if (!config.web.enabled) {
+    console.log('Web server disabled via WEB_SERVER_ENABLED=false');
+    console.log('Running in headless mode (CLI commands only)');
+    return;
+  }
+
   // Initialize web server
   const webServer = new WebServer({
     port: config.web.port,

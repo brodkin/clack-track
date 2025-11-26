@@ -358,6 +358,42 @@ describe('Environment Configuration', () => {
 
         expect(config.web.staticPath).toBe('./custom/dist');
       });
+
+      it('should enable web server when WEB_SERVER_ENABLED=true', () => {
+        process.env.WEB_SERVER_ENABLED = 'true';
+
+        const envModule = require('@/config/env');
+        const config = envModule.loadConfig();
+
+        expect(config.web.enabled).toBe(true);
+      });
+
+      it('should disable web server when WEB_SERVER_ENABLED=false', () => {
+        process.env.WEB_SERVER_ENABLED = 'false';
+
+        const envModule = require('@/config/env');
+        const config = envModule.loadConfig();
+
+        expect(config.web.enabled).toBe(false);
+      });
+
+      it('should default web server to enabled when WEB_SERVER_ENABLED is not set', () => {
+        delete process.env.WEB_SERVER_ENABLED;
+
+        const envModule = require('@/config/env');
+        const config = envModule.loadConfig();
+
+        expect(config.web.enabled).toBe(true);
+      });
+
+      it('should treat any value other than "false" as enabled', () => {
+        process.env.WEB_SERVER_ENABLED = 'yes';
+
+        const envModule = require('@/config/env');
+        const config = envModule.loadConfig();
+
+        expect(config.web.enabled).toBe(true);
+      });
     });
 
     describe('Data sources configuration', () => {
@@ -575,6 +611,7 @@ describe('Environment Configuration', () => {
       expect(config).toHaveProperty('port');
 
       // Web server
+      expect(config.web).toHaveProperty('enabled');
       expect(config.web).toHaveProperty('port');
       expect(config.web).toHaveProperty('host');
       expect(config.web).toHaveProperty('corsEnabled');
