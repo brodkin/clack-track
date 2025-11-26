@@ -1,7 +1,7 @@
 import { HomeAssistantClient } from '../api/data-sources/index.js';
 import { MajorUpdateGenerator } from '../content/generators/index.js';
 import { MinorUpdateGenerator } from '../content/generators/index.js';
-import { VestaboardClient } from '../api/vestaboard.js';
+import type { VestaboardClient } from '../api/vestaboard/index.js';
 import { HomeAssistantEvent } from '../types/home-assistant.js';
 import { log, warn } from '../utils/logger.js';
 
@@ -48,7 +48,7 @@ export class EventHandler {
       const content = await this.majorUpdateGenerator.generate(event.data);
 
       // Send to Vestaboard
-      await this.vestaboardClient.sendMessage({ text: content.text });
+      await this.vestaboardClient.sendText(content.text);
 
       // Update minor generator with new content
       this.minorUpdateGenerator.setLastMajorContent(content);

@@ -1,5 +1,5 @@
 import { MinorUpdateGenerator } from '../content/generators/index.js';
-import { VestaboardClient } from '../api/vestaboard.js';
+import type { VestaboardClient } from '../api/vestaboard/index.js';
 import { log } from '../utils/logger.js';
 
 export class CronScheduler {
@@ -37,7 +37,7 @@ export class CronScheduler {
   private async runMinorUpdate(): Promise<void> {
     try {
       const content = await this.minorUpdateGenerator.generate();
-      await this.vestaboardClient.sendMessage({ text: content.text });
+      await this.vestaboardClient.sendText(content.text);
       log('Minor update sent successfully');
     } catch (error) {
       // TODO: Implement error handling with logger
