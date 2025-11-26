@@ -135,7 +135,12 @@ export class VestaboardHTTPClient {
           throw await this.handleErrorResponse(response);
         }
 
-        return (await response.json()) as number[][];
+        const data = (await response.json()) as { message?: number[][] } | number[][];
+        // Vestaboard API returns { message: [[...]] } format
+        if ('message' in data && Array.isArray(data.message)) {
+          return data.message;
+        }
+        return data as number[][];
       } catch (error) {
         clearTimeout(timeoutId);
         throw this.handleRequestError(error);
