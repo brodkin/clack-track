@@ -95,7 +95,7 @@ module.exports = {
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@tests/(.*)$': '<rootDir>/tests/$1',
-        '(.+)\\.js$': '$1',
+        '^(\\.{1,2}/.*)\\.js$': '$1',
       },
     },
     {
