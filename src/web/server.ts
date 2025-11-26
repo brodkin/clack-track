@@ -4,6 +4,7 @@ import compression from 'compression';
 import helmet from 'helmet';
 import { Server } from 'http';
 import { log } from '../utils/logger.js';
+import { createRateLimiter } from './middleware/rate-limit.js';
 
 export interface WebServerConfig {
   port?: number;
@@ -107,6 +108,14 @@ export class WebServer {
     if (this.corsEnabled) {
       this.app.use(cors());
     }
+
+    // Rate limiting middleware for API routes
+    // Default: 100 requests per 15 minutes per IP
+    // Configurable via environment variables:
+    // - RATE_LIMIT_WINDOW_MS (time window in milliseconds)
+    // - RATE_LIMIT_MAX_REQUESTS (max requests per window)
+    const rateLimiter = createRateLimiter();
+    this.app.use('/api', rateLimiter);
 
     // Static file serving
     this.app.use(express.static(this.staticPath));
