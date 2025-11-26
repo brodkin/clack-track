@@ -6,6 +6,16 @@ import {
 } from './commands/index.js';
 import { frameCommand } from './commands/frame.js';
 
+// Define flags that are boolean (don't expect values)
+const BOOLEAN_FLAGS = new Set([
+  'skip-weather',
+  'skip-colors',
+  'verbose',
+  'v',
+  'interactive',
+  'list',
+]);
+
 export async function runCLI(args: string[]): Promise<void> {
   const command = args[2]; // First two args are node and script path
 
@@ -16,7 +26,10 @@ export async function runCLI(args: string[]): Promise<void> {
       const arg = args[i];
       if (arg.startsWith('--')) {
         const key = arg.slice(2);
-        const value = args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : true;
+        // Only capture next arg as value if this flag is NOT a boolean flag
+        const isBooleanFlag = BOOLEAN_FLAGS.has(key);
+        const value =
+          !isBooleanFlag && args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : true;
         options[key] = value;
         if (value !== true) i++; // Skip next arg if it was used as a value
       }

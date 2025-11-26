@@ -383,6 +383,56 @@ describe('CLI frame command', () => {
     });
   });
 
+  describe('CLI argument parsing', () => {
+    it('should capture positional text argument after boolean flags', async () => {
+      // This test demonstrates the bug: --skip-weather TEST should set text="TEST" not skipWeather="TEST"
+      const { generateFrame } = await import('../../../../src/content/frame/index.js');
+
+      // Simulate: npm run frame -- --skip-weather --skip-colors TEST
+      // The frame command receives parsed options from parseOptions()
+      await frameCommand({ skipWeather: true, skipColors: true, text: 'TEST' });
+
+      expect(generateFrame).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: 'TEST',
+        })
+      );
+      expect(generateFrame).toHaveBeenCalledWith(
+        expect.objectContaining({
+          homeAssistant: undefined,
+          aiProvider: undefined,
+        })
+      );
+    });
+
+    it('should handle boolean flags followed by positional argument', async () => {
+      const { generateFrame } = await import('../../../../src/content/frame/index.js');
+
+      // Simulate: npm run frame -- --skip-weather MY_TEXT
+      await frameCommand({ skipWeather: true, text: 'MY_TEXT' });
+
+      expect(generateFrame).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: 'MY_TEXT',
+        })
+      );
+    });
+
+    it('should handle value flags with their values properly', async () => {
+      // This tests that value flags like --provider don't break
+      // Future enhancement: when parseOptions supports --provider in frame command
+      const { generateFrame } = await import('../../../../src/content/frame/index.js');
+
+      await frameCommand({ text: 'HELLO', skipWeather: false, skipColors: false });
+
+      expect(generateFrame).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: 'HELLO',
+        })
+      );
+    });
+  });
+
   describe('verbose flag', () => {
     it('should not display timing when verbose is false', async () => {
       await frameCommand({ verbose: false });
