@@ -34,16 +34,39 @@ const REQUIRED_COLOR_COUNT = 6;
 /**
  * Service for generating seasonal color palettes for Vestaboard frame
  * Uses Claude Haiku 4.5 AI with 24-hour caching
+ * Implemented as singleton to ensure cache persistence across calls
  */
 export class ColorBarService {
+  private static instance: ColorBarService | null = null;
   private cache: SeasonalColors | null = null;
   private readonly cacheTtlMs: number;
 
-  constructor(
+  private constructor(
     private readonly aiProvider: AIProvider,
     config?: ColorBarServiceConfig
   ) {
     this.cacheTtlMs = config?.cacheTtlMs ?? 24 * 60 * 60 * 1000; // 24 hours default
+  }
+
+  /**
+   * Get singleton instance of ColorBarService
+   * Creates new instance if none exists, otherwise returns existing instance
+   */
+  public static getInstance(
+    aiProvider: AIProvider,
+    config?: ColorBarServiceConfig
+  ): ColorBarService {
+    if (!ColorBarService.instance) {
+      ColorBarService.instance = new ColorBarService(aiProvider, config);
+    }
+    return ColorBarService.instance;
+  }
+
+  /**
+   * Clear singleton instance (for test isolation)
+   */
+  public static clearInstance(): void {
+    ColorBarService.instance = null;
   }
 
   /**

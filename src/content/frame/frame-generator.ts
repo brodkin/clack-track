@@ -51,7 +51,7 @@ export async function generateFrame(options: FrameOptions): Promise<FrameResult>
   let colorBar: number[] = FALLBACK_COLORS;
   if (options.aiProvider) {
     try {
-      const colorService = new ColorBarService(options.aiProvider);
+      const colorService = ColorBarService.getInstance(options.aiProvider);
       colorBar = await colorService.getColors();
     } catch (error) {
       warnings.push(

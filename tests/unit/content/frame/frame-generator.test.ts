@@ -10,7 +10,10 @@ jest.mock('../../../../src/content/frame/color-bar.js', () => {
   const actual = jest.requireActual('../../../../src/content/frame/color-bar.js');
   return {
     ...actual,
-    ColorBarService: jest.fn(),
+    ColorBarService: {
+      getInstance: jest.fn(),
+      clearInstance: jest.fn(),
+    },
   };
 });
 
@@ -24,6 +27,7 @@ describe('generateFrame', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    ColorBarService.clearInstance(); // Clear singleton for test isolation
 
     // Mock HA client
     mockHAClient = {} as jest.Mocked<HomeAssistantClient>;
@@ -243,13 +247,10 @@ describe('generateFrame', () => {
         COLOR_CODES.VIOLET,
       ];
 
-      // Mock ColorBarService.getColors to return mock data
-      (ColorBarService as jest.MockedClass<typeof ColorBarService>).mockImplementation(
-        () =>
-          ({
-            getColors: jest.fn().mockResolvedValue(mockColors),
-          }) as unknown as InstanceType<typeof ColorBarService>
-      );
+      // Mock ColorBarService.getInstance to return mock instance
+      (ColorBarService.getInstance as jest.Mock).mockReturnValue({
+        getColors: jest.fn().mockResolvedValue(mockColors),
+      });
 
       const options: FrameOptions = {
         text: 'TEST',
@@ -259,8 +260,8 @@ describe('generateFrame', () => {
 
       const result = await generateFrame(options);
 
-      // Should have called ColorBarService
-      expect(ColorBarService).toHaveBeenCalledWith(mockAIProvider);
+      // Should have called ColorBarService.getInstance
+      expect(ColorBarService.getInstance).toHaveBeenCalledWith(mockAIProvider);
 
       // Should use AI colors in column 21
       for (let row = 0; row < 6; row++) {
@@ -294,13 +295,10 @@ describe('generateFrame', () => {
     });
 
     it('should warn when color fetch fails', async () => {
-      // Mock ColorBarService to throw error
-      (ColorBarService as jest.MockedClass<typeof ColorBarService>).mockImplementation(
-        () =>
-          ({
-            getColors: jest.fn().mockRejectedValue(new Error('Rate limit exceeded')),
-          }) as unknown as InstanceType<typeof ColorBarService>
-      );
+      // Mock ColorBarService.getInstance to throw error
+      (ColorBarService.getInstance as jest.Mock).mockReturnValue({
+        getColors: jest.fn().mockRejectedValue(new Error('Rate limit exceeded')),
+      });
 
       const options: FrameOptions = {
         text: 'TEST',
@@ -347,12 +345,9 @@ describe('generateFrame', () => {
           }) as unknown as InstanceType<typeof WeatherService>
       );
 
-      (ColorBarService as jest.MockedClass<typeof ColorBarService>).mockImplementation(
-        () =>
-          ({
-            getColors: jest.fn().mockResolvedValue(mockColors),
-          }) as unknown as InstanceType<typeof ColorBarService>
-      );
+      (ColorBarService.getInstance as jest.Mock).mockReturnValue({
+        getColors: jest.fn().mockResolvedValue(mockColors),
+      });
 
       const options: FrameOptions = {
         text: 'MOTIVATIONAL QUOTE OF THE DAY',
@@ -412,12 +407,9 @@ describe('generateFrame', () => {
           }) as unknown as InstanceType<typeof WeatherService>
       );
 
-      (ColorBarService as jest.MockedClass<typeof ColorBarService>).mockImplementation(
-        () =>
-          ({
-            getColors: jest.fn().mockRejectedValue(new Error('AI error')),
-          }) as unknown as InstanceType<typeof ColorBarService>
-      );
+      (ColorBarService.getInstance as jest.Mock).mockReturnValue({
+        getColors: jest.fn().mockRejectedValue(new Error('AI error')),
+      });
 
       const options: FrameOptions = {
         text:

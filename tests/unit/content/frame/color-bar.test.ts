@@ -29,8 +29,9 @@ describe('ColorBarService', () => {
   let service: ColorBarService;
 
   beforeEach(() => {
+    ColorBarService.clearInstance(); // Clear singleton for test isolation
     mockProvider = new MockAIProvider();
-    service = new ColorBarService(mockProvider);
+    service = ColorBarService.getInstance(mockProvider);
     jest.useFakeTimers();
   });
 
@@ -97,8 +98,9 @@ describe('ColorBarService', () => {
     });
 
     it('should use custom cache TTL from config', async () => {
+      ColorBarService.clearInstance(); // Clear to create new instance with custom config
       const customTtl = 60 * 60 * 1000; // 1 hour
-      const customService = new ColorBarService(mockProvider, { cacheTtlMs: customTtl });
+      const customService = ColorBarService.getInstance(mockProvider, { cacheTtlMs: customTtl });
 
       // First call
       await customService.getColors();
@@ -275,6 +277,83 @@ describe('ColorBarService', () => {
 
       const request = generateSpy.mock.calls[0][0] as AIGenerationRequest;
       expect(request.userPrompt).toContain('christmas');
+    });
+  });
+
+  describe('Singleton pattern', () => {
+    it('should return the same instance on multiple getInstance calls', () => {
+      ColorBarService.clearInstance();
+      const instance1 = ColorBarService.getInstance(mockProvider);
+      const instance2 = ColorBarService.getInstance(mockProvider);
+
+      expect(instance1).toBe(instance2);
+    });
+
+    it('should persist cache across getInstance calls', async () => {
+      ColorBarService.clearInstance();
+
+      // First call - creates instance and fetches colors
+      const instance1 = ColorBarService.getInstance(mockProvider);
+      const firstColors = await instance1.getColors();
+      expect(firstColors).toEqual([67, 66, 65, 64, 63, 68]);
+
+      // Change mock response
+      mockProvider.mockResponse = JSON.stringify([63, 64, 65, 66, 67, 68]);
+
+      // Second call - gets same instance, should return cached colors
+      const instance2 = ColorBarService.getInstance(mockProvider);
+      const secondColors = await instance2.getColors();
+
+      // Should be same instance
+      expect(instance1).toBe(instance2);
+
+      // Should return cached colors, not new ones
+      expect(secondColors).toEqual([67, 66, 65, 64, 63, 68]);
+    });
+
+    it('should clear cache when clearInstance is called', async () => {
+      ColorBarService.clearInstance();
+
+      // First call - creates instance and fetches colors
+      const instance1 = ColorBarService.getInstance(mockProvider);
+      await instance1.getColors();
+
+      // Clear instance
+      ColorBarService.clearInstance();
+
+      // Change mock response
+      mockProvider.mockResponse = JSON.stringify([63, 64, 65, 66, 67, 68]);
+
+      // New call - should create new instance and fetch new colors
+      const instance2 = ColorBarService.getInstance(mockProvider);
+      const colors = await instance2.getColors();
+
+      // Should be different instances
+      expect(instance1).not.toBe(instance2);
+
+      // Should fetch new colors
+      expect(colors).toEqual([63, 64, 65, 66, 67, 68]);
+    });
+
+    it('should maintain cache state across multiple getInstance calls within TTL', async () => {
+      ColorBarService.clearInstance();
+      const generateSpy = jest.spyOn(mockProvider, 'generate');
+
+      // First getInstance and getColors - should call AI
+      const instance1 = ColorBarService.getInstance(mockProvider);
+      await instance1.getColors();
+      expect(generateSpy).toHaveBeenCalledTimes(1);
+
+      // Advance time by 1 hour (within 24-hour TTL)
+      jest.advanceTimersByTime(60 * 60 * 1000);
+
+      // Second getInstance and getColors - should use cache, not call AI again
+      const instance2 = ColorBarService.getInstance(mockProvider);
+      await instance2.getColors();
+      expect(generateSpy).toHaveBeenCalledTimes(1); // Still only 1 call
+
+      // Same instance
+      expect(instance1).toBe(instance2);
     });
   });
 });
