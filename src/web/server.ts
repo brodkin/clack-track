@@ -1,6 +1,7 @@
 import express, { Express } from 'express';
 import cors from 'cors';
 import compression from 'compression';
+import helmet from 'helmet';
 import { Server } from 'http';
 import { log } from '../utils/logger.js';
 
@@ -85,6 +86,20 @@ export class WebServer {
   }
 
   private setupMiddleware(): void {
+    // Security headers middleware (must be first for security-first ordering)
+    this.app.use(
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", 'data:', 'https:'],
+          },
+        },
+      })
+    );
+
     // Compression middleware for response optimization
     this.app.use(compression());
 
