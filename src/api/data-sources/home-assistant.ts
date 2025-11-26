@@ -67,6 +67,11 @@
  * For local development without HTTPS, `ws://` may be used but is not recommended.
  */
 
+// Polyfill WebSocket for Node.js (required by home-assistant-js-websocket)
+import WebSocket from 'ws';
+// @ts-expect-error - Polyfill globalThis.WebSocket for home-assistant-js-websocket library
+globalThis.WebSocket = WebSocket;
+
 import {
   createConnection,
   createLongLivedTokenAuth,
