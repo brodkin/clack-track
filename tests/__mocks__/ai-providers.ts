@@ -104,9 +104,7 @@ export function createMockOpenAIClient(options: MockAIProviderOptions = {}): AIP
      * @returns Promise resolving to mock AI response
      * @throws Error if shouldFail option is true
      */
-    async generate(
-      _request: AIGenerationRequest // eslint-disable-line @typescript-eslint/no-unused-vars
-    ): Promise<AIGenerationResponse> {
+    async generate(_request: AIGenerationRequest): Promise<AIGenerationResponse> {
       if (shouldFail) {
         throw new Error('Mock OpenAI API Error: Rate limit exceeded or authentication failed');
       }
@@ -186,9 +184,7 @@ export function createMockAnthropicClient(options: MockAIProviderOptions = {}): 
      * @returns Promise resolving to mock AI response
      * @throws Error if shouldFail option is true
      */
-    async generate(
-      _request: AIGenerationRequest // eslint-disable-line @typescript-eslint/no-unused-vars
-    ): Promise<AIGenerationResponse> {
+    async generate(_request: AIGenerationRequest): Promise<AIGenerationResponse> {
       if (shouldFail) {
         throw new Error('Mock Anthropic API Error: Rate limit exceeded or authentication failed');
       }

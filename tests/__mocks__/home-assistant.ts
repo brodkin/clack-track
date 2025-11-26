@@ -176,7 +176,7 @@ export function createMockConnection(options: MockHomeAssistantOptions = {}): Co
      * @param _message - Message to send (unused in mock)
      * @returns Promise resolving when message is sent
      */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     async sendMessage(_message: Record<string, unknown>): Promise<void> {
       if (isClosed) {
         throw new Error('Connection is closed');
@@ -192,7 +192,7 @@ export function createMockConnection(options: MockHomeAssistantOptions = {}): Co
      * @param _message - Message to send (unused in mock)
      * @returns Promise resolving to response
      */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     async sendMessagePromise<T>(_message: Record<string, unknown>): Promise<T> {
       if (isClosed) {
         throw new Error('Connection is closed');
@@ -442,7 +442,7 @@ export function mockCreateConnection(
  * });
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 export function triggerMockEvent(_connection: Connection, _event: HomeAssistantEvent): void {
   // For testing purposes, we can't access private eventListeners
   // Tests should maintain their own reference to callbacks for triggering
