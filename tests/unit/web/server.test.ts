@@ -26,10 +26,12 @@ mockExpress.json = mockExpressJson;
 
 const mockCors = jest.fn(() => jest.fn());
 const mockCompression = jest.fn(() => jest.fn());
+const mockHelmet = jest.fn(() => jest.fn());
 
 jest.mock('express', () => mockExpress);
 jest.mock('cors', () => mockCors);
 jest.mock('compression', () => mockCompression);
+jest.mock('helmet', () => mockHelmet);
 jest.mock('@/utils/logger', () => ({
   log: jest.fn(),
 }));
@@ -108,6 +110,22 @@ describe('WebServer', () => {
       await server.start();
 
       expect(mockCors).not.toHaveBeenCalled();
+    });
+
+    it('should set up helmet security middleware first', async () => {
+      server = new WebServer({
+        port: 3000,
+        host: '0.0.0.0',
+      });
+
+      await server.start();
+
+      expect(mockHelmet).toHaveBeenCalled();
+      // Helmet should be called before other middleware (first app.use call)
+      const helmetCallIndex = mockUse.mock.calls.findIndex(
+        call => call[0] === mockHelmet.mock.results[0]?.value
+      );
+      expect(helmetCallIndex).toBe(0);
     });
 
     it('should set up compression middleware', async () => {
