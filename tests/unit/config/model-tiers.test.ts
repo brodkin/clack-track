@@ -42,16 +42,16 @@ describe('Model Tiers Configuration', () => {
   });
 
   describe('OpenAI Model Tiers', () => {
-    it('should have light tier with gpt-4o-mini', () => {
-      expect(MODEL_TIERS.openai.light).toBe('gpt-4o-mini');
+    it('should have light tier with gpt-4.1-nano', () => {
+      expect(MODEL_TIERS.openai.light).toBe('gpt-4.1-nano');
     });
 
-    it('should have medium tier with gpt-4o', () => {
-      expect(MODEL_TIERS.openai.medium).toBe('gpt-4o');
+    it('should have medium tier with gpt-4.1-mini', () => {
+      expect(MODEL_TIERS.openai.medium).toBe('gpt-4.1-mini');
     });
 
-    it('should have heavy tier with gpt-4-turbo', () => {
-      expect(MODEL_TIERS.openai.heavy).toBe('gpt-4-turbo');
+    it('should have heavy tier with gpt-4.1', () => {
+      expect(MODEL_TIERS.openai.heavy).toBe('gpt-4.1');
     });
 
     it('should have all three tiers defined', () => {
@@ -64,16 +64,16 @@ describe('Model Tiers Configuration', () => {
   });
 
   describe('Anthropic Model Tiers', () => {
-    it('should have light tier with claude-3-haiku-20240307', () => {
-      expect(MODEL_TIERS.anthropic.light).toBe('claude-3-haiku-20240307');
+    it('should have light tier with claude-haiku-4-5-20251001', () => {
+      expect(MODEL_TIERS.anthropic.light).toBe('claude-haiku-4-5-20251001');
     });
 
-    it('should have medium tier with claude-3-5-sonnet-20241022', () => {
-      expect(MODEL_TIERS.anthropic.medium).toBe('claude-3-5-sonnet-20241022');
+    it('should have medium tier with claude-sonnet-4-5-20250929', () => {
+      expect(MODEL_TIERS.anthropic.medium).toBe('claude-sonnet-4-5-20250929');
     });
 
-    it('should have heavy tier with claude-3-opus-20240229', () => {
-      expect(MODEL_TIERS.anthropic.heavy).toBe('claude-3-opus-20240229');
+    it('should have heavy tier with claude-opus-4-5-20251101', () => {
+      expect(MODEL_TIERS.anthropic.heavy).toBe('claude-opus-4-5-20251101');
     });
 
     it('should have all three tiers defined', () => {
@@ -91,17 +91,17 @@ describe('Model Tiers Configuration', () => {
       const openaiModel = MODEL_TIERS.openai[tier];
       const anthropicModel = MODEL_TIERS.anthropic[tier];
 
-      expect(openaiModel).toBe('gpt-4o');
-      expect(anthropicModel).toBe('claude-3-5-sonnet-20241022');
+      expect(openaiModel).toBe('gpt-4.1-mini');
+      expect(anthropicModel).toBe('claude-sonnet-4-5-20250929');
     });
 
     it('should allow accessing models with valid provider names', () => {
       const provider: AIProviderType = 'openai';
       const models = MODEL_TIERS[provider];
 
-      expect(models.light).toBe('gpt-4o-mini');
-      expect(models.medium).toBe('gpt-4o');
-      expect(models.heavy).toBe('gpt-4-turbo');
+      expect(models.light).toBe('gpt-4.1-nano');
+      expect(models.medium).toBe('gpt-4.1-mini');
+      expect(models.heavy).toBe('gpt-4.1');
     });
   });
 

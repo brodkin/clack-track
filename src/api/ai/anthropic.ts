@@ -11,7 +11,7 @@ export class AnthropicClient implements AIProvider {
   private client: Anthropic;
   private model: string;
 
-  constructor(apiKey: string, model: string = 'claude-sonnet-4-20250514') {
+  constructor(apiKey: string, model: string = 'claude-sonnet-4-5-20250929') {
     if (!apiKey || apiKey.trim() === '') {
       throw new Error('Anthropic API key is required');
     }

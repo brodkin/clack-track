@@ -81,7 +81,7 @@ describe('OpenAIClient', () => {
       await client.generate(request);
 
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4.1',
         messages: [
           { role: 'system', content: 'You are a helpful assistant.' },
           { role: 'user', content: 'Generate a motivational quote.' },
@@ -100,7 +100,7 @@ describe('OpenAIClient', () => {
 
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'gpt-4-turbo-preview',
+          model: 'gpt-4.1',
         })
       );
     });

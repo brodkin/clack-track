@@ -232,21 +232,21 @@ export enum ContentPriority {
  * @example
  * ```typescript
  * // Fast, cheap models for simple content
- * const light = ModelTier.LIGHT; // 'light' (gpt-4o-mini, haiku)
+ * const light = ModelTier.LIGHT; // 'light' (gpt-4.1-nano, haiku-4.5)
  *
  * // Balanced models for standard content
- * const medium = ModelTier.MEDIUM; // 'medium' (gpt-4o, sonnet)
+ * const medium = ModelTier.MEDIUM; // 'medium' (gpt-4.1-mini, sonnet-4.5)
  *
  * // Powerful models for complex content
- * const heavy = ModelTier.HEAVY; // 'heavy' (gpt-4-turbo, opus)
+ * const heavy = ModelTier.HEAVY; // 'heavy' (gpt-4.1, opus-4.5)
  * ```
  */
 export enum ModelTier {
-  /** Fast, cheap models (gpt-4o-mini, claude-haiku) */
+  /** Fast, cheap models (gpt-4.1-nano, claude-haiku-4.5) */
   LIGHT = 'light',
-  /** Balanced models (gpt-4o, claude-sonnet) */
+  /** Balanced models (gpt-4.1-mini, claude-sonnet-4.5) */
   MEDIUM = 'medium',
-  /** Powerful models (gpt-4-turbo, claude-opus) */
+  /** Powerful models (gpt-4.1, claude-opus-4.5) */
   HEAVY = 'heavy',
 }
 
