@@ -8,6 +8,7 @@
  */
 
 import type { VestaboardLayout } from './content.js';
+import type { PersonalityDimensions } from '../content/personality/dimensions.js';
 
 /**
  * Result of a content generator validation check.
@@ -65,6 +66,18 @@ export interface GeneratorValidationResult {
  *     outputMode: 'text'
  *   }
  * };
+ *
+ * // Major update with custom personality dimensions
+ * const customPersonalityContext: GenerationContext = {
+ *   updateType: 'major',
+ *   timestamp: new Date(),
+ *   personality: {
+ *     mood: 'sassy',
+ *     energyLevel: 'high',
+ *     humorStyle: 'dry wit',
+ *     obsession: 'overpriced coffee'
+ *   }
+ * };
  * ```
  */
 export interface GenerationContext {
@@ -76,6 +89,11 @@ export interface GenerationContext {
   eventData?: Record<string, unknown>;
   /** Optional last successful content, used for minor updates to preserve main content */
   previousContent?: GeneratedContent;
+  /**
+   * Optional personality dimensions for content generation.
+   * If not provided, random dimensions will be generated automatically.
+   */
+  personality?: PersonalityDimensions;
 }
 
 /**
