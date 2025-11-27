@@ -1,3 +1,0 @@
-Generate a concise news summary for Vestaboard display.
-Focus on the most important headlines provided.
-Keep it brief and engaging.

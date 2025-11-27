@@ -1,8 +1,3 @@
-Create a weather-focused display message using the CURRENT WEATHER section above.
-
-Use the provided weather data to craft content that is:
-- Practical and useful for planning the day
-- Contextually relevant to the current conditions
-- Engaging and informative
+Make a witty or novel commentary about the weather. Avoid the obvious. DO NOT give a weather report. Your audience already knows the weather condition and temperature.
 
 The weather information has already been fetched and is available in the CURRENT WEATHER section above. Use that data directly rather than making assumptions.
