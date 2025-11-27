@@ -309,8 +309,8 @@ describe('content:test command', () => {
 
       registry.register(
         {
-          id: 'ascii-art',
-          name: 'ASCII Art Generator',
+          id: 'test-layout-gen',
+          name: 'Test Layout Generator',
           priority: 2,
           modelTier: 1,
         },
@@ -318,7 +318,7 @@ describe('content:test command', () => {
       );
 
       // Act
-      await contentTestCommand({ generatorId: 'ascii-art' });
+      await contentTestCommand({ generatorId: 'test-layout-gen' });
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Output mode: layout'));
