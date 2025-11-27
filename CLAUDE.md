@@ -132,6 +132,36 @@ New generators must extend one of three abstract bases:
 - **ProgrammaticGenerator** - Non-AI content. Implement `generate(context)`
 - **NotificationGenerator** - P0 HA events. Implement `eventPattern` RegExp, `formatNotification()`
 
+### Generator Data Architecture
+
+**Principle: Generators are responsible for their own data needs.**
+
+| Layer         | Contains                                                    | Mechanism                                         |
+| ------------- | ----------------------------------------------------------- | ------------------------------------------------- |
+| System Prompt | Universal context (date, personality, persona, constraints) | Template variables `{{var}}` in `prompts/system/` |
+| User Prompt   | Content-specific instructions                               | Plain text in `prompts/user/`                     |
+| Generator     | Data fetching for content-specific needs                    | Override methods, inject via template variables   |
+
+**Rules:**
+
+1. **Self-Sufficient** - Each generator fetches only the data it needs. The base class does NOT inject data that may be unused.
+2. **Template Variables** - Data flows into prompts via `{{placeholder}}` syntax, resolved by `PromptLoader.loadPromptWithVariables()`.
+3. **No Wasteful Injection** - A motivational generator should NOT receive weather data. A weather generator fetches its own weather.
+
+**Example - Weather Generator needs weather:**
+
+```
+WeatherGenerator → fetches weather → passes to template vars → {{temperature}} in prompt
+```
+
+**Example - Motivational Generator does NOT need weather:**
+
+```
+MotivationalGenerator → no weather fetch → clean prompt with just universal context
+```
+
+**Universal context** (date, time, personality) is already in the system prompt via template variables. Content-specific data (weather, news, etc.) must be fetched by generators that need it.
+
 ### Content Registry & Priority Selection
 
 All generators registered via `ContentRegistry.register(metadata, generator)`. Selection uses P0→P2→P3 cascade:
