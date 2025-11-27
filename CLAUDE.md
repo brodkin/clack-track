@@ -27,15 +27,26 @@ Clack Track creates AI-powered content for Vestaboard split-flap displays. The s
 ### Core Component Flow
 
 ```
-EventHandler ← HomeAssistantClient (WebSocket)
-     ↓
-ContentOrchestrator → ContentSelector → ContentRegistry → Generators
-     ↓                     ↓
-generateWithRetry    P0→P2→P3 cascade
-     ↓
-FrameDecorator → VestaboardClient → Vestaboard Device
-
-CronScheduler → EventHandler → ContentOrchestrator (scheduled updates)
+                    bootstrap()
+                        ↓
+    ┌───────────────────┼───────────────────┐
+    ↓                   ↓                   ↓
+EventHandler      CronScheduler      CLI Commands
+(HA WebSocket)    (minute-aligned)   (generate, content:*)
+    ↓                   ↓                   ↓
+    └───────────────────┼───────────────────┘
+                        ↓
+              ContentOrchestrator
+                        ↓
+    ┌───────────────────┼───────────────────┐
+    ↓                   ↓                   ↓
+ContentSelector   generateWithRetry   FrameDecorator
+(P0→P2→P3)       (cross-provider)    (time/weather)
+    ↓                   ↓                   ↓
+ContentRegistry   AI Providers        cachedContent
+    ↓             (primary+alt)       (for minor updates)
+Generators                                  ↓
+                                    VestaboardClient
 ```
 
 ### ContentOrchestrator Pipeline
@@ -50,6 +61,26 @@ Six-step pipeline for all content generation:
 6. **Send** - VestaboardClient sends to device
 
 **Cross-provider failover** triggers only on `RateLimitError` or `AuthenticationError`. Other errors skip directly to P3 fallback.
+
+### Dual-Mode Update Pipeline
+
+**Major Updates** (full regeneration):
+
+- Triggered by: CLI `generate`, HA `content_trigger` events, `state_changed` P0 matches
+- Pipeline: Full ContentOrchestrator flow (select → generate → decorate → cache → send)
+- Side effect: Caches content in `orchestrator.cachedContent`
+
+**Minor Updates** (frame refresh only):
+
+- Triggered by: CronScheduler every 60 seconds (aligned to :00 seconds)
+- Pipeline: MinorUpdateGenerator retrieves cache → reapplies frame → sends
+- **Requires cached content** - throws error if no major update has run
+
+```typescript
+// Minor updates DEPEND on cached content from major updates
+const cached = orchestrator.getCachedContent();
+if (!cached) throw new Error('No cached content available');
+```
 
 ### Layer Purposes
 
@@ -118,6 +149,28 @@ WebSocket client for event-driven content updates. Supports:
 - Service calls to control HA devices/automations
 - Automatic reconnection with exponential backoff
 - Connection validation with latency measurement
+
+**Dual-Subscription Pattern**: EventHandler subscribes to TWO event types:
+
+1. `content_trigger` - Explicit update triggers → P2 major updates
+2. `state_changed` - All entity changes → P0 notification pattern matching
+
+```
+state_changed event → EventHandler → ContentOrchestrator → ContentSelector
+                                                              ↓
+                                              P0 regex pattern matching
+                                              (match: immediate notification)
+                                              (no match: skip to P2 selection)
+```
+
+**Conditional Initialization**: EventHandler only created if HA is configured. Check for `null` before use:
+
+```typescript
+const { eventHandler } = await bootstrap();
+if (eventHandler) {
+  await eventHandler.initialize();
+}
+```
 
 **For detailed API documentation**, see `src/api/data-sources/CLAUDE.md` (loaded on-demand when working with HA integration).
 
@@ -201,6 +254,36 @@ WebSocket client for event-driven content updates. Supports:
 
 ## Critical Integration Patterns
 
+### Bootstrap Pattern (Required for CLI Commands)
+
+All CLI commands MUST call `bootstrap()` in `src/bootstrap.ts` to initialize dependencies and populate ContentRegistry:
+
+```typescript
+export async function myCommand(): Promise<void> {
+  const { orchestrator, scheduler, registry, eventHandler } = await bootstrap();
+
+  try {
+    // Use injected components
+    await orchestrator.generateAndSend({ updateType: 'major', timestamp: new Date() });
+  } finally {
+    scheduler.stop(); // CRITICAL: Clean shutdown to prevent dangling timers
+  }
+}
+```
+
+**Bootstrap Returns:**
+
+- `orchestrator` - ContentOrchestrator for generation
+- `eventHandler` - EventHandler (`null` if HA not configured)
+- `scheduler` - CronScheduler (always present, must be stopped)
+- `registry` - ContentRegistry (populated with all generators)
+
+**Why This Matters:**
+
+- ContentRegistry is a singleton populated during bootstrap
+- Without bootstrap, registry is empty and generators are not registered
+- Forgetting `scheduler.stop()` causes test hangs and resource leaks
+
 ### ColorBarService (Singleton - Performance Critical)
 
 **MUST use `ColorBarService.getInstance()`** - never `new ColorBarService()`. Direct instantiation bypasses the 24-hour cache, causing ~2.4s AI API calls per frame instead of cache hits.
@@ -220,12 +303,35 @@ For test isolation: `ColorBarService.clearInstance()` before each test.
 1. **POST returns 201 with error body** - Must check response text for "invalid api key", not just HTTP status
 2. **GET returns wrapped format** - Response is `{ message: [[...]] }`, not flat array
 
+### CLI Commands
+
+**Available Commands:**
+
+```bash
+npm run generate              # Generate and send major content update
+npm run test-board            # Test Vestaboard connection
+npm run test-ai               # Test AI provider connectivity
+npm run test-ha               # Test Home Assistant connectivity
+npm run frame [text]          # Generate and preview Vestaboard frame
+npm run content:list          # List all registered generators by priority
+npm run content:test <id>     # Test specific generator (dry-run, no send)
+npm run content:test <id> --with-frame  # Test with frame decoration
+```
+
 ### CLI Boolean Flags
 
 When adding CLI boolean flags, **MUST update `BOOLEAN_FLAGS` Set** in `src/cli/index.ts`:
 
 ```typescript
-const BOOLEAN_FLAGS = new Set(['skip-weather', 'skip-colors', 'verbose', 'v']);
+const BOOLEAN_FLAGS = new Set([
+  'skip-weather',
+  'skip-colors',
+  'verbose',
+  'v',
+  'interactive',
+  'list',
+  'with-frame',
+]);
 // ADD NEW BOOLEAN FLAGS HERE
 ```
 
