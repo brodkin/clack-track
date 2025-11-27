@@ -1,9 +1,5 @@
-Create a weather-focused display message.
+{{weather}}
 
-Include:
-- Current weather conditions
-- Temperature (high/low for today)
-- Any weather alerts or notable conditions
-- Current time
+Make a witty or novel commentary about the weather. Avoid the obvious. DO NOT give a weather report. Your audience already knows the weather condition and temperature.
 
-Make it practical and useful for planning the day.
+Use the weather data above directly rather than making assumptions.

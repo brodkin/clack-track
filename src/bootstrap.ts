@@ -22,13 +22,19 @@ import { HomeAssistantClient } from './api/data-sources/home-assistant.js';
 import { createVestaboardClient } from './api/vestaboard/index.js';
 import { StaticFallbackGenerator } from './content/generators/static-fallback-generator.js';
 import { MotivationalGenerator } from './content/generators/ai/motivational-generator.js';
-import { NewsGenerator } from './content/generators/ai/news-generator.js';
+import { GlobalNewsGenerator } from './content/generators/ai/global-news-generator.js';
+import { TechNewsGenerator } from './content/generators/ai/tech-news-generator.js';
+import { LocalNewsGenerator } from './content/generators/ai/local-news-generator.js';
 import { WeatherGenerator } from './content/generators/ai/weather-generator.js';
 import { GreetingGenerator } from './content/generators/programmatic/greeting-generator.js';
 import { ASCIIArtGenerator } from './content/generators/programmatic/ascii-art-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
+import { RSSClient } from './api/data-sources/rss-client.js';
 import { PromptLoader } from './content/prompt-loader.js';
 import { MinorUpdateGenerator } from './content/generators/minor-update.js';
+import { ContentDataProvider } from './services/content-data-provider.js';
+import { WeatherService } from './services/weather-service.js';
+import { ColorBarService } from './content/frame/color-bar.js';
 import type { AIProvider } from './types/ai.js';
 
 /**
@@ -134,12 +140,17 @@ function createAlternateProvider(
 function createCoreGenerators(
   promptLoader: PromptLoader,
   modelTierSelector: ModelTierSelector,
-  apiKeys: Record<string, string>
+  apiKeys: Record<string, string>,
+  weatherService?: WeatherService
 ): CoreGenerators {
+  const rssClient = new RSSClient();
+
   return {
     motivational: new MotivationalGenerator(promptLoader, modelTierSelector, apiKeys),
-    news: new NewsGenerator(promptLoader, modelTierSelector, apiKeys),
-    weather: new WeatherGenerator(promptLoader, modelTierSelector, apiKeys),
+    globalNews: new GlobalNewsGenerator(promptLoader, modelTierSelector, apiKeys, rssClient),
+    techNews: new TechNewsGenerator(promptLoader, modelTierSelector, apiKeys, rssClient),
+    localNews: new LocalNewsGenerator(promptLoader, modelTierSelector, apiKeys, rssClient),
+    weather: new WeatherGenerator(promptLoader, modelTierSelector, apiKeys, weatherService),
     greeting: new GreetingGenerator(),
     asciiArt: new ASCIIArtGenerator(['HELLO', 'WORLD', 'WELCOME']),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
@@ -159,6 +170,13 @@ function createHAClientIfConfigured(
   return new HomeAssistantClient({
     url: config.dataSources.homeAssistant.url,
     token: config.dataSources.homeAssistant.token,
+    reconnection: {
+      enabled: true,
+      maxAttempts: config.dataSources.homeAssistant.maxReconnectAttempts ?? 10,
+      initialDelayMs: config.dataSources.homeAssistant.reconnectDelayMs ?? 5000,
+      maxDelayMs: 30000,
+      backoffMultiplier: 2,
+    },
   });
 }
 
@@ -169,9 +187,11 @@ function createHAClientIfConfigured(
  * 1. Loads configuration from environment
  * 2. Creates AI providers with factory pattern
  * 3. Initializes ContentRegistry and registers all generators
- * 4. Creates ContentSelector, FrameDecorator, ContentOrchestrator
- * 5. Optionally creates EventHandler if Home Assistant is configured
- * 6. Creates CronScheduler for periodic updates
+ * 4. Creates ContentSelector, FrameDecorator
+ * 5. Creates ContentDataProvider for pre-fetching weather and colors (if HA configured)
+ * 6. Creates ContentOrchestrator with dataProvider integration
+ * 7. Optionally creates EventHandler if Home Assistant is configured
+ * 8. Creates CronScheduler for periodic updates
  *
  * @returns Promise resolving to BootstrapResult with all initialized components
  * @throws Error if required configuration is missing or initialization fails
@@ -211,31 +231,62 @@ export async function bootstrap(): Promise<BootstrapResult> {
   const modelTierSelector = new ModelTierSelector(aiProviderType, [aiProviderType]);
   const promptLoader = new PromptLoader('./prompts');
 
-  // Step 4: Create and populate ContentRegistry
+  // Step 4: Create Home Assistant client and WeatherService (if configured)
+  // Created early so WeatherService can be injected into generators
+  const haClient = createHAClientIfConfigured(config);
+
+  // Connect to Home Assistant if client was created
+  if (haClient) {
+    try {
+      await haClient.connect();
+    } catch (error) {
+      // Log warning but continue - graceful degradation without HA
+      console.warn(
+        'Failed to connect to Home Assistant:',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+    }
+  }
+
+  // Only create WeatherService if HA client is connected
+  const weatherService = haClient?.isConnected() ? new WeatherService(haClient) : undefined;
+
+  // Step 5: Create and populate ContentRegistry
   const registry = ContentRegistry.getInstance();
   const apiKeys = { [aiProviderType]: aiConfig.apiKey };
 
-  const coreGenerators = createCoreGenerators(promptLoader, modelTierSelector, apiKeys);
+  const coreGenerators = createCoreGenerators(
+    promptLoader,
+    modelTierSelector,
+    apiKeys,
+    weatherService
+  );
   registerCoreContent(registry, coreGenerators);
 
   const notificationFactory = new HANotificationGeneratorFactory();
   registerNotifications(registry, notificationFactory);
 
-  // Step 5: Create core content infrastructure
+  // Step 6: Create core content infrastructure
   const selector = new ContentSelector(registry);
   const vestaboardClient = createVestaboardClient({
     apiKey: config.vestaboard.apiKey,
     apiUrl: config.vestaboard.apiUrl,
   });
 
-  // Step 6: Create FrameDecorator (with optional HA client for weather)
-  const haClient = createHAClientIfConfigured(config);
+  // Step 7: Create FrameDecorator (with optional HA client for weather)
   const frameDecorator = new FrameDecorator({
     homeAssistant: haClient || undefined,
     aiProvider: primaryProvider,
   });
 
-  // Step 7: Create ContentOrchestrator
+  // Step 8: Create ContentDataProvider (if HA is configured)
+  let dataProvider: ContentDataProvider | undefined;
+  if (haClient && weatherService) {
+    const colorBarService = ColorBarService.getInstance(primaryProvider);
+    dataProvider = new ContentDataProvider(weatherService, colorBarService);
+  }
+
+  // Step 9: Create ContentOrchestrator
   const orchestrator = new ContentOrchestrator({
     selector,
     decorator: frameDecorator,
@@ -243,12 +294,13 @@ export async function bootstrap(): Promise<BootstrapResult> {
     fallbackGenerator: coreGenerators.staticFallback as StaticFallbackGenerator,
     preferredProvider: primaryProvider,
     alternateProvider,
+    dataProvider,
   });
 
-  // Step 8: Create EventHandler (only if Home Assistant configured)
+  // Step 10: Create EventHandler (only if Home Assistant configured)
   const eventHandler = haClient ? new EventHandler(haClient, orchestrator) : null;
 
-  // Step 9: Create CronScheduler for periodic updates
+  // Step 11: Create CronScheduler for periodic updates
   const minorUpdateGenerator = new MinorUpdateGenerator(orchestrator, frameDecorator);
   const scheduler = new CronScheduler(minorUpdateGenerator, vestaboardClient);
 

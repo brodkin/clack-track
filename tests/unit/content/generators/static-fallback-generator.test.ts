@@ -41,25 +41,31 @@ describe('StaticFallbackGenerator', () => {
   });
 
   describe('validate()', () => {
-    it('should return valid when directory path is provided', () => {
+    it('should return valid when directory contains .txt files', async () => {
+      // Mock fs.readdir to return .txt files
+      mockedFs.readdir.mockResolvedValueOnce(['fallback1.txt', 'fallback2.txt'] as unknown as []);
+
       const generator = new StaticFallbackGenerator('prompts/static');
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
     });
 
-    it('should return valid with default directory path', () => {
+    it('should return valid with default directory path when files exist', async () => {
+      // Mock fs.readdir to return .txt files
+      mockedFs.readdir.mockResolvedValueOnce(['default.txt'] as unknown as []);
+
       const generator = new StaticFallbackGenerator();
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
     });
 
-    it('should return invalid when directory path is empty string', () => {
+    it('should return invalid when directory path is empty string', async () => {
       const generator = new StaticFallbackGenerator('');
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
@@ -67,9 +73,9 @@ describe('StaticFallbackGenerator', () => {
       expect(result.errors?.[0]).toContain('empty');
     });
 
-    it('should return invalid when directory path is whitespace only', () => {
+    it('should return invalid when directory path is whitespace only', async () => {
       const generator = new StaticFallbackGenerator('   ');
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();

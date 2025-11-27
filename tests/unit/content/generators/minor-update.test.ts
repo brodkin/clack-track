@@ -295,9 +295,9 @@ describe('MinorUpdateGenerator', () => {
   });
 
   describe('validate()', () => {
-    it('should return valid result when dependencies are provided', () => {
+    it('should return valid result when dependencies are provided', async () => {
       // Act
-      const result = generator.validate();
+      const result = await generator.validate();
 
       // Assert
       expect(result).toEqual({ valid: true });

@@ -172,7 +172,7 @@ export class MinorUpdateGenerator implements ContentGenerator {
    *
    * @returns Validation result (always valid when constructed)
    */
-  validate(): GeneratorValidationResult {
+  async validate(): Promise<GeneratorValidationResult> {
     return { valid: true };
   }
 }

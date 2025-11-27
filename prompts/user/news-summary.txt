@@ -1,8 +1,5 @@
-Create a concise news summary from the provided RSS feeds.
+Pretend you are a late night comic. Select a random current event from the list below, then give your humorous take on it.
 
-Include:
-- Top 1-2 headlines (most important/interesting)
-- Current time
-- Keep it informative but brief
+Your response must begin with "This just in..."
 
-Focus on meaningful news that matters to the household.
+{{headlines}}

@@ -12,6 +12,9 @@ import type { GenerationContext } from '../../types/content-generator.js';
 import { bootstrap } from '../../bootstrap.js';
 import { validateTextContent, validateLayoutContent } from '../../utils/validators.js';
 import { layoutToText } from '../../api/vestaboard/character-converter.js';
+import { HomeAssistantClient } from '../../api/data-sources/home-assistant.js';
+import { createAIProvider, AIProviderType } from '../../api/ai/index.js';
+import type { AIProvider } from '../../types/ai.js';
 
 /**
  * Options for content:test command
@@ -148,8 +151,50 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
         log('FRAME PREVIEW');
         log('='.repeat(60));
 
-        // Create minimal decorator (no dependencies for dry run)
-        const decorator = new FrameDecorator();
+        // Setup HA client for weather (if configured)
+        let haClient: HomeAssistantClient | undefined;
+        const haUrl = process.env.HA_URL ?? process.env.HOME_ASSISTANT_URL;
+        const haToken = process.env.HA_TOKEN ?? process.env.HOME_ASSISTANT_TOKEN;
+
+        if (haUrl && haToken) {
+          try {
+            haClient = new HomeAssistantClient({
+              url: haUrl,
+              token: haToken,
+              reconnection: { enabled: false },
+            });
+            await haClient.connect();
+          } catch {
+            log('  ⚠ Home Assistant connection failed, weather will be blank');
+            haClient = undefined;
+          }
+        }
+
+        // Setup AI provider for color bar (if configured)
+        let aiProvider: AIProvider | undefined;
+        const anthropicKey = process.env.ANTHROPIC_API_KEY;
+        const openaiKey = process.env.OPENAI_API_KEY;
+
+        if (anthropicKey) {
+          try {
+            aiProvider = createAIProvider(AIProviderType.ANTHROPIC, anthropicKey);
+          } catch {
+            // Fallback to OpenAI if Anthropic fails
+          }
+        }
+        if (!aiProvider && openaiKey) {
+          try {
+            aiProvider = createAIProvider(AIProviderType.OPENAI, openaiKey);
+          } catch {
+            // Continue without AI provider
+          }
+        }
+
+        // Create decorator with dependencies for weather and colors
+        const decorator = new FrameDecorator({
+          homeAssistant: haClient,
+          aiProvider,
+        });
         const frameResult = await decorator.decorate(content.text, context.timestamp);
 
         if (frameResult.warnings && frameResult.warnings.length > 0) {

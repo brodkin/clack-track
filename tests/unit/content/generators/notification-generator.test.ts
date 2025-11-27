@@ -120,25 +120,25 @@ describe('NotificationGenerator', () => {
   });
 
   describe('validate() method', () => {
-    it('should return valid for valid RegExp patterns', () => {
+    it('should return valid for valid RegExp patterns', async () => {
       const generator = new TestPersonArrivedNotification();
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
     });
 
-    it('should validate compound patterns', () => {
+    it('should validate compound patterns', async () => {
       const generator = new TestDoorNotification();
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
     });
 
-    it('should detect invalid RegExp patterns', () => {
+    it('should detect invalid RegExp patterns', async () => {
       const generator = new InvalidPatternNotification();
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
@@ -344,10 +344,10 @@ describe('NotificationGenerator', () => {
       expect(content).toHaveProperty('outputMode');
     });
 
-    it('should have synchronous validate method', () => {
+    it('should have synchronous validate method', async () => {
       const generator = new TestPersonArrivedNotification();
 
-      const result = generator.validate();
+      const result = await generator.validate();
 
       // Should return immediately (not a Promise)
       expect(result).not.toBeInstanceOf(Promise);

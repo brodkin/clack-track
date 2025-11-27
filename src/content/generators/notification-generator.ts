@@ -123,18 +123,18 @@ export abstract class NotificationGenerator implements ContentGenerator {
    * override this method to add additional validation (e.g., required configuration,
    * API keys, etc.).
    *
-   * @returns {GeneratorValidationResult} Validation result with any errors
+   * @returns {Promise<GeneratorValidationResult>} Validation result with any errors
    *
    * @example
    * ```typescript
    * const generator = new PersonArrivedNotification();
-   * const result = generator.validate();
+   * const result = await generator.validate();
    * if (!result.valid) {
    *   console.error('Validation failed:', result.errors);
    * }
    * ```
    */
-  validate(): GeneratorValidationResult {
+  async validate(): Promise<GeneratorValidationResult> {
     if (!(this.eventPattern instanceof RegExp)) {
       return {
         valid: false,

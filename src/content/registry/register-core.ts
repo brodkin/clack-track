@@ -19,7 +19,9 @@ import { ContentRegistry } from './content-registry.js';
  *
  * @interface CoreGenerators
  * @property {ContentGenerator} motivational - Motivational quote generator (P2, LIGHT)
- * @property {ContentGenerator} news - News summary generator (P2, MEDIUM)
+ * @property {ContentGenerator} globalNews - Global news generator (P2, MEDIUM)
+ * @property {ContentGenerator} techNews - Tech news generator (P2, MEDIUM)
+ * @property {ContentGenerator} localNews - Local news generator (P2, MEDIUM)
  * @property {ContentGenerator} weather - Weather focus generator (P2, LIGHT)
  * @property {ContentGenerator} greeting - Greeting generator (P2, LIGHT, programmatic)
  * @property {ContentGenerator} [asciiArt] - Optional ASCII art generator (P2, LIGHT)
@@ -29,7 +31,9 @@ import { ContentRegistry } from './content-registry.js';
  * ```typescript
  * const coreGenerators: CoreGenerators = {
  *   motivational: new MotivationalQuoteGenerator(),
- *   news: new NewsSummaryGenerator(),
+ *   globalNews: new GlobalNewsGenerator(),
+ *   techNews: new TechNewsGenerator(),
+ *   localNews: new LocalNewsGenerator(),
  *   weather: new WeatherFocusGenerator(),
  *   greeting: new GreetingGenerator(),
  *   asciiArt: new AsciiArtGenerator(), // Optional
@@ -40,8 +44,12 @@ import { ContentRegistry } from './content-registry.js';
 export interface CoreGenerators {
   /** Motivational quote generator (P2, LIGHT, AI-powered) */
   motivational: ContentGenerator;
-  /** News summary generator (P2, MEDIUM, AI-powered) */
-  news: ContentGenerator;
+  /** Global news generator (P2, MEDIUM, AI-powered) */
+  globalNews: ContentGenerator;
+  /** Tech news generator (P2, MEDIUM, AI-powered) */
+  techNews: ContentGenerator;
+  /** Local news generator (P2, MEDIUM, AI-powered) */
+  localNews: ContentGenerator;
   /** Weather focus generator (P2, LIGHT, AI-powered) */
   weather: ContentGenerator;
   /** Greeting generator (P2, LIGHT, programmatic) */
@@ -58,7 +66,9 @@ export interface CoreGenerators {
  * Registers the following generators:
  * - **P2 Generators (NORMAL priority)**:
  *   - motivational-quote: Motivational quotes (LIGHT, AI)
- *   - news-summary: News summaries (MEDIUM, AI)
+ *   - global-news: Global news summaries (MEDIUM, AI)
+ *   - tech-news: Tech news summaries (MEDIUM, AI)
+ *   - local-news: Local news summaries (MEDIUM, AI)
  *   - weather-focus: Weather updates (LIGHT, AI)
  *   - greeting: Personalized greetings (LIGHT, programmatic)
  *   - ascii-art: ASCII art (LIGHT, programmatic, optional)
@@ -98,15 +108,38 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
     generators.motivational
   );
 
+  // Register three news generators (all at P2 for equal selection)
   registry.register(
     {
-      id: 'news-summary',
-      name: 'News Summary Generator',
+      id: 'global-news',
+      name: 'Global News',
       priority: ContentPriority.NORMAL,
       modelTier: ModelTier.MEDIUM,
       applyFrame: true,
     },
-    generators.news
+    generators.globalNews
+  );
+
+  registry.register(
+    {
+      id: 'tech-news',
+      name: 'Tech News',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.techNews
+  );
+
+  registry.register(
+    {
+      id: 'local-news',
+      name: 'Local News',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.localNews
   );
 
   registry.register(

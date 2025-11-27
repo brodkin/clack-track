@@ -26,7 +26,6 @@
  * ```
  */
 
-import { existsSync } from 'fs';
 import { join } from 'path';
 import { PromptLoader } from '../prompt-loader.js';
 import { ModelTierSelector, type ModelSelection } from '../../api/ai/model-tier-selector.js';
@@ -109,18 +108,22 @@ export abstract class AIPromptGenerator implements ContentGenerator {
    *
    * @returns Validation result with any errors encountered
    */
-  validate(): GeneratorValidationResult {
+  async validate(): Promise<GeneratorValidationResult> {
     const errors: string[] = [];
 
-    // Check if system prompt exists
+    // Check if system prompt exists by trying to load it
     const systemPromptPath = join('prompts', 'system', this.getSystemPromptFile());
-    if (!existsSync(systemPromptPath)) {
+    try {
+      await this.promptLoader.loadPrompt('system', this.getSystemPromptFile());
+    } catch {
       errors.push(`System prompt not found: ${systemPromptPath}`);
     }
 
-    // Check if user prompt exists
+    // Check if user prompt exists by trying to load it
     const userPromptPath = join('prompts', 'user', this.getUserPromptFile());
-    if (!existsSync(userPromptPath)) {
+    try {
+      await this.promptLoader.loadPrompt('user', this.getUserPromptFile());
+    } catch {
       errors.push(`User prompt not found: ${userPromptPath}`);
     }
 

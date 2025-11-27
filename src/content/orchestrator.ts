@@ -23,6 +23,7 @@ import type { StaticFallbackGenerator } from './generators/static-fallback-gener
 import type { VestaboardClient } from '../api/vestaboard/types.js';
 import type { AIProvider } from '../types/ai.js';
 import type { GenerationContext, GeneratedContent } from '../types/content-generator.js';
+import type { ContentDataProvider } from '../services/content-data-provider.js';
 
 /**
  * Configuration options for ContentOrchestrator
@@ -40,6 +41,8 @@ export interface ContentOrchestratorConfig {
   preferredProvider: AIProvider;
   /** Alternate AI provider (failover) */
   alternateProvider: AIProvider;
+  /** Optional data provider for pre-fetching weather and color data */
+  dataProvider?: ContentDataProvider;
 }
 
 /**
@@ -75,6 +78,7 @@ export class ContentOrchestrator {
   private readonly fallbackGenerator: StaticFallbackGenerator;
   private readonly preferredProvider: AIProvider;
   private readonly alternateProvider: AIProvider;
+  private readonly dataProvider?: ContentDataProvider;
   private cachedContent: GeneratedContent | null = null;
 
   /**
@@ -89,18 +93,20 @@ export class ContentOrchestrator {
     this.fallbackGenerator = config.fallbackGenerator;
     this.preferredProvider = config.preferredProvider;
     this.alternateProvider = config.alternateProvider;
+    this.dataProvider = config.dataProvider;
   }
 
   /**
    * Generate and send content through the full pipeline
    *
    * Pipeline steps:
-   * 1. Select generator based on context
-   * 2. Generate with retry logic (preferred → alternate provider)
-   * 3. On failure → P3 fallback (StaticFallbackGenerator)
-   * 4. Decorate with frame if outputMode === 'text'
-   * 5. Cache successful content
-   * 6. Send to Vestaboard
+   * 1. Pre-fetch data (weather, colors) via ContentDataProvider (major updates only)
+   * 2. Select generator based on context
+   * 3. Generate with retry logic (preferred → alternate provider)
+   * 4. On failure → P3 fallback (StaticFallbackGenerator)
+   * 5. Decorate with frame if outputMode === 'text', passing pre-fetched data
+   * 6. Cache successful content
+   * 7. Send to Vestaboard
    *
    * @param context - Generation context with update type and metadata
    * @throws Error if no generator available or Vestaboard send fails
@@ -115,7 +121,19 @@ export class ContentOrchestrator {
    * ```
    */
   async generateAndSend(context: GenerationContext): Promise<void> {
-    // Step 1: Select generator based on context
+    // Step 1: Pre-fetch data if dataProvider is available and this is a major update
+    if (this.dataProvider && context.updateType === 'major') {
+      try {
+        const data = await this.dataProvider.fetchData();
+        context.data = data;
+      } catch {
+        // Graceful degradation - continue without pre-fetched data
+        // FrameDecorator will fetch its own data if needed
+        context.data = undefined;
+      }
+    }
+
+    // Step 2: Select generator based on context
     const registeredGenerator = this.selector.select(context);
 
     if (!registeredGenerator) {
@@ -125,7 +143,7 @@ export class ContentOrchestrator {
     let content: GeneratedContent;
 
     try {
-      // Step 2: Generate with retry logic
+      // Step 3: Generate with retry logic
       content = await generateWithRetry(
         registeredGenerator.generator,
         context,
@@ -144,11 +162,15 @@ export class ContentOrchestrator {
       content = await this.fallbackGenerator.generate(context);
     }
 
-    // Step 4: Apply frame decoration if outputMode === 'text'
+    // Step 5: Apply frame decoration if outputMode === 'text'
     let layoutToSend: number[][];
 
     if (content.outputMode === 'text') {
-      const frameResult = await this.decorator.decorate(content.text, context.timestamp);
+      const frameResult = await this.decorator.decorate(
+        content.text,
+        context.timestamp,
+        context.data
+      );
       layoutToSend = frameResult.layout;
     } else {
       // outputMode === 'layout', use pre-formatted layout
@@ -159,10 +181,10 @@ export class ContentOrchestrator {
       layoutToSend = content.layout.characterCodes;
     }
 
-    // Step 5: Cache successful content
+    // Step 6: Cache successful content
     this.cachedContent = content;
 
-    // Step 6: Send to Vestaboard
+    // Step 7: Send to Vestaboard
     await this.vestaboardClient.sendLayout(layoutToSend);
   }
 

@@ -17,8 +17,8 @@ describe('GreetingGenerator', () => {
   });
 
   describe('validate', () => {
-    it('should always return valid', () => {
-      const result = generator.validate();
+    it('should always return valid', async () => {
+      const result = await generator.validate();
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
     });
