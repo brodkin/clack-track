@@ -3,6 +3,8 @@ import {
   testBoardCommand,
   testAICommand,
   testHACommand,
+  contentListCommand,
+  contentTestCommand,
 } from './commands/index.js';
 import { frameCommand } from './commands/frame.js';
 
@@ -14,6 +16,7 @@ const BOOLEAN_FLAGS = new Set([
   'v',
   'interactive',
   'list',
+  'with-frame',
 ]);
 
 export async function runCLI(args: string[]): Promise<void> {
@@ -73,23 +76,39 @@ export async function runCLI(args: string[]): Promise<void> {
       });
       break;
     }
+    case 'content:list':
+      await contentListCommand();
+      break;
+    case 'content:test': {
+      const options = parseOptions(args);
+      const generatorId = args[3] && !args[3].startsWith('--') ? args[3] : undefined;
+      await contentTestCommand({
+        generatorId,
+        withFrame: options['with-frame'] === true,
+      });
+      break;
+    }
     default:
       console.log(`
 Clack Track CLI
 
 Usage:
-  npm run generate                  Generate and send major content update
-  npm run test-board                Test Vestaboard connection
-  npm run test:ai [options]         Test AI provider connectivity
-  npm run test:ha [options]         Test Home Assistant connectivity
-  npm run frame [text] [options]    Generate and preview a Vestaboard frame
+  npm run generate                      Generate and send major content update
+  npm run test-board                    Test Vestaboard connection
+  npm run test:ai [options]             Test AI provider connectivity
+  npm run test:ha [options]             Test Home Assistant connectivity
+  npm run frame [text] [options]        Generate and preview a Vestaboard frame
+  npm run content:list                  List all registered content generators
+  npm run content:test <id> [options]   Test a specific generator without sending
 
 Available commands:
-  generate      Generate new content and send to Vestaboard
-  test-board    Test connection to Vestaboard
-  test-ai       Test AI provider connectivity
-  test-ha       Test Home Assistant connectivity
-  frame         Generate and preview a Vestaboard frame
+  generate        Generate new content and send to Vestaboard
+  test-board      Test connection to Vestaboard
+  test-ai         Test AI provider connectivity
+  test-ha         Test Home Assistant connectivity
+  frame           Generate and preview a Vestaboard frame
+  content:list    List all registered content generators
+  content:test    Test a specific generator (dry run)
 
 Test AI Options:
   --provider <name>    Provider to test: openai, anthropic, or all (default: all)
@@ -105,6 +124,9 @@ Frame Options:
   --skip-weather       Skip weather/HA integration
   --skip-colors        Skip AI color selection
   --verbose, -v        Show timing breakdown for service calls
+
+Content Test Options:
+  --with-frame         Apply frame decoration to generated content
       `);
   }
 }
