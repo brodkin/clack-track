@@ -1,0 +1,8 @@
+Create a tech/startup news summary from Silicon Valley and beyond.
+
+Include:
+- Top 1-2 tech headlines (focus on innovation, startups, or industry disruption)
+- Current time
+- Keep it punchy and forward-looking
+
+Emphasize the entrepreneurial spirit, breakthrough innovations, and what's shaping the future of technology.
