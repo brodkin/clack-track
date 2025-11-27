@@ -2,3 +2,5 @@ export { generateCommand } from './generate.js';
 export { testBoardCommand } from './test-board.js';
 export { testAICommand } from './test-ai.js';
 export { testHACommand } from './test-ha.js';
+export { contentListCommand } from './content-list.js';
+export { contentTestCommand } from './content-test.js';
