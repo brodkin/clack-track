@@ -164,6 +164,9 @@ export abstract class AIPromptGenerator implements ContentGenerator {
       templateVars
     );
 
+    // Format the user prompt with context
+    const formattedUserPrompt = this.formatUserPrompt(userPrompt, context, personality);
+
     // Select model for this tier
     const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
 
@@ -174,7 +177,7 @@ export abstract class AIPromptGenerator implements ContentGenerator {
       const provider = this.createProviderForSelection(selection);
       const response = await provider.generate({
         systemPrompt,
-        userPrompt: this.formatUserPrompt(userPrompt, context, personality),
+        userPrompt: formattedUserPrompt,
       });
 
       return {
@@ -186,6 +189,8 @@ export abstract class AIPromptGenerator implements ContentGenerator {
           provider: selection.provider,
           tokensUsed: response.tokensUsed,
           personality,
+          systemPrompt,
+          userPrompt: formattedUserPrompt,
         },
       };
     } catch (error) {
@@ -199,7 +204,7 @@ export abstract class AIPromptGenerator implements ContentGenerator {
         const alternateProvider = this.createProviderForSelection(alternate);
         const response = await alternateProvider.generate({
           systemPrompt,
-          userPrompt: this.formatUserPrompt(userPrompt, context, personality),
+          userPrompt: formattedUserPrompt,
         });
 
         return {
@@ -213,6 +218,8 @@ export abstract class AIPromptGenerator implements ContentGenerator {
             failedOver: true,
             primaryError: lastError?.message,
             personality,
+            systemPrompt,
+            userPrompt: formattedUserPrompt,
           },
         };
       } catch (alternateError) {

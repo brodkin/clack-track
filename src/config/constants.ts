@@ -3,6 +3,8 @@ export const VESTABOARD = {
   MAX_COLS: 22,
   MAX_CHARS: 132,
   SUPPORTED_CHARS: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,:;!?'-()/@#$%&*",
+  FRAMED_MAX_ROWS: 5, // Max rows when frame is applied (reserves 1 row for time/weather)
+  FRAMED_MAX_COLS: 21, // Max columns when frame is applied (reserves 1 col for padding)
 } as const;
 
 export const UPDATE_INTERVALS = {

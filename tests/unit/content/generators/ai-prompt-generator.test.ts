@@ -81,11 +81,14 @@ class TestAIPromptGenerator {
 
     let lastError: Error | null = null;
 
+    // Format user prompt with context
+    const formattedUserPrompt = `${userPrompt}\n\nContext: ${JSON.stringify(context)}`;
+
     // Try preferred provider
     try {
       const response = await provider.generate({
         systemPrompt,
-        userPrompt: `${userPrompt}\n\nContext: ${JSON.stringify(context)}`,
+        userPrompt: formattedUserPrompt,
       });
 
       return {
@@ -95,6 +98,8 @@ class TestAIPromptGenerator {
           model: response.model,
           tier: this.modelTier,
           provider: selection.provider,
+          systemPrompt,
+          userPrompt: formattedUserPrompt,
         },
       };
     } catch (error) {
@@ -108,7 +113,7 @@ class TestAIPromptGenerator {
         const alternateProvider = this.getProviderForSelection(alternate);
         const response = await alternateProvider.generate({
           systemPrompt,
-          userPrompt: `${userPrompt}\n\nContext: ${JSON.stringify(context)}`,
+          userPrompt: formattedUserPrompt,
         });
 
         return {
@@ -119,6 +124,8 @@ class TestAIPromptGenerator {
             tier: this.modelTier,
             provider: alternate.provider,
             failedOver: true,
+            systemPrompt,
+            userPrompt: formattedUserPrompt,
           },
         };
       } catch (alternateError) {
@@ -269,6 +276,45 @@ describe('AIPromptGenerator', () => {
       timestamp: new Date('2025-01-01T12:00:00Z'),
       eventData: { test: 'data' },
     };
+
+    it('should include systemPrompt and userPrompt in metadata', async () => {
+      const systemPromptContent = 'You are a helpful assistant for Vestaboard displays';
+      const userPromptContent = 'Generate a motivational quote';
+
+      mockPromptLoader.loadPrompt
+        .mockResolvedValueOnce(systemPromptContent)
+        .mockResolvedValueOnce(userPromptContent);
+
+      const mockProvider: AIProvider = {
+        generate: jest.fn().mockResolvedValue({
+          text: 'Test generated content',
+          model: 'gpt-4o',
+          tokensUsed: 100,
+        }),
+        validateConnection: jest.fn().mockResolvedValue({ valid: true }),
+      };
+
+      mockModelTierSelector.select.mockReturnValue({
+        provider: 'openai',
+        model: 'gpt-4o',
+      });
+
+      const generator = new TestAIPromptGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        ModelTier.MEDIUM
+      );
+
+      // Override provider creation to use our mock
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (generator as any).getProviderForSelection = jest.fn().mockReturnValue(mockProvider);
+
+      const result = await generator.generate(mockContext);
+
+      expect(result.metadata).toBeDefined();
+      expect(result.metadata?.systemPrompt).toBe(systemPromptContent);
+      expect(result.metadata?.userPrompt).toContain(userPromptContent);
+    });
 
     it('should load prompts using getSystemPromptFile() and getUserPromptFile()', async () => {
       mockPromptLoader.loadPrompt

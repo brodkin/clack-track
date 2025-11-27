@@ -68,8 +68,8 @@ describe('content:test command', () => {
 
       registry.register(
         {
-          id: 'news-summary',
-          name: 'News Summary Generator',
+          id: 'test-generator-2',
+          name: 'Test Generator 2',
           priority: 2,
           modelTier: 2,
         },
@@ -82,7 +82,7 @@ describe('content:test command', () => {
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Available generators:'));
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('motivational'));
-      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('news-summary'));
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('test-generator-2'));
       expect(processExitSpy).not.toHaveBeenCalled();
     });
   });
@@ -298,19 +298,22 @@ describe('content:test command', () => {
       // Arrange
       const mockGenerator: jest.Mocked<ContentGenerator> = {
         generate: jest.fn().mockResolvedValue({
-          layout: [[1, 2, 3]],
+          text: 'LAYOUT CONTENT',
+          layout: {
+            rows: ['ROW 1', 'ROW 2', 'ROW 3', 'ROW 4', 'ROW 5', 'ROW 6'],
+          },
           outputMode: 'layout',
           metadata: {
             generatedAt: new Date('2025-01-01T12:00:00Z'),
-            generatorId: 'ascii-art',
+            generatorId: 'test-layout-gen',
           },
         } as GeneratedContent),
       };
 
       registry.register(
         {
-          id: 'ascii-art',
-          name: 'ASCII Art Generator',
+          id: 'test-layout-gen',
+          name: 'Test Layout Generator',
           priority: 2,
           modelTier: 1,
         },
@@ -318,11 +321,237 @@ describe('content:test command', () => {
       );
 
       // Act
-      await contentTestCommand({ generatorId: 'ascii-art' });
+      await contentTestCommand({ generatorId: 'test-layout-gen' });
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Output mode: layout'));
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Layout:'));
+    });
+  });
+
+  describe('user prompt display', () => {
+    it('should display user prompt when available from AI generator', async () => {
+      // Arrange
+      const mockGenerator: jest.Mocked<ContentGenerator> = {
+        generate: jest.fn().mockResolvedValue({
+          text: 'MOTIVATIONAL QUOTE',
+          outputMode: 'text',
+          metadata: {
+            userPrompt: 'Generate a motivational quote about persistence',
+            systemPrompt: 'You are a motivational quote generator',
+          },
+        } as GeneratedContent),
+      };
+
+      registry.register(
+        {
+          id: 'motivational',
+          name: 'Motivational Quote Generator',
+          priority: 2,
+          modelTier: 1,
+        },
+        mockGenerator
+      );
+
+      // Act
+      await contentTestCommand({ generatorId: 'motivational' });
+
+      // Assert
+      const calls = consoleLogSpy.mock.calls.map(call => call.join(' '));
+      const allOutput = calls.join('\n');
+      expect(allOutput).toContain('USER PROMPT SENT TO LLM');
+      expect(allOutput).toContain('Generate a motivational quote about persistence');
+    });
+
+    it('should not display user prompt section when not available', async () => {
+      // Arrange
+      const mockGenerator: jest.Mocked<ContentGenerator> = {
+        generate: jest.fn().mockResolvedValue({
+          text: 'PROGRAMMATIC CONTENT',
+          outputMode: 'text',
+          metadata: {
+            generatedAt: new Date('2025-01-01T12:00:00Z'),
+          },
+        } as GeneratedContent),
+      };
+
+      registry.register(
+        {
+          id: 'static-content',
+          name: 'Static Content Generator',
+          priority: 2,
+          modelTier: 1,
+        },
+        mockGenerator
+      );
+
+      // Act
+      await contentTestCommand({ generatorId: 'static-content' });
+
+      // Assert
+      const calls = consoleLogSpy.mock.calls.map(call => call.join(' '));
+      const allOutput = calls.join('\n');
+      expect(allOutput).not.toContain('USER PROMPT SENT TO LLM');
+    });
+  });
+
+  describe('validation result display', () => {
+    it('should display validation pass status for valid content', async () => {
+      // Arrange - Valid content: 3 lines, max 15 chars per line
+      const validText = 'LINE ONE\nLINE TWO\nLINE THREE';
+      const mockGenerator: jest.Mocked<ContentGenerator> = {
+        generate: jest.fn().mockResolvedValue({
+          text: validText,
+          outputMode: 'text',
+        } as GeneratedContent),
+      };
+
+      registry.register(
+        {
+          id: 'test-valid',
+          name: 'Valid Content Generator',
+          priority: 2,
+          modelTier: 1,
+        },
+        mockGenerator
+      );
+
+      // Act
+      await contentTestCommand({ generatorId: 'test-valid' });
+
+      // Assert
+      const calls = consoleLogSpy.mock.calls.map(call => call.join(' '));
+      const allOutput = calls.join('\n');
+      expect(allOutput).toContain('VALIDATION RESULT');
+      expect(allOutput).toMatch(/Status:.*PASSED/);
+      expect(allOutput).toMatch(/Lines:.*3\/5/);
+      expect(allOutput).toMatch(/Max line length:.*\d+\/21/);
+      expect(allOutput).toContain('Invalid characters: none');
+    });
+
+    it('should display validation fail status for content with too many lines', async () => {
+      // Arrange - Invalid content: 6 lines (exceeds 5 line limit for framed mode)
+      const invalidText = 'LINE 1\nLINE 2\nLINE 3\nLINE 4\nLINE 5\nLINE 6';
+      const mockGenerator: jest.Mocked<ContentGenerator> = {
+        generate: jest.fn().mockResolvedValue({
+          text: invalidText,
+          outputMode: 'text',
+        } as GeneratedContent),
+      };
+
+      registry.register(
+        {
+          id: 'test-invalid-lines',
+          name: 'Invalid Lines Generator',
+          priority: 2,
+          modelTier: 1,
+        },
+        mockGenerator
+      );
+
+      // Act
+      await contentTestCommand({ generatorId: 'test-invalid-lines' });
+
+      // Assert
+      const calls = consoleLogSpy.mock.calls.map(call => call.join(' '));
+      const allOutput = calls.join('\n');
+      expect(allOutput).toContain('VALIDATION RESULT');
+      expect(allOutput).toMatch(/Status:.*FAILED/);
+      expect(allOutput).toMatch(/Lines:.*6\/5/);
+    });
+
+    it('should display validation fail status for content with line too long', async () => {
+      // Arrange - Invalid content: line exceeds 21 char limit
+      const invalidText = 'THIS LINE IS WAY TOO LONG FOR VESTABOARD';
+      const mockGenerator: jest.Mocked<ContentGenerator> = {
+        generate: jest.fn().mockResolvedValue({
+          text: invalidText,
+          outputMode: 'text',
+        } as GeneratedContent),
+      };
+
+      registry.register(
+        {
+          id: 'test-invalid-length',
+          name: 'Invalid Length Generator',
+          priority: 2,
+          modelTier: 1,
+        },
+        mockGenerator
+      );
+
+      // Act
+      await contentTestCommand({ generatorId: 'test-invalid-length' });
+
+      // Assert
+      const calls = consoleLogSpy.mock.calls.map(call => call.join(' '));
+      const allOutput = calls.join('\n');
+      expect(allOutput).toContain('VALIDATION RESULT');
+      expect(allOutput).toMatch(/Status:.*FAILED/);
+      expect(allOutput).toMatch(/Max line length:.*\d+\/21/);
+    });
+
+    it('should display validation fail status for content with invalid characters', async () => {
+      // Arrange - Invalid content: contains lowercase and special chars
+      const invalidText = 'hello@world';
+      const mockGenerator: jest.Mocked<ContentGenerator> = {
+        generate: jest.fn().mockResolvedValue({
+          text: invalidText,
+          outputMode: 'text',
+        } as GeneratedContent),
+      };
+
+      registry.register(
+        {
+          id: 'test-invalid-chars',
+          name: 'Invalid Chars Generator',
+          priority: 2,
+          modelTier: 1,
+        },
+        mockGenerator
+      );
+
+      // Act
+      await contentTestCommand({ generatorId: 'test-invalid-chars' });
+
+      // Assert
+      const calls = consoleLogSpy.mock.calls.map(call => call.join(' '));
+      const allOutput = calls.join('\n');
+      expect(allOutput).toContain('VALIDATION RESULT');
+      expect(allOutput).toMatch(/Status:.*FAILED/);
+      expect(allOutput).toMatch(/Invalid characters:/);
+      expect(allOutput).not.toContain('Invalid characters: none');
+    });
+
+    it('should display validation metrics even when validation passes', async () => {
+      // Arrange
+      const validText = 'VALID TEXT';
+      const mockGenerator: jest.Mocked<ContentGenerator> = {
+        generate: jest.fn().mockResolvedValue({
+          text: validText,
+          outputMode: 'text',
+        } as GeneratedContent),
+      };
+
+      registry.register(
+        {
+          id: 'test-metrics',
+          name: 'Metrics Test Generator',
+          priority: 2,
+          modelTier: 1,
+        },
+        mockGenerator
+      );
+
+      // Act
+      await contentTestCommand({ generatorId: 'test-metrics' });
+
+      // Assert
+      const calls = consoleLogSpy.mock.calls.map(call => call.join(' '));
+      const allOutput = calls.join('\n');
+      expect(allOutput).toContain('Lines:');
+      expect(allOutput).toContain('Max line length:');
+      expect(allOutput).toContain('Invalid characters:');
     });
   });
 });

@@ -59,3 +59,31 @@ export class AuthenticationError extends AIProviderError {
     this.name = 'AuthenticationError';
   }
 }
+
+/**
+ * Error thrown when content validation fails
+ *
+ * Thrown when generator output doesn't meet Vestaboard constraints
+ * (text mode: 5 lines × 21 chars, layout mode: 6 rows × 22 cols).
+ */
+export class ContentValidationError extends Error {
+  public readonly invalidChars?: string[];
+  public readonly lineCount?: number;
+  public readonly maxLineLength?: number;
+
+  constructor(
+    message: string,
+    details?: { invalidChars?: string[]; lineCount?: number; maxLineLength?: number }
+  ) {
+    super(message);
+    this.name = 'ContentValidationError';
+    this.invalidChars = details?.invalidChars;
+    this.lineCount = details?.lineCount;
+    this.maxLineLength = details?.maxLineLength;
+
+    // Maintains proper stack trace for where our error was thrown (only available on V8)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, this.constructor);
+    }
+  }
+}

@@ -114,7 +114,7 @@ describe('ContentOrchestrator', () => {
       };
 
       const generatedContent: GeneratedContent = {
-        text: 'Test content',
+        text: 'TEST CONTENT',
         outputMode: 'text',
       };
 
@@ -138,7 +138,7 @@ describe('ContentOrchestrator', () => {
         mockPreferredProvider,
         mockAlternateProvider
       );
-      expect(mockDecorator.decorate).toHaveBeenCalledWith('Test content', context.timestamp);
+      expect(mockDecorator.decorate).toHaveBeenCalledWith('TEST CONTENT', context.timestamp);
       expect(mockVestaboardClient.sendLayout).toHaveBeenCalledWith(decoratedLayout);
 
       // Verify cached content
@@ -169,16 +169,22 @@ describe('ContentOrchestrator', () => {
         generator: mockGenerator,
       };
 
-      const preFormattedCharacterCodes = [
-        [1, 2, 3],
-        [4, 5, 6],
-      ];
+      const preFormattedCharacterCodes = Array(6)
+        .fill(null)
+        .map(() => Array(22).fill(0));
 
       const generatedContent: GeneratedContent = {
-        text: 'Test content',
+        text: '',
         outputMode: 'layout',
         layout: {
-          rows: ['ABC', 'DEF'],
+          rows: [
+            'ROW ONE               ',
+            'ROW TWO               ',
+            'ROW THREE             ',
+            'ROW FOUR              ',
+            'ROW FIVE              ',
+            'ROW SIX               ',
+          ],
           characterCodes: preFormattedCharacterCodes,
         },
       };
@@ -224,7 +230,7 @@ describe('ContentOrchestrator', () => {
       };
 
       const generatedContent: GeneratedContent = {
-        text: 'Alternate provider content',
+        text: 'ALTERNATE PROVIDER',
         outputMode: 'text',
       };
 
@@ -395,7 +401,7 @@ describe('ContentOrchestrator', () => {
       };
 
       const generatedContent: GeneratedContent = {
-        text: 'Test content',
+        text: 'TEST CONTENT',
         outputMode: 'text',
       };
 
@@ -462,7 +468,7 @@ describe('ContentOrchestrator', () => {
       };
 
       const generatedContent: GeneratedContent = {
-        text: 'Cached content',
+        text: 'CACHED CONTENT',
         outputMode: 'text',
       };
 
@@ -510,12 +516,12 @@ describe('ContentOrchestrator', () => {
       };
 
       const content1: GeneratedContent = {
-        text: 'First content',
+        text: 'FIRST CONTENT',
         outputMode: 'text',
       };
 
       const content2: GeneratedContent = {
-        text: 'Second content',
+        text: 'SECOND CONTENT',
         outputMode: 'text',
       };
 
@@ -566,7 +572,7 @@ describe('ContentOrchestrator', () => {
       };
 
       const generatedContent: GeneratedContent = {
-        text: 'Cached content',
+        text: 'CACHED CONTENT',
         outputMode: 'text',
       };
 

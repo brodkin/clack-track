@@ -10,6 +10,8 @@ import { FrameDecorator } from '../../content/frame/frame-decorator.js';
 import { log, error } from '../../utils/logger.js';
 import type { GenerationContext } from '../../types/content-generator.js';
 import { bootstrap } from '../../bootstrap.js';
+import { validateTextContent, validateLayoutContent } from '../../utils/validators.js';
+import { layoutToText } from '../../api/vestaboard/character-converter.js';
 
 /**
  * Options for content:test command
@@ -105,15 +107,39 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
     if (content.outputMode === 'text' && content.text) {
       log(`\n${content.text}\n`);
 
-      // Validation metrics
-      const charCount = content.text.length;
-      const lineCount = content.text.split('\n').length;
+      // Display user prompt if available from AI generator
+      if (content.metadata?.userPrompt) {
+        log('='.repeat(60));
+        log('USER PROMPT SENT TO LLM');
+        log('='.repeat(60));
+        log(`\n${content.metadata.userPrompt}\n`);
+      }
+
+      // Validation result
+      const validationResult = validateTextContent(content.text);
 
       log('='.repeat(60));
+      log('VALIDATION RESULT');
+      log('='.repeat(60));
+      log(`Status: ${validationResult.valid ? '✅ PASSED' : '❌ FAILED'}`);
+      log(`Lines: ${validationResult.lineCount}/5`);
+      log(`Max line length: ${validationResult.maxLineLength}/21`);
+      log(
+        `Invalid characters: ${
+          validationResult.invalidChars.length === 0
+            ? 'none'
+            : validationResult.invalidChars.join(', ')
+        }`
+      );
+
+      // Display old validation metrics section for backward compatibility
+      const charCount = content.text.length;
+
+      log('\n' + '='.repeat(60));
       log('VALIDATION METRICS');
       log('='.repeat(60));
       log(`Character count: ${charCount}`);
-      log(`Line count: ${lineCount}`);
+      log(`Line count: ${validationResult.lineCount}`);
       log(`Output mode: ${content.outputMode}`);
 
       // Apply frame if requested
@@ -131,12 +157,61 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
           frameResult.warnings.forEach(warning => log(`  - ${warning}`));
         }
 
-        log('\nFrame layout (6x22):');
-        log(JSON.stringify(frameResult.layout, null, 2));
+        log('\nFrame layout (6x22 ASCII preview):');
+        // Convert layout to ASCII with color codes shown as ANSI colored blocks
+        const RESET = '\x1b[0m';
+        const colorAnsi: Record<number, string> = {
+          63: '\x1b[41m', // RED background
+          64: '\x1b[48;5;208m', // ORANGE background (256-color)
+          65: '\x1b[43m', // YELLOW background
+          66: '\x1b[42m', // GREEN background
+          67: '\x1b[44m', // BLUE background
+          68: '\x1b[45m', // VIOLET/MAGENTA background
+          69: '\x1b[47m', // WHITE background
+        };
+        for (let row = 0; row < 6; row++) {
+          let rowStr = '';
+          for (let col = 0; col < 22; col++) {
+            const code = frameResult.layout[row]?.[col] ?? 0;
+            if (code >= 63 && code <= 69) {
+              // Color codes: show as colored block
+              rowStr += `${colorAnsi[code]} ${RESET}`;
+            } else {
+              rowStr += layoutToText([[code]])[0] || ' ';
+            }
+          }
+          log(`  ${row + 1}: |${rowStr}|`);
+        }
       }
     } else if (content.outputMode === 'layout' && content.layout) {
       log(`\nOutput mode: layout\n`);
-      log('Layout:');
+
+      // Display user prompt if available from AI generator
+      if (content.metadata?.userPrompt) {
+        log('='.repeat(60));
+        log('USER PROMPT SENT TO LLM');
+        log('='.repeat(60));
+        log(`\n${content.metadata.userPrompt}\n`);
+      }
+
+      // Validation result for layout mode
+      const validationResult = validateLayoutContent(content.layout);
+
+      log('='.repeat(60));
+      log('VALIDATION RESULT');
+      log('='.repeat(60));
+      log(`Status: ${validationResult.valid ? '✅ PASSED' : '❌ FAILED'}`);
+      log(`Lines: ${validationResult.lineCount}/6`);
+      log(`Max line length: ${validationResult.maxLineLength}/22`);
+      log(
+        `Invalid characters: ${
+          validationResult.invalidChars.length === 0
+            ? 'none'
+            : validationResult.invalidChars.join(', ')
+        }`
+      );
+
+      log('\nLayout:');
       log(JSON.stringify(content.layout, null, 2));
     }
 
