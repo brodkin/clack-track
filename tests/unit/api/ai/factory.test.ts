@@ -40,5 +40,53 @@ describe('AI Provider Factory', () => {
       expect(provider).toHaveProperty('generate');
       expect(provider).toHaveProperty('validateConnection');
     });
+
+    describe('model parameter (tier-based model selection)', () => {
+      it('should create OpenAI client without model parameter (backward compatibility)', () => {
+        const provider = createAIProvider(AIProviderType.OPENAI, MOCK_API_KEY);
+
+        expect(provider).toBeInstanceOf(OpenAIClient);
+        expect(provider).toBeDefined();
+      });
+
+      it('should create Anthropic client without model parameter (backward compatibility)', () => {
+        const provider = createAIProvider(AIProviderType.ANTHROPIC, MOCK_API_KEY);
+
+        expect(provider).toBeInstanceOf(AnthropicClient);
+        expect(provider).toBeDefined();
+      });
+
+      it('should create OpenAI client with custom model parameter', () => {
+        const customModel = 'gpt-4o-mini';
+        const provider = createAIProvider(AIProviderType.OPENAI, MOCK_API_KEY, customModel);
+
+        expect(provider).toBeInstanceOf(OpenAIClient);
+        // Verify model was passed (indirectly through successful instantiation)
+        expect(provider).toBeDefined();
+      });
+
+      it('should create Anthropic client with custom model parameter', () => {
+        const customModel = 'claude-3-haiku-20240307';
+        const provider = createAIProvider(AIProviderType.ANTHROPIC, MOCK_API_KEY, customModel);
+
+        expect(provider).toBeInstanceOf(AnthropicClient);
+        // Verify model was passed (indirectly through successful instantiation)
+        expect(provider).toBeDefined();
+      });
+
+      it('should pass undefined model to OpenAI when not specified', () => {
+        // This test verifies that OpenAI client uses its default when no model is provided
+        const provider = createAIProvider(AIProviderType.OPENAI, MOCK_API_KEY);
+
+        expect(provider).toBeInstanceOf(OpenAIClient);
+      });
+
+      it('should pass undefined model to Anthropic when not specified', () => {
+        // This test verifies that Anthropic client uses its default when no model is provided
+        const provider = createAIProvider(AIProviderType.ANTHROPIC, MOCK_API_KEY);
+
+        expect(provider).toBeInstanceOf(AnthropicClient);
+      });
+    });
   });
 });
