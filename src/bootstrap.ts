@@ -170,6 +170,13 @@ function createHAClientIfConfigured(
   return new HomeAssistantClient({
     url: config.dataSources.homeAssistant.url,
     token: config.dataSources.homeAssistant.token,
+    reconnection: {
+      enabled: true,
+      maxAttempts: config.dataSources.homeAssistant.maxReconnectAttempts ?? 10,
+      initialDelayMs: config.dataSources.homeAssistant.reconnectDelayMs ?? 5000,
+      maxDelayMs: 30000,
+      backoffMultiplier: 2,
+    },
   });
 }
 
@@ -227,7 +234,22 @@ export async function bootstrap(): Promise<BootstrapResult> {
   // Step 4: Create Home Assistant client and WeatherService (if configured)
   // Created early so WeatherService can be injected into generators
   const haClient = createHAClientIfConfigured(config);
-  const weatherService = haClient ? new WeatherService(haClient) : undefined;
+
+  // Connect to Home Assistant if client was created
+  if (haClient) {
+    try {
+      await haClient.connect();
+    } catch (error) {
+      // Log warning but continue - graceful degradation without HA
+      console.warn(
+        'Failed to connect to Home Assistant:',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+    }
+  }
+
+  // Only create WeatherService if HA client is connected
+  const weatherService = haClient?.isConnected() ? new WeatherService(haClient) : undefined;
 
   // Step 5: Create and populate ContentRegistry
   const registry = ContentRegistry.getInstance();
