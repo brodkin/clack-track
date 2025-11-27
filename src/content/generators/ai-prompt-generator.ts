@@ -6,6 +6,7 @@
  * - Prompt file loading and validation
  * - Model tier selection with cross-provider fallback
  * - Retry logic for AI provider failures
+ * - Dynamic personality dimensions for content variety
  *
  * Subclasses must implement:
  * - getSystemPromptFile(): string - Return filename for system prompt
@@ -30,6 +31,11 @@ import { join } from 'path';
 import { PromptLoader } from '../prompt-loader.js';
 import { ModelTierSelector, type ModelSelection } from '../../api/ai/model-tier-selector.js';
 import { createAIProvider, AIProviderType } from '../../api/ai/index.js';
+import {
+  generatePersonalityDimensions,
+  type PersonalityDimensions,
+  type TemplateVariables,
+} from '../personality/index.js';
 import type { AIProvider } from '../../types/ai.js';
 import type {
   ContentGenerator,
@@ -128,20 +134,35 @@ export abstract class AIPromptGenerator implements ContentGenerator {
    * Generates content using AI with automatic provider failover
    *
    * Workflow:
-   * 1. Loads system and user prompts
-   * 2. Selects preferred model based on tier
-   * 3. Attempts generation with preferred provider
-   * 4. On failure, retries with alternate provider (if available)
-   * 5. Throws if all providers fail
+   * 1. Generates personality dimensions for content variety
+   * 2. Loads system and user prompts with template variable substitution
+   * 3. Selects preferred model based on tier
+   * 4. Attempts generation with preferred provider
+   * 5. On failure, retries with alternate provider (if available)
+   * 6. Throws if all providers fail
    *
    * @param context - Context information for content generation
    * @returns Generated content with text and metadata
    * @throws Error if all AI providers fail
    */
   async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Load prompts
-    const systemPrompt = await this.promptLoader.loadPrompt('system', this.getSystemPromptFile());
-    const userPrompt = await this.promptLoader.loadPrompt('user', this.getUserPromptFile());
+    // Generate personality dimensions (use provided or create new)
+    const personality = context.personality ?? generatePersonalityDimensions();
+
+    // Build template variables from personality and context
+    const templateVars = this.buildTemplateVariables(personality, context);
+
+    // Load prompts with variable substitution
+    const systemPrompt = await this.promptLoader.loadPromptWithVariables(
+      'system',
+      this.getSystemPromptFile(),
+      templateVars
+    );
+    const userPrompt = await this.promptLoader.loadPromptWithVariables(
+      'user',
+      this.getUserPromptFile(),
+      templateVars
+    );
 
     // Select model for this tier
     const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
@@ -153,7 +174,7 @@ export abstract class AIPromptGenerator implements ContentGenerator {
       const provider = this.createProviderForSelection(selection);
       const response = await provider.generate({
         systemPrompt,
-        userPrompt: this.formatUserPrompt(userPrompt, context),
+        userPrompt: this.formatUserPrompt(userPrompt, context, personality),
       });
 
       return {
@@ -164,6 +185,7 @@ export abstract class AIPromptGenerator implements ContentGenerator {
           tier: this.modelTier,
           provider: selection.provider,
           tokensUsed: response.tokensUsed,
+          personality,
         },
       };
     } catch (error) {
@@ -177,7 +199,7 @@ export abstract class AIPromptGenerator implements ContentGenerator {
         const alternateProvider = this.createProviderForSelection(alternate);
         const response = await alternateProvider.generate({
           systemPrompt,
-          userPrompt: this.formatUserPrompt(userPrompt, context),
+          userPrompt: this.formatUserPrompt(userPrompt, context, personality),
         });
 
         return {
@@ -190,6 +212,7 @@ export abstract class AIPromptGenerator implements ContentGenerator {
             tokensUsed: response.tokensUsed,
             failedOver: true,
             primaryError: lastError?.message,
+            personality,
           },
         };
       } catch (alternateError) {
@@ -199,6 +222,43 @@ export abstract class AIPromptGenerator implements ContentGenerator {
 
     // All providers failed
     throw new Error(`All AI providers failed for tier ${this.modelTier}: ${lastError?.message}`);
+  }
+
+  /**
+   * Builds template variables from personality dimensions and context
+   *
+   * @param personality - Personality dimensions for this generation
+   * @param context - Generation context with timestamp and other data
+   * @returns Template variables map for prompt substitution
+   */
+  private buildTemplateVariables(
+    personality: PersonalityDimensions,
+    context: GenerationContext
+  ): TemplateVariables {
+    const timestamp = context.timestamp;
+
+    return {
+      // Personality dimensions
+      mood: personality.mood,
+      energyLevel: personality.energyLevel,
+      humorStyle: personality.humorStyle,
+      obsession: personality.obsession,
+
+      // Date/time context
+      date: timestamp.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+      time: timestamp.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+      }),
+
+      // Static persona (could be made configurable later)
+      persona: 'Houseboy',
+    };
   }
 
   /**
@@ -220,11 +280,42 @@ export abstract class AIPromptGenerator implements ContentGenerator {
   /**
    * Formats the user prompt with context information
    *
+   * Appends personality and context as structured plain text rather than JSON
+   * for better readability and model comprehension.
+   *
    * @param userPrompt - Base user prompt text
-   * @param context - Generation context to append
+   * @param context - Generation context
+   * @param personality - Personality dimensions for this generation
    * @returns Formatted prompt with context
    */
-  private formatUserPrompt(userPrompt: string, context: GenerationContext): string {
-    return `${userPrompt}\n\nContext: ${JSON.stringify(context, null, 2)}`;
+  private formatUserPrompt(
+    userPrompt: string,
+    context: GenerationContext,
+    personality: PersonalityDimensions
+  ): string {
+    const timestamp = context.timestamp;
+    const dateStr = timestamp.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    const timeStr = timestamp.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+
+    return `${userPrompt}
+
+CURRENT CONTEXT:
+- Date: ${dateStr}
+- Time: ${timeStr}
+- Update Type: ${context.updateType}
+
+PERSONALITY FOR THIS RESPONSE:
+- Mood: ${personality.mood}
+- Energy: ${personality.energyLevel}
+- Humor Style: ${personality.humorStyle}
+- Current Obsession: ${personality.obsession}`;
   }
 }
