@@ -1,35 +1,29 @@
 import { HomeAssistantClient } from '../api/data-sources/index.js';
-import { MajorUpdateGenerator } from '../content/generators/index.js';
-import { MinorUpdateGenerator } from '../content/generators/index.js';
-import type { VestaboardClient } from '../api/vestaboard/index.js';
+import type { ContentOrchestrator } from '../content/orchestrator.js';
 import { HomeAssistantEvent } from '../types/home-assistant.js';
 import { log, warn } from '../utils/logger.js';
 
 export class EventHandler {
   private homeAssistant: HomeAssistantClient;
-  private majorUpdateGenerator: MajorUpdateGenerator;
-  private minorUpdateGenerator: MinorUpdateGenerator;
-  private vestaboardClient: VestaboardClient;
+  private orchestrator: ContentOrchestrator;
 
-  constructor(
-    homeAssistant: HomeAssistantClient,
-    majorUpdateGenerator: MajorUpdateGenerator,
-    minorUpdateGenerator: MinorUpdateGenerator,
-    vestaboardClient: VestaboardClient
-  ) {
+  constructor(homeAssistant: HomeAssistantClient, orchestrator: ContentOrchestrator) {
     this.homeAssistant = homeAssistant;
-    this.majorUpdateGenerator = majorUpdateGenerator;
-    this.minorUpdateGenerator = minorUpdateGenerator;
-    this.vestaboardClient = vestaboardClient;
+    this.orchestrator = orchestrator;
   }
 
   async initialize(): Promise<void> {
     // Connect to Home Assistant
     await this.homeAssistant.connect();
 
-    // Subscribe to events using subscribeToEvents method
+    // Subscribe to content_trigger events for standard updates
     await this.homeAssistant.subscribeToEvents('content_trigger', event => {
       void this.handleContentTrigger(event);
+    });
+
+    // Subscribe to state_changed events for P0 notifications
+    await this.homeAssistant.subscribeToEvents('state_changed', event => {
+      void this.handleStateChanged(event);
     });
 
     log('Event handler initialized and connected to Home Assistant');
@@ -44,18 +38,31 @@ export class EventHandler {
     try {
       log(`Received content trigger event: ${event.event_type}`);
 
-      // Generate new major content update
-      const content = await this.majorUpdateGenerator.generate(event.data);
-
-      // Send to Vestaboard
-      await this.vestaboardClient.sendText(content.text);
-
-      // Update minor generator with new content
-      this.minorUpdateGenerator.setLastMajorContent(content);
+      // Use orchestrator to generate and send content
+      await this.orchestrator.generateAndSend({
+        updateType: 'major',
+        timestamp: new Date(),
+        eventData: event.data,
+      });
 
       log('Major update triggered successfully');
     } catch (error) {
       warn('Failed to handle content trigger:', error);
+    }
+  }
+
+  private async handleStateChanged(event: HomeAssistantEvent): Promise<void> {
+    try {
+      // P0 notification support: pass state change to orchestrator
+      // Orchestrator (via ContentSelector) will determine if event matches P0 pattern
+      await this.orchestrator.generateAndSend({
+        updateType: 'major',
+        timestamp: new Date(),
+        eventData: event.data,
+      });
+    } catch (error) {
+      // Log errors without crashing the event handler
+      warn('Failed to handle state change event:', error);
     }
   }
 }
