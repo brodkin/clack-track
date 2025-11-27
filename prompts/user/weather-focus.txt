@@ -1,3 +1,5 @@
+{{weather}}
+
 Make a witty or novel commentary about the weather. Avoid the obvious. DO NOT give a weather report. Your audience already knows the weather condition and temperature.
 
-The weather information has already been fetched and is available in the CURRENT WEATHER section above. Use that data directly rather than making assumptions.
+Use the weather data above directly rather than making assumptions.
