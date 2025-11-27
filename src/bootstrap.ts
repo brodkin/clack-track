@@ -49,6 +49,8 @@ export interface BootstrapResult {
   scheduler: CronScheduler;
   /** Content registry with all registered generators */
   registry: ContentRegistry;
+  /** Home Assistant client (null if HA not configured) - call disconnect() to clean up */
+  haClient: HomeAssistantClient | null;
 }
 
 /**
@@ -310,5 +312,6 @@ export async function bootstrap(): Promise<BootstrapResult> {
     eventHandler,
     scheduler,
     registry,
+    haClient,
   };
 }

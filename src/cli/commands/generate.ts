@@ -12,14 +12,20 @@ import { bootstrap, type BootstrapResult } from '../../bootstrap.js';
  */
 export async function generateCommand(options: { type?: 'major' | 'minor' }): Promise<void> {
   let scheduler: BootstrapResult['scheduler'] | null = null;
+  let haClient: BootstrapResult['haClient'] = null;
 
   try {
     const updateType = options.type || 'major';
     log(`Generating ${updateType} content update...`);
 
     // Step 1: Bootstrap the application to initialize all dependencies
-    const { orchestrator, scheduler: bootstrapScheduler } = await bootstrap();
+    const {
+      orchestrator,
+      scheduler: bootstrapScheduler,
+      haClient: bootstrapHaClient,
+    } = await bootstrap();
     scheduler = bootstrapScheduler;
+    haClient = bootstrapHaClient;
 
     // Step 2: Generate and send content via orchestrator
     await orchestrator.generateAndSend({
@@ -33,12 +39,21 @@ export async function generateCommand(options: { type?: 'major' | 'minor' }): Pr
     error('Failed to generate content:', err);
     process.exit(1);
   } finally {
-    // Step 4: Clean shutdown - stop scheduler to prevent dangling timers
+    // Step 4: Clean shutdown - stop scheduler and disconnect HA client
     if (scheduler) {
       try {
         scheduler.stop();
       } catch {
         // Ignore scheduler stop errors - not critical for CLI command
+      }
+    }
+
+    // Disconnect Home Assistant WebSocket to allow process to exit
+    if (haClient) {
+      try {
+        await haClient.disconnect();
+      } catch {
+        // Ignore disconnect errors - not critical for CLI command
       }
     }
   }

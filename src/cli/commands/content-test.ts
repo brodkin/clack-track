@@ -45,7 +45,9 @@ export interface ContentTestOptions {
  */
 export async function contentTestCommand(options: ContentTestOptions): Promise<void> {
   // Bootstrap to populate the registry with generators
-  const { scheduler } = await bootstrap();
+  const { scheduler, haClient: bootstrapHaClient } = await bootstrap();
+  // Track local HA client created for --with-frame (if any)
+  let localHaClient: HomeAssistantClient | undefined;
 
   try {
     // Get registry singleton
@@ -152,21 +154,20 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
         log('='.repeat(60));
 
         // Setup HA client for weather (if configured)
-        let haClient: HomeAssistantClient | undefined;
         const haUrl = process.env.HA_URL ?? process.env.HOME_ASSISTANT_URL;
         const haToken = process.env.HA_TOKEN ?? process.env.HOME_ASSISTANT_TOKEN;
 
         if (haUrl && haToken) {
           try {
-            haClient = new HomeAssistantClient({
+            localHaClient = new HomeAssistantClient({
               url: haUrl,
               token: haToken,
               reconnection: { enabled: false },
             });
-            await haClient.connect();
+            await localHaClient.connect();
           } catch {
             log('  ⚠ Home Assistant connection failed, weather will be blank');
-            haClient = undefined;
+            localHaClient = undefined;
           }
         }
 
@@ -192,7 +193,7 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
 
         // Create decorator with dependencies for weather and colors
         const decorator = new FrameDecorator({
-          homeAssistant: haClient,
+          homeAssistant: localHaClient,
           aiProvider,
         });
         const frameResult = await decorator.decorate(content.text, context.timestamp);
@@ -272,8 +273,26 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
     error('Failed to test content generator:', err);
     process.exit(1);
   } finally {
-    // Clean shutdown - stop scheduler
+    // Clean shutdown - stop scheduler and disconnect HA clients
     scheduler.stop();
+
+    // Disconnect bootstrap HA client
+    if (bootstrapHaClient) {
+      try {
+        await bootstrapHaClient.disconnect();
+      } catch {
+        // Ignore disconnect errors
+      }
+    }
+
+    // Disconnect local HA client (if created for --with-frame)
+    if (localHaClient) {
+      try {
+        await localHaClient.disconnect();
+      } catch {
+        // Ignore disconnect errors
+      }
+    }
   }
 }
 
