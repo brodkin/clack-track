@@ -29,12 +29,27 @@ Clack Track creates AI-powered content for Vestaboard split-flap displays. The s
 ```
 EventHandler ← HomeAssistantClient (WebSocket)
      ↓
-ContentGenerator → AI Providers → Formatters → VestaboardClient → Vestaboard Device
-                ↗ Data Sources ↗
-              ↗ PromptLoader ↗
+ContentOrchestrator → ContentSelector → ContentRegistry → Generators
+     ↓                     ↓
+generateWithRetry    P0→P2→P3 cascade
+     ↓
+FrameDecorator → VestaboardClient → Vestaboard Device
 
-CronScheduler → EventHandler → ContentGenerator (scheduled updates)
+CronScheduler → EventHandler → ContentOrchestrator (scheduled updates)
 ```
+
+### ContentOrchestrator Pipeline
+
+Six-step pipeline for all content generation:
+
+1. **Select** - ContentSelector picks generator via P0→P2→P3 priority cascade
+2. **Generate** - `generateWithRetry()` with cross-provider failover
+3. **Fallback** - P3 StaticFallbackGenerator on retry exhaustion
+4. **Decorate** - FrameDecorator adds time/weather frame (if outputMode='text')
+5. **Cache** - Store for minor updates
+6. **Send** - VestaboardClient sends to device
+
+**Cross-provider failover** triggers only on `RateLimitError` or `AuthenticationError`. Other errors skip directly to P3 fallback.
 
 ### Layer Purposes
 
@@ -66,6 +81,34 @@ CronScheduler → EventHandler → ContentGenerator (scheduled updates)
 - Config-driven selection via `AI_PROVIDER` environment variable
 - Error types: `RateLimitError`, `AuthenticationError`, `InvalidRequestError`
 
+### Model Tier System
+
+Three capability tiers for cost/performance optimization:
+
+| Tier   | OpenAI      | Anthropic         | Use Case                 |
+| ------ | ----------- | ----------------- | ------------------------ |
+| LIGHT  | gpt-4o-mini | claude-3-haiku    | Fast, cheap (quotes)     |
+| MEDIUM | gpt-4o      | claude-3-5-sonnet | Balanced (news, weather) |
+| HEAVY  | gpt-4-turbo | claude-3-opus     | Complex reasoning        |
+
+`ModelTierSelector` maintains capability level across provider failover.
+
+### Content Generator Hierarchy
+
+New generators must extend one of three abstract bases:
+
+- **AIPromptGenerator** - AI-powered content. Implement `getSystemPromptFile()`, `getUserPromptFile()`
+- **ProgrammaticGenerator** - Non-AI content. Implement `generate(context)`
+- **NotificationGenerator** - P0 HA events. Implement `eventPattern` RegExp, `formatNotification()`
+
+### Content Registry & Priority Selection
+
+All generators registered via `ContentRegistry.register(metadata, generator)`. Selection uses P0→P2→P3 cascade:
+
+- **P0 (NOTIFICATION)** - Event pattern matching for HA events (immediate, no frame)
+- **P2 (NORMAL)** - Random selection from available generators
+- **P3 (FALLBACK)** - Static fallback when all else fails
+
 ### Home Assistant Integration
 
 WebSocket client for event-driven content updates. Supports:
@@ -94,12 +137,24 @@ WebSocket client for event-driven content updates. Supports:
 
 ## Common Development Tasks
 
-### Adding a New Content Type
+### Adding a New Content Generator
 
-1. Create prompt in `prompts/user/<name>.txt`
-2. Add enum value to `ContentType` in `src/types/index.ts`
-3. Update `ContentGenerator` logic in `src/content/generator.ts`
-4. Write tests in `tests/unit/content/` and `tests/integration/content-to-board/`
+**For AI-powered content:**
+
+1. Create prompt files in `prompts/system/` and `prompts/user/`
+2. Extend `AIPromptGenerator` in `src/content/generators/ai/`
+3. Register via `registerCoreContent()` in `src/content/registry/register-core.ts`
+4. Write tests in `tests/unit/content/generators/`
+
+**For programmatic content:**
+
+1. Extend `ProgrammaticGenerator` in `src/content/generators/programmatic/`
+2. Register with appropriate priority (P2 or P3)
+
+**For HA event notifications:**
+
+1. Extend `NotificationGenerator` with `eventPattern` RegExp
+2. Register via `registerNotifications()` with P0 priority
 
 ### Adding a New Data Source
 
@@ -143,3 +198,49 @@ WebSocket client for event-driven content updates. Supports:
 | HA API docs       | `src/api/data-sources/CLAUDE.md`                                                  |
 | AI fixtures       | `tests/fixtures/openai-responses.json`, `tests/fixtures/anthropic-responses.json` |
 | Test mocks        | `tests/__mocks__/`                                                                |
+
+## Critical Integration Patterns
+
+### ColorBarService (Singleton - Performance Critical)
+
+**MUST use `ColorBarService.getInstance()`** - never `new ColorBarService()`. Direct instantiation bypasses the 24-hour cache, causing ~2.4s AI API calls per frame instead of cache hits.
+
+```typescript
+// ✅ CORRECT
+const service = ColorBarService.getInstance(aiProvider);
+
+// ❌ WRONG - breaks cache, causes 2.4s delays
+const service = new ColorBarService(aiProvider);
+```
+
+For test isolation: `ColorBarService.clearInstance()` before each test.
+
+### Vestaboard Local API Quirks
+
+1. **POST returns 201 with error body** - Must check response text for "invalid api key", not just HTTP status
+2. **GET returns wrapped format** - Response is `{ message: [[...]] }`, not flat array
+
+### CLI Boolean Flags
+
+When adding CLI boolean flags, **MUST update `BOOLEAN_FLAGS` Set** in `src/cli/index.ts`:
+
+```typescript
+const BOOLEAN_FLAGS = new Set(['skip-weather', 'skip-colors', 'verbose', 'v']);
+// ADD NEW BOOLEAN FLAGS HERE
+```
+
+Without this, positional arguments get incorrectly consumed as flag values.
+
+### WebSocket Polyfill Import Order
+
+In `src/api/data-sources/home-assistant.ts`, the WebSocket polyfill **MUST execute before** importing `home-assistant-js-websocket`:
+
+```typescript
+import WebSocket from 'ws';
+globalThis.WebSocket = WebSocket;  // MUST be before HA imports
+import { createConnection, ... } from 'home-assistant-js-websocket';
+```
+
+### Live Integration Tests
+
+Vestaboard live tests require explicit opt-in: `VESTABOARD_LIVE_TEST=true`. Never enable in CI/CD without configuration.
