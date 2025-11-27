@@ -18,13 +18,13 @@ export type AIProviderType = 'openai' | 'anthropic';
  */
 export const MODEL_TIERS = {
   openai: {
-    light: 'gpt-4o-mini',
-    medium: 'gpt-4o',
-    heavy: 'gpt-4-turbo',
+    light: 'gpt-4.1-nano',
+    medium: 'gpt-4.1-mini',
+    heavy: 'gpt-4.1',
   },
   anthropic: {
-    light: 'claude-3-haiku-20240307',
-    medium: 'claude-3-5-sonnet-20241022',
-    heavy: 'claude-3-opus-20240229',
+    light: 'claude-haiku-4-5-20251001',
+    medium: 'claude-sonnet-4-5-20250929',
+    heavy: 'claude-opus-4-5-20251101',
   },
 } as const;

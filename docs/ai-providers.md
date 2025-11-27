@@ -30,7 +30,7 @@ const response = await provider.generate({
 });
 
 console.log(response.text); // Generated text
-console.log(response.model); // Model used (e.g., "gpt-4-turbo-preview")
+console.log(response.model); // Model used (e.g., "gpt-4.1")
 console.log(response.usage); // Token usage statistics
 ```
 
@@ -50,7 +50,7 @@ if (!isConnected) {
 // Generate content
 const response = await client.generate({
   prompt: 'Hello, world!',
-  model: 'gpt-4-turbo-preview', // Optional: override default
+  model: 'gpt-4.1', // Optional: override default
   maxTokens: 150, // Optional: limit response length
 });
 ```
@@ -71,7 +71,7 @@ if (!isConnected) {
 // Generate content
 const response = await client.generate({
   prompt: 'Hello, Claude!',
-  model: 'claude-3-5-sonnet-20241022', // Optional: override default
+  model: 'claude-sonnet-4-5-20250929', // Optional: override default
   maxTokens: 150,
 });
 ```
@@ -114,7 +114,7 @@ import {
 // Mock successful generation
 const mockProvider = createMockOpenAIClient({
   responseText: 'Mock AI response',
-  model: 'gpt-4-turbo-preview',
+  model: 'gpt-4.1',
 });
 
 // Mock failure scenarios
@@ -153,9 +153,9 @@ npm run test:ai -- --interactive
 | -------------------- | ----------------------------------------- | ----------------------------------- |
 | `AI_PROVIDER`        | Provider to use (`openai` or `anthropic`) | `openai`                            |
 | `OPENAI_API_KEY`     | OpenAI API key                            | (required if AI_PROVIDER=openai)    |
-| `OPENAI_MODEL`       | OpenAI model name                         | `gpt-4-turbo-preview`               |
+| `OPENAI_MODEL`       | OpenAI model name                         | `gpt-4.1`                           |
 | `ANTHROPIC_API_KEY`  | Anthropic API key                         | (required if AI_PROVIDER=anthropic) |
-| `ANTHROPIC_MODEL`    | Anthropic model name                      | `claude-3-5-sonnet-20241022`        |
+| `ANTHROPIC_MODEL`    | Anthropic model name                      | `claude-sonnet-4-5-20250929`        |
 
 ## Troubleshooting
 

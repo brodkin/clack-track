@@ -116,11 +116,11 @@ if (!cached) throw new Error('No cached content available');
 
 Three capability tiers for cost/performance optimization:
 
-| Tier   | OpenAI      | Anthropic         | Use Case                 |
-| ------ | ----------- | ----------------- | ------------------------ |
-| LIGHT  | gpt-4o-mini | claude-3-haiku    | Fast, cheap (quotes)     |
-| MEDIUM | gpt-4o      | claude-3-5-sonnet | Balanced (news, weather) |
-| HEAVY  | gpt-4-turbo | claude-3-opus     | Complex reasoning        |
+| Tier   | OpenAI       | Anthropic          | Use Case                 |
+| ------ | ------------ | ------------------ | ------------------------ |
+| LIGHT  | gpt-4.1-nano | claude-haiku-4.5   | Fast, cheap (quotes)     |
+| MEDIUM | gpt-4.1-mini | claude-sonnet-4.5  | Balanced (news, weather) |
+| HEAVY  | gpt-4.1      | claude-opus-4.5    | Complex reasoning        |
 
 `ModelTierSelector` maintains capability level across provider failover.
 

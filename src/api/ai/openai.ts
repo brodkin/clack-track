@@ -11,7 +11,7 @@ export class OpenAIClient implements AIProvider {
   private client: OpenAI;
   private model: string;
 
-  constructor(apiKey: string, model: string = 'gpt-4-turbo-preview') {
+  constructor(apiKey: string, model: string = 'gpt-4.1') {
     if (!apiKey || apiKey.trim() === '') {
       throw new Error('OpenAI API key is required');
     }

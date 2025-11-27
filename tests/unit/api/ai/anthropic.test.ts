@@ -72,7 +72,7 @@ describe('AnthropicClient', () => {
       await client.generate(request);
 
       expect(mockAnthropic.messages.create).toHaveBeenCalledWith({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250929',
         system: 'You are a helpful assistant.',
         messages: [{ role: 'user', content: 'Generate a motivational quote.' }],
         max_tokens: 100,
@@ -87,7 +87,7 @@ describe('AnthropicClient', () => {
 
       expect(mockAnthropic.messages.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-5-20250929',
         })
       );
     });
@@ -210,7 +210,7 @@ describe('AnthropicClient', () => {
 
       expect(result).toBe(true);
       expect(mockAnthropic.messages.create).toHaveBeenCalledWith({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250929',
         max_tokens: 10,
         messages: [{ role: 'user', content: 'test connection' }],
       });
