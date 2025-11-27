@@ -122,7 +122,7 @@ describe('GlobalNewsGenerator', () => {
   });
 
   describe('getUserPromptFile()', () => {
-    it('should return news-global.txt', () => {
+    it('should return news-summary.txt (unified prompt for all news generators)', () => {
       const generator = new GlobalNewsGenerator(
         mockPromptLoader,
         mockModelTierSelector,
@@ -132,7 +132,7 @@ describe('GlobalNewsGenerator', () => {
 
       const userPromptFile = generator.getUserPromptFile();
 
-      expect(userPromptFile).toBe('news-global.txt');
+      expect(userPromptFile).toBe('news-summary.txt');
     });
   });
 

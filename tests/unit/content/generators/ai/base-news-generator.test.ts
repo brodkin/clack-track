@@ -15,14 +15,11 @@ import type { AIProvider } from '@/types/ai';
 import type { GenerationContext, ModelTier } from '@/types/content-generator';
 
 // Concrete implementation for testing abstract class
+// Note: BaseNewsGenerator now provides getSystemPromptFile() and getUserPromptFile()
+// implementations, so TestNewsGenerator just needs to exist as a concrete class
 class TestNewsGenerator extends BaseNewsGenerator {
-  getUserPromptFile(): string {
-    return 'test-news-prompt.txt';
-  }
-
-  getSystemPromptFile(): string {
-    return 'major-update-base.txt';
-  }
+  // Inherits getSystemPromptFile() returning 'major-update-base.txt'
+  // Inherits getUserPromptFile() returning 'news-summary.txt'
 }
 
 describe('BaseNewsGenerator', () => {
@@ -74,14 +71,19 @@ describe('BaseNewsGenerator', () => {
       validateConnection: jest.fn().mockResolvedValue({ success: true, message: 'Connected' }),
     } as unknown as jest.Mocked<AIProvider>;
 
-    // Mock PromptLoader
+    // Mock PromptLoader - simulates template variable substitution
     mockPromptLoader = {
       loadPrompt: jest.fn().mockResolvedValue('prompt content'),
-      loadPromptWithVariables: jest.fn().mockImplementation((type, _filename) => {
+      loadPromptWithVariables: jest.fn().mockImplementation((type, _filename, variables) => {
         if (type === 'system') {
           return Promise.resolve('System prompt for Vestaboard content generation.');
         }
-        return Promise.resolve('Generate news summary from provided headlines.');
+        // Simulate simple {{headlines}} variable substitution
+        // The headlines are pre-formatted as a string by base-news-generator
+        const headlines = variables?.headlines || '';
+        return Promise.resolve(
+          `Pretend you are a late night comic. Select a random current event from the list below.\n\n${headlines}`
+        );
       }),
     } as unknown as jest.Mocked<PromptLoader>;
 
@@ -145,16 +147,13 @@ describe('BaseNewsGenerator', () => {
       const generateCall = mockAIProvider.generate.mock.calls[0][0];
       const userPrompt = generateCall.userPrompt;
 
-      // Verify headlines are included in prompt
+      // Verify headline titles are included in prompt (source not included in simplified format)
       expect(userPrompt).toContain('Breaking: Major Tech Announcement');
-      expect(userPrompt).toContain('Tech News');
       expect(userPrompt).toContain('Market Update: Stocks Rise');
-      expect(userPrompt).toContain('Financial Times');
       expect(userPrompt).toContain('Sports: Championship Game Tonight');
-      expect(userPrompt).toContain('Sports Daily');
     });
 
-    it('should format headlines with source attribution', async () => {
+    it('should format headlines as bullet list', async () => {
       mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
 
       const context: GenerationContext = {
@@ -167,10 +166,10 @@ describe('BaseNewsGenerator', () => {
       const generateCall = mockAIProvider.generate.mock.calls[0][0];
       const userPrompt = generateCall.userPrompt;
 
-      // Check formatted structure: "- Title (Source)"
-      expect(userPrompt).toContain('- Breaking: Major Tech Announcement (Tech News)');
-      expect(userPrompt).toContain('- Market Update: Stocks Rise (Financial Times)');
-      expect(userPrompt).toContain('- Sports: Championship Game Tonight (Sports Daily)');
+      // Check mustache template renders headlines as bullet list
+      expect(userPrompt).toContain('  - Breaking: Major Tech Announcement');
+      expect(userPrompt).toContain('  - Market Update: Stocks Rise');
+      expect(userPrompt).toContain('  - Sports: Championship Game Tonight');
     });
 
     it('should return generated content from AI provider', async () => {
@@ -197,7 +196,7 @@ describe('BaseNewsGenerator', () => {
   });
 
   describe('Graceful Degradation', () => {
-    it('should continue with empty headlines when RSS fetch fails', async () => {
+    it('should continue with fallback message when RSS fetch fails', async () => {
       mockRSSClient.getLatestItems.mockRejectedValue(new Error('Network timeout'));
 
       const context: GenerationContext = {
@@ -214,10 +213,10 @@ describe('BaseNewsGenerator', () => {
       // Verify prompt contains fallback message
       const generateCall = mockAIProvider.generate.mock.calls[0][0];
       const userPrompt = generateCall.userPrompt;
-      expect(userPrompt).toContain('No recent headlines available');
+      expect(userPrompt).toContain('No news available at this time');
     });
 
-    it('should handle empty RSS results gracefully', async () => {
+    it('should handle empty RSS results with fallback', async () => {
       mockRSSClient.getLatestItems.mockResolvedValue([]);
 
       const context: GenerationContext = {
@@ -230,9 +229,11 @@ describe('BaseNewsGenerator', () => {
       expect(result.text).toBeDefined();
       expect(mockAIProvider.generate).toHaveBeenCalledTimes(1);
 
+      // Empty array results in empty prompt section (no headlines)
       const generateCall = mockAIProvider.generate.mock.calls[0][0];
       const userPrompt = generateCall.userPrompt;
-      expect(userPrompt).toContain('No recent headlines available');
+      // Prompt should still be generated but with no headlines in list
+      expect(userPrompt).toContain('late night comic');
     });
 
     it('should handle partial RSS failures gracefully', async () => {
@@ -256,7 +257,7 @@ describe('BaseNewsGenerator', () => {
   });
 
   describe('Headline Formatting', () => {
-    it('should include headline section header in prompt', async () => {
+    it('should include late night comic style instructions', async () => {
       mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
 
       const context: GenerationContext = {
@@ -269,8 +270,8 @@ describe('BaseNewsGenerator', () => {
       const generateCall = mockAIProvider.generate.mock.calls[0][0];
       const userPrompt = generateCall.userPrompt;
 
-      // Should have section header
-      expect(userPrompt).toContain('RECENT HEADLINES:');
+      // Should have late night comic style instructions
+      expect(userPrompt).toContain('late night comic');
     });
 
     it('should limit headlines to requested count', async () => {
@@ -311,12 +312,12 @@ describe('BaseNewsGenerator', () => {
     });
   });
 
-  describe('Abstract Class Contract', () => {
-    it('should require getUserPromptFile implementation', () => {
-      expect(generator.getUserPromptFile()).toBe('test-news-prompt.txt');
+  describe('Base Class Contract', () => {
+    it('should provide getUserPromptFile returning news-summary.txt', () => {
+      expect(generator.getUserPromptFile()).toBe('news-summary.txt');
     });
 
-    it('should require getSystemPromptFile implementation', () => {
+    it('should provide getSystemPromptFile returning major-update-base.txt', () => {
       expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
     });
 

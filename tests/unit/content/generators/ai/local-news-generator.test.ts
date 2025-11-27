@@ -132,7 +132,7 @@ describe('LocalNewsGenerator', () => {
   });
 
   describe('getUserPromptFile()', () => {
-    it('should return news-local.txt', () => {
+    it('should return news-summary.txt (unified prompt for all news generators)', () => {
       const generator = new LocalNewsGenerator(
         mockPromptLoader,
         mockModelTierSelector,
@@ -142,7 +142,7 @@ describe('LocalNewsGenerator', () => {
 
       const userPromptFile = generator.getUserPromptFile();
 
-      expect(userPromptFile).toBe('news-local.txt');
+      expect(userPromptFile).toBe('news-summary.txt');
     });
   });
 
@@ -204,7 +204,7 @@ describe('LocalNewsGenerator', () => {
 
       // Verify the generator uses the correct configuration
       expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
-      expect(generator.getUserPromptFile()).toBe('news-local.txt');
+      expect(generator.getUserPromptFile()).toBe('news-summary.txt');
       expect(generator.modelTier).toBe(ModelTier.MEDIUM);
       expect(generator.feedUrls).toEqual(LocalNewsGenerator.DEFAULT_FEEDS);
     });

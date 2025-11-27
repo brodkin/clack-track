@@ -91,7 +91,7 @@ describe('TechNewsGenerator', () => {
   });
 
   describe('getUserPromptFile', () => {
-    it('should return news-tech.txt', () => {
+    it('should return news-summary.txt (unified prompt for all news generators)', () => {
       const generator = new TechNewsGenerator(
         promptLoader,
         modelTierSelector,
@@ -101,7 +101,7 @@ describe('TechNewsGenerator', () => {
 
       // Call protected method for testing
       const result = generator.getUserPromptFile();
-      expect(result).toBe('news-tech.txt');
+      expect(result).toBe('news-summary.txt');
     });
   });
 

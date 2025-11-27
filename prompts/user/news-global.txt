@@ -1,8 +1,0 @@
-Create a world news summary highlighting major international events.
-
-Include:
-- Top 1-2 global headlines (focus on international affairs, world politics, or global events)
-- Current time
-- Keep it informative with an international perspective
-
-Emphasize stories that have worldwide impact, diplomatic developments, or significant events happening across different regions of the world.
