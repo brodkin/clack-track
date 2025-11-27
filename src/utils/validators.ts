@@ -1,3 +1,187 @@
+import type { GeneratedContent, VestaboardLayout } from '../types/index.js';
+import { ContentValidationError } from '../types/errors.js';
+import { VESTABOARD } from '../config/constants.js';
+
+/**
+ * Result of generator output validation
+ */
+export interface ValidationResult {
+  /** Whether the validation passed */
+  valid: boolean;
+  /** Number of lines in the content */
+  lineCount: number;
+  /** Maximum line length found */
+  maxLineLength: number;
+  /** Array of invalid characters found */
+  invalidChars: string[];
+  /** Array of validation error messages */
+  errors: string[];
+}
+
+/**
+ * Validate generator output against Vestaboard constraints.
+ *
+ * For 'text' mode: validates against framed limits (5 lines × 21 chars)
+ * For 'layout' mode: validates against unframed limits (6 rows × 22 cols)
+ *
+ * @throws {ContentValidationError} if validation fails
+ * @returns {ValidationResult} validation details
+ */
+export function validateGeneratorOutput(content: GeneratedContent): ValidationResult {
+  if (content.outputMode === 'text') {
+    const result = validateTextContent(content.text);
+    if (!result.valid) {
+      throw new ContentValidationError(result.errors[0], {
+        invalidChars: result.invalidChars,
+        lineCount: result.lineCount,
+        maxLineLength: result.maxLineLength,
+      });
+    }
+    return result;
+  } else if (content.outputMode === 'layout') {
+    if (!content.layout) {
+      throw new ContentValidationError('layout mode requires layout data');
+    }
+    const result = validateLayoutContent(content.layout);
+    if (!result.valid) {
+      throw new ContentValidationError(result.errors[0], {
+        invalidChars: result.invalidChars,
+        lineCount: result.lineCount,
+        maxLineLength: result.maxLineLength,
+      });
+    }
+    return result;
+  }
+
+  throw new ContentValidationError(`Invalid outputMode: ${content.outputMode}`);
+}
+
+/**
+ * Validate text content against framed Vestaboard constraints.
+ *
+ * Framed content allows maximum 5 lines × 21 characters per line
+ * (reserves 1 row for time/weather frame).
+ *
+ * @param text - Plain text content to validate
+ * @returns {ValidationResult} validation details
+ */
+export function validateTextContent(text: string): ValidationResult {
+  const errors: string[] = [];
+
+  // Check for empty content
+  if (text.length === 0) {
+    errors.push('text content cannot be empty');
+  }
+
+  // Split into lines and count (trim trailing newline if present)
+  const lines = text.replace(/\n$/, '').split('\n');
+  const lineCount = lines.length;
+  const maxLineLength = Math.max(...lines.map(line => line.length), 0);
+
+  // Validate line count (framed mode: max 5 lines)
+  if (lineCount > VESTABOARD.FRAMED_MAX_ROWS) {
+    errors.push(
+      `text mode content must have at most ${VESTABOARD.FRAMED_MAX_ROWS} lines (found: ${lineCount})`
+    );
+  }
+
+  // Validate line length (framed mode: max 21 chars per line)
+  const tooLongLines = lines
+    .map((line, idx) => ({ idx, length: line.length }))
+    .filter(info => info.length > VESTABOARD.FRAMED_MAX_COLS);
+
+  if (tooLongLines.length > 0) {
+    const first = tooLongLines[0];
+    errors.push(
+      `text mode line ${first.idx} exceeds ${VESTABOARD.FRAMED_MAX_COLS} characters (found: ${first.length})`
+    );
+  }
+
+  // Validate character set (check each line, not the text with newlines)
+  const invalidChars = findInvalidCharacters(lines.join(''));
+
+  if (invalidChars.length > 0) {
+    errors.push(`text contains invalid characters: ${invalidChars.join(', ')}`);
+  }
+
+  return {
+    valid: errors.length === 0,
+    lineCount,
+    maxLineLength,
+    invalidChars,
+    errors,
+  };
+}
+
+/**
+ * Validate layout content against unframed Vestaboard constraints.
+ *
+ * Layout content must have exactly 6 rows × 22 characters per row.
+ *
+ * @param layout - VestaboardLayout to validate
+ * @returns {ValidationResult} validation details
+ */
+export function validateLayoutContent(layout: VestaboardLayout): ValidationResult {
+  const errors: string[] = [];
+  const allText = layout.rows.join('');
+  const invalidChars = findInvalidCharacters(allText);
+
+  const rowCount = layout.rows.length;
+  const maxRowLength = Math.max(...layout.rows.map(row => row.length), 0);
+
+  // Validate row count (must be exactly 6)
+  if (rowCount !== VESTABOARD.MAX_ROWS) {
+    errors.push(`layout must have exactly ${VESTABOARD.MAX_ROWS} rows (found: ${rowCount})`);
+  }
+
+  // Validate row lengths (max 22 chars per row)
+  const tooLongRows = layout.rows
+    .map((row, idx) => ({ idx, length: row.length }))
+    .filter(info => info.length > VESTABOARD.MAX_COLS);
+
+  if (tooLongRows.length > 0) {
+    const first = tooLongRows[0];
+    errors.push(
+      `layout row ${first.idx} exceeds ${VESTABOARD.MAX_COLS} characters (found: ${first.length})`
+    );
+  }
+
+  // Validate character set
+  if (invalidChars.length > 0) {
+    errors.push(`layout contains invalid characters: ${invalidChars.join(', ')}`);
+  }
+
+  return {
+    valid: errors.length === 0,
+    lineCount: rowCount,
+    maxLineLength: maxRowLength,
+    invalidChars,
+    errors,
+  };
+}
+
+/**
+ * Find invalid Vestaboard characters in text.
+ *
+ * Vestaboard supports: A-Z, 0-9, space, and limited punctuation.
+ * Returns array of unique invalid characters found.
+ *
+ * @param text - Text to check for invalid characters
+ * @returns {string[]} array of unique invalid characters
+ */
+export function findInvalidCharacters(text: string): string[] {
+  const supportedSet = new Set(VESTABOARD.SUPPORTED_CHARS.split(''));
+  const invalidSet = new Set<string>();
+
+  for (const char of text) {
+    if (!supportedSet.has(char)) {
+      invalidSet.add(char);
+    }
+  }
+
+  return Array.from(invalidSet);
+}
+
 export function validateVestaboardText(text: string): { valid: boolean; error?: string } {
   // Vestaboard has 6 rows x 22 columns = 132 character limit
   const MAX_LENGTH = 132;

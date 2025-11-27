@@ -26,6 +26,25 @@ import type { AIProvider } from '@/types/ai';
 import type { GeneratedContent, ContentGenerator } from '@/types/content-generator';
 import type { HomeAssistantClient } from '@/api/data-sources/home-assistant';
 
+// Mock ColorBarService to prevent real AI calls
+jest.mock('../../../src/content/frame/color-bar', () => {
+  const actual = jest.requireActual('../../../src/content/frame/color-bar');
+  return {
+    ...actual,
+    ColorBarService: {
+      getInstance: jest.fn().mockReturnValue({
+        getColors: jest.fn().mockResolvedValue([
+          [255, 0, 0],
+          [0, 255, 0],
+        ]),
+      }),
+      clearInstance: jest.fn(),
+    },
+  };
+});
+
+import { ColorBarService } from '../../../src/content/frame/color-bar';
+
 describe('CronScheduler Minor Update Integration', () => {
   let scheduler: CronScheduler;
   let minorUpdateGenerator: MinorUpdateGenerator;
@@ -38,7 +57,20 @@ describe('CronScheduler Minor Update Integration', () => {
   let mockAlternateProvider: jest.Mocked<AIProvider>;
   let mockHomeAssistant: jest.Mocked<HomeAssistantClient>;
 
+  beforeAll(() => {
+    // Use fake timers to prevent real interval timers from blocking tests
+    jest.useFakeTimers();
+  });
+
+  afterAll(() => {
+    // Restore real timers after all tests
+    jest.useRealTimers();
+  });
+
   beforeEach(() => {
+    // Clear ColorBarService singleton for test isolation
+    ColorBarService.clearInstance();
+
     // Mock VestaboardClient
     mockVestaboardClient = {
       sendLayout: jest.fn().mockResolvedValue(undefined),
@@ -49,7 +81,7 @@ describe('CronScheduler Minor Update Integration', () => {
     // Mock ContentSelector
     const mockContentGenerator: jest.Mocked<ContentGenerator> = {
       generate: jest.fn().mockResolvedValue({
-        text: 'STAY FOCUSED AND KEEP MOVING',
+        text: 'STAY MOVING',
         outputMode: 'text',
         metadata: { source: 'ai-generator', aiModel: 'gpt-4o-mini' },
       } as GeneratedContent),
@@ -77,7 +109,7 @@ describe('CronScheduler Minor Update Integration', () => {
     // Mock AI Providers
     mockPreferredProvider = {
       generate: jest.fn().mockResolvedValue({
-        text: 'AI GENERATED CONTENT',
+        text: 'AI GENERATED',
         model: 'gpt-4o-mini',
         tokensUsed: 50,
         finishReason: 'stop',
@@ -87,7 +119,7 @@ describe('CronScheduler Minor Update Integration', () => {
 
     mockAlternateProvider = {
       generate: jest.fn().mockResolvedValue({
-        text: 'ALTERNATE AI CONTENT',
+        text: 'ALTERNATE AI',
         model: 'claude-3-haiku',
         tokensUsed: 45,
         finishReason: 'stop',
@@ -137,7 +169,9 @@ describe('CronScheduler Minor Update Integration', () => {
   afterEach(() => {
     scheduler.stop();
     orchestrator.clearCache();
+    ColorBarService.clearInstance();
     jest.clearAllMocks();
+    jest.clearAllTimers();
   });
 
   describe('full minor update flow with outputMode "text"', () => {
@@ -154,7 +188,7 @@ describe('CronScheduler Minor Update Integration', () => {
       // Step 2: Verify content was cached
       const cachedContent = orchestrator.getCachedContent();
       expect(cachedContent).not.toBeNull();
-      expect(cachedContent?.text).toBe('STAY FOCUSED AND KEEP MOVING');
+      expect(cachedContent?.text).toBe('STAY MOVING');
 
       // Step 3: Directly test minor update generation (not via scheduler)
       // This avoids timer complexity while testing the integration flow
@@ -228,16 +262,24 @@ describe('CronScheduler Minor Update Integration', () => {
 
   describe('full minor update flow with outputMode "layout"', () => {
     it('should return cached layout directly without frame regeneration', async () => {
-      // Step 1: Mock selector to return content with outputMode 'layout'
+      // Step 1: Create a proper layout (6 rows × 22 columns for Vestaboard)
+      const properLayoutCodes: number[][] = Array(6)
+        .fill(null)
+        .map((_, i) => Array(22).fill(i + 1)); // Each row filled with its row number
+
+      // Create corresponding rows strings for validation
+      const layoutRows = Array(6)
+        .fill(null)
+        .map(() => 'A'.repeat(22)); // 22 character A's per row
+
+      // Mock selector to return content with outputMode 'layout'
       const mockLayoutGenerator: jest.Mocked<ContentGenerator> = {
         generate: jest.fn().mockResolvedValue({
-          text: 'PRE-FORMATTED CONTENT',
+          text: 'PRE-FORMATTED',
           outputMode: 'layout',
           layout: {
-            characterCodes: [
-              [1, 2, 3, 4, 5],
-              [6, 7, 8, 9, 10],
-            ],
+            rows: layoutRows,
+            characterCodes: properLayoutCodes,
           },
           metadata: { source: 'static-fallback' },
         } as GeneratedContent),
@@ -264,15 +306,11 @@ describe('CronScheduler Minor Update Integration', () => {
 
       // Step 4: Verify cached layout returned unchanged
       expect(minorContent.outputMode).toBe('layout');
-      expect(minorContent.layout?.characterCodes).toEqual([
-        [1, 2, 3, 4, 5],
-        [6, 7, 8, 9, 10],
-      ]);
-      expect(minorContent.text).toBe('PRE-FORMATTED CONTENT');
+      expect(minorContent.layout?.characterCodes).toEqual(properLayoutCodes);
+      expect(minorContent.text).toBe('PRE-FORMATTED');
 
-      // Frame decorator should NOT have been called for minor update
-      // (We can't easily verify this with real FrameDecorator, but the test
-      // validates that the layout was returned directly)
+      // Frame decorator should NOT have been called for layout mode
+      // Layout mode content is returned directly without frame decoration
     });
   });
 

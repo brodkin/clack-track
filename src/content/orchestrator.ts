@@ -16,6 +16,7 @@
  */
 
 import { generateWithRetry } from './orchestrator-retry.js';
+import { validateGeneratorOutput } from '../utils/validators.js';
 import type { ContentSelector } from './registry/content-selector.js';
 import type { FrameDecorator } from './frame/frame-decorator.js';
 import type { StaticFallbackGenerator } from './generators/static-fallback-generator.js';
@@ -131,8 +132,15 @@ export class ContentOrchestrator {
         this.preferredProvider,
         this.alternateProvider
       );
-    } catch {
-      // Step 3: P3 fallback on retry failure
+
+      // Step 2.5: Validate generator output
+      validateGeneratorOutput(content);
+    } catch (error) {
+      // Step 3: P3 fallback on retry failure or validation error
+      console.warn(
+        'Generator failed, using P3 fallback:',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
       content = await this.fallbackGenerator.generate(context);
     }
 
