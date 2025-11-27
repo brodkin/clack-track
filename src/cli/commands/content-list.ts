@@ -10,6 +10,7 @@
 import { ContentRegistry } from '../../content/registry/content-registry.js';
 import { ContentPriority } from '../../types/content-generator.js';
 import type { RegisteredGenerator } from '../../content/registry/content-registry.js';
+import { bootstrap } from '../../bootstrap.js';
 
 /**
  * Priority group display configuration
@@ -128,35 +129,43 @@ function displayPriorityGroup(group: PriorityGroup, generators: RegisteredGenera
  * ```
  */
 export async function contentListCommand(): Promise<void> {
-  const registry = ContentRegistry.getInstance();
-  const allGenerators = registry.getAll();
+  // Bootstrap to populate the registry with generators
+  const { scheduler } = await bootstrap();
 
-  // Display header
-  console.log('');
-  console.log(
-    '═══════════════════════════════════════════════════════════════════════════════════════'
-  );
-  console.log(
-    '                        Registered Content Generators                                  '
-  );
-  console.log(
-    '═══════════════════════════════════════════════════════════════════════════════════════'
-  );
+  try {
+    const registry = ContentRegistry.getInstance();
+    const allGenerators = registry.getAll();
 
-  // Display each priority group
-  for (const group of PRIORITY_GROUPS) {
-    const groupGenerators = registry.getByPriority(group.priority);
-    displayPriorityGroup(group, groupGenerators);
+    // Display header
+    console.log('');
+    console.log(
+      '═══════════════════════════════════════════════════════════════════════════════════════'
+    );
+    console.log(
+      '                        Registered Content Generators                                  '
+    );
+    console.log(
+      '═══════════════════════════════════════════════════════════════════════════════════════'
+    );
+
+    // Display each priority group
+    for (const group of PRIORITY_GROUPS) {
+      const groupGenerators = registry.getByPriority(group.priority);
+      displayPriorityGroup(group, groupGenerators);
+    }
+
+    // Display total count
+    console.log('');
+    console.log(
+      '───────────────────────────────────────────────────────────────────────────────────────'
+    );
+    console.log(`Total: ${allGenerators.length} generator${allGenerators.length === 1 ? '' : 's'}`);
+    console.log(
+      '═══════════════════════════════════════════════════════════════════════════════════════'
+    );
+    console.log('');
+  } finally {
+    // Clean shutdown - stop scheduler
+    scheduler.stop();
   }
-
-  // Display total count
-  console.log('');
-  console.log(
-    '───────────────────────────────────────────────────────────────────────────────────────'
-  );
-  console.log(`Total: ${allGenerators.length} generator${allGenerators.length === 1 ? '' : 's'}`);
-  console.log(
-    '═══════════════════════════════════════════════════════════════════════════════════════'
-  );
-  console.log('');
 }

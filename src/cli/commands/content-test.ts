@@ -9,6 +9,7 @@ import { ContentRegistry } from '../../content/registry/content-registry.js';
 import { FrameDecorator } from '../../content/frame/frame-decorator.js';
 import { log, error } from '../../utils/logger.js';
 import type { GenerationContext } from '../../types/content-generator.js';
+import { bootstrap } from '../../bootstrap.js';
 
 /**
  * Options for content:test command
@@ -38,6 +39,9 @@ export interface ContentTestOptions {
  * ```
  */
 export async function contentTestCommand(options: ContentTestOptions): Promise<void> {
+  // Bootstrap to populate the registry with generators
+  const { scheduler } = await bootstrap();
+
   try {
     // Get registry singleton
     const registry = ContentRegistry.getInstance();
@@ -147,6 +151,9 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
   } catch (err) {
     error('Failed to test content generator:', err);
     process.exit(1);
+  } finally {
+    // Clean shutdown - stop scheduler
+    scheduler.stop();
   }
 }
 

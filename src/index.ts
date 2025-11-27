@@ -12,7 +12,18 @@ async function main() {
   const command = args[2];
 
   // If a CLI command is provided, run CLI mode
-  if (command && ['generate', 'test-board', 'test-ai', 'test-ha', 'frame'].includes(command)) {
+  if (
+    command &&
+    [
+      'generate',
+      'test-board',
+      'test-ai',
+      'test-ha',
+      'frame',
+      'content:list',
+      'content:test',
+    ].includes(command)
+  ) {
     await runCLI(args);
     return;
   }
