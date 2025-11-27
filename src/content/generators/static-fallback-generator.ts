@@ -65,18 +65,15 @@ export class StaticFallbackGenerator implements ContentGenerator {
   /**
    * Validate that the fallback directory exists and contains .txt files.
    *
-   * This is a synchronous validation check that verifies the generator
+   * This is an asynchronous validation check that verifies the generator
    * can successfully produce content when needed.
    *
-   * Note: Uses synchronous filesystem operations to comply with the
-   * ContentGenerator interface requirement for synchronous validation.
-   *
-   * @returns {GeneratorValidationResult} Validation result with any errors
+   * @returns {Promise<GeneratorValidationResult>} Validation result with any errors
    *
    * @example
    * ```typescript
    * const generator = new StaticFallbackGenerator();
-   * const result = generator.validate();
+   * const result = await generator.validate();
    *
    * if (result.valid) {
    *   console.log('Fallback generator ready');
@@ -85,20 +82,36 @@ export class StaticFallbackGenerator implements ContentGenerator {
    * }
    * ```
    */
-  validate(): GeneratorValidationResult {
-    // Note: We do a lightweight validation here to avoid blocking sync I/O.
-    // Just check that the directory path is set. Full validation happens
-    // during generate() which is async.
+  async validate(): Promise<GeneratorValidationResult> {
+    const errors: string[] = [];
+
     if (!this.fallbackDirectory || this.fallbackDirectory.trim() === '') {
+      errors.push('Fallback directory path is empty');
       return {
         valid: false,
-        errors: ['Fallback directory path is empty'],
+        errors,
       };
     }
 
-    // Basic path validation - the actual directory existence and content
-    // check will happen during generate() since we can't do sync I/O safely
-    return { valid: true };
+    try {
+      // Check that directory exists and is readable
+      const files = await fs.readdir(this.fallbackDirectory);
+
+      // Filter for .txt files only
+      const txtFiles = files.filter(file => file.endsWith('.txt'));
+
+      if (txtFiles.length === 0) {
+        errors.push(`No .txt files found in fallback directory: ${this.fallbackDirectory}`);
+      }
+    } catch {
+      // Error details not needed - we just need to report directory is not accessible
+      errors.push(`Fallback directory not accessible: ${this.fallbackDirectory}`);
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors: errors.length > 0 ? errors : undefined,
+    };
   }
 
   /**

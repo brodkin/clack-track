@@ -72,13 +72,13 @@ export abstract class ProgrammaticGenerator implements ContentGenerator {
    * is always ready to use. Subclasses can override this method to implement
    * custom validation logic (e.g., checking for required configuration).
    *
-   * @returns {GeneratorValidationResult} Always returns { valid: true }
+   * @returns {Promise<GeneratorValidationResult>} Always returns { valid: true }
    *
    * @example
    * ```typescript
    * // Default behavior (no override)
    * const generator = new SimpleGenerator();
-   * const result = generator.validate();
+   * const result = await generator.validate();
    * // result: { valid: true }
    * ```
    *
@@ -86,7 +86,7 @@ export abstract class ProgrammaticGenerator implements ContentGenerator {
    * ```typescript
    * // Custom validation (override)
    * class ApiGenerator extends ProgrammaticGenerator {
-   *   validate(): GeneratorValidationResult {
+   *   async validate(): Promise<GeneratorValidationResult> {
    *     if (!process.env.API_KEY) {
    *       return {
    *         valid: false,
@@ -102,7 +102,7 @@ export abstract class ProgrammaticGenerator implements ContentGenerator {
    * }
    * ```
    */
-  validate(): GeneratorValidationResult {
+  async validate(): Promise<GeneratorValidationResult> {
     return { valid: true };
   }
 

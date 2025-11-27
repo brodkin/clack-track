@@ -9,6 +9,7 @@
 
 import type { VestaboardLayout } from './content.js';
 import type { PersonalityDimensions } from '../content/personality/dimensions.js';
+import type { ContentData } from './content-data.js';
 
 /**
  * Result of a content generator validation check.
@@ -94,6 +95,11 @@ export interface GenerationContext {
    * If not provided, random dimensions will be generated automatically.
    */
   personality?: PersonalityDimensions;
+  /**
+   * Optional pre-fetched content data (weather, colors, etc.)
+   * Provided by ContentDataProvider before generation to avoid duplicate fetches.
+   */
+  data?: ContentData;
 }
 
 /**
@@ -192,17 +198,17 @@ export interface ContentGenerator {
   /**
    * Validate the generator configuration and dependencies.
    *
-   * @returns {GeneratorValidationResult} Validation result with any errors
+   * @returns {Promise<GeneratorValidationResult>} Validation result with any errors
    *
    * @example
    * ```typescript
-   * const result = generator.validate();
+   * const result = await generator.validate();
    * if (!result.valid) {
    *   console.error('Generator validation failed:', result.errors);
    * }
    * ```
    */
-  validate(): GeneratorValidationResult;
+  validate(): Promise<GeneratorValidationResult>;
 }
 
 /**

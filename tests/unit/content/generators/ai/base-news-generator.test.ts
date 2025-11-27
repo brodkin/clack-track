@@ -76,6 +76,7 @@ describe('BaseNewsGenerator', () => {
 
     // Mock PromptLoader
     mockPromptLoader = {
+      loadPrompt: jest.fn().mockResolvedValue('prompt content'),
       loadPromptWithVariables: jest.fn().mockImplementation((type, _filename) => {
         if (type === 'system') {
           return Promise.resolve('System prompt for Vestaboard content generation.');
@@ -288,10 +289,11 @@ describe('BaseNewsGenerator', () => {
   });
 
   describe('Constructor', () => {
-    it('should store RSSClient and feed URLs', () => {
+    it('should store RSSClient and feed URLs', async () => {
       expect(generator).toBeInstanceOf(BaseNewsGenerator);
       // Protected properties - verify through behavior
-      expect(generator.validate().valid).toBe(true);
+      const result = await generator.validate();
+      expect(result.valid).toBe(true);
     });
 
     it('should accept custom feed URLs', () => {
@@ -318,8 +320,8 @@ describe('BaseNewsGenerator', () => {
       expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
     });
 
-    it('should inherit validation from AIPromptGenerator', () => {
-      const result = generator.validate();
+    it('should inherit validation from AIPromptGenerator', async () => {
+      const result = await generator.validate();
       expect(result).toHaveProperty('valid');
       expect(result.valid).toBe(true);
     });

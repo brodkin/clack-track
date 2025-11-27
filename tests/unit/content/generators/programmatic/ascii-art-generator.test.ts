@@ -11,17 +11,17 @@ import type { GenerationContext } from '@/types/content-generator';
 
 describe('ASCIIArtGenerator', () => {
   describe('validate', () => {
-    it('should return valid when patterns array has content', () => {
+    it('should return valid when patterns array has content', async () => {
       const generator = new ASCIIArtGenerator(['Pattern 1', 'Pattern 2']);
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
     });
 
-    it('should return invalid when patterns array is empty', () => {
+    it('should return invalid when patterns array is empty', async () => {
       const generator = new ASCIIArtGenerator([]);
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();

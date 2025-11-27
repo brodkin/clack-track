@@ -83,23 +83,27 @@ describe('WeatherGenerator', () => {
   });
 
   describe('validate()', () => {
-    it('should validate that prompt files exist', () => {
+    it('should validate that prompt files exist', async () => {
+      mockPromptLoader.loadPrompt.mockResolvedValue('prompt content');
+
       const generator = new WeatherGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result).toBeDefined();
       expect(typeof result.valid).toBe('boolean');
     });
 
-    it('should return valid when both prompt files exist', () => {
+    it('should return valid when both prompt files exist', async () => {
+      mockPromptLoader.loadPrompt.mockResolvedValue('prompt content');
+
       const generator = new WeatherGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      const result = generator.validate();
+      const result = await generator.validate();
 
       // Assuming prompts exist in the worktree
       expect(result.valid).toBe(true);

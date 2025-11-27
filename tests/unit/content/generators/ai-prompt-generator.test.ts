@@ -7,32 +7,25 @@
  * - validate() checks prompt files exist
  * - generate() retry logic with provider failover
  * - Error handling for missing prompts and provider failures
+ * - Weather context injection
  */
 
+import { AIPromptGenerator } from '@/content/generators/ai-prompt-generator';
 import { PromptLoader } from '@/content/prompt-loader';
-import { ModelTierSelector, type ModelSelection } from '@/api/ai/model-tier-selector';
-import type { AIProvider } from '@/types/ai';
-import type {
-  GenerationContext,
-  GeneratedContent,
-  GeneratorValidationResult,
-} from '@/types/content-generator';
+import { ModelTierSelector } from '@/api/ai/model-tier-selector';
+import type { GenerationContext } from '@/types/content-generator';
 import { ModelTier } from '@/types/content-generator';
+import type { PersonalityDimensions } from '@/content/personality';
 
 // We need to create a concrete implementation for testing the abstract class
-class TestAIPromptGenerator {
-  protected promptLoader: PromptLoader;
-  protected modelTierSelector: ModelTierSelector;
-  protected modelTier: ModelTier;
-
+class TestAIPromptGenerator extends AIPromptGenerator {
   constructor(
     promptLoader: PromptLoader,
     modelTierSelector: ModelTierSelector,
-    modelTier: ModelTier
+    modelTier: ModelTier,
+    apiKeys: Record<string, string> = {}
   ) {
-    this.promptLoader = promptLoader;
-    this.modelTierSelector = modelTierSelector;
-    this.modelTier = modelTier;
+    super(promptLoader, modelTierSelector, modelTier, apiKeys);
   }
 
   protected getSystemPromptFile(): string {
@@ -43,96 +36,14 @@ class TestAIPromptGenerator {
     return 'test-user.txt';
   }
 
-  async validate(): Promise<GeneratorValidationResult> {
-    const errors: string[] = [];
-
-    // Check if system prompt exists
-    const systemPromptPath = `prompts/system/${this.getSystemPromptFile()}`;
-    try {
-      await this.promptLoader.loadPrompt('system', this.getSystemPromptFile());
-    } catch {
-      errors.push(`System prompt not found: ${systemPromptPath}`);
-    }
-
-    // Check if user prompt exists
-    const userPromptPath = `prompts/user/${this.getUserPromptFile()}`;
-    try {
-      await this.promptLoader.loadPrompt('user', this.getUserPromptFile());
-    } catch {
-      errors.push(`User prompt not found: ${userPromptPath}`);
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors: errors.length > 0 ? errors : undefined,
-    };
-  }
-
-  async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Load prompts
-    const systemPrompt = await this.promptLoader.loadPrompt('system', this.getSystemPromptFile());
-    const userPrompt = await this.promptLoader.loadPrompt('user', this.getUserPromptFile());
-
-    // Select model
-    const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
-
-    // Get provider and generate
-    const provider = this.getProviderForSelection(selection);
-
-    let lastError: Error | null = null;
-
-    // Try preferred provider
-    try {
-      const response = await provider.generate({
-        systemPrompt,
-        userPrompt: `${userPrompt}\n\nContext: ${JSON.stringify(context)}`,
-      });
-
-      return {
-        text: response.text,
-        outputMode: 'text',
-        metadata: {
-          model: response.model,
-          tier: this.modelTier,
-          provider: selection.provider,
-        },
-      };
-    } catch (error) {
-      lastError = error as Error;
-    }
-
-    // Try alternate provider
-    const alternate = this.modelTierSelector.getAlternate(selection);
-    if (alternate) {
-      try {
-        const alternateProvider = this.getProviderForSelection(alternate);
-        const response = await alternateProvider.generate({
-          systemPrompt,
-          userPrompt: `${userPrompt}\n\nContext: ${JSON.stringify(context)}`,
-        });
-
-        return {
-          text: response.text,
-          outputMode: 'text',
-          metadata: {
-            model: response.model,
-            tier: this.modelTier,
-            provider: alternate.provider,
-            failedOver: true,
-          },
-        };
-      } catch (alternateError) {
-        lastError = alternateError as Error;
-      }
-    }
-
-    throw new Error(`All AI providers failed for tier ${this.modelTier}: ${lastError?.message}`);
-  }
-
-  private getProviderForSelection(_selection: ModelSelection): AIProvider {
-    // This would be injected or created via factory in real implementation
-    // For now, throw to test error handling
-    throw new Error('Provider factory not implemented in test');
+  // Expose the private formatUserPrompt method for testing
+  public testFormatUserPrompt(
+    userPrompt: string,
+    context: GenerationContext,
+    personality: PersonalityDimensions
+  ): string {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (this as any).formatUserPrompt(userPrompt, context, personality);
   }
 }
 
@@ -145,6 +56,8 @@ describe('AIPromptGenerator', () => {
     mockPromptLoader = {
       loadPrompt: jest.fn(),
       loadPromptTemplate: jest.fn(),
+      loadPromptWithVariables: jest.fn(),
+      loadPromptTemplateWithVariables: jest.fn(),
     } as unknown as jest.Mocked<PromptLoader>;
 
     // Mock ModelTierSelector
@@ -271,7 +184,7 @@ describe('AIPromptGenerator', () => {
     };
 
     it('should load prompts using getSystemPromptFile() and getUserPromptFile()', async () => {
-      mockPromptLoader.loadPrompt
+      mockPromptLoader.loadPromptWithVariables
         .mockResolvedValueOnce('system prompt')
         .mockResolvedValueOnce('user prompt');
 
@@ -289,12 +202,20 @@ describe('AIPromptGenerator', () => {
       // This will throw because provider factory is not implemented
       await expect(generator.generate(mockContext)).rejects.toThrow();
 
-      expect(mockPromptLoader.loadPrompt).toHaveBeenCalledWith('system', 'test-system.txt');
-      expect(mockPromptLoader.loadPrompt).toHaveBeenCalledWith('user', 'test-user.txt');
+      expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
+        'system',
+        'test-system.txt',
+        expect.any(Object)
+      );
+      expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
+        'user',
+        'test-user.txt',
+        expect.any(Object)
+      );
     });
 
     it('should select model using ModelTierSelector with configured tier', async () => {
-      mockPromptLoader.loadPrompt
+      mockPromptLoader.loadPromptWithVariables
         .mockResolvedValueOnce('system prompt')
         .mockResolvedValueOnce('user prompt');
 
@@ -315,7 +236,7 @@ describe('AIPromptGenerator', () => {
     });
 
     it('should call getAlternate when implemented to handle provider failover', async () => {
-      mockPromptLoader.loadPrompt
+      mockPromptLoader.loadPromptWithVariables
         .mockResolvedValueOnce('system prompt')
         .mockResolvedValueOnce('user prompt');
 
@@ -382,6 +303,172 @@ describe('AIPromptGenerator', () => {
 
       // Test implementation returns specific file
       expect(generator['getUserPromptFile']()).toBe('test-user.txt');
+    });
+  });
+
+  describe('weather context injection', () => {
+    it('should inject weather section when context.data.weather exists', () => {
+      const generator = new TestAIPromptGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        ModelTier.MEDIUM
+      );
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date('2025-01-01T12:00:00Z'),
+        data: {
+          weather: {
+            temperature: 72,
+            temperatureUnit: '°F',
+            condition: 'sunny',
+            humidity: 45,
+            colorCode: 66,
+          },
+          fetchedAt: new Date(),
+          warnings: [],
+        },
+      };
+
+      const formatted = generator.testFormatUserPrompt('Test prompt', context, {
+        mood: 'cheerful',
+        energyLevel: 'energetic',
+        humorStyle: 'witty',
+        obsession: 'coffee',
+      });
+
+      // Should contain weather section
+      expect(formatted).toContain('=== CURRENT WEATHER ===');
+      expect(formatted).toContain('Temperature: 72°F');
+      expect(formatted).toContain('Condition: sunny');
+      expect(formatted).toContain('Humidity: 45%');
+    });
+
+    it('should return original prompt when context.data is undefined', () => {
+      const generator = new TestAIPromptGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        ModelTier.MEDIUM
+      );
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date('2025-01-01T12:00:00Z'),
+      };
+
+      const formatted = generator.testFormatUserPrompt('Test prompt', context, {
+        mood: 'cheerful',
+        energyLevel: 'energetic',
+        humorStyle: 'witty',
+        obsession: 'coffee',
+      });
+
+      // Should NOT contain weather section
+      expect(formatted).not.toContain('=== CURRENT WEATHER ===');
+      expect(formatted).toContain('Test prompt');
+    });
+
+    it('should return original prompt when context.data.weather is undefined', () => {
+      const generator = new TestAIPromptGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        ModelTier.MEDIUM
+      );
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date('2025-01-01T12:00:00Z'),
+        data: {
+          fetchedAt: new Date(),
+          warnings: [],
+        },
+      };
+
+      const formatted = generator.testFormatUserPrompt('Test prompt', context, {
+        mood: 'cheerful',
+        energyLevel: 'energetic',
+        humorStyle: 'witty',
+        obsession: 'coffee',
+      });
+
+      // Should NOT contain weather section
+      expect(formatted).not.toContain('=== CURRENT WEATHER ===');
+      expect(formatted).toContain('Test prompt');
+    });
+
+    it('should format weather section with all available fields', () => {
+      const generator = new TestAIPromptGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        ModelTier.MEDIUM
+      );
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date('2025-01-01T12:00:00Z'),
+        data: {
+          weather: {
+            temperature: 18,
+            temperatureUnit: '°C',
+            condition: 'rainy',
+            humidity: 80,
+            apparentTemperature: 16,
+            colorCode: 67,
+          },
+          fetchedAt: new Date(),
+          warnings: [],
+        },
+      };
+
+      const formatted = generator.testFormatUserPrompt('Test prompt', context, {
+        mood: 'calm',
+        energyLevel: 'relaxed',
+        humorStyle: 'dry',
+        obsession: 'tea',
+      });
+
+      // Should contain all weather fields including optional ones
+      expect(formatted).toContain('Temperature: 18°C');
+      expect(formatted).toContain('Condition: rainy');
+      expect(formatted).toContain('Humidity: 80%');
+      expect(formatted).toContain('Feels Like: 16°C');
+    });
+
+    it('should format weather section without optional fields', () => {
+      const generator = new TestAIPromptGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        ModelTier.MEDIUM
+      );
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date('2025-01-01T12:00:00Z'),
+        data: {
+          weather: {
+            temperature: 72,
+            temperatureUnit: '°F',
+            condition: 'sunny',
+            colorCode: 66,
+          },
+          fetchedAt: new Date(),
+          warnings: [],
+        },
+      };
+
+      const formatted = generator.testFormatUserPrompt('Test prompt', context, {
+        mood: 'cheerful',
+        energyLevel: 'energetic',
+        humorStyle: 'witty',
+        obsession: 'coffee',
+      });
+
+      // Should contain required fields
+      expect(formatted).toContain('Temperature: 72°F');
+      expect(formatted).toContain('Condition: sunny');
+      // Should NOT contain optional fields
+      expect(formatted).not.toContain('Humidity:');
+      expect(formatted).not.toContain('Feels Like:');
     });
   });
 });
