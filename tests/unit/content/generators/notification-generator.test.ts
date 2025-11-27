@@ -120,7 +120,7 @@ describe('NotificationGenerator', () => {
   });
 
   describe('validate() method', () => {
-    it('should return valid for valid RegExp patterns', () => {
+    it('should return valid for valid RegExp patterns', async () => {
       const generator = new TestPersonArrivedNotification();
       const result = await generator.validate();
 
@@ -128,7 +128,7 @@ describe('NotificationGenerator', () => {
       expect(result.errors).toBeUndefined();
     });
 
-    it('should validate compound patterns', () => {
+    it('should validate compound patterns', async () => {
       const generator = new TestDoorNotification();
       const result = await generator.validate();
 
@@ -136,7 +136,7 @@ describe('NotificationGenerator', () => {
       expect(result.errors).toBeUndefined();
     });
 
-    it('should detect invalid RegExp patterns', () => {
+    it('should detect invalid RegExp patterns', async () => {
       const generator = new InvalidPatternNotification();
       const result = await generator.validate();
 
@@ -344,7 +344,7 @@ describe('NotificationGenerator', () => {
       expect(content).toHaveProperty('outputMode');
     });
 
-    it('should have synchronous validate method', () => {
+    it('should have synchronous validate method', async () => {
       const generator = new TestPersonArrivedNotification();
 
       const result = await generator.validate();
