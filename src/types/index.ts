@@ -19,6 +19,7 @@ export enum ContentType {
 // Export all new types
 export * from './ai.js';
 export * from './content.js';
+export * from './content-data.js';
 export * from './content-generator.js';
 export * from './data-sources.js';
 export * from './errors.js';
