@@ -11,6 +11,8 @@ export interface FrameOptions {
   aiProvider?: AIProvider;
   dateTime?: Date; // For testing - defaults to new Date()
   debug?: boolean; // Enable timing output
+  weather?: WeatherData; // Pre-fetched weather data (skips fetch if provided)
+  colorBar?: number[]; // Pre-fetched color bar (skips fetch if provided)
 }
 
 export interface TimingEntry {
@@ -45,9 +47,13 @@ export async function generateFrame(options: FrameOptions): Promise<FrameResult>
   const { lines, contentWarnings } = processContent(options.text);
   warnings.push(...contentWarnings);
 
-  // 2. Fetch weather data (graceful failure)
+  // 2. Fetch weather data (graceful failure) - skip if pre-fetched data provided
   let weatherData: WeatherData | null = null;
-  if (options.homeAssistant) {
+  if (options.weather) {
+    // Use pre-fetched weather data
+    weatherData = options.weather;
+  } else if (options.homeAssistant) {
+    // Fetch weather if not pre-fetched
     try {
       const weatherService = new WeatherService(options.homeAssistant);
       const weatherStart = performance.now();
@@ -67,9 +73,13 @@ export async function generateFrame(options: FrameOptions): Promise<FrameResult>
     }
   }
 
-  // 3. Fetch seasonal colors (graceful failure)
+  // 3. Fetch seasonal colors (graceful failure) - skip if pre-fetched data provided
   let colorBar: number[] = FALLBACK_COLORS;
-  if (options.aiProvider) {
+  if (options.colorBar) {
+    // Use pre-fetched color bar
+    colorBar = options.colorBar;
+  } else if (options.aiProvider) {
+    // Fetch colors if not pre-fetched
     try {
       const colorService = ColorBarService.getInstance(options.aiProvider);
       const colorStart = performance.now();

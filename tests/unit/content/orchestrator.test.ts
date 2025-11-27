@@ -138,7 +138,11 @@ describe('ContentOrchestrator', () => {
         mockPreferredProvider,
         mockAlternateProvider
       );
-      expect(mockDecorator.decorate).toHaveBeenCalledWith('Test content', context.timestamp);
+      expect(mockDecorator.decorate).toHaveBeenCalledWith(
+        'Test content',
+        context.timestamp,
+        undefined
+      );
       expect(mockVestaboardClient.sendLayout).toHaveBeenCalledWith(decoratedLayout);
 
       // Verify cached content
@@ -307,7 +311,8 @@ describe('ContentOrchestrator', () => {
       expect(mockFallbackGenerator.generate).toHaveBeenCalledWith(context);
       expect(mockDecorator.decorate).toHaveBeenCalledWith(
         'Static fallback content',
-        context.timestamp
+        context.timestamp,
+        undefined
       );
       expect(mockVestaboardClient.sendLayout).toHaveBeenCalledWith(decoratedLayout);
 

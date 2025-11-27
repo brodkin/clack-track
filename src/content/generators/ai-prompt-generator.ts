@@ -26,7 +26,6 @@
  * ```
  */
 
-import { existsSync } from 'fs';
 import { join } from 'path';
 import { PromptLoader } from '../prompt-loader.js';
 import { ModelTierSelector, type ModelSelection } from '../../api/ai/model-tier-selector.js';
@@ -44,6 +43,7 @@ import type {
   GeneratorValidationResult,
   ModelTier,
 } from '../../types/content-generator.js';
+import type { WeatherData } from '../../services/weather-service.js';
 
 /**
  * Type-safe API key provider mapping
@@ -109,18 +109,22 @@ export abstract class AIPromptGenerator implements ContentGenerator {
    *
    * @returns Validation result with any errors encountered
    */
-  validate(): GeneratorValidationResult {
+  async validate(): Promise<GeneratorValidationResult> {
     const errors: string[] = [];
 
-    // Check if system prompt exists
+    // Check if system prompt exists by trying to load it
     const systemPromptPath = join('prompts', 'system', this.getSystemPromptFile());
-    if (!existsSync(systemPromptPath)) {
+    try {
+      await this.promptLoader.loadPrompt('system', this.getSystemPromptFile());
+    } catch {
       errors.push(`System prompt not found: ${systemPromptPath}`);
     }
 
-    // Check if user prompt exists
+    // Check if user prompt exists by trying to load it
     const userPromptPath = join('prompts', 'user', this.getUserPromptFile());
-    if (!existsSync(userPromptPath)) {
+    try {
+      await this.promptLoader.loadPrompt('user', this.getUserPromptFile());
+    } catch {
       errors.push(`User prompt not found: ${userPromptPath}`);
     }
 
@@ -305,7 +309,15 @@ export abstract class AIPromptGenerator implements ContentGenerator {
       minute: '2-digit',
     });
 
-    return `${userPrompt}
+    let formattedPrompt = userPrompt;
+
+    // Inject weather data if available
+    if (context.data?.weather) {
+      const weatherSection = this.formatWeatherSection(context.data.weather);
+      formattedPrompt = `${weatherSection}\n\n${formattedPrompt}`;
+    }
+
+    return `${formattedPrompt}
 
 CURRENT CONTEXT:
 - Date: ${dateStr}
@@ -317,5 +329,31 @@ PERSONALITY FOR THIS RESPONSE:
 - Energy: ${personality.energyLevel}
 - Humor Style: ${personality.humorStyle}
 - Current Obsession: ${personality.obsession}`;
+  }
+
+  /**
+   * Formats weather data into a structured section for AI prompts
+   *
+   * Creates a clearly delimited weather information block that provides
+   * the AI model with current weather context for content generation.
+   *
+   * @param weather - Weather data from ContentDataProvider
+   * @returns Formatted weather section with header and footer delimiters
+   */
+  private formatWeatherSection(weather: WeatherData): string {
+    let section = `=== CURRENT WEATHER ===
+Temperature: ${weather.temperature}${weather.temperatureUnit}
+Condition: ${weather.condition}`;
+
+    if (weather.humidity !== undefined) {
+      section += `\nHumidity: ${weather.humidity}%`;
+    }
+
+    if (weather.apparentTemperature !== undefined) {
+      section += `\nFeels Like: ${weather.apparentTemperature}${weather.temperatureUnit}`;
+    }
+
+    section += '\n===';
+    return section;
   }
 }

@@ -122,7 +122,7 @@ describe('NotificationGenerator', () => {
   describe('validate() method', () => {
     it('should return valid for valid RegExp patterns', () => {
       const generator = new TestPersonArrivedNotification();
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
@@ -130,7 +130,7 @@ describe('NotificationGenerator', () => {
 
     it('should validate compound patterns', () => {
       const generator = new TestDoorNotification();
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
@@ -138,7 +138,7 @@ describe('NotificationGenerator', () => {
 
     it('should detect invalid RegExp patterns', () => {
       const generator = new InvalidPatternNotification();
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
@@ -347,7 +347,7 @@ describe('NotificationGenerator', () => {
     it('should have synchronous validate method', () => {
       const generator = new TestPersonArrivedNotification();
 
-      const result = generator.validate();
+      const result = await generator.validate();
 
       // Should return immediately (not a Promise)
       expect(result).not.toBeInstanceOf(Promise);

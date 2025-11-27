@@ -77,18 +77,18 @@ export class ASCIIArtGenerator extends ProgrammaticGenerator {
   /**
    * Validate that patterns array is not empty.
    *
-   * @returns {GeneratorValidationResult} Validation result
+   * @returns {Promise<GeneratorValidationResult>} Validation result
    *
    * @example
    * ```typescript
    * const validGen = new ASCIIArtGenerator(['Pattern 1']);
-   * validGen.validate(); // { valid: true }
+   * await validGen.validate(); // { valid: true }
    *
    * const invalidGen = new ASCIIArtGenerator([]);
-   * invalidGen.validate(); // { valid: false, errors: [...] }
+   * await invalidGen.validate(); // { valid: false, errors: [...] }
    * ```
    */
-  validate(): GeneratorValidationResult {
+  async validate(): Promise<GeneratorValidationResult> {
     if (this.patterns.length === 0) {
       return {
         valid: false,

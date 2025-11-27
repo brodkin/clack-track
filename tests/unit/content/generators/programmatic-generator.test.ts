@@ -40,7 +40,7 @@ class ValidatingProgrammaticGenerator extends ProgrammaticGenerator {
     };
   }
 
-  validate() {
+  async validate() {
     if (!this.isConfigured) {
       return {
         valid: false,
@@ -71,16 +71,16 @@ describe('ProgrammaticGenerator', () => {
   });
 
   describe('default validate() implementation', () => {
-    it('should return valid: true by default', () => {
+    it('should return valid: true by default', async () => {
       const generator = new TestProgrammaticGenerator();
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result).toEqual({ valid: true });
     });
 
-    it('should not include errors when valid', () => {
+    it('should not include errors when valid', async () => {
       const generator = new TestProgrammaticGenerator();
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
@@ -88,12 +88,12 @@ describe('ProgrammaticGenerator', () => {
   });
 
   describe('validate() override capability', () => {
-    it('should allow subclasses to override validate()', () => {
+    it('should allow subclasses to override validate()', async () => {
       const validGenerator = new ValidatingProgrammaticGenerator(true);
       const invalidGenerator = new ValidatingProgrammaticGenerator(false);
 
-      const validResult = validGenerator.validate();
-      const invalidResult = invalidGenerator.validate();
+      const validResult = await validGenerator.validate();
+      const invalidResult = await invalidGenerator.validate();
 
       expect(validResult).toEqual({ valid: true });
       expect(invalidResult).toEqual({
@@ -102,9 +102,9 @@ describe('ProgrammaticGenerator', () => {
       });
     });
 
-    it('should return custom validation errors when overridden', () => {
+    it('should return custom validation errors when overridden', async () => {
       const generator = new ValidatingProgrammaticGenerator(false);
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('Generator not properly configured');
@@ -208,14 +208,17 @@ describe('ProgrammaticGenerator', () => {
       expect(content).toHaveProperty('outputMode');
     });
 
-    it('should have synchronous validate method', () => {
+    it('should have asynchronous validate method', async () => {
       const generator = new TestProgrammaticGenerator();
 
       const result = generator.validate();
 
-      // Should return immediately (not a Promise)
-      expect(result).not.toBeInstanceOf(Promise);
-      expect(result).toHaveProperty('valid');
+      // Should return a Promise
+      expect(result).toBeInstanceOf(Promise);
+
+      // Promise should resolve to GeneratorValidationResult
+      const validationResult = await result;
+      expect(validationResult).toHaveProperty('valid');
     });
   });
 });

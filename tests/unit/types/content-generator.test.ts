@@ -67,19 +67,19 @@ describe('Content Generator Types', () => {
       expect(result.outputMode).toBe('text');
     });
 
-    it('should return GeneratorValidationResult from validate method', () => {
+    it('should return GeneratorValidationResult from validate method', async () => {
       const mockGenerator: ContentGenerator = {
         generate: async () => ({
           text: 'test',
           outputMode: 'text',
         }),
-        validate: () => ({
+        validate: async () => ({
           valid: true,
           errors: [],
         }),
       };
 
-      const result = mockGenerator.validate();
+      const result = await mockGenerator.validate();
       expect(result.valid).toBe(true);
       expect(result.errors).toEqual([]);
     });

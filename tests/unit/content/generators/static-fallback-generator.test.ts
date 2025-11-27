@@ -43,7 +43,7 @@ describe('StaticFallbackGenerator', () => {
   describe('validate()', () => {
     it('should return valid when directory path is provided', () => {
       const generator = new StaticFallbackGenerator('prompts/static');
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
@@ -51,7 +51,7 @@ describe('StaticFallbackGenerator', () => {
 
     it('should return valid with default directory path', () => {
       const generator = new StaticFallbackGenerator();
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
@@ -59,7 +59,7 @@ describe('StaticFallbackGenerator', () => {
 
     it('should return invalid when directory path is empty string', () => {
       const generator = new StaticFallbackGenerator('');
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
@@ -69,7 +69,7 @@ describe('StaticFallbackGenerator', () => {
 
     it('should return invalid when directory path is whitespace only', () => {
       const generator = new StaticFallbackGenerator('   ');
-      const result = generator.validate();
+      const result = await generator.validate();
 
       expect(result.valid).toBe(false);
       expect(result.errors).toBeDefined();
