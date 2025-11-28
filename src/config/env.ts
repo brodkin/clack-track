@@ -54,7 +54,7 @@ export interface EnvironmentConfig {
   // Database
   database: {
     url?: string;
-    type: 'sqlite' | 'postgres' | 'mongodb';
+    type: 'sqlite' | 'mysql' | 'postgres' | 'mongodb';
   };
 }
 
@@ -157,7 +157,11 @@ export function loadConfig(): EnvironmentConfig {
 
     database: {
       url: getOptionalEnv('DATABASE_URL'),
-      type: getOptionalEnv('DATABASE_TYPE', 'sqlite') as 'sqlite' | 'postgres' | 'mongodb',
+      type: getOptionalEnv('DATABASE_TYPE', 'sqlite') as
+        | 'sqlite'
+        | 'mysql'
+        | 'postgres'
+        | 'mongodb',
     },
   };
 }
