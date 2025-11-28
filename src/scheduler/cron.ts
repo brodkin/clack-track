@@ -89,9 +89,10 @@ export class CronScheduler {
    * Execute a single minor update cycle
    *
    * Process:
-   * 1. Generate minor update with current timestamp
-   * 2. Validate layout structure
-   * 3. Send to Vestaboard
+   * 1. Check if update should be skipped (full-frame content)
+   * 2. Generate minor update with current timestamp
+   * 3. Validate layout structure
+   * 4. Send to Vestaboard
    *
    * Errors are logged but do not crash the scheduler, ensuring continuous operation.
    *
@@ -99,19 +100,25 @@ export class CronScheduler {
    */
   private async runMinorUpdate(): Promise<void> {
     try {
-      // Generate minor update with current timestamp
+      // Step 1: Check if minor update should be skipped
+      if (this.minorUpdateGenerator.shouldSkip()) {
+        log('Minor update skipped - cached content is full frame');
+        return;
+      }
+
+      // Step 2: Generate minor update with current timestamp
       const content = await this.minorUpdateGenerator.generate({
         updateType: 'minor',
         timestamp: new Date(),
       });
 
-      // Validate layout structure
+      // Step 3: Validate layout structure
       // MinorUpdateGenerator always returns outputMode 'layout' after processing
       if (!content.layout?.characterCodes) {
         throw new Error('Minor update must return valid layout with characterCodes');
       }
 
-      // Send to Vestaboard
+      // Step 4: Send to Vestaboard
       await this.vestaboardClient.sendLayout(content.layout.characterCodes);
       log('Minor update sent successfully');
     } catch (error) {
