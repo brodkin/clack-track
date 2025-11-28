@@ -35,6 +35,9 @@ import { MinorUpdateGenerator } from './content/generators/minor-update.js';
 import { ContentDataProvider } from './services/content-data-provider.js';
 import { WeatherService } from './services/weather-service.js';
 import { ColorBarService } from './content/frame/color-bar.js';
+import { Database } from './storage/database.js';
+import { ContentModel } from './storage/models/content.js';
+import { ContentRepository } from './storage/repositories/content-repo.js';
 import type { AIProvider } from './types/ai.js';
 
 /**
@@ -221,6 +224,23 @@ export async function bootstrap(): Promise<BootstrapResult> {
   if (!config.vestaboard) {
     throw new Error('Vestaboard configuration is required for operation');
   }
+
+  // Step 1.5: Initialize database and run retention cleanup
+  // Fire-and-forget pattern: cleanup runs in background without blocking startup
+  const database = new Database();
+  await database.connect();
+  await database.migrate();
+
+  const contentModel = new ContentModel(database);
+  const contentRepository = new ContentRepository(contentModel);
+
+  // Run 90-day retention cleanup on startup (fire-and-forget)
+  contentRepository.cleanupOldRecords(90).catch(error => {
+    console.warn(
+      'Startup retention cleanup failed:',
+      error instanceof Error ? error.message : error
+    );
+  });
 
   // Step 2: Create AI providers (primary + alternate for failover)
   const aiProviderType = getAIProviderType(config.ai.provider);
