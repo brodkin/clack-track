@@ -89,6 +89,42 @@ if (!cached) throw new Error('No cached content available');
 - **Storage Layer** - Database connection, models, repositories for content/votes/logs
 - **Scheduler Layer** - Cron scheduling for periodic updates, event-driven update triggers
 - **Web Layer** - Express server with security middleware (Helmet.js, rate limiting, compression, CORS)
+- **Frontend Layer** - React SPA with Vite bundler, shadcn/ui components, React Router for navigation
+
+### Web Frontend Architecture
+
+The frontend is a React Single Page Application in `src/web/frontend/`:
+
+```
+src/web/frontend/
+├── App.tsx              # Root with React Router
+├── main.tsx             # Entry point with BrowserRouter
+├── components/          # Reusable UI components
+│   ├── ui/              # shadcn/ui components (Button, Card, Sheet, Badge...)
+│   ├── Navigation.tsx   # Mobile hamburger + desktop nav bar
+│   ├── PageLayout.tsx   # Wrapper with navigation
+│   ├── VestaboardPreview.tsx  # 6×22 character grid display
+│   ├── VotingButtons.tsx      # Thumbs up/down voting
+│   └── ContentCard.tsx        # Content item with metadata badges
+├── pages/               # Route components
+│   ├── Welcome.tsx      # / - Latest content + voting
+│   ├── History.tsx      # /flipside - Content history list
+│   ├── Account.tsx      # /account - Profile + passkeys
+│   └── Login.tsx        # /login - Passkey authentication
+├── lib/
+│   ├── mockData.ts      # Placeholder data for development
+│   └── utils.ts         # cn() helper for Tailwind classes
+└── services/
+    └── apiClient.ts     # REST API wrapper
+```
+
+**Key Components:**
+
+- `VestaboardPreview` - Renders 6×22 grid with split-flap aesthetic (amber text, black cells)
+- `Navigation` - Responsive: Sheet-based hamburger on mobile, horizontal links on desktop
+- `VotingButtons` - Touch-friendly (44px min) thumbs up/down for content quality voting
+
+**Testing:** Frontend tests in `tests/web/` use jsdom environment with React Testing Library.
 
 ## Key Application Concepts
 

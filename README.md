@@ -98,6 +98,42 @@ A debugging web interface provides:
 - **Debug Logs** - System logs, API calls, and error tracking
 - **Content History** - Review past generated content
 
+#### Web Server Configuration
+
+The web server can be enabled or disabled via environment variable:
+
+```bash
+# Enable web server (default)
+WEB_SERVER_ENABLED=true
+
+# Disable web server (headless mode)
+WEB_SERVER_ENABLED=false
+```
+
+**Headless Mode** is useful for:
+
+- CLI-only usage (`npm run generate`, `npm run content:test`)
+- Testing environments
+- Docker containers without web UI requirements
+- Resource-constrained deployments
+
+#### Frontend Architecture
+
+The web frontend is built with:
+
+- **React 18** with TypeScript
+- **React Router** for client-side routing
+- **Tailwind CSS v4** for styling
+- **shadcn/ui** component library
+- **Vite** for development and bundling
+
+**Routes:**
+
+- `/` - Welcome page with Vestaboard preview and voting
+- `/flipside` - Content history with metadata and voting
+- `/account` - User profile and passkey management
+- `/login` - Passkey-only authentication
+
 ### API Rate Limiting
 
 The web API is protected with rate limiting to prevent abuse and ensure fair usage:
@@ -133,6 +169,117 @@ Content-Type: application/json
 ```
 
 The `Retry-After` header indicates seconds until the rate limit window resets.
+
+### REST API Endpoints
+
+The web server exposes the following REST API endpoints:
+
+#### Content Endpoints
+
+| Method | Endpoint                        | Description                                    |
+| ------ | ------------------------------- | ---------------------------------------------- |
+| GET    | `/api/content/latest`           | Get the most recent content sent to Vestaboard |
+| GET    | `/api/content/history?limit=20` | Get paginated content history                  |
+
+**GET /api/content/latest**
+
+```json
+// Response 200 OK
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "text": "HELLO WORLD",
+    "characterCodes": [[8,5,12,12,15], ...],
+    "generatorId": "motivational",
+    "modelTier": "LIGHT",
+    "metadata": { "provider": "openai", "tokens": 150 },
+    "createdAt": "2024-01-15T10:30:00Z"
+  }
+}
+
+// Response 404 Not Found
+{ "success": false, "error": "No content found" }
+```
+
+**GET /api/content/history?limit=20**
+
+```json
+// Response 200 OK
+{
+  "success": true,
+  "data": [
+    /* array of content records */
+  ],
+  "pagination": { "limit": 20, "count": 15 }
+}
+```
+
+#### Voting Endpoints
+
+| Method | Endpoint          | Description                       |
+| ------ | ----------------- | --------------------------------- |
+| POST   | `/api/vote`       | Submit a quality vote for content |
+| GET    | `/api/vote/stats` | Get aggregated voting statistics  |
+
+**POST /api/vote**
+
+```json
+// Request
+{ "contentId": 1, "vote": "good" }  // vote: "good" | "bad"
+
+// Response 200 OK
+{
+  "success": true,
+  "data": { "id": 1, "contentId": 1, "vote": "good", "createdAt": "..." }
+}
+
+// Response 400 Bad Request
+{ "success": false, "error": "contentId and vote are required" }
+{ "success": false, "error": "vote must be \"good\" or \"bad\"" }
+```
+
+**GET /api/vote/stats**
+
+```json
+// Response 200 OK
+{
+  "success": true,
+  "data": { "totalVotes": 100, "goodVotes": 75, "badVotes": 25 }
+}
+```
+
+#### Logs Endpoints
+
+| Method | Endpoint                         | Description           |
+| ------ | -------------------------------- | --------------------- |
+| GET    | `/api/logs?level=info&limit=100` | Get recent debug logs |
+| DELETE | `/api/logs?days=30`              | Clear old debug logs  |
+
+**GET /api/logs?level=info&limit=100**
+
+```json
+// Response 200 OK
+{
+  "success": true,
+  "data": [{ "id": 1, "level": "info", "message": "...", "timestamp": "..." }],
+  "count": 50
+}
+```
+
+- `level`: Filter by log level (`info`, `warn`, `error`, `debug`)
+- `limit`: Max records to return (default: 100, max: 500)
+
+**DELETE /api/logs?days=30**
+
+```json
+// Response 200 OK
+{
+  "success": true,
+  "message": "Logs cleared successfully",
+  "deletedCount": 150
+}
+```
 
 ## Prerequisites
 
@@ -274,9 +421,13 @@ clack-track/
 │   │   └── formatters/ # Vestaboard text layout
 │   ├── scheduler/      # Cron and event-based updates
 │   ├── storage/        # Database and data persistence
-│   ├── web/            # Debugging web interface
-│   │   ├── routes/     # API endpoints
-│   │   └── pages/      # HTML pages
+│   ├── web/            # Web server and frontend
+│   │   ├── routes/     # REST API endpoints (content, voting, logs)
+│   │   ├── middleware/ # Rate limiting, auth, etc.
+│   │   └── frontend/   # React SPA
+│   │       ├── components/  # UI components (VestaboardPreview, Navigation, etc.)
+│   │       ├── pages/       # Page components (Welcome, History, Account, Login)
+│   │       └── lib/         # Utilities, mock data, API client
 │   ├── types/          # TypeScript type definitions
 │   └── utils/          # Utility functions
 ├── prompts/             # AI prompt templates
@@ -472,6 +623,17 @@ npm run generate
 
 # Start the service for scheduled updates
 npm start
+
+# Content Management Commands
+npm run content:list           # List all registered content generators
+npm run content:test <id>      # Test a specific generator (dry-run, no send)
+npm run content:test <id> --with-frame  # Test with frame decoration
+
+# Diagnostics
+npm run test-board             # Test Vestaboard connection
+npm run test-ai                # Test AI provider connectivity
+npm run test-ha                # Test Home Assistant connectivity
+npm run frame "Your text"      # Preview Vestaboard frame formatting
 ```
 
 ## Development Scripts
@@ -479,7 +641,8 @@ npm start
 ```bash
 # Development
 npm run dev                # Start development server with hot reload
-npm run build              # Build for production
+npm run dev:web            # Start frontend dev server only (Vite HMR)
+npm run build              # Build for production (backend + frontend)
 npm start                  # Run production build
 
 # Testing
