@@ -10,6 +10,7 @@ import { FrameDecorator } from '../../content/frame/frame-decorator.js';
 import { log, error } from '../../utils/logger.js';
 import type { GenerationContext } from '../../types/content-generator.js';
 import { bootstrap } from '../../bootstrap.js';
+import { renderAsciiPreview } from '../display.js';
 
 /**
  * Options for content:test command
@@ -131,13 +132,13 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
           frameResult.warnings.forEach(warning => log(`  - ${warning}`));
         }
 
-        log('\nFrame layout (6x22):');
-        log(JSON.stringify(frameResult.layout, null, 2));
+        log('\nFrame preview:');
+        log(renderAsciiPreview(frameResult.layout));
       }
     } else if (content.outputMode === 'layout' && content.layout) {
       log(`\nOutput mode: layout\n`);
-      log('Layout:');
-      log(JSON.stringify(content.layout, null, 2));
+      log('Preview:');
+      log(renderAsciiPreview(content.layout));
     }
 
     // Display timing
