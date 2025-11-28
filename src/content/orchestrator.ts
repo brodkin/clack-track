@@ -145,7 +145,7 @@ export class ContentOrchestrator {
       throw new Error('No content generator available for context');
     }
 
-    let content: GeneratedContent;
+    let content: GeneratedContent | undefined;
     let generationError: Error | null = null;
 
     try {
@@ -171,7 +171,7 @@ export class ContentOrchestrator {
 
       // Save failed generation to database (fire-and-forget)
       if (this.contentRepository && context.updateType === 'major') {
-        this.saveFailedContent(context, registeredGenerator, generationError).catch(() => {
+        this.saveFailedContent(context, registeredGenerator, generationError, content).catch(() => {
           // Silently catch database errors - don't block content delivery
         });
       }
@@ -253,16 +253,18 @@ export class ContentOrchestrator {
    * @param context - Generation context
    * @param registeredGenerator - Generator metadata
    * @param error - Error that caused generation failure
+   * @param content - Generated content (optional, available for validation failures)
    */
   private async saveFailedContent(
     context: GenerationContext,
     registeredGenerator: { registration: { id: string; name: string; priority: number } },
-    error: Error
+    error: Error,
+    content?: GeneratedContent
   ): Promise<void> {
     if (!this.contentRepository) return;
 
     await this.contentRepository.saveContent({
-      text: '', // Empty text for failed generations
+      text: content?.text || '', // Use generated text if available, otherwise empty
       type: context.updateType,
       generatedAt: context.timestamp,
       sentAt: null,
@@ -272,8 +274,14 @@ export class ContentOrchestrator {
       priority: registeredGenerator.registration.priority,
       errorType: error.name,
       errorMessage: error.message,
-      aiProvider: '', // No AI provider since generation failed
-      metadata: undefined,
+      aiProvider: (content?.metadata?.aiProvider as string) || '', // Extract from content metadata if available
+      aiModel: (content?.metadata?.aiModel as string) || undefined,
+      modelTier: (content?.metadata?.modelTier as string) || undefined,
+      tokensUsed: (content?.metadata?.tokensUsed as number) || undefined,
+      failedOver: (content?.metadata?.failedOver as boolean) || false,
+      primaryProvider: (content?.metadata?.primaryProvider as string) || undefined,
+      primaryError: (content?.metadata?.primaryError as string) || undefined,
+      metadata: content?.metadata || undefined,
     });
   }
 
