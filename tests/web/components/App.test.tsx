@@ -1,30 +1,67 @@
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect } from '@jest/globals';
 import App from '@/web/frontend/App';
 
 describe('App Component', () => {
-  it('renders Clack Track branding', () => {
-    render(<App />);
+  it('renders Welcome page on default route', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
 
-    const heading = screen.getByRole('heading', { name: /clack track/i });
+    const heading = screen.getByRole('heading', { name: /latest content/i });
     // @ts-expect-error - jest-dom matchers
     expect(heading).toBeInTheDocument();
   });
 
-  it('displays debug interface label', () => {
-    render(<App />);
+  it('renders navigation with Clack Track branding', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
 
-    const debugLabel = screen.getByText(/debug interface/i);
+    const brand = screen.getByText(/clack track/i);
     // @ts-expect-error - jest-dom matchers
-    expect(debugLabel).toBeInTheDocument();
+    expect(brand).toBeInTheDocument();
   });
 
-  it('shows technology stack', () => {
-    render(<App />);
+  it('renders History page on /flipside route', () => {
+    render(
+      <MemoryRouter initialEntries={['/flipside']}>
+        <App />
+      </MemoryRouter>
+    );
 
-    const techStack = screen.getByText(/react \+ typescript \+ vite/i);
+    const heading = screen.getByRole('heading', { name: /the flip side/i });
     // @ts-expect-error - jest-dom matchers
-    expect(techStack).toBeInTheDocument();
+    expect(heading).toBeInTheDocument();
+  });
+
+  it('renders Account page on /account route', () => {
+    render(
+      <MemoryRouter initialEntries={['/account']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const heading = screen.getByRole('heading', { name: /account/i });
+    // @ts-expect-error - jest-dom matchers
+    expect(heading).toBeInTheDocument();
+  });
+
+  it('renders Login page on /login route', () => {
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const button = screen.getByRole('button', { name: /sign in with passkey/i });
+    // @ts-expect-error - jest-dom matchers
+    expect(button).toBeInTheDocument();
   });
 });
