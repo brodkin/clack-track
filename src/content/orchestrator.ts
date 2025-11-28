@@ -24,6 +24,7 @@ import type { VestaboardClient } from '../api/vestaboard/types.js';
 import type { AIProvider } from '../types/ai.js';
 import type { GenerationContext, GeneratedContent } from '../types/content-generator.js';
 import type { ContentDataProvider } from '../services/content-data-provider.js';
+import type { ContentRepository } from '../storage/repositories/content-repo.js';
 
 /**
  * Configuration options for ContentOrchestrator
@@ -43,6 +44,8 @@ export interface ContentOrchestratorConfig {
   alternateProvider: AIProvider;
   /** Optional data provider for pre-fetching weather and color data */
   dataProvider?: ContentDataProvider;
+  /** Optional content repository for database persistence */
+  contentRepository?: ContentRepository;
 }
 
 /**
@@ -79,6 +82,7 @@ export class ContentOrchestrator {
   private readonly preferredProvider: AIProvider;
   private readonly alternateProvider: AIProvider;
   private readonly dataProvider?: ContentDataProvider;
+  private readonly contentRepository?: ContentRepository;
   private cachedContent: GeneratedContent | null = null;
 
   /**
@@ -94,6 +98,7 @@ export class ContentOrchestrator {
     this.preferredProvider = config.preferredProvider;
     this.alternateProvider = config.alternateProvider;
     this.dataProvider = config.dataProvider;
+    this.contentRepository = config.contentRepository;
   }
 
   /**

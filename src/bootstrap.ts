@@ -35,6 +35,9 @@ import { MinorUpdateGenerator } from './content/generators/minor-update.js';
 import { ContentDataProvider } from './services/content-data-provider.js';
 import { WeatherService } from './services/weather-service.js';
 import { ColorBarService } from './content/frame/color-bar.js';
+import { Database } from './storage/database.js';
+import { ContentModel } from './storage/models/content.js';
+import { ContentRepository } from './storage/repositories/content-repo.js';
 import type { AIProvider } from './types/ai.js';
 
 /**
@@ -51,6 +54,8 @@ export interface BootstrapResult {
   registry: ContentRegistry;
   /** Home Assistant client (null if HA not configured) - call disconnect() to clean up */
   haClient: HomeAssistantClient | null;
+  /** Database connection (null if not configured) - call disconnect() to clean up */
+  database: Database | null;
 }
 
 /**
@@ -253,6 +258,29 @@ export async function bootstrap(): Promise<BootstrapResult> {
   // Only create WeatherService if HA client is connected
   const weatherService = haClient?.isConnected() ? new WeatherService(haClient) : undefined;
 
+  // Step 4.5: Initialize Database (if configured)
+  let database: Database | null = null;
+  let contentRepository: ContentRepository | undefined;
+
+  if (config.database.url) {
+    try {
+      database = new Database({ databaseUrl: config.database.url });
+      await database.connect();
+      await database.migrate();
+
+      const contentModel = new ContentModel(database);
+      contentRepository = new ContentRepository(contentModel);
+    } catch (error) {
+      // Log warning but continue - graceful degradation without database
+      console.warn(
+        'Failed to connect to database:',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      database = null;
+      contentRepository = undefined;
+    }
+  }
+
   // Step 5: Create and populate ContentRegistry
   const registry = ContentRegistry.getInstance();
   const apiKeys = { [aiProviderType]: aiConfig.apiKey };
@@ -297,6 +325,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
     preferredProvider: primaryProvider,
     alternateProvider,
     dataProvider,
+    contentRepository,
   });
 
   // Step 10: Create EventHandler (only if Home Assistant configured)
@@ -313,5 +342,6 @@ export async function bootstrap(): Promise<BootstrapResult> {
     scheduler,
     registry,
     haClient,
+    database,
   };
 }

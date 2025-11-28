@@ -61,8 +61,38 @@ export class Database {
   }
 
   async migrate(): Promise<void> {
-    // TODO: Implement database migrations
-    // Create tables for content, votes, logs
+    if (!this.pool) {
+      throw new Error('Database not connected. Call connect() first.');
+    }
+
+    // Create content table with enhanced schema for success/failure tracking
+    await this.pool.execute(`
+      CREATE TABLE IF NOT EXISTS content (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        text TEXT NOT NULL,
+        type ENUM('major', 'minor') NOT NULL,
+        generatedAt DATETIME NOT NULL,
+        sentAt DATETIME DEFAULT NULL,
+        aiProvider VARCHAR(50) NOT NULL,
+        metadata JSON DEFAULT NULL,
+        status ENUM('success', 'failed') NOT NULL DEFAULT 'success',
+        generatorId VARCHAR(100) DEFAULT NULL,
+        generatorName VARCHAR(200) DEFAULT NULL,
+        priority INT DEFAULT 2,
+        aiModel VARCHAR(100) DEFAULT NULL,
+        modelTier VARCHAR(20) DEFAULT NULL,
+        failedOver BOOLEAN DEFAULT FALSE,
+        primaryProvider VARCHAR(50) DEFAULT NULL,
+        primaryError TEXT DEFAULT NULL,
+        errorType VARCHAR(100) DEFAULT NULL,
+        errorMessage TEXT DEFAULT NULL,
+        tokensUsed INT DEFAULT NULL,
+        INDEX idx_generated_at (generatedAt),
+        INDEX idx_status (status),
+        INDEX idx_generator_id (generatorId)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     log('Database migrations completed');
   }
 

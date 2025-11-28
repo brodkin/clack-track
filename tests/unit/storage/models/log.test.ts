@@ -32,7 +32,7 @@ describe('LogModel', () => {
         metadata: { version: '1.0.0' },
       });
       expect(result.id).toBeDefined();
-      expect(result.timestamp).toBeInstanceOf(Date);
+      expect(result.created_at).toBeInstanceOf(Date);
     });
 
     test('should create a log record without metadata', async () => {
@@ -310,6 +310,54 @@ describe('LogModel', () => {
       const logs = await logModel.findRecent(100);
       expect(logs).toHaveLength(1);
       expect(logs[0].message).toBe('New log');
+    });
+  });
+
+  describe('MySQL-specific features', () => {
+    test('should handle complex nested metadata as JSON', async () => {
+      const complexMetadata = {
+        user: {
+          id: 123,
+          name: 'John Doe',
+          roles: ['admin', 'editor'],
+        },
+        request: {
+          method: 'POST',
+          path: '/api/content',
+          duration: 125.5,
+        },
+        nested: {
+          deep: {
+            value: 'test',
+          },
+        },
+      };
+
+      const log = await logModel.create({
+        level: 'info',
+        message: 'Complex operation',
+        metadata: complexMetadata,
+      });
+
+      const retrieved = await logModel.findById(log.id);
+      expect(retrieved).not.toBeNull();
+      expect(retrieved!.metadata).toEqual(complexMetadata);
+    });
+
+    test('should handle metadata with special characters', async () => {
+      const specialMetadata = {
+        error: 'Failed to parse: {"key": "value"}',
+        path: '/path/with/special-chars_123',
+      };
+
+      const log = await logModel.create({
+        level: 'error',
+        message: 'Parse error',
+        metadata: specialMetadata,
+      });
+
+      const retrieved = await logModel.findById(log.id);
+      expect(retrieved!.metadata).toEqual(specialMetadata);
     });
   });
 });
