@@ -103,6 +103,78 @@ export interface SessionResponse {
 }
 
 /**
+ * Account API Types
+ */
+export interface ProfileResponse {
+  username: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface Passkey {
+  id: string;
+  name: string;
+  deviceType: 'phone' | 'tablet' | 'laptop' | 'desktop' | 'security-key';
+  createdAt: string;
+  lastUsed: string;
+}
+
+export interface PasskeysResponse {
+  passkeys: Passkey[];
+}
+
+export interface RegistrationOptions {
+  challenge: string;
+  rp: {
+    name: string;
+    id: string;
+  };
+  user: {
+    id: string;
+    name: string;
+    displayName: string;
+  };
+  pubKeyCredParams: Array<{
+    type: 'public-key';
+    alg: number;
+  }>;
+  timeout: number;
+  attestation?: string;
+  authenticatorSelection?: {
+    residentKey?: string;
+    userVerification?: string;
+  };
+}
+
+export interface RegistrationCredential {
+  id: string;
+  rawId: string;
+  response: {
+    clientDataJSON: string;
+    attestationObject: string;
+  };
+  type: 'public-key';
+}
+
+export interface VerifyRegistrationRequest {
+  credential: RegistrationCredential;
+  name: string;
+}
+
+export interface VerifyRegistrationResponse {
+  verified: boolean;
+  passkey: Passkey;
+}
+
+export interface RemovePasskeyResponse {
+  success: boolean;
+}
+
+export interface RenamePasskeyResponse {
+  passkey: Passkey;
+}
+
+/**
  * Error response types
  */
 export class ApiError extends Error {
