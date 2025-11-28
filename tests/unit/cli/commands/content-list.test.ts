@@ -5,6 +5,9 @@
  * content generators grouped by priority with their metadata.
  */
 
+// Set environment variables BEFORE any imports that call bootstrap
+process.env.OPENAI_API_KEY = 'test-key';
+
 import { contentListCommand } from '../../../../src/cli/commands/content-list.js';
 import { ContentRegistry } from '../../../../src/content/registry/content-registry.js';
 import { ContentPriority, ModelTier } from '../../../../src/types/content-generator.js';

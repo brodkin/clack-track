@@ -1,3 +1,6 @@
+// Set environment variables BEFORE any imports that call bootstrap
+process.env.OPENAI_API_KEY = 'test-key';
+
 import { bootstrap } from '../../src/bootstrap.js';
 import { Database, createDatabase } from '../../src/storage/database.js';
 import { ContentModel } from '../../src/storage/models/content.js';

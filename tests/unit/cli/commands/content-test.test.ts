@@ -4,6 +4,9 @@
  * Tests the dry-run content generator testing functionality.
  */
 
+// Set environment variables BEFORE any imports that call bootstrap
+process.env.OPENAI_API_KEY = 'test-key';
+
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { contentTestCommand } from '../../../../src/cli/commands/content-test.js';
 import { ContentRegistry } from '../../../../src/content/registry/content-registry.js';
