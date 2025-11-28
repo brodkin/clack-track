@@ -140,7 +140,8 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
       // Display old validation metrics section for backward compatibility
       const charCount = content.text.length;
 
-      log('\n' + '='.repeat(60));
+      log('');
+      log('='.repeat(60));
       log('VALIDATION METRICS');
       log('='.repeat(60));
       log(`Character count: ${charCount}`);
@@ -149,7 +150,8 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
 
       // Apply frame if requested
       if (options.withFrame) {
-        log('\n' + '='.repeat(60));
+        log('');
+        log('='.repeat(60));
         log('FRAME PREVIEW');
         log('='.repeat(60));
 
@@ -203,8 +205,9 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
           frameResult.warnings.forEach(warning => log(`  - ${warning}`));
         }
 
-        log('\nFrame preview:');
-        log(renderAsciiPreview(frameResult.layout));
+        log('');
+        log('Frame preview:');
+        console.log(renderAsciiPreview(frameResult.layout));
       }
     } else if (content.outputMode === 'layout' && content.layout) {
       log(`\nOutput mode: layout\n`);
@@ -235,11 +238,12 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
       );
 
       log('\nPreview:');
-      log(renderAsciiPreview(content.layout));
+      console.log(renderAsciiPreview(content.layout));
     }
 
     // Display timing
-    log('\n' + '='.repeat(60));
+    log('');
+    log('='.repeat(60));
     log('TIMING INFORMATION');
     log('='.repeat(60));
     log(`Generation time: ${generationTime}ms`);
