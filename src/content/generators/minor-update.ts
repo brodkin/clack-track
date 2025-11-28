@@ -165,6 +165,34 @@ export class MinorUpdateGenerator implements ContentGenerator {
   }
 
   /**
+   * Determine if minor update should be skipped
+   *
+   * Minor updates should be skipped when cached content has outputMode 'layout'
+   * because full-frame layouts have no time/weather frame to refresh.
+   *
+   * @returns true if minor update should be skipped, false otherwise
+   *
+   * @example
+   * ```typescript
+   * if (generator.shouldSkip()) {
+   *   console.log('Skipping minor update - cached content is full frame');
+   *   return;
+   * }
+   * ```
+   */
+  shouldSkip(): boolean {
+    const cachedContent = this.orchestrator.getCachedContent();
+
+    // Skip if cached content is layout mode (full-frame, no frame to refresh)
+    if (cachedContent?.outputMode === 'layout') {
+      return true;
+    }
+
+    // Don't skip for text mode (needs frame refresh) or no cache (will error during generate)
+    return false;
+  }
+
+  /**
    * Validate generator configuration
    *
    * Since dependencies are provided via constructor and TypeScript ensures
