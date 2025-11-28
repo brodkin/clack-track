@@ -9,7 +9,7 @@ import { ContentOrchestrator } from '@/content/orchestrator';
 import { ContentSelector } from '@/content/registry/content-selector';
 import { FrameDecorator } from '@/content/frame/frame-decorator';
 import { StaticFallbackGenerator } from '@/content/generators/static-fallback-generator';
-import { RateLimitError, AuthenticationError } from '@/types/errors';
+import { RateLimitError, AuthenticationError, ContentValidationError } from '@/types/errors';
 import type { VestaboardClient } from '@/api/vestaboard/types';
 import type { AIProvider } from '@/types/ai';
 import {
@@ -26,7 +26,13 @@ jest.mock('@/content/orchestrator-retry', () => ({
   generateWithRetry: jest.fn(),
 }));
 
+jest.mock('@/utils/validators', () => ({
+  validateGeneratorOutput: jest.fn(),
+}));
+
 const { generateWithRetry } = jest.requireMock('@/content/orchestrator-retry');
+const { validateGeneratorOutput: mockValidateGeneratorOutput } =
+  jest.requireMock('@/utils/validators');
 
 describe('ContentOrchestrator', () => {
   let mockSelector: jest.Mocked<ContentSelector>;
@@ -79,6 +85,7 @@ describe('ContentOrchestrator', () => {
 
     // Reset mocks
     jest.clearAllMocks();
+    mockValidateGeneratorOutput.mockImplementation(() => undefined);
 
     // Create orchestrator instance
     orchestrator = new ContentOrchestrator({
@@ -792,6 +799,141 @@ describe('ContentOrchestrator', () => {
     });
 
     describe('Failed Generations', () => {
+      it('should save text and metadata on validation failure', async () => {
+        // Arrange
+        const context: GenerationContext = {
+          updateType: 'major',
+          timestamp: new Date('2025-01-15T10:30:00Z'),
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn(),
+          validate: jest.fn().mockReturnValue({ valid: true }),
+        };
+
+        const registeredGenerator: RegisteredGenerator = {
+          registration: {
+            id: 'quote-gen',
+            name: 'Quote Generator',
+            priority: 2,
+            modelTier: ModelTier.LIGHT,
+            applyFrame: true,
+          },
+          generator: mockGenerator,
+        };
+
+        // Content that fails validation
+        const generatedContent: GeneratedContent = {
+          text: 'LINE ONE\nLINE TWO\nLINE THREE\nLINE FOUR\nLINE FIVE\nLINE SIX\nLINE SEVEN',
+          outputMode: 'text',
+          metadata: {
+            aiProvider: 'openai',
+            aiModel: 'gpt-4.1-nano',
+            modelTier: 'LIGHT',
+            tokensUsed: 250,
+            failedOver: false,
+          },
+        };
+
+        mockSelector.select.mockReturnValue(registeredGenerator);
+        (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+
+        // Mock validation to throw ContentValidationError
+        mockValidateGeneratorOutput.mockImplementation(() => {
+          throw new ContentValidationError('Content exceeds 6 lines');
+        });
+
+        const fallbackContent: GeneratedContent = {
+          text: 'Static fallback content',
+          outputMode: 'text',
+        };
+
+        mockFallbackGenerator.generate.mockResolvedValue(fallbackContent);
+        mockDecorator.decorate.mockResolvedValue({
+          layout: [[1, 2, 3]],
+          warnings: [],
+        });
+
+        // Act
+        await orchestrator.generateAndSend(context);
+
+        // Wait for fire-and-forget promise
+        await new Promise(resolve => setImmediate(resolve));
+
+        // Assert - Should save the generated text and metadata, even though validation failed
+        expect(mockContentRepository.saveContent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            text: 'LINE ONE\nLINE TWO\nLINE THREE\nLINE FOUR\nLINE FIVE\nLINE SIX\nLINE SEVEN',
+            status: 'failed',
+            generatorId: 'quote-gen',
+            generatorName: 'Quote Generator',
+            aiProvider: 'openai',
+            aiModel: 'gpt-4.1-nano',
+            modelTier: 'LIGHT',
+            tokensUsed: 250,
+            errorType: 'ContentValidationError',
+            errorMessage: 'Content exceeds 6 lines',
+          })
+        );
+      });
+
+      it('should save with empty fields when provider fails (no content)', async () => {
+        // Arrange
+        const context: GenerationContext = {
+          updateType: 'major',
+          timestamp: new Date('2025-01-15T10:30:00Z'),
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn(),
+          validate: jest.fn().mockReturnValue({ valid: true }),
+        };
+
+        const registeredGenerator: RegisteredGenerator = {
+          registration: {
+            id: 'news-gen',
+            name: 'News Generator',
+            priority: 2,
+            modelTier: ModelTier.MEDIUM,
+            applyFrame: true,
+          },
+          generator: mockGenerator,
+        };
+
+        // Provider throws before content is generated
+        const rateLimitError = new RateLimitError('Rate limit exceeded');
+
+        const fallbackContent: GeneratedContent = {
+          text: 'Static fallback content',
+          outputMode: 'text',
+        };
+
+        mockSelector.select.mockReturnValue(registeredGenerator);
+        (generateWithRetry as jest.Mock).mockRejectedValue(rateLimitError);
+        mockFallbackGenerator.generate.mockResolvedValue(fallbackContent);
+        mockDecorator.decorate.mockResolvedValue({
+          layout: [[1, 2, 3]],
+          warnings: [],
+        });
+
+        // Act
+        await orchestrator.generateAndSend(context);
+
+        // Wait for fire-and-forget promise
+        await new Promise(resolve => setImmediate(resolve));
+
+        // Assert - Should save with empty text and aiProvider when no content was generated
+        expect(mockContentRepository.saveContent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            text: '',
+            status: 'failed',
+            aiProvider: '',
+            errorType: 'RateLimitError',
+            errorMessage: 'Rate limit exceeded',
+          })
+        );
+      });
+
       it('should save failed generation when retry exhaustion triggers P3 fallback', async () => {
         // Arrange
         const context: GenerationContext = {
