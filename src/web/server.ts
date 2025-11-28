@@ -6,6 +6,7 @@ import { Server } from 'http';
 import { log } from '../utils/logger.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { createAuthRouter } from './routes/auth.js';
+import { createAccountRouter } from './routes/account.js';
 
 export interface WebServerConfig {
   port?: number;
@@ -132,6 +133,10 @@ export class WebServer {
     // Authentication routes
     const authRouter = createAuthRouter();
     this.app.use('/api/auth', authRouter);
+
+    // Account management routes
+    const accountRouter = createAccountRouter();
+    this.app.use('/api/account', accountRouter);
   }
 
   private registerSignalHandlers(): void {

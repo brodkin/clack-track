@@ -15,6 +15,12 @@ jest.mock('@/web/frontend/services/apiClient', () => ({
     startLogin: jest.fn(),
     verifyLogin: jest.fn(),
     logout: jest.fn(),
+    getProfile: jest.fn(),
+    getPasskeys: jest.fn(),
+    registerPasskeyStart: jest.fn(),
+    registerPasskeyVerify: jest.fn(),
+    removePasskey: jest.fn(),
+    renamePasskey: jest.fn(),
   },
 }));
 
@@ -96,14 +102,45 @@ describe('App Component', () => {
     expect(heading).toBeInTheDocument();
   });
 
-  it('renders Account page on /account route', () => {
+  it('redirects unauthenticated user from /account to /login', async () => {
+    // Mock session check returns unauthenticated (default)
     render(
       <MemoryRouter initialEntries={['/account']}>
         <App />
       </MemoryRouter>
     );
 
-    const heading = screen.getByRole('heading', { name: /account/i });
+    // Account page redirects to login when not authenticated
+    const button = await screen.findByRole('button', { name: /sign in with passkey/i });
+    // @ts-expect-error - jest-dom matchers
+    expect(button).toBeInTheDocument();
+  });
+
+  it('renders Account page when authenticated', async () => {
+    // Mock authenticated session
+    mockApiClient.checkSession.mockResolvedValue({
+      authenticated: true,
+      user: { name: 'Test User' },
+    });
+
+    // Mock account data (returns data directly, not wrapped)
+    mockApiClient.getProfile.mockResolvedValue({
+      username: 'testuser',
+      email: 'test@example.com',
+      createdAt: new Date().toISOString(),
+    });
+
+    mockApiClient.getPasskeys.mockResolvedValue({
+      passkeys: [],
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/account']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const heading = await screen.findByRole('heading', { name: /account/i });
     // @ts-expect-error - jest-dom matchers
     expect(heading).toBeInTheDocument();
   });
