@@ -21,6 +21,7 @@
 import { MinorUpdateGenerator } from '../content/generators/index.js';
 import type { VestaboardClient } from '../api/vestaboard/index.js';
 import { log } from '../utils/logger.js';
+import { ThrottledLogger } from '../utils/throttled-logger.js';
 
 /**
  * Interval duration for minor updates (1 minute)
@@ -30,6 +31,7 @@ const MINUTE_INTERVAL_MS = 60 * 1000;
 export class CronScheduler {
   private readonly minorUpdateGenerator: MinorUpdateGenerator;
   private readonly vestaboardClient: VestaboardClient;
+  private readonly throttledLogger: ThrottledLogger;
   private intervalId: NodeJS.Timeout | null = null;
 
   /**
@@ -41,6 +43,7 @@ export class CronScheduler {
   constructor(minorUpdateGenerator: MinorUpdateGenerator, vestaboardClient: VestaboardClient) {
     this.minorUpdateGenerator = minorUpdateGenerator;
     this.vestaboardClient = vestaboardClient;
+    this.throttledLogger = new ThrottledLogger(); // 5 minute default throttle
   }
 
   /**
@@ -115,8 +118,42 @@ export class CronScheduler {
       await this.vestaboardClient.sendLayout(content.layout.characterCodes);
       log('Minor update sent successfully');
     } catch (error) {
-      // Log error but don't crash scheduler - continue running
-      console.error('Failed to run minor update:', error);
+      // Use throttled logger to prevent error spam (same error repeating every minute)
+      // Different error types get different keys for independent throttling
+      const errorKey = this.getErrorKey(error);
+      this.throttledLogger.error(errorKey, 'Failed to run minor update:', error);
     }
+  }
+
+  /**
+   * Determine error key for throttled logging based on error type
+   *
+   * @param error - The error that occurred
+   * @returns Error key for throttling (e.g., 'no-cache', 'network-error')
+   * @private
+   */
+  private getErrorKey(error: unknown): string {
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase();
+
+      // Categorize common error types
+      if (message.includes('no cached content') || message.includes('cache')) {
+        return 'no-cache';
+      }
+      if (message.includes('network') || message.includes('connect')) {
+        return 'network-error';
+      }
+      if (message.includes('layout') || message.includes('validation')) {
+        return 'validation-error';
+      }
+      if (message.includes('timeout')) {
+        return 'timeout-error';
+      }
+
+      // Generic error type based on error name
+      return error.name.toLowerCase() || 'unknown-error';
+    }
+
+    return 'unknown-error';
   }
 }
