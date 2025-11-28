@@ -175,6 +175,19 @@ export interface RenamePasskeyResponse {
 }
 
 /**
+ * Push Notification Types
+ */
+export interface PushSubscriptionData {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
+export type PushPermission = 'granted' | 'denied' | 'default';
+
+/**
  * Error response types
  */
 export class ApiError extends Error {
