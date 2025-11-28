@@ -14,6 +14,14 @@ let sharedDbInstance: BetterSqlite3.Database | null = null;
 export class SQLiteDatabase {
   private db: BetterSqlite3.Database | null = null;
 
+  /**
+   * Connect to the in-memory SQLite database.
+   * Uses a singleton pattern to ensure all instances share the same database.
+   * Enables foreign key support for CASCADE DELETE operations.
+   *
+   * @returns Promise that resolves when connection is established
+   * @throws Error if database initialization fails
+   */
   async connect(): Promise<void> {
     // Use shared singleton instance to ensure test and bootstrap share same database
     // Validate existing instance is still open before reuse
@@ -29,10 +37,24 @@ export class SQLiteDatabase {
     this.db.pragma('foreign_keys = ON');
   }
 
+  /**
+   * Disconnect from the database.
+   * Note: Does not close the shared singleton instance to allow other connections.
+   *
+   * @returns Promise that resolves when disconnection is complete
+   */
   async disconnect(): Promise<void> {
     await this.close();
   }
 
+  /**
+   * Run database migrations to create tables and indexes.
+   * Creates content, votes, and logs tables with appropriate indexes.
+   * Safe to call multiple times (uses IF NOT EXISTS).
+   *
+   * @returns Promise that resolves when migrations are complete
+   * @throws Error if database is not connected
+   */
   async migrate(): Promise<void> {
     if (!this.db) {
       throw new Error('Database not connected. Call connect() first.');
@@ -98,7 +120,13 @@ export class SQLiteDatabase {
   }
 
   /**
-   * Execute a SELECT query and return the first row
+   * Execute a SELECT query and return the first row.
+   *
+   * @template T - The expected type of the returned row
+   * @param sql - SQL query string
+   * @param params - Array of parameters to bind to the query
+   * @returns Promise resolving to the first row or null if no rows found
+   * @throws Error if database is not connected
    */
   async get<T = DatabaseRow>(sql: string, params: unknown[] = []): Promise<T | null> {
     const rows = await this.all<T>(sql, params);
@@ -106,7 +134,13 @@ export class SQLiteDatabase {
   }
 
   /**
-   * Execute a SELECT query and return all rows
+   * Execute a SELECT query and return all rows.
+   *
+   * @template T - The expected type of the returned rows
+   * @param sql - SQL query string
+   * @param params - Array of parameters to bind to the query
+   * @returns Promise resolving to an array of rows
+   * @throws Error if database is not connected
    */
   async all<T = DatabaseRow>(sql: string, params: unknown[] = []): Promise<T[]> {
     if (!this.db) {
@@ -130,7 +164,13 @@ export class SQLiteDatabase {
   }
 
   /**
-   * Execute an INSERT, UPDATE, or DELETE query
+   * Execute an INSERT, UPDATE, or DELETE query.
+   * Automatically converts boolean parameters to integers (SQLite compatibility).
+   *
+   * @param sql - SQL query string
+   * @param params - Array of parameters to bind to the query
+   * @returns Promise resolving to result with changes count and last inserted ID
+   * @throws Error if database is not connected
    */
   async run(sql: string, params: unknown[] = []): Promise<DatabaseResult> {
     if (!this.db) {
@@ -154,8 +194,11 @@ export class SQLiteDatabase {
   }
 
   /**
-   * Reset the shared database instance (call at end of test suite)
-   * This actually closes the database and clears the singleton
+   * Reset the shared database instance.
+   * This actually closes the database and clears the singleton.
+   * Should be called at the end of test suites to ensure clean teardown.
+   *
+   * @returns void
    */
   static resetSharedInstance(): void {
     if (sharedDbInstance) {
@@ -166,8 +209,13 @@ export class SQLiteDatabase {
   }
 
   /**
-   * Execute a function within a transaction
-   * Automatically commits on success, rolls back on error
+   * Execute a function within a transaction.
+   * Automatically commits on success, rolls back on error.
+   *
+   * @template T - The return type of the transaction function
+   * @param fn - Async function to execute within the transaction
+   * @returns Promise resolving to the transaction function's return value
+   * @throws Error if database is not connected or transaction fails
    */
   async transaction<T>(fn: (db: BetterSqlite3.Database) => Promise<T>): Promise<T> {
     if (!this.db) {
