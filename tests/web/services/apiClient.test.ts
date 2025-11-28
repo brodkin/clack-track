@@ -214,9 +214,9 @@ describe('API Client', () => {
     it('should submit a good vote successfully', async () => {
       const mockVote: VoteRecord = {
         id: 123,
-        contentId: 'content-123',
-        vote: 'good',
-        votedAt: new Date('2025-01-01T12:00:00Z'),
+        content_id: 123,
+        vote_type: 'good',
+        created_at: new Date('2025-01-01T12:00:00Z'),
       };
 
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -250,9 +250,9 @@ describe('API Client', () => {
     it('should submit a bad vote successfully', async () => {
       const mockVote: VoteRecord = {
         id: 456,
-        contentId: 'content-123',
-        vote: 'bad',
-        votedAt: new Date('2025-01-01T12:00:00Z'),
+        content_id: 123,
+        vote_type: 'bad',
+        created_at: new Date('2025-01-01T12:00:00Z'),
       };
 
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -270,7 +270,7 @@ describe('API Client', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.data?.vote.vote).toBe('bad');
+      expect(result.data?.vote.vote_type).toBe('bad');
     });
 
     it('should handle validation errors', async () => {
@@ -313,13 +313,13 @@ describe('API Client', () => {
           id: 1,
           level: 'info',
           message: 'Content generated successfully',
-          timestamp: new Date('2025-01-01T12:00:00Z'),
+          created_at: new Date('2025-01-01T12:00:00Z'),
         },
         {
           id: 2,
           level: 'error',
           message: 'Failed to send to Vestaboard',
-          timestamp: new Date('2025-01-01T12:01:00Z'),
+          created_at: new Date('2025-01-01T12:01:00Z'),
         },
       ];
 

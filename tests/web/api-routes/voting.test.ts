@@ -45,13 +45,13 @@ describe('Voting API Routes', () => {
     it('should submit a good vote successfully', async () => {
       const mockVote: VoteRecord = {
         id: 123,
-        contentId: 'content-456',
-        vote: 'good',
-        votedAt: new Date('2025-01-15T10:00:00Z'),
+        content_id: 456,
+        vote_type: 'good',
+        created_at: new Date('2025-01-15T10:00:00Z'),
       };
 
       mockRequest.body = {
-        contentId: 'content-456',
+        contentId: '456',
         vote: 'good',
       };
 
@@ -64,7 +64,7 @@ describe('Voting API Routes', () => {
 
       await submitVote(mockRequest, mockResponse, mockRepository);
 
-      expect(mockSubmitVote).toHaveBeenCalledWith('content-456', 'good');
+      expect(mockSubmitVote).toHaveBeenCalledWith(456, 'good');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
         data: mockVote,
@@ -75,13 +75,13 @@ describe('Voting API Routes', () => {
     it('should submit a bad vote successfully', async () => {
       const mockVote: VoteRecord = {
         id: 789,
-        contentId: 'content-456',
-        vote: 'bad',
-        votedAt: new Date('2025-01-15T10:05:00Z'),
+        content_id: 456,
+        vote_type: 'bad',
+        created_at: new Date('2025-01-15T10:05:00Z'),
       };
 
       mockRequest.body = {
-        contentId: 'content-456',
+        contentId: '456',
         vote: 'bad',
       };
 
@@ -94,7 +94,7 @@ describe('Voting API Routes', () => {
 
       await submitVote(mockRequest, mockResponse, mockRepository);
 
-      expect(mockSubmitVote).toHaveBeenCalledWith('content-456', 'bad');
+      expect(mockSubmitVote).toHaveBeenCalledWith(456, 'bad');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
         data: mockVote,
@@ -117,7 +117,7 @@ describe('Voting API Routes', () => {
 
     it('should return 400 for missing vote', async () => {
       mockRequest.body = {
-        contentId: 'content-456',
+        contentId: '456',
       };
 
       await submitVote(mockRequest, mockResponse);
@@ -131,7 +131,7 @@ describe('Voting API Routes', () => {
 
     it('should return 400 for invalid vote value', async () => {
       mockRequest.body = {
-        contentId: 'content-456',
+        contentId: '456',
         vote: 'excellent',
       };
 
@@ -158,7 +158,7 @@ describe('Voting API Routes', () => {
 
     it('should return 500 on repository error', async () => {
       mockRequest.body = {
-        contentId: 'content-456',
+        contentId: '456',
         vote: 'good',
       };
 

@@ -367,4 +367,52 @@ describe('MinorUpdateGenerator', () => {
       ]);
     });
   });
+
+  describe('shouldSkip()', () => {
+    it('should return true when cached content has outputMode "layout"', () => {
+      // Arrange - cached content is full-frame layout
+      const cachedContent: GeneratedContent = {
+        text: 'FULL FRAME CONTENT',
+        outputMode: 'layout',
+        layout: {
+          characterCodes: [[1, 2, 3]],
+        },
+      };
+
+      mockOrchestrator.getCachedContent.mockReturnValue(cachedContent);
+
+      // Act
+      const result = generator.shouldSkip();
+
+      // Assert - should skip minor update for full-frame content
+      expect(result).toBe(true);
+    });
+
+    it('should return false when cached content has outputMode "text"', () => {
+      // Arrange - cached content is text that needs frame refresh
+      const cachedContent: GeneratedContent = {
+        text: 'TEXT CONTENT',
+        outputMode: 'text',
+      };
+
+      mockOrchestrator.getCachedContent.mockReturnValue(cachedContent);
+
+      // Act
+      const result = generator.shouldSkip();
+
+      // Assert - should NOT skip, text content needs frame refresh
+      expect(result).toBe(false);
+    });
+
+    it('should return false when no cached content exists', () => {
+      // Arrange - no cached content
+      mockOrchestrator.getCachedContent.mockReturnValue(null);
+
+      // Act
+      const result = generator.shouldSkip();
+
+      // Assert - should NOT skip (will error during generate, not during skip check)
+      expect(result).toBe(false);
+    });
+  });
 });
