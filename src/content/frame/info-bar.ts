@@ -1,5 +1,6 @@
 import { charToCode } from '../../api/vestaboard/character-converter.js';
 import type { WeatherData } from '../../services/weather-service.js';
+import { formatDayName, formatDateMonth, formatTime } from '../../utils/timezone.js';
 
 export interface InfoBarData {
   weatherData?: WeatherData;
@@ -26,9 +27,11 @@ export interface InfoBarData {
 export function formatInfoBar(data: InfoBarData): number[] {
   const now = data.dateTime ?? new Date();
 
-  // Format components
-  const day = formatDay(now); // "WED" (3 chars)
-  const dateMonth = formatDateMonth(now); // "26NOV" (5 chars) or "5NOV" (4 chars)
+  // Format components using timezone-aware utilities
+  const dayName = formatDayName(now); // "TUESDAY" → slice to "TUE" (3 chars)
+  const day = dayName.slice(0, 3); // "TUE" (3 chars)
+  const dateMonthFormatted = formatDateMonth(now); // "NOV 26" → reformat to "26NOV"
+  const dateMonth = reformatDateMonth(dateMonthFormatted); // "26NOV" (5 chars) or "5NOV" (4 chars)
   const time = formatTime(now); // "10:30" (5 chars)
 
   // Build info string with single space separators
@@ -57,23 +60,19 @@ export function formatInfoBar(data: InfoBarData): number[] {
   return codes;
 }
 
-function formatDay(date: Date): string {
-  // Return 3-letter uppercase day abbreviation
-  return date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase().slice(0, 3);
-}
-
-function formatDateMonth(date: Date): string {
-  // Return date + month as "26NOV" format (no leading zero on date)
-  const day = date.getDate().toString();
-  const month = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase().slice(0, 3);
-  return `${day}${month}`;
-}
-
-function formatTime(date: Date): string {
-  // Return 24-hour time as "HH:MM" format
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  return `${hours}:${minutes}`;
+/**
+ * Reformat "NOV 26" or "NOV 5" from timezone utility to "26NOV" or "5NOV"
+ * @param formatted - Date string from formatDateMonth (e.g., "NOV 26")
+ * @returns Reformatted string (e.g., "26NOV")
+ */
+function reformatDateMonth(formatted: string): string {
+  // Input format: "NOV 26" or "NOV 5"
+  const parts = formatted.split(' ');
+  if (parts.length !== 2) {
+    return formatted; // Fallback to original if unexpected format
+  }
+  const [month, day] = parts;
+  return `${day}${month}`; // "26NOV" or "5NOV"
 }
 
 function formatTemperature(weather: WeatherData): string {
