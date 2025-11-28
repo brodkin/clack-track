@@ -35,7 +35,7 @@ import { MinorUpdateGenerator } from './content/generators/minor-update.js';
 import { ContentDataProvider } from './services/content-data-provider.js';
 import { WeatherService } from './services/weather-service.js';
 import { ColorBarService } from './content/frame/color-bar.js';
-import { Database } from './storage/database.js';
+import { Database, createDatabase } from './storage/database.js';
 import { ContentModel } from './storage/models/content.js';
 import { ContentRepository } from './storage/repositories/content-repo.js';
 import type { AIProvider } from './types/ai.js';
@@ -262,9 +262,11 @@ export async function bootstrap(): Promise<BootstrapResult> {
   let database: Database | null = null;
   let contentRepository: ContentRepository | undefined;
 
-  if (config.database.url) {
+  // In test environment, always use in-memory SQLite via factory
+  // In production, require DATABASE_URL to be configured
+  if (process.env.NODE_ENV === 'test' || config.database.url) {
     try {
-      database = new Database({ databaseUrl: config.database.url });
+      database = await createDatabase();
       await database.connect();
       await database.migrate();
 

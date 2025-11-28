@@ -1,6 +1,11 @@
 // CRITICAL: Load dotenv FIRST before any other imports that might use process.env
+// Preserve NODE_ENV if already set (e.g., by Jest test runner)
+const preserveNodeEnv = process.env.NODE_ENV;
 import dotenv from 'dotenv';
 dotenv.config({ override: true });
+if (preserveNodeEnv) {
+  process.env.NODE_ENV = preserveNodeEnv;
+}
 
 import { WebServer } from './web/server.js';
 import { config } from './config/env.js';

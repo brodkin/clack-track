@@ -1,12 +1,6 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(mount:*)",
-      "Bash(python3:*)",
-      "mcp__plugin_beads_beads__set_context",
-      "mcp__plugin_beads_beads__ready",
-      "mcp__plugin_beads_beads__list"
-    ],
+    "allow": ["Bash(mount:*)", "Bash(python3:*)", "mcp__plugin_beads_beads__*"],
     "deny": [],
     "ask": []
   }

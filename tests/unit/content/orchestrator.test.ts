@@ -645,9 +645,9 @@ describe('ContentOrchestrator', () => {
           text: 'SUCCESS CONTENT',
           outputMode: 'text',
           metadata: {
-            aiProvider: 'openai',
-            aiModel: 'gpt-4.1-nano',
-            modelTier: 'LIGHT',
+            provider: 'openai',
+            model: 'gpt-4.1-nano',
+            tier: 'LIGHT',
             tokensUsed: 150,
             failedOver: false,
           },
@@ -713,9 +713,9 @@ describe('ContentOrchestrator', () => {
           text: 'WEATHER CONTENT',
           outputMode: 'text',
           metadata: {
-            aiProvider: 'anthropic',
-            aiModel: 'claude-sonnet-4.5',
-            modelTier: 'MEDIUM',
+            provider: 'anthropic',
+            model: 'claude-sonnet-4.5',
+            tier: 'MEDIUM',
             tokensUsed: 320,
             failedOver: true,
             primaryProvider: 'openai',
@@ -827,9 +827,9 @@ describe('ContentOrchestrator', () => {
           text: 'LINE ONE\nLINE TWO\nLINE THREE\nLINE FOUR\nLINE FIVE\nLINE SIX\nLINE SEVEN',
           outputMode: 'text',
           metadata: {
-            aiProvider: 'openai',
-            aiModel: 'gpt-4.1-nano',
-            modelTier: 'LIGHT',
+            provider: 'openai',
+            model: 'gpt-4.1-nano',
+            tier: 'LIGHT',
             tokensUsed: 250,
             failedOver: false,
           },
@@ -1080,8 +1080,8 @@ describe('ContentOrchestrator', () => {
           text: 'SUCCESS CONTENT',
           outputMode: 'text',
           metadata: {
-            aiProvider: 'openai',
-            aiModel: 'gpt-4.1-nano',
+            provider: 'openai',
+            model: 'gpt-4.1-nano',
           },
         };
 

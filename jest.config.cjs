@@ -1,4 +1,9 @@
 /** @type {import('jest').Config} */
+
+// Set NODE_ENV to 'test' BEFORE any imports happen
+// This must come before ts-jest loads files, which may import dotenv
+process.env.NODE_ENV = 'test';
+
 module.exports = {
   preset: 'ts-jest',
 

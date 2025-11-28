@@ -1,14 +1,16 @@
 import { LogModel, LogLevel } from '../../../../src/storage/models/index.js';
-import { Database } from '../../../../src/storage/database.js';
+import { Database, createDatabase } from '../../../../src/storage/database.js';
 
 describe('LogModel', () => {
   let db: Database;
   let logModel: LogModel;
 
   beforeEach(async () => {
-    db = new Database();
+    db = await createDatabase();
     await db.connect();
     await db.migrate();
+    // Clean tables for isolated tests (DELETE works in both MySQL and SQLite)
+    await db.run('DELETE FROM logs');
     logModel = new LogModel(db);
   });
 

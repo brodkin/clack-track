@@ -170,3 +170,19 @@ export class Database {
     }
   }
 }
+
+/**
+ * Factory function to create appropriate database instance
+ * Returns SQLiteDatabase for test environment, MySQL Database otherwise
+ */
+export async function createDatabase(): Promise<Database> {
+  const isTest = process.env.NODE_ENV === 'test';
+
+  if (isTest) {
+    const { SQLiteDatabase } = await import('./sqlite-database.js');
+    // Cast to Database since interfaces match
+    return new SQLiteDatabase() as unknown as Database;
+  }
+
+  return new Database();
+}

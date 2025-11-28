@@ -1,6 +1,6 @@
 import { VoteModel } from '../../../../src/storage/models/index.js';
 import { ContentModel } from '../../../../src/storage/models/index.js';
-import { Database } from '../../../../src/storage/database.js';
+import { Database, createDatabase } from '../../../../src/storage/database.js';
 
 describe('VoteModel', () => {
   let db: Database;
@@ -8,9 +8,12 @@ describe('VoteModel', () => {
   let contentModel: ContentModel;
 
   beforeEach(async () => {
-    db = new Database();
+    db = await createDatabase();
     await db.connect();
     await db.migrate();
+    // Clean tables for isolated tests (DELETE works in both MySQL and SQLite)
+    await db.run('DELETE FROM votes');
+    await db.run('DELETE FROM content');
     voteModel = new VoteModel(db);
     contentModel = new ContentModel(db);
   });
@@ -435,10 +438,14 @@ describe('VoteModel', () => {
 
   describe('CASCADE DELETE behavior', () => {
     test('should automatically delete votes when content is deleted', async () => {
+      // Create content with a past date so deleteOlderThan works
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 10); // 10 days ago
+
       const content = await contentModel.create({
         text: 'Test content',
         type: 'major',
-        generatedAt: new Date(),
+        generatedAt: pastDate,
         sentAt: null,
         aiProvider: 'openai',
       });
@@ -452,9 +459,10 @@ describe('VoteModel', () => {
       expect(votesBefore).toHaveLength(2);
 
       // Delete the content (should cascade to votes)
-      await contentModel.deleteOlderThan(0); // Deletes all content
+      // deleteOlderThan(7) deletes content older than 7 days (our content is 10 days old)
+      await contentModel.deleteOlderThan(7);
 
-      // Verify votes were automatically deleted
+      // Verify votes were automatically deleted via CASCADE
       const votesAfter = await voteModel.findByContentId(content.id);
       expect(votesAfter).toHaveLength(0);
     });

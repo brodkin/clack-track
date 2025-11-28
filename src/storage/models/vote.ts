@@ -49,7 +49,7 @@ export class VoteModel {
    */
   async findByContentId(contentId: number): Promise<Vote[]> {
     const rows = await this.db.all(
-      'SELECT id, content_id, vote_type, created_at, userAgent, ipAddress FROM votes WHERE content_id = ? ORDER BY created_at DESC',
+      'SELECT id, content_id, vote_type, created_at, userAgent, ipAddress FROM votes WHERE content_id = ? ORDER BY created_at DESC, id DESC',
       [contentId]
     );
 

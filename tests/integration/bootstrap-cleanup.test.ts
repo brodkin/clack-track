@@ -1,13 +1,13 @@
 import { bootstrap } from '../../src/bootstrap.js';
-import { Database } from '../../src/storage/database.js';
+import { Database, createDatabase } from '../../src/storage/database.js';
 import { ContentModel } from '../../src/storage/models/content.js';
 
 describe('Bootstrap - Retention Cleanup Integration', () => {
   let database: Database;
 
   beforeAll(async () => {
-    // Connect to test database
-    database = new Database();
+    // Connect to test database (uses in-memory SQLite in test env)
+    database = await createDatabase();
     await database.connect();
     await database.migrate();
   });
@@ -17,8 +17,8 @@ describe('Bootstrap - Retention Cleanup Integration', () => {
   });
 
   beforeEach(async () => {
-    // Clean table before each test
-    await database.run('TRUNCATE TABLE content');
+    // Clean table before each test (DELETE works in both MySQL and SQLite)
+    await database.run('DELETE FROM content');
   });
 
   test('should run retention cleanup on startup', async () => {

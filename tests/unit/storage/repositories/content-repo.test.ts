@@ -1,6 +1,6 @@
 import { ContentRepository } from '../../../../src/storage/repositories/content-repo.js';
 import { ContentModel } from '../../../../src/storage/models/index.js';
-import { Database } from '../../../../src/storage/database.js';
+import { Database, createDatabase } from '../../../../src/storage/database.js';
 
 describe('ContentRepository', () => {
   let db: Database;
@@ -8,11 +8,11 @@ describe('ContentRepository', () => {
   let contentRepo: ContentRepository;
 
   beforeEach(async () => {
-    db = new Database();
+    db = await createDatabase();
     await db.connect();
     await db.migrate();
-    // Clean table for isolated tests
-    await db.run('TRUNCATE TABLE content');
+    // Clean table for isolated tests (DELETE works in both MySQL and SQLite)
+    await db.run('DELETE FROM content');
     contentModel = new ContentModel(db);
     contentRepo = new ContentRepository(contentModel);
   });
