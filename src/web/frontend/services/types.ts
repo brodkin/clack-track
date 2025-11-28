@@ -60,6 +60,49 @@ export interface LogsResponse {
 }
 
 /**
+ * Authentication API Types
+ */
+export interface AuthenticationOptions {
+  challenge: string;
+  rpId: string;
+  rpName: string;
+  timeout: number;
+  userVerification: string;
+}
+
+export interface AuthCredential {
+  id: string;
+  rawId: string;
+  response: {
+    clientDataJSON: string;
+    authenticatorData: string;
+    signature: string;
+    userHandle?: string;
+  };
+  type: 'public-key';
+}
+
+export interface VerifyLoginRequest {
+  credential: AuthCredential;
+  challenge: string;
+}
+
+export interface VerifyLoginResponse {
+  verified: boolean;
+  user: { name: string };
+}
+
+export interface LogoutResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface SessionResponse {
+  authenticated: boolean;
+  user: { name: string } | null;
+}
+
+/**
  * Error response types
  */
 export class ApiError extends Error {

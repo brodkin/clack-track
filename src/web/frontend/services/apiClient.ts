@@ -19,6 +19,11 @@ import type {
   VoteResponse,
   LogFilters,
   LogsResponse,
+  AuthenticationOptions,
+  VerifyLoginRequest,
+  VerifyLoginResponse,
+  LogoutResponse,
+  SessionResponse,
 } from './types.js';
 
 /**
@@ -148,5 +153,49 @@ export const apiClient = {
     return fetchJSON<LogsResponse>(url, {
       method: 'GET',
     });
+  },
+
+  /**
+   * Start passkey login flow - get authentication challenge
+   */
+  async startLogin(): Promise<AuthenticationOptions> {
+    const response = await fetchJSON<AuthenticationOptions>(
+      `${API_BASE_URL}/api/auth/login/start`,
+      {
+        method: 'POST',
+      }
+    );
+    return response as unknown as AuthenticationOptions;
+  },
+
+  /**
+   * Verify passkey authentication response
+   */
+  async verifyLogin(request: VerifyLoginRequest): Promise<VerifyLoginResponse> {
+    const response = await fetchJSON<VerifyLoginResponse>(`${API_BASE_URL}/api/auth/login/verify`, {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+    return response as unknown as VerifyLoginResponse;
+  },
+
+  /**
+   * Logout current user
+   */
+  async logout(): Promise<LogoutResponse> {
+    const response = await fetchJSON<LogoutResponse>(`${API_BASE_URL}/api/auth/logout`, {
+      method: 'POST',
+    });
+    return response as unknown as LogoutResponse;
+  },
+
+  /**
+   * Check current authentication session
+   */
+  async checkSession(): Promise<SessionResponse> {
+    const response = await fetchJSON<SessionResponse>(`${API_BASE_URL}/api/auth/session`, {
+      method: 'GET',
+    });
+    return response as unknown as SessionResponse;
   },
 };
