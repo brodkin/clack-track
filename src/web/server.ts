@@ -7,6 +7,7 @@ import { log } from '../utils/logger.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createAccountRouter } from './routes/account.js';
+import { pushRouter } from './routes/push.js';
 
 export interface WebServerConfig {
   port?: number;
@@ -137,6 +138,9 @@ export class WebServer {
     // Account management routes
     const accountRouter = createAccountRouter();
     this.app.use('/api/account', accountRouter);
+
+    // Push notification routes
+    this.app.use('/api/push', pushRouter);
   }
 
   private registerSignalHandlers(): void {
