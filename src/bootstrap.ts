@@ -270,6 +270,14 @@ export async function bootstrap(): Promise<BootstrapResult> {
 
       const contentModel = new ContentModel(database);
       contentRepository = new ContentRepository(contentModel);
+
+      // Run 90-day retention cleanup on startup (fire-and-forget)
+      contentRepository.cleanupOldRecords(90).catch(cleanupError => {
+        console.warn(
+          'Startup retention cleanup failed:',
+          cleanupError instanceof Error ? cleanupError.message : cleanupError
+        );
+      });
     } catch (error) {
       // Log warning but continue - graceful degradation without database
       console.warn(
