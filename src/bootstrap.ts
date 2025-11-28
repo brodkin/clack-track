@@ -227,23 +227,6 @@ export async function bootstrap(): Promise<BootstrapResult> {
     throw new Error('Vestaboard configuration is required for operation');
   }
 
-  // Step 1.5: Initialize database and run retention cleanup
-  // Fire-and-forget pattern: cleanup runs in background without blocking startup
-  const database = new Database();
-  await database.connect();
-  await database.migrate();
-
-  const contentModel = new ContentModel(database);
-  const contentRepository = new ContentRepository(contentModel);
-
-  // Run 90-day retention cleanup on startup (fire-and-forget)
-  contentRepository.cleanupOldRecords(90).catch(error => {
-    console.warn(
-      'Startup retention cleanup failed:',
-      error instanceof Error ? error.message : error
-    );
-  });
-
   // Step 2: Create AI providers (primary + alternate for failover)
   const aiProviderType = getAIProviderType(config.ai.provider);
   const aiConfig = getAIConfig(config);
@@ -287,6 +270,14 @@ export async function bootstrap(): Promise<BootstrapResult> {
 
       const contentModel = new ContentModel(database);
       contentRepository = new ContentRepository(contentModel);
+
+      // Run 90-day retention cleanup on startup (fire-and-forget)
+      contentRepository.cleanupOldRecords(90).catch(cleanupError => {
+        console.warn(
+          'Startup retention cleanup failed:',
+          cleanupError instanceof Error ? cleanupError.message : cleanupError
+        );
+      });
     } catch (error) {
       // Log warning but continue - graceful degradation without database
       console.warn(
