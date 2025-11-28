@@ -84,7 +84,7 @@ export async function submitVote(
     }
 
     // Submit vote to repository
-    const voteRecord = await repository.submitVote(contentId as string, vote);
+    const voteRecord = await repository.submitVote(Number(contentId), vote);
 
     res.json({
       success: true,

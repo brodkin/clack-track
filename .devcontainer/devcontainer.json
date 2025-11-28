@@ -12,10 +12,14 @@
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {}
   },
-  "forwardPorts": [3000, 4000],
+  "forwardPorts": [3000, 3306, 4000],
   "portsAttributes": {
     "3000": {
       "label": "Vite Dev Server",
+      "onAutoForward": "notify"
+    },
+    "3306": {
+      "label": "MySQL Database",
       "onAutoForward": "notify"
     },
     "4000": {

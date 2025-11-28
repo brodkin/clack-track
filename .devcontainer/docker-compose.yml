@@ -26,6 +26,19 @@ services:
     ports:
       - '3000:3000' # Application server
     working_dir: /workspace
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: devpassword
+      MYSQL_DATABASE: clack_track
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysql-data:/var/lib/mysql
 
 volumes:
   # Persistent command history volume
@@ -34,3 +47,5 @@ volumes:
   claude-config-clack-track:
   # Persistent beads database volume (ext4 for Unix socket support)
   beads-db-clack-track:
+  # MySQL database volume
+  mysql-data:
