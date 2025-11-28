@@ -1,10 +1,11 @@
 /**
- * GreetingGenerator - Time-based greeting generator
+ * GreetingGenerator - Timezone-aware time-based greeting generator
  *
- * Generates greetings based on the time of day using context.timestamp.
+ * Generates greetings based on the time of day using context.timestamp
+ * in the configured timezone (TZ environment variable or America/Los_Angeles).
  * No external dependencies required.
  *
- * Time-based greetings:
+ * Time-based greetings (based on configured timezone):
  * - 5am-12pm: "Good morning!"
  * - 12pm-5pm: "Good afternoon!"
  * - 5pm-9pm: "Good evening!"
@@ -15,6 +16,7 @@
 
 import { ProgrammaticGenerator } from '../programmatic-generator.js';
 import type { GenerationContext, GeneratedContent } from '../../../types/content-generator.js';
+import { getHourInTimezone } from '../../../utils/timezone.js';
 
 /**
  * Generates time-based greetings for Vestaboard display.
@@ -41,7 +43,8 @@ export class GreetingGenerator extends ProgrammaticGenerator {
   /**
    * Generate time-based greeting.
    *
-   * Determines appropriate greeting based on hour from context.timestamp:
+   * Determines appropriate greeting based on hour from context.timestamp
+   * in the configured timezone (TZ environment variable or America/Los_Angeles):
    * - Morning (5-11): "Good morning!"
    * - Afternoon (12-16): "Good afternoon!"
    * - Evening (17-20): "Good evening!"
@@ -54,23 +57,24 @@ export class GreetingGenerator extends ProgrammaticGenerator {
    * ```typescript
    * const generator = new GreetingGenerator();
    *
-   * // Morning greeting
+   * // Morning greeting (timezone-aware)
+   * process.env.TZ = 'America/Los_Angeles';
    * const result = await generator.generate({
    *   updateType: 'major',
-   *   timestamp: new Date('2024-01-15T08:00:00')
+   *   timestamp: new Date('2024-01-15T16:00:00Z') // 8am PST
    * });
    * // result.text: "Good morning!"
    *
-   * // Evening greeting
+   * // Evening greeting (timezone-aware)
    * const result2 = await generator.generate({
    *   updateType: 'major',
-   *   timestamp: new Date('2024-01-15T19:00:00')
+   *   timestamp: new Date('2024-01-16T03:00:00Z') // 7pm PST
    * });
    * // result2.text: "Good evening!"
    * ```
    */
   async generate(context: GenerationContext): Promise<GeneratedContent> {
-    const hour = context.timestamp.getHours();
+    const hour = getHourInTimezone(context.timestamp);
 
     let greeting: string;
 

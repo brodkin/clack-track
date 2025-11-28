@@ -325,7 +325,7 @@ describe('content:test command', () => {
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Output mode: layout'));
-      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Layout:'));
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Preview:'));
     });
   });
 

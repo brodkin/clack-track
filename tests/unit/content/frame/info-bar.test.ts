@@ -2,6 +2,7 @@ import { formatInfoBar } from '../../../../src/content/frame/info-bar.js';
 import { charToCode } from '../../../../src/api/vestaboard/character-converter.js';
 import type { InfoBarData } from '../../../../src/content/frame/info-bar.js';
 import type { WeatherData } from '../../../../src/services/weather-service.js';
+import * as timezoneUtils from '../../../../src/utils/timezone.js';
 
 // Helper function to convert character codes back to string for testing
 function codesToString(codes: number[]): string {
@@ -192,7 +193,7 @@ describe('Info Bar Formatter', () => {
   describe('formatTime', () => {
     it('should return 24-hour format with leading zeros', () => {
       const data: InfoBarData = {
-        dateTime: new Date('2024-11-26T09:05:00'),
+        dateTime: new Date('2024-11-26T17:05:00Z'), // UTC time → 09:05 Pacific
       };
       const result = formatInfoBar(data);
       // Extract time portion
@@ -203,7 +204,7 @@ describe('Info Bar Formatter', () => {
 
     it('should handle midnight as 00:00', () => {
       const data: InfoBarData = {
-        dateTime: new Date('2024-11-26T00:00:00'),
+        dateTime: new Date('2024-11-26T08:00:00Z'), // UTC time → 00:00 Pacific
       };
       const result = formatInfoBar(data);
       // Extract time portion
@@ -214,7 +215,7 @@ describe('Info Bar Formatter', () => {
 
     it('should handle afternoon times correctly', () => {
       const data: InfoBarData = {
-        dateTime: new Date('2024-11-26T14:45:00'),
+        dateTime: new Date('2024-11-26T22:45:00Z'), // UTC time → 14:45 Pacific
       };
       const result = formatInfoBar(data);
       // Extract time portion
@@ -379,6 +380,92 @@ describe('Info Bar Formatter', () => {
 
       expect(resultStr).toContain('-5C');
       expect(result).toHaveLength(21);
+    });
+  });
+
+  describe('timezone awareness', () => {
+    it('should use timezone utility functions for formatting', () => {
+      const formatDayNameSpy = jest.spyOn(timezoneUtils, 'formatDayName');
+      const formatDateMonthSpy = jest.spyOn(timezoneUtils, 'formatDateMonth');
+      const formatTimeSpy = jest.spyOn(timezoneUtils, 'formatTime');
+
+      const data: InfoBarData = {
+        dateTime: new Date('2024-11-26T10:30:00Z'),
+      };
+
+      formatInfoBar(data);
+
+      expect(formatDayNameSpy).toHaveBeenCalledWith(data.dateTime);
+      expect(formatDateMonthSpy).toHaveBeenCalledWith(data.dateTime);
+      expect(formatTimeSpy).toHaveBeenCalledWith(data.dateTime);
+
+      formatDayNameSpy.mockRestore();
+      formatDateMonthSpy.mockRestore();
+      formatTimeSpy.mockRestore();
+    });
+
+    it('should respect timezone when formatting day names', () => {
+      // Mock formatDayName to return a specific value
+      const formatDayNameSpy = jest.spyOn(timezoneUtils, 'formatDayName').mockReturnValue('TUE');
+      const formatDateMonthSpy = jest
+        .spyOn(timezoneUtils, 'formatDateMonth')
+        .mockReturnValue('26NOV');
+      const formatTimeSpy = jest.spyOn(timezoneUtils, 'formatTime').mockReturnValue('10:30');
+
+      const data: InfoBarData = {
+        dateTime: new Date('2024-11-26T10:30:00Z'),
+      };
+
+      const result = formatInfoBar(data);
+      const dayPortion = codesToString(result.slice(0, 3));
+
+      expect(dayPortion).toBe('TUE');
+
+      formatDayNameSpy.mockRestore();
+      formatDateMonthSpy.mockRestore();
+      formatTimeSpy.mockRestore();
+    });
+
+    it('should respect timezone when formatting dates', () => {
+      const formatDayNameSpy = jest.spyOn(timezoneUtils, 'formatDayName').mockReturnValue('WED');
+      const formatDateMonthSpy = jest
+        .spyOn(timezoneUtils, 'formatDateMonth')
+        .mockReturnValue('27NOV');
+      const formatTimeSpy = jest.spyOn(timezoneUtils, 'formatTime').mockReturnValue('14:45');
+
+      const data: InfoBarData = {
+        dateTime: new Date('2024-11-27T06:45:00Z'), // Early UTC time
+      };
+
+      const result = formatInfoBar(data);
+      const dateMonthPortion = codesToString(result.slice(4, 10));
+
+      expect(dateMonthPortion).toBe('27NOV ');
+
+      formatDayNameSpy.mockRestore();
+      formatDateMonthSpy.mockRestore();
+      formatTimeSpy.mockRestore();
+    });
+
+    it('should respect timezone when formatting time', () => {
+      const formatDayNameSpy = jest.spyOn(timezoneUtils, 'formatDayName').mockReturnValue('WED');
+      const formatDateMonthSpy = jest
+        .spyOn(timezoneUtils, 'formatDateMonth')
+        .mockReturnValue('27NOV');
+      const formatTimeSpy = jest.spyOn(timezoneUtils, 'formatTime').mockReturnValue('23:45');
+
+      const data: InfoBarData = {
+        dateTime: new Date('2024-11-27T07:45:00Z'), // Morning UTC
+      };
+
+      const result = formatInfoBar(data);
+      const timePortion = codesToString(result.slice(10, 15));
+
+      expect(timePortion).toBe('23:45');
+
+      formatDayNameSpy.mockRestore();
+      formatDateMonthSpy.mockRestore();
+      formatTimeSpy.mockRestore();
     });
   });
 });

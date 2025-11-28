@@ -11,10 +11,10 @@ import { log, error } from '../../utils/logger.js';
 import type { GenerationContext } from '../../types/content-generator.js';
 import { bootstrap } from '../../bootstrap.js';
 import { validateTextContent, validateLayoutContent } from '../../utils/validators.js';
-import { layoutToText } from '../../api/vestaboard/character-converter.js';
 import { HomeAssistantClient } from '../../api/data-sources/home-assistant.js';
 import { createAIProvider, AIProviderType } from '../../api/ai/index.js';
 import type { AIProvider } from '../../types/ai.js';
+import { renderAsciiPreview } from '../display.js';
 
 /**
  * Options for content:test command
@@ -203,31 +203,8 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
           frameResult.warnings.forEach(warning => log(`  - ${warning}`));
         }
 
-        log('\nFrame layout (6x22 ASCII preview):');
-        // Convert layout to ASCII with color codes shown as ANSI colored blocks
-        const RESET = '\x1b[0m';
-        const colorAnsi: Record<number, string> = {
-          63: '\x1b[41m', // RED background
-          64: '\x1b[48;5;208m', // ORANGE background (256-color)
-          65: '\x1b[43m', // YELLOW background
-          66: '\x1b[42m', // GREEN background
-          67: '\x1b[44m', // BLUE background
-          68: '\x1b[45m', // VIOLET/MAGENTA background
-          69: '\x1b[47m', // WHITE background
-        };
-        for (let row = 0; row < 6; row++) {
-          let rowStr = '';
-          for (let col = 0; col < 22; col++) {
-            const code = frameResult.layout[row]?.[col] ?? 0;
-            if (code >= 63 && code <= 69) {
-              // Color codes: show as colored block
-              rowStr += `${colorAnsi[code]} ${RESET}`;
-            } else {
-              rowStr += layoutToText([[code]])[0] || ' ';
-            }
-          }
-          log(`  ${row + 1}: |${rowStr}|`);
-        }
+        log('\nFrame preview:');
+        log(renderAsciiPreview(frameResult.layout));
       }
     } else if (content.outputMode === 'layout' && content.layout) {
       log(`\nOutput mode: layout\n`);
@@ -257,8 +234,8 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
         }`
       );
 
-      log('\nLayout:');
-      log(JSON.stringify(content.layout, null, 2));
+      log('\nPreview:');
+      log(renderAsciiPreview(content.layout));
     }
 
     // Display timing

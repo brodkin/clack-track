@@ -3,27 +3,10 @@
  */
 
 import { generateFrame } from '../../content/frame/index.js';
-import { codeToColorName, codeToChar } from '../../api/vestaboard/character-converter.js';
 import { HomeAssistantClient } from '../../api/data-sources/home-assistant.js';
 import { createAIProvider, AIProviderType } from '../../api/ai/index.js';
 import type { AIProvider } from '../../types/index.js';
-
-const colors = {
-  reset: '\x1b[0m',
-  green: '\x1b[32m',
-  red: '\x1b[31m',
-  yellow: '\x1b[33m',
-  cyan: '\x1b[36m',
-  dim: '\x1b[2m',
-  // Background colors for Vestaboard color preview
-  bgRed: '\x1b[41m',
-  bgOrange: '\x1b[48;5;208m',
-  bgYellow: '\x1b[43m',
-  bgGreen: '\x1b[42m',
-  bgBlue: '\x1b[44m',
-  bgViolet: '\x1b[45m',
-  bgWhite: '\x1b[47m',
-};
+import { renderAsciiPreview, terminalColors as colors } from '../display.js';
 
 export interface FrameCommandOptions {
   text?: string;
@@ -156,52 +139,4 @@ function setupAIProvider(): AIProvider | undefined {
 
   console.log(`${colors.dim}ℹ No AI provider configured, using fallback colors${colors.reset}`);
   return undefined;
-}
-
-function renderAsciiPreview(layout: number[][]): string {
-  const lines: string[] = [];
-
-  // Top border
-  lines.push('┌' + '─'.repeat(22) + '┐');
-
-  // Content rows
-  for (const row of layout) {
-    let line = '│';
-    for (const code of row) {
-      line += renderCharCode(code);
-    }
-    line += '│';
-    lines.push(line);
-  }
-
-  // Bottom border
-  lines.push('└' + '─'.repeat(22) + '┘');
-
-  return lines.join('\n');
-}
-
-function renderCharCode(code: number): string {
-  // Check if this is a color code (63-69)
-  const colorName = codeToColorName(code);
-  if (colorName) {
-    return renderColorBlock(colorName);
-  }
-
-  // Regular character - convert code back to char
-  return codeToChar(code);
-}
-
-function renderColorBlock(colorName: string): string {
-  const bgColors: Record<string, string> = {
-    RED: colors.bgRed,
-    ORANGE: colors.bgOrange,
-    YELLOW: colors.bgYellow,
-    GREEN: colors.bgGreen,
-    BLUE: colors.bgBlue,
-    VIOLET: colors.bgViolet,
-    WHITE: colors.bgWhite,
-  };
-
-  const bg = bgColors[colorName] ?? '';
-  return `${bg} ${colors.reset}`;
 }
