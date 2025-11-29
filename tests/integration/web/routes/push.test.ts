@@ -44,7 +44,10 @@ describe('Push Routes', () => {
         },
       };
 
-      const response = await request(app).post('/api/push/subscribe').send(subscription).expect(201);
+      const response = await request(app)
+        .post('/api/push/subscribe')
+        .send(subscription)
+        .expect(201);
 
       expect(response.body).toEqual({
         success: true,
@@ -60,7 +63,10 @@ describe('Push Routes', () => {
         },
       };
 
-      const response = await request(app).post('/api/push/subscribe').send(subscription).expect(400);
+      const response = await request(app)
+        .post('/api/push/subscribe')
+        .send(subscription)
+        .expect(400);
 
       expect(response.body).toEqual({
         error: 'Invalid subscription object',

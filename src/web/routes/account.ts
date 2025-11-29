@@ -15,7 +15,7 @@ import { generateRegistrationOptions, verifyRegistrationResponse } from '@simple
 import type {
   RegistrationResponseJSON,
   PublicKeyCredentialCreationOptionsJSON,
-} from '@simplewebauthn/types';
+} from '@simplewebauthn/server';
 
 /**
  * In-memory session storage (shared with auth.ts)
@@ -356,11 +356,9 @@ async function removePasskey(req: Request, res: Response): Promise<void> {
 
     // Check if trying to remove last passkey
     if (id === 'last-passkey' || userPasskeys.length === 1) {
-      res
-        .status(400)
-        .json({
-          error: 'Cannot remove last passkey. Add another passkey before removing this one.',
-        });
+      res.status(400).json({
+        error: 'Cannot remove last passkey. Add another passkey before removing this one.',
+      });
       return;
     }
 

@@ -18,7 +18,7 @@ import {
 import type {
   AuthenticationResponseJSON,
   PublicKeyCredentialRequestOptionsJSON,
-} from '@simplewebauthn/types';
+} from '@simplewebauthn/server';
 
 /**
  * In-memory session storage for demonstration purposes
