@@ -126,36 +126,5 @@ describe('MotivationalGenerator', () => {
       expect(generator.getUserPromptFile()).toBe('motivational.txt');
       expect(generator.modelTier).toBe(ModelTier.LIGHT);
     });
-
-    it('should call base class generate method with proper configuration', () => {
-      // The generate() method is inherited from AIPromptGenerator
-      // This test verifies the method exists and is callable
-      const generator = new MotivationalGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      expect(typeof generator.generate).toBe('function');
-      // The actual implementation is tested in ai-prompt-generator.test.ts
-    });
-  });
-
-  describe('integration with base class', () => {
-    it('should inherit retry logic from AIPromptGenerator', () => {
-      const generator = new MotivationalGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      // Verify that generate method exists (inherited from base class)
-      expect(typeof generator.generate).toBe('function');
-    });
-
-    it('should inherit validation logic from AIPromptGenerator', () => {
-      const generator = new MotivationalGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      // Verify that validate method exists (inherited from base class)
-      expect(typeof generator.validate).toBe('function');
-    });
   });
 });

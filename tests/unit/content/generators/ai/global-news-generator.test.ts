@@ -149,29 +149,4 @@ describe('GlobalNewsGenerator', () => {
     });
   });
 
-  describe('integration with BaseNewsGenerator', () => {
-    it('should inherit RSS feed fetching from BaseNewsGenerator', () => {
-      const generator = new GlobalNewsGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        apiKeys,
-        mockRSSClient
-      );
-
-      // Verify that generate method exists (inherited from base class)
-      expect(typeof generator.generate).toBe('function');
-    });
-
-    it('should inherit validation logic from base class', () => {
-      const generator = new GlobalNewsGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        apiKeys,
-        mockRSSClient
-      );
-
-      // Verify that validate method exists (inherited from base class)
-      expect(typeof generator.validate).toBe('function');
-    });
-  });
 });

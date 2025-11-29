@@ -188,7 +188,7 @@ describe('VestaboardHTTPClient', () => {
     });
 
     it('should use exponential backoff between retries', async () => {
-      // All calls fail
+      // All calls fail - will exhaust 3 attempts (initial + 2 retries)
       mockFetch.mockResolvedValue({
         ok: false,
         status: 503,
@@ -199,9 +199,14 @@ describe('VestaboardHTTPClient', () => {
       await expect(client.post(mockLayout)).rejects.toThrow(VestaboardServerError);
       const elapsed = Date.now() - startTime;
 
-      // Should have taken some time due to backoff (at least 1s for first retry)
-      // But not too long (less than 10s total for 3 retries)
-      expect(elapsed).toBeGreaterThanOrEqual(500); // Allow for some timing variance
+      // With exponential backoff:
+      // Attempt 0: 0ms delay (initial attempt)
+      // Attempt 1: ~1000ms delay (1000 * 2^0)
+      // Attempt 2: ~2000ms delay (1000 * 2^1)
+      // Total: ~3000ms minimum
+      // Allow 500ms variance for system overhead
+      expect(elapsed).toBeGreaterThanOrEqual(2500);
+      expect(elapsed).toBeLessThan(10000); // Upper bound sanity check
     }, 15000);
 
     it('should not retry on non-retryable errors', async () => {

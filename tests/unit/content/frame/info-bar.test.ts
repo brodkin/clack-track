@@ -3,6 +3,7 @@ import { charToCode } from '../../../../src/api/vestaboard/character-converter.j
 import type { InfoBarData } from '../../../../src/content/frame/info-bar.js';
 import type { WeatherData } from '../../../../src/services/weather-service.js';
 import * as timezoneUtils from '../../../../src/utils/timezone.js';
+import { withTimezone, TEST_TIMEZONES } from '../../../__helpers__/timezone.js';
 
 // Helper function to convert character codes back to string for testing
 function codesToString(codes: number[]): string {
@@ -192,36 +193,42 @@ describe('Info Bar Formatter', () => {
 
   describe('formatTime', () => {
     it('should return 24-hour format with leading zeros', () => {
-      const data: InfoBarData = {
-        dateTime: new Date('2024-11-26T17:05:00Z'), // UTC time → 09:05 Pacific
-      };
-      const result = formatInfoBar(data);
-      // Extract time portion
-      const timePortion = codesToString(result.slice(10, 15));
+      withTimezone(TEST_TIMEZONES.PACIFIC, () => {
+        const data: InfoBarData = {
+          dateTime: new Date('2024-11-26T17:05:00Z'), // UTC time → 09:05 Pacific
+        };
+        const result = formatInfoBar(data);
+        // Extract time portion
+        const timePortion = codesToString(result.slice(10, 15));
 
-      expect(timePortion).toBe('09:05');
+        expect(timePortion).toBe('09:05');
+      });
     });
 
     it('should handle midnight as 00:00', () => {
-      const data: InfoBarData = {
-        dateTime: new Date('2024-11-26T08:00:00Z'), // UTC time → 00:00 Pacific
-      };
-      const result = formatInfoBar(data);
-      // Extract time portion
-      const timePortion = codesToString(result.slice(10, 15));
+      withTimezone(TEST_TIMEZONES.PACIFIC, () => {
+        const data: InfoBarData = {
+          dateTime: new Date('2024-11-26T08:00:00Z'), // UTC time → 00:00 Pacific
+        };
+        const result = formatInfoBar(data);
+        // Extract time portion
+        const timePortion = codesToString(result.slice(10, 15));
 
-      expect(timePortion).toBe('00:00');
+        expect(timePortion).toBe('00:00');
+      });
     });
 
     it('should handle afternoon times correctly', () => {
-      const data: InfoBarData = {
-        dateTime: new Date('2024-11-26T22:45:00Z'), // UTC time → 14:45 Pacific
-      };
-      const result = formatInfoBar(data);
-      // Extract time portion
-      const timePortion = codesToString(result.slice(10, 15));
+      withTimezone(TEST_TIMEZONES.PACIFIC, () => {
+        const data: InfoBarData = {
+          dateTime: new Date('2024-11-26T22:45:00Z'), // UTC time → 14:45 Pacific
+        };
+        const result = formatInfoBar(data);
+        // Extract time portion
+        const timePortion = codesToString(result.slice(10, 15));
 
-      expect(timePortion).toBe('14:45');
+        expect(timePortion).toBe('14:45');
+      });
     });
   });
 
