@@ -18,21 +18,25 @@ import type {
   GeneratorValidationResult,
 } from '@/types/content-generator';
 import { ModelTier } from '@/types/content-generator';
+import { createMockAIProvider, createRateLimitedProvider } from '@tests/__helpers__/mockAIProvider';
 
 // We need to create a concrete implementation for testing the abstract class
 class TestAIPromptGenerator {
   protected promptLoader: PromptLoader;
   protected modelTierSelector: ModelTierSelector;
   protected modelTier: ModelTier;
+  private mockProvider: AIProvider;
 
   constructor(
     promptLoader: PromptLoader,
     modelTierSelector: ModelTierSelector,
-    modelTier: ModelTier
+    modelTier: ModelTier,
+    mockProvider: AIProvider = createMockAIProvider()
   ) {
     this.promptLoader = promptLoader;
     this.modelTierSelector = modelTierSelector;
     this.modelTier = modelTier;
+    this.mockProvider = mockProvider;
   }
 
   protected getSystemPromptFile(): string {
@@ -137,9 +141,13 @@ class TestAIPromptGenerator {
   }
 
   private getProviderForSelection(_selection: ModelSelection): AIProvider {
-    // This would be injected or created via factory in real implementation
-    // For now, throw to test error handling
-    throw new Error('Provider factory not implemented in test');
+    // Return the injected mock provider for testing
+    return this.mockProvider;
+  }
+
+  // Allow tests to set a different provider for testing failover
+  setMockProvider(provider: AIProvider): void {
+    this.mockProvider = provider;
   }
 }
 
@@ -280,19 +288,19 @@ describe('AIPromptGenerator', () => {
     it('should include systemPrompt and userPrompt in metadata', async () => {
       const systemPromptContent = 'You are a helpful assistant for Vestaboard displays';
       const userPromptContent = 'Generate a motivational quote';
+      const generatedText = 'Test generated content';
 
       mockPromptLoader.loadPrompt
         .mockResolvedValueOnce(systemPromptContent)
         .mockResolvedValueOnce(userPromptContent);
 
-      const mockProvider: AIProvider = {
-        generate: jest.fn().mockResolvedValue({
-          text: 'Test generated content',
+      const mockProvider = createMockAIProvider({
+        response: {
+          text: generatedText,
           model: 'gpt-4o',
           tokensUsed: 100,
-        }),
-        validateConnection: jest.fn().mockResolvedValue({ valid: true }),
-      };
+        },
+      });
 
       mockModelTierSelector.select.mockReturnValue({
         provider: 'openai',
@@ -302,41 +310,50 @@ describe('AIPromptGenerator', () => {
       const generator = new TestAIPromptGenerator(
         mockPromptLoader,
         mockModelTierSelector,
-        ModelTier.MEDIUM
+        ModelTier.MEDIUM,
+        mockProvider
       );
-
-      // Override provider creation to use our mock
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (generator as any).getProviderForSelection = jest.fn().mockReturnValue(mockProvider);
 
       const result = await generator.generate(mockContext);
 
       expect(result.metadata).toBeDefined();
       expect(result.metadata?.systemPrompt).toBe(systemPromptContent);
       expect(result.metadata?.userPrompt).toContain(userPromptContent);
+      expect(result.text).toBe(generatedText);
+      expect(result.outputMode).toBe('text');
     });
 
     it('should load prompts using getSystemPromptFile() and getUserPromptFile()', async () => {
+      const systemPromptContent = 'system prompt';
+      const userPromptContent = 'user prompt';
+
       mockPromptLoader.loadPrompt
-        .mockResolvedValueOnce('system prompt')
-        .mockResolvedValueOnce('user prompt');
+        .mockResolvedValueOnce(systemPromptContent)
+        .mockResolvedValueOnce(userPromptContent);
 
       mockModelTierSelector.select.mockReturnValue({
         provider: 'openai',
         model: 'gpt-4o',
       });
 
+      const mockProvider = createMockAIProvider();
+
       const generator = new TestAIPromptGenerator(
         mockPromptLoader,
         mockModelTierSelector,
-        ModelTier.MEDIUM
+        ModelTier.MEDIUM,
+        mockProvider
       );
 
-      // This will throw because provider factory is not implemented
-      await expect(generator.generate(mockContext)).rejects.toThrow();
+      const result = await generator.generate(mockContext);
 
+      // Verify prompts were loaded
       expect(mockPromptLoader.loadPrompt).toHaveBeenCalledWith('system', 'test-system.txt');
       expect(mockPromptLoader.loadPrompt).toHaveBeenCalledWith('user', 'test-user.txt');
+
+      // Verify generation succeeded and prompts are in metadata
+      expect(result.metadata?.systemPrompt).toBe(systemPromptContent);
+      expect(result.metadata?.userPrompt).toContain(userPromptContent);
     });
 
     it('should select model using ModelTierSelector with configured tier', async () => {
@@ -344,20 +361,32 @@ describe('AIPromptGenerator', () => {
         .mockResolvedValueOnce('system prompt')
         .mockResolvedValueOnce('user prompt');
 
-      mockModelTierSelector.select.mockReturnValue({
+      const selectedTierSelection: ModelSelection = {
         provider: 'anthropic',
         model: 'claude-3-5-sonnet-20241022',
+      };
+
+      mockModelTierSelector.select.mockReturnValue(selectedTierSelection);
+
+      const mockProvider = createMockAIProvider({
+        response: { model: 'claude-3-5-sonnet-20241022' },
       });
 
       const generator = new TestAIPromptGenerator(
         mockPromptLoader,
         mockModelTierSelector,
-        ModelTier.MEDIUM
+        ModelTier.MEDIUM,
+        mockProvider
       );
 
-      await expect(generator.generate(mockContext)).rejects.toThrow();
+      const result = await generator.generate(mockContext);
 
+      // Verify tier selection was called with the correct tier
       expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
+
+      // Verify generation succeeded with the selected model
+      expect(result.metadata?.model).toBe('claude-3-5-sonnet-20241022');
+      expect(result.metadata?.provider).toBe('anthropic');
     });
 
     it('should call getAlternate when implemented to handle provider failover', async () => {
@@ -372,17 +401,26 @@ describe('AIPromptGenerator', () => {
 
       mockModelTierSelector.select.mockReturnValue(primarySelection);
 
+      // Mock getAlternate to verify it gets called (successful primary means it won't be used)
+      mockModelTierSelector.getAlternate.mockReturnValue(null);
+
+      const mockProvider = createMockAIProvider();
+
       const generator = new TestAIPromptGenerator(
         mockPromptLoader,
         mockModelTierSelector,
-        ModelTier.MEDIUM
+        ModelTier.MEDIUM,
+        mockProvider
       );
 
-      // Will fail because provider factory not implemented, but that's expected in test
-      await expect(generator.generate(mockContext)).rejects.toThrow();
+      const result = await generator.generate(mockContext);
 
       // Verify model selector was used
       expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
+
+      // Verify generation succeeded with primary provider
+      expect(result.text).toBeDefined();
+      expect(result.metadata?.provider).toBe(primarySelection.provider);
     });
 
     it('should throw error when all providers fail', async () => {
@@ -390,20 +428,34 @@ describe('AIPromptGenerator', () => {
         .mockResolvedValueOnce('system prompt')
         .mockResolvedValueOnce('user prompt');
 
-      mockModelTierSelector.select.mockReturnValue({
+      const primarySelection: ModelSelection = {
         provider: 'openai',
         model: 'gpt-4o',
-      });
+      };
 
+      mockModelTierSelector.select.mockReturnValue(primarySelection);
+
+      // No alternate provider available - test exhaustion
       mockModelTierSelector.getAlternate.mockReturnValue(null);
+
+      // Primary provider fails with RateLimitError to trigger failover attempt
+      const failingProvider = createRateLimitedProvider('openai');
 
       const generator = new TestAIPromptGenerator(
         mockPromptLoader,
         mockModelTierSelector,
-        ModelTier.MEDIUM
+        ModelTier.MEDIUM,
+        failingProvider
       );
 
-      await expect(generator.generate(mockContext)).rejects.toThrow();
+      // Should throw because primary fails and no alternate is available
+      await expect(generator.generate(mockContext)).rejects.toThrow(
+        /All AI providers failed for tier/
+      );
+
+      // Verify failover logic was attempted
+      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
+      expect(mockModelTierSelector.getAlternate).toHaveBeenCalledWith(primarySelection);
     });
   });
 

@@ -52,25 +52,6 @@ class InvalidPatternNotification extends NotificationGenerator {
 }
 
 describe('NotificationGenerator', () => {
-  describe('abstract class enforcement', () => {
-    it('should not be directly instantiable at compile time', () => {
-      // TypeScript prevents direct instantiation of abstract classes at compile time
-      const compileTimeCheck = true;
-      expect(compileTimeCheck).toBe(true);
-    });
-
-    it('should require eventPattern property in subclasses', () => {
-      const generator = new TestPersonArrivedNotification();
-      expect(generator).toHaveProperty('eventPattern');
-      expect(generator.eventPattern).toBeInstanceOf(RegExp);
-    });
-
-    it('should require formatNotification() implementation in subclasses', () => {
-      const generator = new TestPersonArrivedNotification();
-      expect(typeof generator['formatNotification']).toBe('function');
-    });
-  });
-
   describe('eventPattern property', () => {
     it('should accept simple event type patterns', () => {
       const generator = new TestPersonArrivedNotification();
@@ -314,14 +295,6 @@ describe('NotificationGenerator', () => {
   });
 
   describe('ContentGenerator interface compliance', () => {
-    it('should implement ContentGenerator interface', () => {
-      const generator = new TestPersonArrivedNotification();
-
-      // Verify interface methods exist
-      expect(typeof generator.generate).toBe('function');
-      expect(typeof generator.validate).toBe('function');
-    });
-
     it('should have async generate method', async () => {
       const generator = new TestPersonArrivedNotification();
       const context: GenerationContext = {

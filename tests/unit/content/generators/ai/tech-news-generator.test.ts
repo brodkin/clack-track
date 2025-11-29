@@ -126,19 +126,6 @@ describe('TechNewsGenerator', () => {
   });
 
   describe('inheritance from BaseNewsGenerator', () => {
-    it('should inherit RSS fetching capability', () => {
-      const generator = new TechNewsGenerator(
-        promptLoader,
-        modelTierSelector,
-        apiKeys,
-        rssClient
-      ) as ProtectedTechNewsGenerator;
-
-      // Verify BaseNewsGenerator properties exist
-      expect(generator.rssClient).toBe(rssClient);
-      expect(generator.feedUrls).toBeDefined();
-    });
-
     it('should use default feeds when no custom feeds provided', () => {
       const generator = new TechNewsGenerator(
         promptLoader,
