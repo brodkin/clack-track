@@ -1,17 +1,15 @@
 /**
- * Integration tests for logs API routes
+ * Unit tests for logs API routes
  * Tests GET /api/logs and DELETE /api/logs endpoints
- *
- * @jest-environment node
  */
 
-import { getDebugLogs, clearLogs } from '../../../src/web/routes/logs.js';
-import { LogModel } from '../../../src/storage/models/log.js';
-import type { LogRecord } from '../../../src/storage/models/log.js';
-import type { Request, Response } from '../../../src/web/types.js';
+import { getDebugLogs, clearLogs } from '../../../../src/web/routes/logs.js';
+import { LogModel } from '../../../../src/storage/models/log.js';
+import type { LogRecord } from '../../../../src/storage/models/log.js';
+import type { Request, Response } from '../../../../src/web/types.js';
 
 // Mock LogModel
-jest.mock('../../../src/storage/models/log.js');
+jest.mock('../../../../src/storage/models/log.js');
 
 describe('Logs API Routes', () => {
   let mockRequest: Request;

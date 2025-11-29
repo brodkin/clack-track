@@ -1,18 +1,16 @@
 /**
- * Integration tests for voting API routes
+ * Unit tests for voting API routes
  * Tests POST /api/vote and GET /api/vote/stats endpoints
- *
- * @jest-environment node
  */
 
-import { submitVote, getVoteStats } from '../../../src/web/routes/voting.js';
-import { VoteRepository } from '../../../src/storage/repositories/vote-repo.js';
-import type { VoteRecord } from '../../../src/storage/models/vote.js';
-import type { Request, Response } from '../../../src/web/types.js';
+import { submitVote, getVoteStats } from '../../../../src/web/routes/voting.js';
+import { VoteRepository } from '../../../../src/storage/repositories/vote-repo.js';
+import type { VoteRecord } from '../../../../src/storage/models/vote.js';
+import type { Request, Response } from '../../../../src/web/types.js';
 
 // Mock VoteRepository
-jest.mock('../../../src/storage/repositories/vote-repo.js');
-jest.mock('../../../src/storage/models/vote.js');
+jest.mock('../../../../src/storage/repositories/vote-repo.js');
+jest.mock('../../../../src/storage/models/vote.js');
 
 describe('Voting API Routes', () => {
   let mockRequest: Request;

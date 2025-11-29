@@ -1,18 +1,16 @@
 /**
- * Integration tests for content API routes
+ * Unit tests for content API routes
  * Tests GET /api/content/latest and GET /api/content/history endpoints
- *
- * @jest-environment node
  */
 
-import { getLatestContent, getContentHistory } from '../../../src/web/routes/content.js';
-import { ContentRepository } from '../../../src/storage/repositories/content-repo.js';
-import type { ContentRecord } from '../../../src/storage/models/content.js';
-import type { Request, Response } from '../../../src/web/types.js';
+import { getLatestContent, getContentHistory } from '../../../../src/web/routes/content.js';
+import { ContentRepository } from '../../../../src/storage/repositories/content-repo.js';
+import type { ContentRecord } from '../../../../src/storage/models/content.js';
+import type { Request, Response } from '../../../../src/web/types.js';
 
 // Mock ContentRepository
-jest.mock('../../../src/storage/repositories/content-repo.js');
-jest.mock('../../../src/storage/models/content.js');
+jest.mock('../../../../src/storage/repositories/content-repo.js');
+jest.mock('../../../../src/storage/models/content.js');
 
 describe('Content API Routes', () => {
   let mockRequest: Request;
