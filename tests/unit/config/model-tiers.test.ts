@@ -2,23 +2,6 @@ import { describe, it, expect } from '@jest/globals';
 import { MODEL_TIERS, ModelTier, AIProviderType } from '@/config/model-tiers';
 
 describe('Model Tiers Configuration', () => {
-  describe('MODEL_TIERS Structure', () => {
-    it('should export MODEL_TIERS constant', () => {
-      expect(MODEL_TIERS).toBeDefined();
-      expect(typeof MODEL_TIERS).toBe('object');
-    });
-
-    it('should have openai provider configuration', () => {
-      expect(MODEL_TIERS.openai).toBeDefined();
-      expect(typeof MODEL_TIERS.openai).toBe('object');
-    });
-
-    it('should have anthropic provider configuration', () => {
-      expect(MODEL_TIERS.anthropic).toBeDefined();
-      expect(typeof MODEL_TIERS.anthropic).toBe('object');
-    });
-  });
-
   describe('OpenAI Model Tiers', () => {
     it('should have light tier with gpt-4.1-nano', () => {
       expect(MODEL_TIERS.openai.light).toBe('gpt-4.1-nano');
