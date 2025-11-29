@@ -105,7 +105,6 @@ describe('ProgrammaticGenerator', () => {
 
       expect(content).toHaveProperty('text');
       expect(content).toHaveProperty('outputMode');
-      expect(typeof content.text).toBe('string');
       expect(['text', 'layout']).toContain(content.outputMode);
     });
 

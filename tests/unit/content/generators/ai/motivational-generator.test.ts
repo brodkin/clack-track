@@ -85,19 +85,6 @@ describe('MotivationalGenerator', () => {
   });
 
   describe('validate()', () => {
-    it('should validate that prompt files exist', async () => {
-      mockPromptLoader.loadPrompt.mockResolvedValue('prompt content');
-
-      const generator = new MotivationalGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const result = await generator.validate();
-
-      expect(result).toBeDefined();
-      expect(typeof result.valid).toBe('boolean');
-    });
-
     it('should return valid when both prompt files exist', async () => {
       mockPromptLoader.loadPrompt.mockResolvedValue('prompt content');
 

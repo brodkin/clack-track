@@ -62,11 +62,6 @@ describe('NotificationGenerator', () => {
       const generator = new TestDoorNotification();
       expect(generator.eventPattern).toEqual(/^(door\.opened|door\.closed)$/);
     });
-
-    it('should be a RegExp instance', () => {
-      const generator = new TestPersonArrivedNotification();
-      expect(generator.eventPattern).toBeInstanceOf(RegExp);
-    });
   });
 
   describe('matchesEvent() helper method', () => {
@@ -334,9 +329,6 @@ describe('NotificationGenerator', () => {
 
       // Pattern matching responsibility
       expect(generator.matchesEvent('person.arrived')).toBe(true);
-
-      // Content generation responsibility (separate from pattern matching)
-      expect(typeof generator.generate).toBe('function');
     });
 
     it('should follow Open/Closed Principle (extensible via subclasses)', () => {
@@ -348,19 +340,6 @@ describe('NotificationGenerator', () => {
       expect(personGenerator.eventPattern).not.toEqual(doorGenerator.eventPattern);
       expect(personGenerator).toBeInstanceOf(NotificationGenerator);
       expect(doorGenerator).toBeInstanceOf(NotificationGenerator);
-    });
-
-    it('should follow Liskov Substitution Principle (all subclasses are ContentGenerators)', () => {
-      const generators: NotificationGenerator[] = [
-        new TestPersonArrivedNotification(),
-        new TestDoorNotification(),
-      ];
-
-      // All can be used interchangeably as ContentGenerators
-      generators.forEach(gen => {
-        expect(typeof gen.generate).toBe('function');
-        expect(typeof gen.validate).toBe('function');
-      });
     });
   });
 });
