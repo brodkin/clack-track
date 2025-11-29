@@ -1,5 +1,5 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import type { AIProvider, AIGenerationResponse } from '@/types/ai';
+import type { AIProvider, AIGenerationResponse, AIGenerationRequest } from '@/types/ai';
 import { ColorBarService, FALLBACK_COLORS } from '@/content/frame/color-bar';
 
 // Mock AI Provider
@@ -171,71 +171,148 @@ describe('ColorBarService', () => {
   describe('Season detection', () => {
     it('should detect spring (March-May)', async () => {
       jest.setSystemTime(new Date('2024-03-15'));
+      const generateSpy = jest.spyOn(mockProvider, 'generate');
+
       await service.getColors();
-      // Verify season is used in prompt by checking the AI was called
-      expect(mockProvider.mockResponse).toBeTruthy();
+
+      expect(generateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringContaining('spring'),
+        })
+      );
     });
 
     it('should detect summer (June-August)', async () => {
       jest.setSystemTime(new Date('2024-07-15'));
+      const generateSpy = jest.spyOn(mockProvider, 'generate');
+
       await service.getColors();
-      expect(mockProvider.mockResponse).toBeTruthy();
+
+      expect(generateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringContaining('summer'),
+        })
+      );
     });
 
     it('should detect fall (September-November)', async () => {
       jest.setSystemTime(new Date('2024-10-15'));
+      const generateSpy = jest.spyOn(mockProvider, 'generate');
+
       await service.getColors();
-      expect(mockProvider.mockResponse).toBeTruthy();
+
+      expect(generateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringContaining('fall'),
+        })
+      );
     });
 
     it('should detect winter (December-February)', async () => {
       jest.setSystemTime(new Date('2024-12-15'));
+      const generateSpy = jest.spyOn(mockProvider, 'generate');
+
       await service.getColors();
-      expect(mockProvider.mockResponse).toBeTruthy();
+
+      expect(generateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringContaining('winter'),
+        })
+      );
     });
   });
 
   describe('Holiday detection', () => {
     it('should detect Christmas (Dec 18-25)', async () => {
       jest.setSystemTime(new Date('2024-12-23'));
+      const generateSpy = jest.spyOn(mockProvider, 'generate');
+
       await service.getColors();
-      expect(mockProvider.mockResponse).toBeTruthy();
+
+      expect(generateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringMatching(/christmas/i),
+        })
+      );
     });
 
     it('should detect Thanksgiving (Nov 20-28)', async () => {
       jest.setSystemTime(new Date('2024-11-25'));
+      const generateSpy = jest.spyOn(mockProvider, 'generate');
+
       await service.getColors();
-      expect(mockProvider.mockResponse).toBeTruthy();
+
+      expect(generateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringMatching(/thanksgiving/i),
+        })
+      );
     });
 
     it('should detect Halloween (Oct 24-31)', async () => {
       jest.setSystemTime(new Date('2024-10-30'));
+      const generateSpy = jest.spyOn(mockProvider, 'generate');
+
       await service.getColors();
-      expect(mockProvider.mockResponse).toBeTruthy();
+
+      expect(generateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringMatching(/halloween/i),
+        })
+      );
     });
 
     it('should detect Independence Day (Jul 1-7)', async () => {
       jest.setSystemTime(new Date('2024-07-04'));
+      const generateSpy = jest.spyOn(mockProvider, 'generate');
+
       await service.getColors();
-      expect(mockProvider.mockResponse).toBeTruthy();
+
+      expect(generateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringMatching(/independence.?day/i),
+        })
+      );
     });
 
     it('should detect Valentines Day (Feb 7-14)', async () => {
       jest.setSystemTime(new Date('2024-02-12'));
+      const generateSpy = jest.spyOn(mockProvider, 'generate');
+
       await service.getColors();
-      expect(mockProvider.mockResponse).toBeTruthy();
+
+      expect(generateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringMatching(/valentines?.?day/i),
+        })
+      );
     });
 
     it('should detect St Patricks Day (Mar 10-17)', async () => {
       jest.setSystemTime(new Date('2024-03-15'));
+      const generateSpy = jest.spyOn(mockProvider, 'generate');
+
       await service.getColors();
-      expect(mockProvider.mockResponse).toBeTruthy();
+
+      expect(generateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.stringMatching(/st.?patrick/i),
+        })
+      );
     });
 
     it('should not detect holiday outside date ranges', async () => {
       jest.setSystemTime(new Date('2024-05-15')); // Mid-May, no holidays
+      const generateSpy = jest.spyOn(mockProvider, 'generate');
+
       await service.getColors();
-      expect(mockProvider.mockResponse).toBeTruthy();
+
+      // Should NOT contain an "Upcoming holiday:" line
+      expect(generateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userPrompt: expect.not.stringMatching(/upcoming holiday:/i),
+        })
+      );
     });
   });
 

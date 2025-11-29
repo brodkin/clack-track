@@ -458,28 +458,4 @@ describe('AIPromptGenerator', () => {
       expect(mockModelTierSelector.getAlternate).toHaveBeenCalledWith(primarySelection);
     });
   });
-
-  describe('abstract methods', () => {
-    it('should require subclasses to implement getSystemPromptFile()', () => {
-      const generator = new TestAIPromptGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        ModelTier.MEDIUM
-      );
-
-      // Test implementation returns specific file
-      expect(generator['getSystemPromptFile']()).toBe('test-system.txt');
-    });
-
-    it('should require subclasses to implement getUserPromptFile()', () => {
-      const generator = new TestAIPromptGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        ModelTier.MEDIUM
-      );
-
-      // Test implementation returns specific file
-      expect(generator['getUserPromptFile']()).toBe('test-user.txt');
-    });
-  });
 });

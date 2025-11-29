@@ -137,18 +137,31 @@ describe('Push Routes', () => {
     });
 
     it('should return 500 when VAPID key not configured', async () => {
+      // Save original key and clear it
       const originalKey = process.env.VAPID_PUBLIC_KEY;
       process.env.VAPID_PUBLIC_KEY = '';
 
-      // Create new app instance with empty key
+      // Reset module cache to force re-import with empty key
+      jest.resetModules();
+
+      // Re-import router with empty VAPID key using absolute path
+      const { pushRouter: testRouter } = await import('/workspace/src/web/routes/push.ts');
+
+      // Create app with re-imported router
       const testApp = express();
       testApp.use(express.json());
+      testApp.use('/api/push', testRouter);
 
-      // Re-import router to pick up empty key
-      // Note: In practice, this would require module re-loading
-      // For this test, we'll just verify the endpoint exists
+      // Make request and verify 500 response
+      const response = await request(testApp).get('/api/push/vapid-public-key').expect(500);
 
+      expect(response.body).toEqual({
+        error: 'VAPID keys not configured',
+      });
+
+      // Restore original key and reset modules again for other tests
       process.env.VAPID_PUBLIC_KEY = originalKey;
+      jest.resetModules();
     });
   });
 

@@ -131,7 +131,7 @@ describe('StaticFallbackGenerator', () => {
       );
     });
 
-    it('should select different files on multiple calls (randomness)', async () => {
+    it('should select different files based on Math.random()', async () => {
       mockedFs.access.mockResolvedValue(undefined);
       mockedFs.readdir.mockResolvedValue([
         'fallback1.txt',
@@ -147,17 +147,59 @@ describe('StaticFallbackGenerator', () => {
       });
 
       const generator = new StaticFallbackGenerator('prompts/static');
+      const mockRandom = jest.spyOn(Math, 'random');
 
-      // Call generate multiple times and collect results
-      const results = new Set<string>();
-      for (let i = 0; i < 20; i++) {
-        const content = await generator.generate(mockContext);
-        results.add(content.text);
-      }
+      // Mock sequence that selects different files deterministically
+      // With 3 files: index 0 (0.0-0.33), index 1 (0.33-0.66), index 2 (0.66-1.0)
+      mockRandom
+        .mockReturnValueOnce(0.1) // Selects file index 0 (fallback1.txt)
+        .mockReturnValueOnce(0.5) // Selects file index 1 (fallback2.txt)
+        .mockReturnValueOnce(0.9); // Selects file index 2 (fallback3.txt)
 
-      // With 20 calls across 3 files, we should see at least 2 different files
-      // (extremely unlikely to get the same file 20 times in a row)
-      expect(results.size).toBeGreaterThanOrEqual(2);
+      const result1 = await generator.generate(mockContext);
+      const result2 = await generator.generate(mockContext);
+      const result3 = await generator.generate(mockContext);
+
+      // Verify different files were selected with different content
+      const results = new Set([result1.text, result2.text, result3.text]);
+      expect(results.size).toBe(3);
+      expect(result1.text).toBe('Content 1');
+      expect(result2.text).toBe('Content 2');
+      expect(result3.text).toBe('Content 3');
+
+      // Verify Math.random() was called for each generation
+      expect(mockRandom).toHaveBeenCalledTimes(3);
+
+      mockRandom.mockRestore();
+    });
+
+    it('should use Math.random to select files', async () => {
+      mockedFs.access.mockResolvedValue(undefined);
+      mockedFs.readdir.mockResolvedValue(['fallback1.txt', 'fallback2.txt'] as string[]);
+
+      mockedFs.readFile.mockImplementation(async path => {
+        if (path.toString().includes('fallback1.txt')) return 'Content 1';
+        if (path.toString().includes('fallback2.txt')) return 'Content 2';
+        return 'Unknown';
+      });
+
+      const generator = new StaticFallbackGenerator('prompts/static');
+      const mockRandom = jest.spyOn(Math, 'random');
+
+      // Return 0.0 - should select first file (index 0)
+      mockRandom.mockReturnValueOnce(0.0);
+      const first = await generator.generate(mockContext);
+      expect(first.text).toBe('Content 1');
+
+      // Return 0.99 - should select second file (index 1)
+      mockRandom.mockReturnValueOnce(0.99);
+      const last = await generator.generate(mockContext);
+      expect(last.text).toBe('Content 2');
+
+      // Verify different files were selected
+      expect(first.text).not.toBe(last.text);
+
+      mockRandom.mockRestore();
     });
 
     it('should throw error when directory has no .txt files', async () => {

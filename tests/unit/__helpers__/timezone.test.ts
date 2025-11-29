@@ -190,7 +190,7 @@ describe('timezone', () => {
 
     it('should handle real async operations', async () => {
       const result = await withTimezoneAsync('UTC', async () => {
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 10));
         return process.env.TZ;
       });
 

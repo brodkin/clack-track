@@ -465,7 +465,7 @@ describe('bootstrap', () => {
     );
   });
 
-  it('should create alternate provider when both openai and anthropic are configured', async () => {
+  it('should create primary provider (openai) first, then alternate provider (anthropic)', async () => {
     // Arrange
     const mockConfig = {
       nodeEnv: 'test',
@@ -500,18 +500,23 @@ describe('bootstrap', () => {
     await bootstrap();
 
     // Assert
-    // Should create primary with OpenAI, then alternate with Anthropic
     const calls = (aiModule.createAIProvider as jest.Mock).mock.calls;
-    expect(calls).toContainEqual([aiModule.AIProviderType.OPENAI, 'test-openai-key', 'gpt-4']);
-    // Second call should be for alternate provider (Anthropic)
-    expect(
-      calls.some(
-        call => call[0] === aiModule.AIProviderType.ANTHROPIC && call[1] === 'test-anthropic-key'
-      )
-    ).toBe(true);
+
+    // Verify that createAIProvider was called exactly twice
+    expect(calls.length).toBe(2);
+
+    // Verify PRIMARY provider (OpenAI) is called FIRST
+    expect(calls[0][0]).toBe(aiModule.AIProviderType.OPENAI);
+    expect(calls[0][1]).toBe('test-openai-key');
+    expect(calls[0][2]).toBe('gpt-4');
+
+    // Verify ALTERNATE provider (Anthropic) is called SECOND
+    expect(calls[1][0]).toBe(aiModule.AIProviderType.ANTHROPIC);
+    expect(calls[1][1]).toBe('test-anthropic-key');
+    expect(calls[1][2]).toBe('claude-sonnet-4');
   });
 
-  it('should create alternate provider when both anthropic and openai are configured', async () => {
+  it('should create primary provider (anthropic) first, then alternate provider (openai)', async () => {
     // Arrange
     const mockConfig = {
       nodeEnv: 'test',
@@ -546,18 +551,19 @@ describe('bootstrap', () => {
     await bootstrap();
 
     // Assert
-    // Should create primary with Anthropic, then alternate with OpenAI
     const calls = (aiModule.createAIProvider as jest.Mock).mock.calls;
-    expect(calls).toContainEqual([
-      aiModule.AIProviderType.ANTHROPIC,
-      'test-anthropic-key',
-      'claude-sonnet-4',
-    ]);
-    // Second call should be for alternate provider (OpenAI)
-    expect(
-      calls.some(
-        call => call[0] === aiModule.AIProviderType.OPENAI && call[1] === 'test-openai-key'
-      )
-    ).toBe(true);
+
+    // Verify that createAIProvider was called exactly twice
+    expect(calls.length).toBe(2);
+
+    // Verify PRIMARY provider (Anthropic) is called FIRST
+    expect(calls[0][0]).toBe(aiModule.AIProviderType.ANTHROPIC);
+    expect(calls[0][1]).toBe('test-anthropic-key');
+    expect(calls[0][2]).toBe('claude-sonnet-4');
+
+    // Verify ALTERNATE provider (OpenAI) is called SECOND
+    expect(calls[1][0]).toBe(aiModule.AIProviderType.OPENAI);
+    expect(calls[1][1]).toBe('test-openai-key');
+    expect(calls[1][2]).toBe('gpt-4');
   });
 });

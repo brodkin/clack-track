@@ -298,21 +298,19 @@ Total: 8 generators
     });
 
     it('should handle nested captures', async () => {
-      const { result: outer, output: outerOutput } = await captureConsoleOutput(
-        async () => {
-          console.log('Outer 1');
+      const { result: outer, output: outerOutput } = await captureConsoleOutput(async () => {
+        console.log('Outer 1');
 
-          const { result: inner, output: innerOutput } = await captureConsoleOutput(() => {
-            console.log('Inner 1');
-            console.log('Inner 2');
-            return 'inner';
-          });
+        const { result: inner, output: innerOutput } = await captureConsoleOutput(() => {
+          console.log('Inner 1');
+          console.log('Inner 2');
+          return 'inner';
+        });
 
-          console.log('Outer 2');
+        console.log('Outer 2');
 
-          return { inner, innerOutput };
-        }
-      );
+        return { inner, innerOutput };
+      });
 
       expect(outerOutput).toEqual(['Outer 1', 'Outer 2']);
       expect(outer.inner).toBe('inner');

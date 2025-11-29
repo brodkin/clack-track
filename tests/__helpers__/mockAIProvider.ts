@@ -7,11 +7,7 @@
  */
 
 import type { AIProvider, AIGenerationRequest, AIGenerationResponse } from '@/types/ai';
-import {
-  RateLimitError,
-  AuthenticationError,
-  InvalidRequestError,
-} from '@/types/errors';
+import { RateLimitError, AuthenticationError, InvalidRequestError } from '@/types/errors';
 
 /**
  * Configuration options for mock AI provider behavior
@@ -181,9 +177,6 @@ export function createInvalidRequestProvider(provider = 'mock-provider'): AIProv
  * expect(result).toBe(true);
  * ```
  */
-export function createMockProviderWithConnection(
-  valid: boolean,
-  latencyMs = 10
-): AIProvider {
+export function createMockProviderWithConnection(valid: boolean, latencyMs = 10): AIProvider {
   return createMockAIProvider({ connectionValid: valid, latencyMs });
 }

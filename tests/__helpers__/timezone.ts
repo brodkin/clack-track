@@ -48,10 +48,7 @@ export function withTimezone<T>(timezone: string, fn: () => T): T {
  * @param fn Async function to execute in the specified timezone
  * @returns Promise resolving to result of the function
  */
-export async function withTimezoneAsync<T>(
-  timezone: string,
-  fn: () => Promise<T>,
-): Promise<T> {
+export async function withTimezoneAsync<T>(timezone: string, fn: () => Promise<T>): Promise<T> {
   const originalTz = process.env.TZ;
 
   try {

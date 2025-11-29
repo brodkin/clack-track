@@ -148,5 +148,4 @@ describe('GlobalNewsGenerator', () => {
       expect(GlobalNewsGenerator.DEFAULT_FEEDS).toHaveLength(2);
     });
   });
-
 });

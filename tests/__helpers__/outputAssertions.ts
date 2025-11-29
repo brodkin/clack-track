@@ -94,7 +94,7 @@ export function extractSection(output: string, sectionName: string): string | nu
   const lines = stripped.split('\n');
 
   // Find the line that starts with the section name
-  const sectionStart = lines.findIndex((line) => line.trim().startsWith(sectionName));
+  const sectionStart = lines.findIndex(line => line.trim().startsWith(sectionName));
 
   if (sectionStart === -1) {
     return null;
@@ -106,10 +106,7 @@ export function extractSection(output: string, sectionName: string): string | nu
   );
 
   // Extract lines from section start to section end (or end of output)
-  const sectionLines = lines.slice(
-    sectionStart,
-    sectionEnd === -1 ? undefined : sectionEnd
-  );
+  const sectionLines = lines.slice(sectionStart, sectionEnd === -1 ? undefined : sectionEnd);
 
   return sectionLines.join('\n');
 }

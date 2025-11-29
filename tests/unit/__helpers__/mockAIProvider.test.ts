@@ -16,11 +16,7 @@ import {
   createMockProviderWithConnection,
 } from '@tests/__helpers__/mockAIProvider';
 import type { AIGenerationRequest } from '@/types/ai';
-import {
-  RateLimitError,
-  AuthenticationError,
-  InvalidRequestError,
-} from '@/types/errors';
+import { RateLimitError, AuthenticationError, InvalidRequestError } from '@/types/errors';
 
 describe('mockAIProvider', () => {
   describe('createMockAIProvider', () => {

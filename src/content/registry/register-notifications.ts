@@ -29,11 +29,11 @@ export interface NotificationGeneratorFactory {
   /**
    * Create a notification generator for a specific event pattern.
    *
-   * @param {string} eventPattern - RegExp pattern as string (e.g., '/^door\\..*$/')
+   * @param {RegExp} eventPattern - Regular expression pattern for matching Home Assistant events
    * @param {string} displayName - Human-readable name for the generator
    * @returns {ContentGenerator} Content generator instance
    */
-  create(eventPattern: string, displayName: string): ContentGenerator;
+  create(eventPattern: RegExp, displayName: string): ContentGenerator;
 }
 
 /**
@@ -49,8 +49,6 @@ interface NotificationConfig {
   displayName: string;
   /** RegExp pattern for matching Home Assistant entity IDs */
   pattern: RegExp;
-  /** String representation of the pattern (for factory) */
-  patternString: string;
 }
 
 /**
@@ -67,25 +65,21 @@ const NOTIFICATION_CONFIGS: NotificationConfig[] = [
     id: 'ha-notification-door',
     displayName: 'Door Notification',
     pattern: /^binary_sensor\..*_door$/,
-    patternString: '/^binary_sensor\\..*_door$/',
   },
   {
     id: 'ha-notification-person',
     displayName: 'Person Notification',
     pattern: /^person\..*$/,
-    patternString: '/^person\\..*$/',
   },
   {
     id: 'ha-notification-motion',
     displayName: 'Motion Notification',
     pattern: /^binary_sensor\..*_motion$/,
-    patternString: '/^binary_sensor\\..*_motion$/',
   },
   {
     id: 'ha-notification-garage',
     displayName: 'Garage Notification',
     pattern: /^cover\..*garage.*$/i,
-    patternString: '/^cover\\..*garage.*$/i',
   },
 ];
 
@@ -131,7 +125,7 @@ export function registerNotifications(
 ): void {
   NOTIFICATION_CONFIGS.forEach(config => {
     // Create generator instance via factory
-    const generator = notificationGeneratorFactory.create(config.patternString, config.displayName);
+    const generator = notificationGeneratorFactory.create(config.pattern, config.displayName);
 
     // Build registration metadata
     const registration: ContentRegistration = {

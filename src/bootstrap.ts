@@ -62,7 +62,7 @@ export interface BootstrapResult {
  * Factory interface for creating notification generators
  */
 interface NotificationGeneratorFactory {
-  create(eventPattern: string, displayName: string): NotificationGenerator;
+  create(eventPattern: RegExp, displayName: string): NotificationGenerator;
 }
 
 /**
@@ -75,17 +75,14 @@ class HANotificationGeneratorFactory implements NotificationGeneratorFactory {
   /**
    * Create a notification generator for a specific event pattern
    *
-   * @param eventPattern - RegExp pattern as string (e.g., '/^door\\..*$/')
+   * @param eventPattern - Regular expression pattern for matching Home Assistant events
    * @param displayName - Human-readable name for the notification
    * @returns NotificationGenerator instance
    */
-  create(eventPattern: string, displayName: string): NotificationGenerator {
-    // Parse pattern string to RegExp (remove leading/trailing slashes)
-    const pattern = new RegExp(eventPattern.slice(1, -1));
-
+  create(eventPattern: RegExp, displayName: string): NotificationGenerator {
     // Create anonymous class extending NotificationGenerator
     return new (class extends NotificationGenerator {
-      protected eventPattern = pattern;
+      protected eventPattern = eventPattern;
 
       protected formatNotification(eventData: Record<string, unknown>): string {
         const entityId = (eventData.entity_id as string) || 'unknown';
