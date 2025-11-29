@@ -182,18 +182,6 @@ describe('LocalNewsGenerator', () => {
   });
 
   describe('generate()', () => {
-    it('should inherit generate method from BaseNewsGenerator', () => {
-      const generator = new LocalNewsGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockRSSClient
-      );
-
-      expect(typeof generator.generate).toBe('function');
-      // The actual implementation is tested in base-news-generator.test.ts
-    });
-
     it('should use correct configuration for local news', () => {
       const generator = new LocalNewsGenerator(
         mockPromptLoader,
@@ -211,30 +199,6 @@ describe('LocalNewsGenerator', () => {
   });
 
   describe('integration with base class', () => {
-    it('should inherit RSS feed fetching from BaseNewsGenerator', () => {
-      const generator = new LocalNewsGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockRSSClient
-      );
-
-      // Verify that generate method exists (inherited from base class)
-      expect(typeof generator.generate).toBe('function');
-    });
-
-    it('should inherit validation logic from BaseNewsGenerator', () => {
-      const generator = new LocalNewsGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockRSSClient
-      );
-
-      // Verify that validate method exists (inherited from base class)
-      expect(typeof generator.validate).toBe('function');
-    });
-
     it('should pass RSS client to base class', () => {
       const generator = new LocalNewsGenerator(
         mockPromptLoader,

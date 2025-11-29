@@ -35,6 +35,9 @@ import { MinorUpdateGenerator } from './content/generators/minor-update.js';
 import { ContentDataProvider } from './services/content-data-provider.js';
 import { WeatherService } from './services/weather-service.js';
 import { ColorBarService } from './content/frame/color-bar.js';
+import { Database, createDatabase } from './storage/database.js';
+import { ContentModel } from './storage/models/content.js';
+import { ContentRepository } from './storage/repositories/content-repo.js';
 import type { AIProvider } from './types/ai.js';
 
 /**
@@ -51,13 +54,15 @@ export interface BootstrapResult {
   registry: ContentRegistry;
   /** Home Assistant client (null if HA not configured) - call disconnect() to clean up */
   haClient: HomeAssistantClient | null;
+  /** Database connection (null if not configured) - call disconnect() to clean up */
+  database: Database | null;
 }
 
 /**
  * Factory interface for creating notification generators
  */
 interface NotificationGeneratorFactory {
-  create(eventPattern: string, displayName: string): NotificationGenerator;
+  create(eventPattern: RegExp, displayName: string): NotificationGenerator;
 }
 
 /**
@@ -70,17 +75,14 @@ class HANotificationGeneratorFactory implements NotificationGeneratorFactory {
   /**
    * Create a notification generator for a specific event pattern
    *
-   * @param eventPattern - RegExp pattern as string (e.g., '/^door\\..*$/')
+   * @param eventPattern - Regular expression pattern for matching Home Assistant events
    * @param displayName - Human-readable name for the notification
    * @returns NotificationGenerator instance
    */
-  create(eventPattern: string, displayName: string): NotificationGenerator {
-    // Parse pattern string to RegExp (remove leading/trailing slashes)
-    const pattern = new RegExp(eventPattern.slice(1, -1));
-
+  create(eventPattern: RegExp, displayName: string): NotificationGenerator {
     // Create anonymous class extending NotificationGenerator
     return new (class extends NotificationGenerator {
-      protected eventPattern = pattern;
+      protected eventPattern = eventPattern;
 
       protected formatNotification(eventData: Record<string, unknown>): string {
         const entityId = (eventData.entity_id as string) || 'unknown';
@@ -253,6 +255,39 @@ export async function bootstrap(): Promise<BootstrapResult> {
   // Only create WeatherService if HA client is connected
   const weatherService = haClient?.isConnected() ? new WeatherService(haClient) : undefined;
 
+  // Step 4.5: Initialize Database (if configured)
+  let database: Database | null = null;
+  let contentRepository: ContentRepository | undefined;
+
+  // In test environment, always use in-memory SQLite via factory
+  // In production, require DATABASE_URL to be configured
+  if (process.env.NODE_ENV === 'test' || config.database.url) {
+    try {
+      database = await createDatabase();
+      await database.connect();
+      await database.migrate();
+
+      const contentModel = new ContentModel(database);
+      contentRepository = new ContentRepository(contentModel);
+
+      // Run 90-day retention cleanup on startup (fire-and-forget)
+      contentRepository.cleanupOldRecords(90).catch(cleanupError => {
+        console.warn(
+          'Startup retention cleanup failed:',
+          cleanupError instanceof Error ? cleanupError.message : cleanupError
+        );
+      });
+    } catch (error) {
+      // Log warning but continue - graceful degradation without database
+      console.warn(
+        'Failed to connect to database:',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      database = null;
+      contentRepository = undefined;
+    }
+  }
+
   // Step 5: Create and populate ContentRegistry
   const registry = ContentRegistry.getInstance();
   const apiKeys = { [aiProviderType]: aiConfig.apiKey };
@@ -297,6 +332,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
     preferredProvider: primaryProvider,
     alternateProvider,
     dataProvider,
+    contentRepository,
   });
 
   // Step 10: Create EventHandler (only if Home Assistant configured)
@@ -313,5 +349,6 @@ export async function bootstrap(): Promise<BootstrapResult> {
     scheduler,
     registry,
     haClient,
+    database,
   };
 }

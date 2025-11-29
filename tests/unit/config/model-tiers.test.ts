@@ -2,45 +2,6 @@ import { describe, it, expect } from '@jest/globals';
 import { MODEL_TIERS, ModelTier, AIProviderType } from '@/config/model-tiers';
 
 describe('Model Tiers Configuration', () => {
-  describe('Type Exports', () => {
-    it('should export ModelTier type with correct literal values', () => {
-      // Type assertion tests - will fail at compile time if types are wrong
-      const light: ModelTier = 'light';
-      const medium: ModelTier = 'medium';
-      const heavy: ModelTier = 'heavy';
-
-      expect(light).toBe('light');
-      expect(medium).toBe('medium');
-      expect(heavy).toBe('heavy');
-    });
-
-    it('should export AIProviderType with correct literal values', () => {
-      // Type assertion tests - will fail at compile time if types are wrong
-      const openai: AIProviderType = 'openai';
-      const anthropic: AIProviderType = 'anthropic';
-
-      expect(openai).toBe('openai');
-      expect(anthropic).toBe('anthropic');
-    });
-  });
-
-  describe('MODEL_TIERS Structure', () => {
-    it('should export MODEL_TIERS constant', () => {
-      expect(MODEL_TIERS).toBeDefined();
-      expect(typeof MODEL_TIERS).toBe('object');
-    });
-
-    it('should have openai provider configuration', () => {
-      expect(MODEL_TIERS.openai).toBeDefined();
-      expect(typeof MODEL_TIERS.openai).toBe('object');
-    });
-
-    it('should have anthropic provider configuration', () => {
-      expect(MODEL_TIERS.anthropic).toBeDefined();
-      expect(typeof MODEL_TIERS.anthropic).toBe('object');
-    });
-  });
-
   describe('OpenAI Model Tiers', () => {
     it('should have light tier with gpt-4.1-nano', () => {
       expect(MODEL_TIERS.openai.light).toBe('gpt-4.1-nano');

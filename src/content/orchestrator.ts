@@ -24,6 +24,7 @@ import type { VestaboardClient } from '../api/vestaboard/types.js';
 import type { AIProvider } from '../types/ai.js';
 import type { GenerationContext, GeneratedContent } from '../types/content-generator.js';
 import type { ContentDataProvider } from '../services/content-data-provider.js';
+import type { ContentRepository } from '../storage/repositories/content-repo.js';
 
 /**
  * Configuration options for ContentOrchestrator
@@ -43,6 +44,8 @@ export interface ContentOrchestratorConfig {
   alternateProvider: AIProvider;
   /** Optional data provider for pre-fetching weather and color data */
   dataProvider?: ContentDataProvider;
+  /** Optional content repository for database persistence */
+  contentRepository?: ContentRepository;
 }
 
 /**
@@ -79,6 +82,7 @@ export class ContentOrchestrator {
   private readonly preferredProvider: AIProvider;
   private readonly alternateProvider: AIProvider;
   private readonly dataProvider?: ContentDataProvider;
+  private readonly contentRepository?: ContentRepository;
   private cachedContent: GeneratedContent | null = null;
 
   /**
@@ -94,6 +98,7 @@ export class ContentOrchestrator {
     this.preferredProvider = config.preferredProvider;
     this.alternateProvider = config.alternateProvider;
     this.dataProvider = config.dataProvider;
+    this.contentRepository = config.contentRepository;
   }
 
   /**
@@ -140,7 +145,8 @@ export class ContentOrchestrator {
       throw new Error('No content generator available for context');
     }
 
-    let content: GeneratedContent;
+    let content: GeneratedContent | undefined;
+    let generationError: Error | null = null;
 
     try {
       // Step 3: Generate with retry logic
@@ -154,11 +160,22 @@ export class ContentOrchestrator {
       // Step 2.5: Validate generator output
       validateGeneratorOutput(content);
     } catch (error) {
+      // Capture the original error for persistence
+      generationError = error instanceof Error ? error : new Error('Unknown error');
+
       // Step 3: P3 fallback on retry failure or validation error
       console.warn(
         'Generator failed, using P3 fallback:',
         error instanceof Error ? error.message : 'Unknown error'
       );
+
+      // Save failed generation to database (fire-and-forget)
+      if (this.contentRepository && context.updateType === 'major') {
+        this.saveFailedContent(context, registeredGenerator, generationError, content).catch(() => {
+          // Silently catch database errors - don't block content delivery
+        });
+      }
+
       content = await this.fallbackGenerator.generate(context);
     }
 
@@ -186,6 +203,86 @@ export class ContentOrchestrator {
 
     // Step 7: Send to Vestaboard
     await this.vestaboardClient.sendLayout(layoutToSend);
+
+    // Step 8: Save successful major update to database (fire-and-forget)
+    // Only save if no generation error occurred (successful path)
+    if (this.contentRepository && context.updateType === 'major' && !generationError) {
+      this.saveSuccessfulContent(context, registeredGenerator, content).catch(() => {
+        // Silently catch database errors - don't block content delivery
+      });
+    }
+  }
+
+  /**
+   * Save successful content generation to database (fire-and-forget)
+   *
+   * @param context - Generation context
+   * @param registeredGenerator - Generator metadata
+   * @param content - Generated content
+   */
+  private async saveSuccessfulContent(
+    context: GenerationContext,
+    registeredGenerator: { registration: { id: string; name: string; priority: number } },
+    content: GeneratedContent
+  ): Promise<void> {
+    if (!this.contentRepository) return;
+
+    await this.contentRepository.saveContent({
+      text: content.text,
+      type: context.updateType,
+      generatedAt: context.timestamp,
+      sentAt: new Date(),
+      status: 'success',
+      generatorId: registeredGenerator.registration.id,
+      generatorName: registeredGenerator.registration.name,
+      priority: registeredGenerator.registration.priority,
+      aiProvider: (content.metadata?.provider as string) || '',
+      aiModel: (content.metadata?.model as string) || undefined,
+      modelTier: (content.metadata?.tier as string) || undefined,
+      tokensUsed: (content.metadata?.tokensUsed as number) || undefined,
+      failedOver: (content.metadata?.failedOver as boolean) || false,
+      primaryProvider: (content.metadata?.primaryProvider as string) || undefined,
+      primaryError: (content.metadata?.primaryError as string) || undefined,
+      metadata: content.metadata ? content.metadata : undefined,
+    });
+  }
+
+  /**
+   * Save failed content generation to database (fire-and-forget)
+   *
+   * @param context - Generation context
+   * @param registeredGenerator - Generator metadata
+   * @param error - Error that caused generation failure
+   * @param content - Generated content (optional, available for validation failures)
+   */
+  private async saveFailedContent(
+    context: GenerationContext,
+    registeredGenerator: { registration: { id: string; name: string; priority: number } },
+    error: Error,
+    content?: GeneratedContent
+  ): Promise<void> {
+    if (!this.contentRepository) return;
+
+    await this.contentRepository.saveContent({
+      text: content?.text || '', // Use generated text if available, otherwise empty
+      type: context.updateType,
+      generatedAt: context.timestamp,
+      sentAt: null,
+      status: 'failed',
+      generatorId: registeredGenerator.registration.id,
+      generatorName: registeredGenerator.registration.name,
+      priority: registeredGenerator.registration.priority,
+      errorType: error.name,
+      errorMessage: error.message,
+      aiProvider: (content?.metadata?.provider as string) || '', // Extract from content metadata if available
+      aiModel: (content?.metadata?.model as string) || undefined,
+      modelTier: (content?.metadata?.tier as string) || undefined,
+      tokensUsed: (content?.metadata?.tokensUsed as number) || undefined,
+      failedOver: (content?.metadata?.failedOver as boolean) || false,
+      primaryProvider: (content?.metadata?.primaryProvider as string) || undefined,
+      primaryError: (content?.metadata?.primaryError as string) || undefined,
+      metadata: content?.metadata || undefined,
+    });
   }
 
   /**

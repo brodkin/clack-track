@@ -11,6 +11,7 @@
 
 // Import jest-dom matchers for web tests
 import '@testing-library/jest-dom';
+import { SQLiteDatabase } from '../../src/storage/sqlite-database.js';
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
@@ -39,5 +40,10 @@ jest.setTimeout(30000);
 //   warn: jest.fn(),
 //   error: jest.fn(),
 // };
+
+// Clean up shared SQLite database instance after all tests complete
+afterAll(() => {
+  SQLiteDatabase.resetSharedInstance();
+});
 
 export {};

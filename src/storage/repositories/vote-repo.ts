@@ -8,19 +8,19 @@ export class VoteRepository {
   }
 
   async submitVote(
-    contentId: string,
+    contentId: number,
     vote: 'good' | 'bad',
     metadata?: Record<string, string>
   ): Promise<VoteRecord> {
     return this.model.create({
-      contentId,
-      vote,
+      content_id: contentId,
+      vote_type: vote,
       userAgent: metadata?.userAgent,
       ipAddress: metadata?.ipAddress,
     });
   }
 
-  async getVotesByContent(contentId: string): Promise<VoteRecord[]> {
+  async getVotesByContent(contentId: number): Promise<VoteRecord[]> {
     return this.model.findByContentId(contentId);
   }
 

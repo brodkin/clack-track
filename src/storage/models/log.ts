@@ -2,13 +2,16 @@ import { Database, DatabaseRow } from '../database.js';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
-export interface LogRecord {
+export interface LogEntry {
   id: number;
   level: LogLevel;
   message: string;
-  timestamp: Date;
+  created_at: Date;
   metadata?: Record<string, unknown>;
 }
+
+// Maintain backward compatibility with old interface name
+export type LogRecord = LogEntry;
 
 /**
  * LogModel handles database operations for log records
@@ -20,13 +23,13 @@ export class LogModel {
   /**
    * Create a new log record in the database
    */
-  async create(log: Omit<LogRecord, 'id' | 'timestamp'>): Promise<LogRecord> {
+  async create(log: Omit<LogEntry, 'id' | 'created_at'>): Promise<LogEntry> {
     const now = new Date();
     const metadataJson = log.metadata ? JSON.stringify(log.metadata) : null;
 
     const result = await this.db.run(
-      'INSERT INTO logs (level, message, timestamp, metadata) VALUES (?, ?, ?, ?)',
-      [log.level, log.message, now.toISOString(), metadataJson]
+      'INSERT INTO logs (level, message, metadata) VALUES (?, ?, ?)',
+      [log.level, log.message, metadataJson]
     );
 
     if (!result.lastID) {
@@ -37,7 +40,7 @@ export class LogModel {
       id: result.lastID,
       level: log.level,
       message: log.message,
-      timestamp: now,
+      created_at: now,
       metadata: log.metadata,
     };
   }
@@ -45,29 +48,45 @@ export class LogModel {
   /**
    * Find recent log records, optionally filtered by level
    */
-  async findRecent(limit: number = 100, level?: LogLevel): Promise<LogRecord[]> {
+  async findRecent(limit: number = 100, level?: LogLevel): Promise<LogEntry[]> {
     let rows: DatabaseRow[];
 
     if (level) {
       rows = await this.db.all(
-        'SELECT id, level, message, timestamp, metadata FROM logs WHERE level = ? ORDER BY timestamp DESC LIMIT ?',
+        'SELECT id, level, message, created_at, metadata FROM logs WHERE level = ? ORDER BY created_at DESC LIMIT ?',
         [level, limit]
       );
     } else {
       rows = await this.db.all(
-        'SELECT id, level, message, timestamp, metadata FROM logs ORDER BY timestamp DESC LIMIT ?',
+        'SELECT id, level, message, created_at, metadata FROM logs ORDER BY created_at DESC LIMIT ?',
         [limit]
       );
     }
 
-    return rows.map(row => this.mapRowToLogRecord(row));
+    return rows.map(row => this.mapRowToLogEntry(row));
   }
 
   /**
    * Find logs by level
    */
-  async findByLevel(level: LogLevel, limit: number = 100): Promise<LogRecord[]> {
+  async findByLevel(level: LogLevel, limit: number = 100): Promise<LogEntry[]> {
     return this.findRecent(limit, level);
+  }
+
+  /**
+   * Find a log by ID
+   */
+  async findById(id: number): Promise<LogEntry | null> {
+    const row = await this.db.get(
+      'SELECT id, level, message, created_at, metadata FROM logs WHERE id = ?',
+      [id]
+    );
+
+    if (!row) {
+      return null;
+    }
+
+    return this.mapRowToLogEntry(row);
   }
 
   /**
@@ -77,7 +96,7 @@ export class LogModel {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
-    const result = await this.db.run('DELETE FROM logs WHERE timestamp < ?', [
+    const result = await this.db.run('DELETE FROM logs WHERE created_at < ?', [
       cutoffDate.toISOString(),
     ]);
     return result.changes || 0;
@@ -115,7 +134,7 @@ export class LogModel {
     return result.changes || 0;
   }
 
-  private mapRowToLogRecord(row: DatabaseRow): LogRecord {
+  private mapRowToLogEntry(row: DatabaseRow): LogEntry {
     let metadata: Record<string, unknown> | undefined;
     try {
       const metadataStr = row.metadata as string | null;
@@ -130,7 +149,7 @@ export class LogModel {
       id: row.id as number,
       level: row.level as LogLevel,
       message: row.message as string,
-      timestamp: new Date(row.timestamp as string),
+      created_at: new Date(row.created_at as string),
       metadata,
     };
   }

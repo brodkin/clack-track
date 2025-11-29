@@ -1,14 +1,16 @@
 import { ContentModel } from '../../../../src/storage/models/index.js';
-import { Database } from '../../../../src/storage/database.js';
+import { Database, createDatabase } from '../../../../src/storage/database.js';
 
 describe('ContentModel', () => {
   let db: Database;
   let contentModel: ContentModel;
 
   beforeEach(async () => {
-    db = new Database();
+    db = await createDatabase();
     await db.connect();
     await db.migrate();
+    // Clean table for isolated tests (DELETE works in both MySQL and SQLite)
+    await db.run('DELETE FROM content');
     contentModel = new ContentModel(db);
   });
 
@@ -162,7 +164,8 @@ describe('ContentModel', () => {
         aiProvider: 'openai',
       });
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // Wait 1 second for MySQL DATETIME precision (second-level, not millisecond)
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       const content2 = await contentModel.create({
         text: 'Content 2',
@@ -429,6 +432,376 @@ describe('ContentModel', () => {
       const deleted = await contentModel.deleteOlderThan(7);
 
       expect(deleted).toBe(0);
+    });
+  });
+
+  // NEW TESTS FOR ENHANCED SCHEMA
+
+  describe('create with new fields', () => {
+    test('should create content with status and generator metadata', async () => {
+      const now = new Date();
+      const contentData = {
+        text: 'Test Content',
+        type: 'major' as const,
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        status: 'success' as const,
+        generatorId: 'motivational-quote',
+        generatorName: 'Motivational Quote Generator',
+        priority: 2,
+        aiModel: 'gpt-4.1-nano',
+        modelTier: 'LIGHT',
+      };
+
+      const result = await contentModel.create(contentData);
+
+      expect(result).toMatchObject({
+        text: 'Test Content',
+        type: 'major',
+        status: 'success',
+        generatorId: 'motivational-quote',
+        generatorName: 'Motivational Quote Generator',
+        priority: 2,
+        aiProvider: 'openai',
+        aiModel: 'gpt-4.1-nano',
+        modelTier: 'LIGHT',
+      });
+      expect(result.id).toBeDefined();
+    });
+
+    test('should create content with failed status and error details', async () => {
+      const now = new Date();
+      const contentData = {
+        text: 'Failed generation placeholder',
+        type: 'major' as const,
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        status: 'failed' as const,
+        generatorId: 'news-summary',
+        generatorName: 'News Summary Generator',
+        priority: 2,
+        errorType: 'RateLimitError',
+        errorMessage: 'API rate limit exceeded',
+      };
+
+      const result = await contentModel.create(contentData);
+
+      expect(result).toMatchObject({
+        status: 'failed',
+        errorType: 'RateLimitError',
+        errorMessage: 'API rate limit exceeded',
+      });
+    });
+
+    test('should create content with failover metadata', async () => {
+      const now = new Date();
+      const contentData = {
+        text: 'Content generated with failover',
+        type: 'major' as const,
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'anthropic',
+        status: 'success' as const,
+        generatorId: 'weather-focus',
+        generatorName: 'Weather Focus Generator',
+        priority: 2,
+        aiModel: 'claude-haiku-4.5',
+        modelTier: 'LIGHT',
+        failedOver: true,
+        primaryProvider: 'openai',
+        primaryError: 'Authentication failed',
+      };
+
+      const result = await contentModel.create(contentData);
+
+      expect(result).toMatchObject({
+        failedOver: true,
+        primaryProvider: 'openai',
+        primaryError: 'Authentication failed',
+        aiProvider: 'anthropic',
+      });
+    });
+
+    test('should create content with tokens used', async () => {
+      const now = new Date();
+      const contentData = {
+        text: 'Content with token tracking',
+        type: 'major' as const,
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        status: 'success' as const,
+        generatorId: 'test-gen',
+        generatorName: 'Test Generator',
+        priority: 2,
+        tokensUsed: 150,
+      };
+
+      const result = await contentModel.create(contentData);
+
+      expect(result.tokensUsed).toBe(150);
+    });
+
+    test('should default status to success if not provided', async () => {
+      const now = new Date();
+      const contentData = {
+        text: 'Content without explicit status',
+        type: 'major' as const,
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        generatorId: 'test-gen',
+        generatorName: 'Test Generator',
+        priority: 2,
+      };
+
+      const result = await contentModel.create(contentData);
+
+      expect(result.status).toBe('success');
+    });
+  });
+
+  describe('findByStatus', () => {
+    test('should find content records by success status', async () => {
+      const now = new Date();
+
+      await contentModel.create({
+        text: 'Success 1',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        status: 'success',
+        generatorId: 'gen1',
+        generatorName: 'Gen 1',
+        priority: 2,
+      });
+
+      await contentModel.create({
+        text: 'Failed 1',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        status: 'failed',
+        generatorId: 'gen2',
+        generatorName: 'Gen 2',
+        priority: 2,
+        errorType: 'Error',
+        errorMessage: 'Failed',
+      });
+
+      await contentModel.create({
+        text: 'Success 2',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        status: 'success',
+        generatorId: 'gen3',
+        generatorName: 'Gen 3',
+        priority: 2,
+      });
+
+      const successResults = await contentModel.findByStatus('success', 10);
+
+      expect(successResults).toHaveLength(2);
+      expect(successResults.every(c => c.status === 'success')).toBe(true);
+    });
+
+    test('should find content records by failed status', async () => {
+      const now = new Date();
+
+      await contentModel.create({
+        text: 'Success 1',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        status: 'success',
+        generatorId: 'gen1',
+        generatorName: 'Gen 1',
+        priority: 2,
+      });
+
+      await contentModel.create({
+        text: 'Failed 1',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        status: 'failed',
+        generatorId: 'gen2',
+        generatorName: 'Gen 2',
+        priority: 2,
+      });
+
+      const failedResults = await contentModel.findByStatus('failed', 10);
+
+      expect(failedResults).toHaveLength(1);
+      expect(failedResults[0].status).toBe('failed');
+      expect(failedResults[0].text).toBe('Failed 1');
+    });
+
+    test('should respect limit parameter in findByStatus', async () => {
+      const now = new Date();
+
+      for (let i = 0; i < 5; i++) {
+        await contentModel.create({
+          text: `Success ${i}`,
+          type: 'major',
+          generatedAt: new Date(now.getTime() + i * 1000),
+          sentAt: null,
+          aiProvider: 'openai',
+          status: 'success',
+          generatorId: `gen${i}`,
+          generatorName: `Gen ${i}`,
+          priority: 2,
+        });
+      }
+
+      const results = await contentModel.findByStatus('success', 2);
+
+      expect(results).toHaveLength(2);
+    });
+
+    test('should return empty array when no content matches status', async () => {
+      const now = new Date();
+
+      await contentModel.create({
+        text: 'Success 1',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        status: 'success',
+        generatorId: 'gen1',
+        generatorName: 'Gen 1',
+        priority: 2,
+      });
+
+      const failedResults = await contentModel.findByStatus('failed', 10);
+
+      expect(failedResults).toEqual([]);
+    });
+  });
+
+  describe('findFailures', () => {
+    test('should find all failed content records', async () => {
+      const now = new Date();
+
+      await contentModel.create({
+        text: 'Success 1',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        status: 'success',
+        generatorId: 'gen1',
+        generatorName: 'Gen 1',
+        priority: 2,
+      });
+
+      await contentModel.create({
+        text: 'Failed 1',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        status: 'failed',
+        generatorId: 'gen2',
+        generatorName: 'Gen 2',
+        priority: 2,
+        errorType: 'RateLimitError',
+        errorMessage: 'Rate limit exceeded',
+      });
+
+      await contentModel.create({
+        text: 'Failed 2',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'anthropic',
+        status: 'failed',
+        generatorId: 'gen3',
+        generatorName: 'Gen 3',
+        priority: 2,
+        errorType: 'AuthenticationError',
+        errorMessage: 'Invalid API key',
+      });
+
+      const failures = await contentModel.findFailures(10);
+
+      expect(failures).toHaveLength(2);
+      expect(failures.every(f => f.status === 'failed')).toBe(true);
+      expect(failures.some(f => f.errorType === 'RateLimitError')).toBe(true);
+      expect(failures.some(f => f.errorType === 'AuthenticationError')).toBe(true);
+    });
+
+    test('should respect limit parameter in findFailures', async () => {
+      const now = new Date();
+
+      for (let i = 0; i < 5; i++) {
+        await contentModel.create({
+          text: `Failed ${i}`,
+          type: 'major',
+          generatedAt: new Date(now.getTime() + i * 1000),
+          sentAt: null,
+          aiProvider: 'openai',
+          status: 'failed',
+          generatorId: `gen${i}`,
+          generatorName: `Gen ${i}`,
+          priority: 2,
+        });
+      }
+
+      const failures = await contentModel.findFailures(2);
+
+      expect(failures).toHaveLength(2);
+    });
+
+    test('should return empty array when no failures exist', async () => {
+      const now = new Date();
+
+      await contentModel.create({
+        text: 'Success 1',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        status: 'success',
+        generatorId: 'gen1',
+        generatorName: 'Gen 1',
+        priority: 2,
+      });
+
+      const failures = await contentModel.findFailures(10);
+
+      expect(failures).toEqual([]);
+    });
+
+    test('should default to limit of 10 for findFailures', async () => {
+      const now = new Date();
+
+      for (let i = 0; i < 15; i++) {
+        await contentModel.create({
+          text: `Failed ${i}`,
+          type: 'major',
+          generatedAt: new Date(now.getTime() + i * 1000),
+          sentAt: null,
+          aiProvider: 'openai',
+          status: 'failed',
+          generatorId: `gen${i}`,
+          generatorName: `Gen ${i}`,
+          priority: 2,
+        });
+      }
+
+      const failures = await contentModel.findFailures();
+
+      expect(failures).toHaveLength(10);
     });
   });
 });

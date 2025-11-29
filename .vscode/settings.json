@@ -1,0 +1,13 @@
+{
+  "sqltools.connections": [
+    {
+      "name": "Clack Track Dev",
+      "driver": "MySQL",
+      "server": "mysql",
+      "port": 3306,
+      "database": "clack_track",
+      "username": "root",
+      "password": "devpassword"
+    }
+  ]
+}

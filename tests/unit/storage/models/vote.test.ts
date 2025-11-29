@@ -1,15 +1,21 @@
 import { VoteModel } from '../../../../src/storage/models/index.js';
-import { Database } from '../../../../src/storage/database.js';
+import { ContentModel } from '../../../../src/storage/models/index.js';
+import { Database, createDatabase } from '../../../../src/storage/database.js';
 
 describe('VoteModel', () => {
   let db: Database;
   let voteModel: VoteModel;
+  let contentModel: ContentModel;
 
   beforeEach(async () => {
-    db = new Database();
+    db = await createDatabase();
     await db.connect();
     await db.migrate();
+    // Clean tables for isolated tests (DELETE works in both MySQL and SQLite)
+    await db.run('DELETE FROM votes');
+    await db.run('DELETE FROM content');
     voteModel = new VoteModel(db);
+    contentModel = new ContentModel(db);
   });
 
   afterEach(async () => {
@@ -18,9 +24,18 @@ describe('VoteModel', () => {
 
   describe('create', () => {
     test('should create a vote record with all fields', async () => {
+      // Create a content record first
+      const content = await contentModel.create({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
       const voteData = {
-        contentId: 'content-1',
-        vote: 'good' as const,
+        content_id: content.id,
+        vote_type: 'good' as const,
         userAgent: 'Mozilla/5.0',
         ipAddress: '192.168.1.1',
       };
@@ -28,121 +43,194 @@ describe('VoteModel', () => {
       const result = await voteModel.create(voteData);
 
       expect(result).toMatchObject({
-        contentId: 'content-1',
-        vote: 'good',
+        content_id: content.id,
+        vote_type: 'good',
         userAgent: 'Mozilla/5.0',
         ipAddress: '192.168.1.1',
       });
       expect(result.id).toBeDefined();
-      expect(result.votedAt).toBeInstanceOf(Date);
+      expect(result.created_at).toBeInstanceOf(Date);
     });
 
     test('should create a vote record with minimal fields', async () => {
+      const content = await contentModel.create({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
       const voteData = {
-        contentId: 'content-1',
-        vote: 'bad' as const,
+        content_id: content.id,
+        vote_type: 'bad' as const,
       };
 
       const result = await voteModel.create(voteData);
 
       expect(result).toMatchObject({
-        contentId: 'content-1',
-        vote: 'bad',
+        content_id: content.id,
+        vote_type: 'bad',
       });
       expect(result.id).toBeDefined();
-      expect(result.votedAt).toBeInstanceOf(Date);
+      expect(result.created_at).toBeInstanceOf(Date);
     });
 
     test('should generate unique IDs for each vote', async () => {
+      const content = await contentModel.create({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
       const vote1 = await voteModel.create({
-        contentId: 'content-1',
-        vote: 'good',
+        content_id: content.id,
+        vote_type: 'good',
       });
 
       const vote2 = await voteModel.create({
-        contentId: 'content-1',
-        vote: 'bad',
+        content_id: content.id,
+        vote_type: 'bad',
       });
 
       expect(vote1.id).not.toBe(vote2.id);
     });
 
     test('should accept both good and bad vote types', async () => {
+      const content1 = await contentModel.create({
+        text: 'Test content 1',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
+      const content2 = await contentModel.create({
+        text: 'Test content 2',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
       const goodVote = await voteModel.create({
-        contentId: 'content-1',
-        vote: 'good',
+        content_id: content1.id,
+        vote_type: 'good',
       });
 
       const badVote = await voteModel.create({
-        contentId: 'content-2',
-        vote: 'bad',
+        content_id: content2.id,
+        vote_type: 'bad',
       });
 
-      expect(goodVote.vote).toBe('good');
-      expect(badVote.vote).toBe('bad');
+      expect(goodVote.vote_type).toBe('good');
+      expect(badVote.vote_type).toBe('bad');
+    });
+
+    test('should enforce foreign key constraint for invalid content_id', async () => {
+      const voteData = {
+        content_id: 99999, // Non-existent content ID
+        vote_type: 'good' as const,
+      };
+
+      await expect(voteModel.create(voteData)).rejects.toThrow();
     });
   });
 
   describe('findByContentId', () => {
     test('should find all votes for a specific content ID', async () => {
-      await voteModel.create({
-        contentId: 'content-1',
-        vote: 'good',
+      const content1 = await contentModel.create({
+        text: 'Test content 1',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
+      const content2 = await contentModel.create({
+        text: 'Test content 2',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
       });
 
       await voteModel.create({
-        contentId: 'content-1',
-        vote: 'bad',
+        content_id: content1.id,
+        vote_type: 'good',
       });
 
       await voteModel.create({
-        contentId: 'content-2',
-        vote: 'good',
+        content_id: content1.id,
+        vote_type: 'bad',
       });
 
-      const votes = await voteModel.findByContentId('content-1');
+      await voteModel.create({
+        content_id: content2.id,
+        vote_type: 'good',
+      });
+
+      const votes = await voteModel.findByContentId(content1.id);
 
       expect(votes).toHaveLength(2);
-      expect(votes.every(v => v.contentId === 'content-1')).toBe(true);
+      expect(votes.every(v => v.content_id === content1.id)).toBe(true);
     });
 
     test('should return empty array when no votes found', async () => {
-      const votes = await voteModel.findByContentId('nonexistent');
+      const votes = await voteModel.findByContentId(99999);
 
       expect(votes).toEqual([]);
     });
 
     test('should return votes in descending order by timestamp', async () => {
+      const content = await contentModel.create({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
       const vote1 = await voteModel.create({
-        contentId: 'content-1',
-        vote: 'good',
+        content_id: content.id,
+        vote_type: 'good',
       });
 
       // Wait a tiny bit to ensure different timestamps
       await new Promise(resolve => setTimeout(resolve, 10));
 
       const vote2 = await voteModel.create({
-        contentId: 'content-1',
-        vote: 'bad',
+        content_id: content.id,
+        vote_type: 'bad',
       });
 
-      const votes = await voteModel.findByContentId('content-1');
+      const votes = await voteModel.findByContentId(content.id);
 
       expect(votes[0].id).toBe(vote2.id);
       expect(votes[1].id).toBe(vote1.id);
     });
 
     test('should preserve vote type and metadata', async () => {
+      const content = await contentModel.create({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
       await voteModel.create({
-        contentId: 'content-1',
-        vote: 'good',
+        content_id: content.id,
+        vote_type: 'good',
         userAgent: 'Test Agent',
         ipAddress: '127.0.0.1',
       });
 
-      const votes = await voteModel.findByContentId('content-1');
+      const votes = await voteModel.findByContentId(content.id);
 
-      expect(votes[0].vote).toBe('good');
+      expect(votes[0].vote_type).toBe('good');
       expect(votes[0].userAgent).toBe('Test Agent');
       expect(votes[0].ipAddress).toBe('127.0.0.1');
     });
@@ -158,9 +246,31 @@ describe('VoteModel', () => {
     });
 
     test('should calculate correct stats with single vote type', async () => {
-      await voteModel.create({ contentId: 'content-1', vote: 'good' });
-      await voteModel.create({ contentId: 'content-2', vote: 'good' });
-      await voteModel.create({ contentId: 'content-3', vote: 'good' });
+      const content1 = await contentModel.create({
+        text: 'Test 1',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+      const content2 = await contentModel.create({
+        text: 'Test 2',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+      const content3 = await contentModel.create({
+        text: 'Test 3',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
+      await voteModel.create({ content_id: content1.id, vote_type: 'good' });
+      await voteModel.create({ content_id: content2.id, vote_type: 'good' });
+      await voteModel.create({ content_id: content3.id, vote_type: 'good' });
 
       const stats = await voteModel.getStats();
 
@@ -170,9 +280,31 @@ describe('VoteModel', () => {
     });
 
     test('should calculate correct stats with mixed votes', async () => {
-      await voteModel.create({ contentId: 'content-1', vote: 'good' });
-      await voteModel.create({ contentId: 'content-2', vote: 'good' });
-      await voteModel.create({ contentId: 'content-3', vote: 'bad' });
+      const content1 = await contentModel.create({
+        text: 'Test 1',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+      const content2 = await contentModel.create({
+        text: 'Test 2',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+      const content3 = await contentModel.create({
+        text: 'Test 3',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
+      await voteModel.create({ content_id: content1.id, vote_type: 'good' });
+      await voteModel.create({ content_id: content2.id, vote_type: 'good' });
+      await voteModel.create({ content_id: content3.id, vote_type: 'bad' });
 
       const stats = await voteModel.getStats();
 
@@ -182,8 +314,23 @@ describe('VoteModel', () => {
     });
 
     test('should calculate correct ratio with all bad votes', async () => {
-      await voteModel.create({ contentId: 'content-1', vote: 'bad' });
-      await voteModel.create({ contentId: 'content-2', vote: 'bad' });
+      const content1 = await contentModel.create({
+        text: 'Test 1',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+      const content2 = await contentModel.create({
+        text: 'Test 2',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
+      await voteModel.create({ content_id: content1.id, vote_type: 'bad' });
+      await voteModel.create({ content_id: content2.id, vote_type: 'bad' });
 
       const stats = await voteModel.getStats();
 
@@ -193,8 +340,23 @@ describe('VoteModel', () => {
     });
 
     test('should calculate correct ratio with equal good and bad votes', async () => {
-      await voteModel.create({ contentId: 'content-1', vote: 'good' });
-      await voteModel.create({ contentId: 'content-2', vote: 'bad' });
+      const content1 = await contentModel.create({
+        text: 'Test 1',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+      const content2 = await contentModel.create({
+        text: 'Test 2',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
+      await voteModel.create({ content_id: content1.id, vote_type: 'good' });
+      await voteModel.create({ content_id: content2.id, vote_type: 'bad' });
 
       const stats = await voteModel.getStats();
 
@@ -206,17 +368,25 @@ describe('VoteModel', () => {
 
   describe('findById', () => {
     test('should find a vote by ID', async () => {
+      const content = await contentModel.create({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
       const created = await voteModel.create({
-        contentId: 'content-1',
-        vote: 'good',
+        content_id: content.id,
+        vote_type: 'good',
       });
 
       const found = await voteModel.findById(created.id);
 
       expect(found).toMatchObject({
         id: created.id,
-        contentId: 'content-1',
-        vote: 'good',
+        content_id: content.id,
+        vote_type: 'good',
       });
     });
 
@@ -229,25 +399,72 @@ describe('VoteModel', () => {
 
   describe('deleteByContentId', () => {
     test('should delete all votes for a content ID', async () => {
-      await voteModel.create({ contentId: 'content-1', vote: 'good' });
-      await voteModel.create({ contentId: 'content-1', vote: 'bad' });
-      await voteModel.create({ contentId: 'content-2', vote: 'good' });
+      const content1 = await contentModel.create({
+        text: 'Test 1',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+      const content2 = await contentModel.create({
+        text: 'Test 2',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
 
-      const deleted = await voteModel.deleteByContentId('content-1');
+      await voteModel.create({ content_id: content1.id, vote_type: 'good' });
+      await voteModel.create({ content_id: content1.id, vote_type: 'bad' });
+      await voteModel.create({ content_id: content2.id, vote_type: 'good' });
+
+      const deleted = await voteModel.deleteByContentId(content1.id);
 
       expect(deleted).toBe(2);
 
-      const remaining = await voteModel.findByContentId('content-1');
+      const remaining = await voteModel.findByContentId(content1.id);
       expect(remaining).toHaveLength(0);
 
-      const content2Votes = await voteModel.findByContentId('content-2');
+      const content2Votes = await voteModel.findByContentId(content2.id);
       expect(content2Votes).toHaveLength(1);
     });
 
     test('should return 0 when deleting nonexistent content', async () => {
-      const deleted = await voteModel.deleteByContentId('nonexistent');
+      const deleted = await voteModel.deleteByContentId(99999);
 
       expect(deleted).toBe(0);
+    });
+  });
+
+  describe('CASCADE DELETE behavior', () => {
+    test('should automatically delete votes when content is deleted', async () => {
+      // Create content with a past date so deleteOlderThan works
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 10); // 10 days ago
+
+      const content = await contentModel.create({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: pastDate,
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
+      // Create votes for this content
+      await voteModel.create({ content_id: content.id, vote_type: 'good' });
+      await voteModel.create({ content_id: content.id, vote_type: 'bad' });
+
+      // Verify votes exist
+      const votesBefore = await voteModel.findByContentId(content.id);
+      expect(votesBefore).toHaveLength(2);
+
+      // Delete the content (should cascade to votes)
+      // deleteOlderThan(7) deletes content older than 7 days (our content is 10 days old)
+      await contentModel.deleteOlderThan(7);
+
+      // Verify votes were automatically deleted via CASCADE
+      const votesAfter = await voteModel.findByContentId(content.id);
+      expect(votesAfter).toHaveLength(0);
     });
   });
 });

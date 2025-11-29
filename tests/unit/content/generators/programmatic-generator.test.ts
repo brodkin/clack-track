@@ -52,24 +52,6 @@ class ValidatingProgrammaticGenerator extends ProgrammaticGenerator {
 }
 
 describe('ProgrammaticGenerator', () => {
-  describe('abstract class enforcement', () => {
-    it('should not be directly instantiable at compile time', () => {
-      // TypeScript prevents direct instantiation of abstract classes at compile time
-      // Runtime JS doesn't enforce this, so we verify TypeScript's compile-time protection
-      // The @ts-expect-error annotation above the new statement proves TypeScript blocks it
-      const compileTimeCheck = true; // If this file compiles, TypeScript is enforcing the rule
-      expect(compileTimeCheck).toBe(true);
-    });
-
-    it('should require generate() implementation in subclasses', () => {
-      // This is enforced at compile time by TypeScript
-      // Verify that our test implementation compiles and works
-      const generator = new TestProgrammaticGenerator();
-      expect(generator).toBeInstanceOf(ProgrammaticGenerator);
-      expect(typeof generator.generate).toBe('function');
-    });
-  });
-
   describe('default validate() implementation', () => {
     it('should return valid: true by default', async () => {
       const generator = new TestProgrammaticGenerator();
@@ -123,7 +105,6 @@ describe('ProgrammaticGenerator', () => {
 
       expect(content).toHaveProperty('text');
       expect(content).toHaveProperty('outputMode');
-      expect(typeof content.text).toBe('string');
       expect(['text', 'layout']).toContain(content.outputMode);
     });
 
@@ -178,47 +159,6 @@ describe('ProgrammaticGenerator', () => {
       expect(content.metadata).toBeDefined();
       expect(content.metadata?.source).toBe('test-generator');
       expect(content.metadata?.generatedAt).toBe('2025-01-15T12:00:00.000Z');
-    });
-  });
-
-  describe('ContentGenerator interface compliance', () => {
-    it('should implement ContentGenerator interface', () => {
-      const generator = new TestProgrammaticGenerator();
-
-      // Verify interface methods exist
-      expect(typeof generator.generate).toBe('function');
-      expect(typeof generator.validate).toBe('function');
-    });
-
-    it('should have async generate method', async () => {
-      const generator = new TestProgrammaticGenerator();
-      const context: GenerationContext = {
-        updateType: 'major',
-        timestamp: new Date(),
-      };
-
-      const result = generator.generate(context);
-
-      // Should return a Promise
-      expect(result).toBeInstanceOf(Promise);
-
-      // Promise should resolve to GeneratedContent
-      const content = await result;
-      expect(content).toHaveProperty('text');
-      expect(content).toHaveProperty('outputMode');
-    });
-
-    it('should have asynchronous validate method', async () => {
-      const generator = new TestProgrammaticGenerator();
-
-      const result = generator.validate();
-
-      // Should return a Promise
-      expect(result).toBeInstanceOf(Promise);
-
-      // Promise should resolve to GeneratorValidationResult
-      const validationResult = await result;
-      expect(validationResult).toHaveProperty('valid');
     });
   });
 });

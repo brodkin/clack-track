@@ -19,6 +19,18 @@ import type {
   VoteResponse,
   LogFilters,
   LogsResponse,
+  AuthenticationOptions,
+  VerifyLoginRequest,
+  VerifyLoginResponse,
+  LogoutResponse,
+  SessionResponse,
+  ProfileResponse,
+  PasskeysResponse,
+  RegistrationOptions,
+  VerifyRegistrationRequest,
+  VerifyRegistrationResponse,
+  RemovePasskeyResponse,
+  RenamePasskeyResponse,
 } from './types.js';
 
 /**
@@ -148,5 +160,125 @@ export const apiClient = {
     return fetchJSON<LogsResponse>(url, {
       method: 'GET',
     });
+  },
+
+  /**
+   * Start passkey login flow - get authentication challenge
+   */
+  async startLogin(): Promise<AuthenticationOptions> {
+    const response = await fetchJSON<AuthenticationOptions>(
+      `${API_BASE_URL}/api/auth/login/start`,
+      {
+        method: 'POST',
+      }
+    );
+    return response as unknown as AuthenticationOptions;
+  },
+
+  /**
+   * Verify passkey authentication response
+   */
+  async verifyLogin(request: VerifyLoginRequest): Promise<VerifyLoginResponse> {
+    const response = await fetchJSON<VerifyLoginResponse>(`${API_BASE_URL}/api/auth/login/verify`, {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+    return response as unknown as VerifyLoginResponse;
+  },
+
+  /**
+   * Logout current user
+   */
+  async logout(): Promise<LogoutResponse> {
+    const response = await fetchJSON<LogoutResponse>(`${API_BASE_URL}/api/auth/logout`, {
+      method: 'POST',
+    });
+    return response as unknown as LogoutResponse;
+  },
+
+  /**
+   * Check current authentication session
+   */
+  async checkSession(): Promise<SessionResponse> {
+    const response = await fetchJSON<SessionResponse>(`${API_BASE_URL}/api/auth/session`, {
+      method: 'GET',
+    });
+    return response as unknown as SessionResponse;
+  },
+
+  /**
+   * Get user profile information
+   */
+  async getProfile(): Promise<ProfileResponse> {
+    const response = await fetchJSON<ProfileResponse>(`${API_BASE_URL}/api/account/profile`, {
+      method: 'GET',
+    });
+    return response as unknown as ProfileResponse;
+  },
+
+  /**
+   * Get list of passkeys for authenticated user
+   */
+  async getPasskeys(): Promise<PasskeysResponse> {
+    const response = await fetchJSON<PasskeysResponse>(`${API_BASE_URL}/api/account/passkeys`, {
+      method: 'GET',
+    });
+    return response as unknown as PasskeysResponse;
+  },
+
+  /**
+   * Start passkey registration flow - get registration challenge
+   */
+  async registerPasskeyStart(): Promise<RegistrationOptions> {
+    const response = await fetchJSON<RegistrationOptions>(
+      `${API_BASE_URL}/api/account/passkey/register/start`,
+      {
+        method: 'POST',
+      }
+    );
+    return response as unknown as RegistrationOptions;
+  },
+
+  /**
+   * Verify passkey registration response and store new passkey
+   */
+  async registerPasskeyVerify(
+    request: VerifyRegistrationRequest
+  ): Promise<VerifyRegistrationResponse> {
+    const response = await fetchJSON<VerifyRegistrationResponse>(
+      `${API_BASE_URL}/api/account/passkey/register/verify`,
+      {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }
+    );
+    return response as unknown as VerifyRegistrationResponse;
+  },
+
+  /**
+   * Remove a passkey by ID
+   */
+  async removePasskey(id: string): Promise<RemovePasskeyResponse> {
+    const response = await fetchJSON<RemovePasskeyResponse>(
+      `${API_BASE_URL}/api/account/passkey/${id}`,
+      {
+        method: 'DELETE',
+      }
+    );
+    return response as unknown as RemovePasskeyResponse;
+  },
+
+  /**
+   * Rename a passkey
+   */
+  async renamePasskey(id: string, name: string): Promise<RenamePasskeyResponse> {
+    const response = await fetchJSON<RenamePasskeyResponse>(
+      `${API_BASE_URL}/api/account/passkey/${id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ name }),
+      }
+    );
+    return response as unknown as RenamePasskeyResponse;
   },
 };

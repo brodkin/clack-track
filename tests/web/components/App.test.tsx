@@ -1,30 +1,159 @@
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from '@jest/globals';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import App from '@/web/frontend/App';
+import * as apiClient from '@/web/frontend/services/apiClient';
+
+// Mock the apiClient module
+jest.mock('@/web/frontend/services/apiClient', () => ({
+  apiClient: {
+    checkSession: jest.fn(),
+    getLatestContent: jest.fn(),
+    getContentHistory: jest.fn(),
+    submitVote: jest.fn(),
+    startLogin: jest.fn(),
+    verifyLogin: jest.fn(),
+    logout: jest.fn(),
+    getProfile: jest.fn(),
+    getPasskeys: jest.fn(),
+    registerPasskeyStart: jest.fn(),
+    registerPasskeyVerify: jest.fn(),
+    removePasskey: jest.fn(),
+    renamePasskey: jest.fn(),
+  },
+}));
+
+const mockApiClient = apiClient.apiClient as jest.Mocked<typeof apiClient.apiClient>;
+
+// Mock PublicKeyCredential for browser support detection
+Object.defineProperty(globalThis, 'PublicKeyCredential', {
+  value: {
+    isConditionalMediationAvailable: (() => Promise.resolve(true)) as unknown,
+  },
+  writable: true,
+  configurable: true,
+});
 
 describe('App Component', () => {
-  it('renders Clack Track branding', () => {
-    render(<App />);
+  beforeEach(() => {
+    jest.clearAllMocks();
 
-    const heading = screen.getByRole('heading', { name: /clack track/i });
+    // Mock successful session check by default
+    mockApiClient.checkSession.mockResolvedValue({
+      authenticated: false,
+      user: null,
+    });
+
+    // Mock content endpoints
+    mockApiClient.getLatestContent.mockResolvedValue({
+      success: true,
+      data: {
+        content: {
+          id: 1,
+          text: 'TEST CONTENT',
+          type: 'major',
+          generatorId: 'test',
+          generatedAt: new Date(),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+        },
+      },
+    });
+
+    mockApiClient.getContentHistory.mockResolvedValue({
+      success: true,
+      data: { contents: [], total: 0 },
+    });
+  });
+  it('renders Welcome page on default route', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const heading = screen.getByRole('heading', { name: /latest content/i });
     // @ts-expect-error - jest-dom matchers
     expect(heading).toBeInTheDocument();
   });
 
-  it('displays debug interface label', () => {
-    render(<App />);
+  it('renders navigation with Clack Track branding', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    );
 
-    const debugLabel = screen.getByText(/debug interface/i);
+    const brand = screen.getByText(/clack track/i);
     // @ts-expect-error - jest-dom matchers
-    expect(debugLabel).toBeInTheDocument();
+    expect(brand).toBeInTheDocument();
   });
 
-  it('shows technology stack', () => {
-    render(<App />);
+  it('renders History page on /flipside route', () => {
+    render(
+      <MemoryRouter initialEntries={['/flipside']}>
+        <App />
+      </MemoryRouter>
+    );
 
-    const techStack = screen.getByText(/react \+ typescript \+ vite/i);
+    const heading = screen.getByRole('heading', { name: /the flip side/i });
     // @ts-expect-error - jest-dom matchers
-    expect(techStack).toBeInTheDocument();
+    expect(heading).toBeInTheDocument();
+  });
+
+  it('redirects unauthenticated user from /account to /login', async () => {
+    // Mock session check returns unauthenticated (default)
+    render(
+      <MemoryRouter initialEntries={['/account']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    // Account page redirects to login when not authenticated
+    const button = await screen.findByRole('button', { name: /sign in with passkey/i });
+    // @ts-expect-error - jest-dom matchers
+    expect(button).toBeInTheDocument();
+  });
+
+  it('renders Account page when authenticated', async () => {
+    // Mock authenticated session
+    mockApiClient.checkSession.mockResolvedValue({
+      authenticated: true,
+      user: { name: 'Test User' },
+    });
+
+    // Mock account data (returns data directly, not wrapped)
+    mockApiClient.getProfile.mockResolvedValue({
+      username: 'testuser',
+      email: 'test@example.com',
+      createdAt: new Date().toISOString(),
+    });
+
+    mockApiClient.getPasskeys.mockResolvedValue({
+      passkeys: [],
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/account']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const heading = await screen.findByRole('heading', { name: /account/i });
+    // @ts-expect-error - jest-dom matchers
+    expect(heading).toBeInTheDocument();
+  });
+
+  it('renders Login page on /login route', async () => {
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    const button = await screen.findByRole('button', { name: /sign in with passkey/i });
+    // @ts-expect-error - jest-dom matchers
+    expect(button).toBeInTheDocument();
   });
 });

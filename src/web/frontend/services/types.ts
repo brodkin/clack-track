@@ -60,6 +60,134 @@ export interface LogsResponse {
 }
 
 /**
+ * Authentication API Types
+ */
+export interface AuthenticationOptions {
+  challenge: string;
+  rpId: string;
+  rpName: string;
+  timeout: number;
+  userVerification: string;
+}
+
+export interface AuthCredential {
+  id: string;
+  rawId: string;
+  response: {
+    clientDataJSON: string;
+    authenticatorData: string;
+    signature: string;
+    userHandle?: string;
+  };
+  type: 'public-key';
+}
+
+export interface VerifyLoginRequest {
+  credential: AuthCredential;
+  challenge: string;
+}
+
+export interface VerifyLoginResponse {
+  verified: boolean;
+  user: { name: string };
+}
+
+export interface LogoutResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface SessionResponse {
+  authenticated: boolean;
+  user: { name: string } | null;
+}
+
+/**
+ * Account API Types
+ */
+export interface ProfileResponse {
+  username: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface Passkey {
+  id: string;
+  name: string;
+  deviceType: 'phone' | 'tablet' | 'laptop' | 'desktop' | 'security-key';
+  createdAt: string;
+  lastUsed: string;
+}
+
+export interface PasskeysResponse {
+  passkeys: Passkey[];
+}
+
+export interface RegistrationOptions {
+  challenge: string;
+  rp: {
+    name: string;
+    id: string;
+  };
+  user: {
+    id: string;
+    name: string;
+    displayName: string;
+  };
+  pubKeyCredParams: Array<{
+    type: 'public-key';
+    alg: number;
+  }>;
+  timeout: number;
+  attestation?: string;
+  authenticatorSelection?: {
+    residentKey?: string;
+    userVerification?: string;
+  };
+}
+
+export interface RegistrationCredential {
+  id: string;
+  rawId: string;
+  response: {
+    clientDataJSON: string;
+    attestationObject: string;
+  };
+  type: 'public-key';
+}
+
+export interface VerifyRegistrationRequest {
+  credential: RegistrationCredential;
+  name: string;
+}
+
+export interface VerifyRegistrationResponse {
+  verified: boolean;
+  passkey: Passkey;
+}
+
+export interface RemovePasskeyResponse {
+  success: boolean;
+}
+
+export interface RenamePasskeyResponse {
+  passkey: Passkey;
+}
+
+/**
+ * Push Notification Types
+ */
+export interface PushSubscriptionData {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
+export type PushPermission = 'granted' | 'denied' | 'default';
+
+/**
  * Error response types
  */
 export class ApiError extends Error {

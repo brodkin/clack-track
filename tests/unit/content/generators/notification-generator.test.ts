@@ -52,25 +52,6 @@ class InvalidPatternNotification extends NotificationGenerator {
 }
 
 describe('NotificationGenerator', () => {
-  describe('abstract class enforcement', () => {
-    it('should not be directly instantiable at compile time', () => {
-      // TypeScript prevents direct instantiation of abstract classes at compile time
-      const compileTimeCheck = true;
-      expect(compileTimeCheck).toBe(true);
-    });
-
-    it('should require eventPattern property in subclasses', () => {
-      const generator = new TestPersonArrivedNotification();
-      expect(generator).toHaveProperty('eventPattern');
-      expect(generator.eventPattern).toBeInstanceOf(RegExp);
-    });
-
-    it('should require formatNotification() implementation in subclasses', () => {
-      const generator = new TestPersonArrivedNotification();
-      expect(typeof generator['formatNotification']).toBe('function');
-    });
-  });
-
   describe('eventPattern property', () => {
     it('should accept simple event type patterns', () => {
       const generator = new TestPersonArrivedNotification();
@@ -80,11 +61,6 @@ describe('NotificationGenerator', () => {
     it('should accept compound event type patterns', () => {
       const generator = new TestDoorNotification();
       expect(generator.eventPattern).toEqual(/^(door\.opened|door\.closed)$/);
-    });
-
-    it('should be a RegExp instance', () => {
-      const generator = new TestPersonArrivedNotification();
-      expect(generator.eventPattern).toBeInstanceOf(RegExp);
     });
   });
 
@@ -314,14 +290,6 @@ describe('NotificationGenerator', () => {
   });
 
   describe('ContentGenerator interface compliance', () => {
-    it('should implement ContentGenerator interface', () => {
-      const generator = new TestPersonArrivedNotification();
-
-      // Verify interface methods exist
-      expect(typeof generator.generate).toBe('function');
-      expect(typeof generator.validate).toBe('function');
-    });
-
     it('should have async generate method', async () => {
       const generator = new TestPersonArrivedNotification();
       const context: GenerationContext = {
@@ -361,9 +329,6 @@ describe('NotificationGenerator', () => {
 
       // Pattern matching responsibility
       expect(generator.matchesEvent('person.arrived')).toBe(true);
-
-      // Content generation responsibility (separate from pattern matching)
-      expect(typeof generator.generate).toBe('function');
     });
 
     it('should follow Open/Closed Principle (extensible via subclasses)', () => {
@@ -375,19 +340,6 @@ describe('NotificationGenerator', () => {
       expect(personGenerator.eventPattern).not.toEqual(doorGenerator.eventPattern);
       expect(personGenerator).toBeInstanceOf(NotificationGenerator);
       expect(doorGenerator).toBeInstanceOf(NotificationGenerator);
-    });
-
-    it('should follow Liskov Substitution Principle (all subclasses are ContentGenerators)', () => {
-      const generators: NotificationGenerator[] = [
-        new TestPersonArrivedNotification(),
-        new TestDoorNotification(),
-      ];
-
-      // All can be used interchangeably as ContentGenerators
-      generators.forEach(gen => {
-        expect(typeof gen.generate).toBe('function');
-        expect(typeof gen.validate).toBe('function');
-      });
     });
   });
 });

@@ -38,7 +38,9 @@
         "anthropic.claude-code",
         "kaih2o.worktrees",
         "mikestead.dotenv",
-        "EditorConfig.EditorConfig"
+        "EditorConfig.EditorConfig",
+        "mtxr.sqltools",
+        "mtxr.sqltools-driver-mysql"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash",

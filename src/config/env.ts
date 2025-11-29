@@ -71,8 +71,12 @@ function getOptionalEnv(key: string, defaultValue: string = ''): string {
 }
 
 export function loadConfig(): EnvironmentConfig {
-  // Load environment variables FIRST (lazy initialization)
+  // Preserve NODE_ENV if already set (e.g., by Jest test runner)
+  const preserveNodeEnv = process.env.NODE_ENV;
   dotenv.config({ override: true });
+  if (preserveNodeEnv) {
+    process.env.NODE_ENV = preserveNodeEnv;
+  }
 
   const aiProvider = getOptionalEnv('AI_PROVIDER', 'openai') as 'openai' | 'anthropic';
   const nodeEnv = getOptionalEnv('NODE_ENV', 'development');

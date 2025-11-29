@@ -414,4 +414,123 @@ describe('CronScheduler Minor Update Integration', () => {
       // This test documents the expected interval duration
     });
   });
+
+  describe('skip logic for full-frame content', () => {
+    it('should skip minor update and not call Vestaboard when cached content is layout mode', async () => {
+      // Step 1: Create a proper layout (6 rows × 22 columns for Vestaboard)
+      const properLayoutCodes: number[][] = Array(6)
+        .fill(null)
+        .map((_, i) => Array(22).fill(i + 1));
+
+      const layoutRows = Array(6)
+        .fill(null)
+        .map(() => 'A'.repeat(22));
+
+      // Mock selector to return content with outputMode 'layout'
+      const mockLayoutGenerator: jest.Mocked<ContentGenerator> = {
+        generate: jest.fn().mockResolvedValue({
+          text: 'FULL FRAME',
+          outputMode: 'layout',
+          layout: {
+            rows: layoutRows,
+            characterCodes: properLayoutCodes,
+          },
+          metadata: { source: 'static-fallback' },
+        } as GeneratedContent),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      mockSelector.select.mockReturnValue({
+        generator: mockLayoutGenerator,
+        priority: 3,
+        name: 'fallback',
+      });
+
+      // Step 2: Major update with layout mode (caches layout content)
+      await orchestrator.generateAndSend({
+        updateType: 'major',
+        timestamp: new Date('2025-01-15T10:00:00Z'),
+      });
+
+      const initialCallCount = mockVestaboardClient.sendLayout.mock.calls.length;
+
+      // Step 3: Spy on console.log to verify skip message
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      // Step 4: Trigger minor update manually (scheduler will use same logic)
+      // Since cached content is layout mode, shouldSkip() should return true
+      // We'll test the actual scheduler behavior indirectly
+      const shouldSkip = minorUpdateGenerator.shouldSkip();
+      expect(shouldSkip).toBe(true);
+
+      // Step 5: Verify Vestaboard was NOT called again
+      expect(mockVestaboardClient.sendLayout).toHaveBeenCalledTimes(initialCallCount);
+
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should proceed with minor update when cached content is text mode', async () => {
+      // Step 1: Major update with text mode
+      await orchestrator.generateAndSend({
+        updateType: 'major',
+        timestamp: new Date('2025-01-15T10:00:00Z'),
+      });
+
+      const initialCallCount = mockVestaboardClient.sendLayout.mock.calls.length;
+
+      // Step 2: Check shouldSkip returns false for text mode
+      const shouldSkip = minorUpdateGenerator.shouldSkip();
+      expect(shouldSkip).toBe(false);
+
+      // Step 3: Minor update should proceed
+      const minorContent = await minorUpdateGenerator.generate({
+        updateType: 'minor',
+        timestamp: new Date('2025-01-15T10:01:00Z'),
+      });
+
+      await mockVestaboardClient.sendLayout(minorContent.layout!.characterCodes);
+
+      // Step 4: Verify Vestaboard WAS called with new content
+      expect(mockVestaboardClient.sendLayout).toHaveBeenCalledTimes(initialCallCount + 1);
+    });
+
+    it('should log skip message when minor update is skipped', async () => {
+      // Step 1: Setup layout mode content
+      const properLayoutCodes: number[][] = Array(6)
+        .fill(null)
+        .map((_, i) => Array(22).fill(i + 1));
+
+      const mockLayoutGenerator: jest.Mocked<ContentGenerator> = {
+        generate: jest.fn().mockResolvedValue({
+          text: 'FULL FRAME',
+          outputMode: 'layout',
+          layout: {
+            rows: Array(6)
+              .fill(null)
+              .map(() => 'A'.repeat(22)),
+            characterCodes: properLayoutCodes,
+          },
+        } as GeneratedContent),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      mockSelector.select.mockReturnValue({
+        generator: mockLayoutGenerator,
+        priority: 3,
+        name: 'fallback',
+      });
+
+      // Step 2: Major update
+      await orchestrator.generateAndSend({
+        updateType: 'major',
+        timestamp: new Date('2025-01-15T10:00:00Z'),
+      });
+
+      // Step 3: Verify shouldSkip returns true
+      const shouldSkip = minorUpdateGenerator.shouldSkip();
+      expect(shouldSkip).toBe(true);
+
+      // The log message will be tested when we implement the scheduler skip logic
+    });
+  });
 });

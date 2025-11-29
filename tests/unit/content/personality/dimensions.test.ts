@@ -1,7 +1,6 @@
 import {
   generatePersonalityDimensions,
   DIMENSION_POOLS,
-  type PersonalityDimensions,
 } from '../../../../src/content/personality/dimensions.js';
 
 describe('PersonalityDimensions', () => {
@@ -53,24 +52,40 @@ describe('PersonalityDimensions', () => {
       expect(DIMENSION_POOLS.obsession).toContain(dimensions.obsession);
     });
 
-    it('should generate varying results over multiple calls', () => {
-      // Generate many dimensions and check for variation
-      const results: PersonalityDimensions[] = [];
-      for (let i = 0; i < 50; i++) {
-        results.push(generatePersonalityDimensions());
-      }
+    it('should generate varying results based on Math.random', () => {
+      const mockRandom = jest.spyOn(Math, 'random');
 
-      // Check that we got at least some variation in each dimension
-      const uniqueMoods = new Set(results.map(r => r.mood));
-      const uniqueEnergy = new Set(results.map(r => r.energyLevel));
-      const uniqueHumor = new Set(results.map(r => r.humorStyle));
-      const uniqueObsession = new Set(results.map(r => r.obsession));
+      // Each generatePersonalityDimensions() call triggers 4 Math.random() calls
+      // (for mood, energyLevel, humorStyle, obsession)
+      // First generation with low values (selects early indices)
+      mockRandom.mockReturnValueOnce(0.1); // mood: 0.1*8=0.8→index 0
+      mockRandom.mockReturnValueOnce(0.1); // energy: 0.1*4=0.4→index 0
+      mockRandom.mockReturnValueOnce(0.1); // humor: 0.1*5=0.5→index 0
+      mockRandom.mockReturnValueOnce(0.1); // obsession: 0.1*12=1.2→index 1
 
-      // With 50 samples, we should see at least 2 unique values for each dimension
-      expect(uniqueMoods.size).toBeGreaterThan(1);
-      expect(uniqueEnergy.size).toBeGreaterThan(1);
-      expect(uniqueHumor.size).toBeGreaterThan(1);
-      expect(uniqueObsession.size).toBeGreaterThan(1);
+      const result1 = generatePersonalityDimensions();
+
+      // Second generation with high values (selects later indices)
+      mockRandom.mockReturnValueOnce(0.9); // mood: 0.9*8=7.2→index 7
+      mockRandom.mockReturnValueOnce(0.9); // energy: 0.9*4=3.6→index 3
+      mockRandom.mockReturnValueOnce(0.9); // humor: 0.9*5=4.5→index 4
+      mockRandom.mockReturnValueOnce(0.9); // obsession: 0.9*12=10.8→index 10
+
+      const result2 = generatePersonalityDimensions();
+
+      // Verify that different dimensions were selected for mood
+      expect(result1.mood).not.toBe(result2.mood);
+
+      // Verify that energy levels differ
+      expect(result1.energyLevel).not.toBe(result2.energyLevel);
+
+      // Verify humor styles differ
+      expect(result1.humorStyle).not.toBe(result2.humorStyle);
+
+      // Verify obsessions differ
+      expect(result1.obsession).not.toBe(result2.obsession);
+
+      mockRandom.mockRestore();
     });
   });
 

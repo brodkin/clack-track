@@ -37,7 +37,7 @@ class MockNotificationGenerator implements ContentGenerator {
  * Mock factory interface matching the expected signature
  */
 interface NotificationGeneratorFactory {
-  create(eventPattern: string, displayName: string): ContentGenerator;
+  create(eventPattern: RegExp, displayName: string): ContentGenerator;
 }
 
 describe('registerNotifications', () => {
@@ -56,7 +56,7 @@ describe('registerNotifications', () => {
 
     // Create mock factory with spy
     factoryCreateSpy = jest
-      .fn<(eventPattern: string, displayName: string) => ContentGenerator>()
+      .fn<(eventPattern: RegExp, displayName: string) => ContentGenerator>()
       .mockReturnValue(mockGenerator);
     mockFactory = {
       create: factoryCreateSpy,
@@ -144,23 +144,20 @@ describe('registerNotifications', () => {
   it('should call factory with correct parameters for door notification', () => {
     registerNotifications(registry, mockFactory);
 
-    expect(factoryCreateSpy).toHaveBeenCalledWith(
-      '/^binary_sensor\\..*_door$/',
-      'Door Notification'
-    );
+    expect(factoryCreateSpy).toHaveBeenCalledWith(/^binary_sensor\..*_door$/, 'Door Notification');
   });
 
   it('should call factory with correct parameters for person notification', () => {
     registerNotifications(registry, mockFactory);
 
-    expect(factoryCreateSpy).toHaveBeenCalledWith('/^person\\..*$/', 'Person Notification');
+    expect(factoryCreateSpy).toHaveBeenCalledWith(/^person\..*$/, 'Person Notification');
   });
 
   it('should call factory with correct parameters for motion notification', () => {
     registerNotifications(registry, mockFactory);
 
     expect(factoryCreateSpy).toHaveBeenCalledWith(
-      '/^binary_sensor\\..*_motion$/',
+      /^binary_sensor\..*_motion$/,
       'Motion Notification'
     );
   });
@@ -168,7 +165,7 @@ describe('registerNotifications', () => {
   it('should call factory with correct parameters for garage notification', () => {
     registerNotifications(registry, mockFactory);
 
-    expect(factoryCreateSpy).toHaveBeenCalledWith('/^cover\\..*garage.*$/i', 'Garage Notification');
+    expect(factoryCreateSpy).toHaveBeenCalledWith(/^cover\..*garage.*$/i, 'Garage Notification');
   });
 
   it('should call factory exactly 4 times', () => {

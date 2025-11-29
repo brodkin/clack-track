@@ -1,13 +1,16 @@
 import { Database, DatabaseRow } from '../database.js';
 
-export interface VoteRecord {
+export interface Vote {
   id: number;
-  contentId: string;
-  vote: 'good' | 'bad';
-  votedAt: Date;
+  content_id: number;
+  vote_type: 'good' | 'bad';
+  created_at: Date;
   userAgent?: string;
   ipAddress?: string;
 }
+
+// Maintain backward compatibility with old interface name
+export type VoteRecord = Vote;
 
 /**
  * VoteModel handles database operations for vote records
@@ -19,12 +22,12 @@ export class VoteModel {
   /**
    * Create a new vote record in the database
    */
-  async create(vote: Omit<VoteRecord, 'id' | 'votedAt'>): Promise<VoteRecord> {
+  async create(vote: Omit<Vote, 'id' | 'created_at'>): Promise<Vote> {
     const now = new Date();
 
     const result = await this.db.run(
-      'INSERT INTO votes (contentId, vote, votedAt, userAgent, ipAddress) VALUES (?, ?, ?, ?, ?)',
-      [vote.contentId, vote.vote, now.toISOString(), vote.userAgent || null, vote.ipAddress || null]
+      'INSERT INTO votes (content_id, vote_type, userAgent, ipAddress) VALUES (?, ?, ?, ?)',
+      [vote.content_id, vote.vote_type, vote.userAgent || null, vote.ipAddress || null]
     );
 
     if (!result.lastID) {
@@ -33,9 +36,9 @@ export class VoteModel {
 
     return {
       id: result.lastID,
-      contentId: vote.contentId,
-      vote: vote.vote,
-      votedAt: now,
+      content_id: vote.content_id,
+      vote_type: vote.vote_type,
+      created_at: now,
       userAgent: vote.userAgent,
       ipAddress: vote.ipAddress,
     };
@@ -44,23 +47,23 @@ export class VoteModel {
   /**
    * Find all votes for a specific content piece
    */
-  async findByContentId(contentId: string): Promise<VoteRecord[]> {
+  async findByContentId(contentId: number): Promise<Vote[]> {
     const rows = await this.db.all(
-      'SELECT id, contentId, vote, votedAt, userAgent, ipAddress FROM votes WHERE contentId = ? ORDER BY votedAt DESC',
+      'SELECT id, content_id, vote_type, created_at, userAgent, ipAddress FROM votes WHERE content_id = ? ORDER BY created_at DESC, id DESC',
       [contentId]
     );
 
-    return rows.map(row => this.mapRowToVoteRecord(row));
+    return rows.map(row => this.mapRowToVote(row));
   }
 
   /**
    * Get overall vote statistics across all content
    */
   async getStats(): Promise<{ good: number; bad: number; ratio: number }> {
-    const rows = await this.db.all('SELECT vote FROM votes', []);
+    const rows = await this.db.all('SELECT vote_type FROM votes', []);
 
-    const good = rows.filter(row => row.vote === 'good').length;
-    const bad = rows.filter(row => row.vote === 'bad').length;
+    const good = rows.filter(row => row.vote_type === 'good').length;
+    const bad = rows.filter(row => row.vote_type === 'bad').length;
     const total = good + bad;
     const ratio = total > 0 ? good / total : 0;
 
@@ -70,9 +73,9 @@ export class VoteModel {
   /**
    * Find a vote by ID
    */
-  async findById(id: number): Promise<VoteRecord | null> {
+  async findById(id: number): Promise<Vote | null> {
     const row = await this.db.get(
-      'SELECT id, contentId, vote, votedAt, userAgent, ipAddress FROM votes WHERE id = ?',
+      'SELECT id, content_id, vote_type, created_at, userAgent, ipAddress FROM votes WHERE id = ?',
       [id]
     );
 
@@ -80,23 +83,23 @@ export class VoteModel {
       return null;
     }
 
-    return this.mapRowToVoteRecord(row);
+    return this.mapRowToVote(row);
   }
 
   /**
    * Delete all votes for a specific content
    */
-  async deleteByContentId(contentId: string): Promise<number> {
-    const result = await this.db.run('DELETE FROM votes WHERE contentId = ?', [contentId]);
+  async deleteByContentId(contentId: number): Promise<number> {
+    const result = await this.db.run('DELETE FROM votes WHERE content_id = ?', [contentId]);
     return result.changes || 0;
   }
 
-  private mapRowToVoteRecord(row: DatabaseRow): VoteRecord {
+  private mapRowToVote(row: DatabaseRow): Vote {
     return {
       id: row.id as number,
-      contentId: row.contentId as string,
-      vote: row.vote as 'good' | 'bad',
-      votedAt: new Date(row.votedAt as string),
+      content_id: row.content_id as number,
+      vote_type: row.vote_type as 'good' | 'bad',
+      created_at: new Date(row.created_at as string),
       userAgent: row.userAgent as string | undefined,
       ipAddress: row.ipAddress as string | undefined,
     };
