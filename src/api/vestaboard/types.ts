@@ -19,6 +19,10 @@ export interface VestaboardClientConfig {
   maxRetries?: number;
 }
 
+export interface CharacterConverter {
+  textToLayout(text: string): number[][];
+}
+
 export interface VestaboardClient {
   sendText(text: string): Promise<void>;
   sendLayout(layout: number[][]): Promise<void>;

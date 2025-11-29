@@ -1,12 +1,14 @@
-import { textToLayout } from './character-converter.js';
 import type { VestaboardHTTPClient } from './http-client.js';
-import type { VestaboardClient, AnimationOptions } from './types.js';
+import type { VestaboardClient, AnimationOptions, CharacterConverter } from './types.js';
 
 /**
  * VestaboardClient implementation using dependency injection
  */
 export class VestaboardClientImpl implements VestaboardClient {
-  constructor(private readonly httpClient: VestaboardHTTPClient) {}
+  constructor(
+    private readonly httpClient: VestaboardHTTPClient,
+    private readonly converter: CharacterConverter
+  ) {}
 
   /**
    * Send text to the Vestaboard
@@ -15,7 +17,7 @@ export class VestaboardClientImpl implements VestaboardClient {
    * @param text - Text to send (can include \n for line breaks)
    */
   async sendText(text: string): Promise<void> {
-    const layout = textToLayout(text);
+    const layout = this.converter.textToLayout(text);
     await this.httpClient.post(layout);
   }
 

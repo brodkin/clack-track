@@ -1,6 +1,7 @@
 import { VestaboardHTTPClient } from './http-client.js';
 import { VestaboardClientImpl } from './client.js';
-import type { VestaboardClient, VestaboardClientConfig } from './types.js';
+import { textToLayout } from './character-converter.js';
+import type { VestaboardClient, VestaboardClientConfig, CharacterConverter } from './types.js';
 
 /**
  * Factory function to create a VestaboardClient instance
@@ -16,7 +17,11 @@ export function createVestaboardClient(config: VestaboardClientConfig): Vestaboa
     maxRetries: config.maxRetries,
   });
 
-  return new VestaboardClientImpl(httpClient);
+  const converter: CharacterConverter = {
+    textToLayout,
+  };
+
+  return new VestaboardClientImpl(httpClient, converter);
 }
 
 // Export errors
@@ -31,4 +36,5 @@ export type {
   AnimationOptions,
   VestaboardClientConfig,
   VestaboardClient,
+  CharacterConverter,
 } from './types.js';

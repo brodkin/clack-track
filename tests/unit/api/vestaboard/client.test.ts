@@ -1,10 +1,11 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { VestaboardClientImpl } from '@/api/vestaboard/client';
 import type { VestaboardHTTPClient } from '@/api/vestaboard/http-client';
-import type { AnimationOptions } from '@/api/vestaboard/types';
+import type { AnimationOptions, CharacterConverter } from '@/api/vestaboard/types';
 
 describe('VestaboardClientImpl', () => {
   let mockHttpClient: jest.Mocked<VestaboardHTTPClient>;
+  let mockConverter: jest.Mocked<CharacterConverter>;
   let client: VestaboardClientImpl;
 
   beforeEach(() => {
@@ -14,41 +15,68 @@ describe('VestaboardClientImpl', () => {
       get: jest.fn(),
     } as jest.Mocked<VestaboardHTTPClient>;
 
-    client = new VestaboardClientImpl(mockHttpClient);
+    mockConverter = {
+      textToLayout: jest.fn(),
+    } as jest.Mocked<CharacterConverter>;
+
+    client = new VestaboardClientImpl(mockHttpClient, mockConverter);
   });
 
   describe('sendText', () => {
     it('should convert text to layout and send via HTTP client', async () => {
+      const mockLayout = [
+        [1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      ];
+      mockConverter.textToLayout.mockReturnValueOnce(mockLayout);
       mockHttpClient.post.mockResolvedValueOnce(undefined);
 
       await client.sendText('HELLO WORLD');
 
-      expect(mockHttpClient.post).toHaveBeenCalledTimes(1);
-      const layout = mockHttpClient.post.mock.calls[0][0];
-      expect(layout).toHaveLength(6);
-      expect(layout[0]).toHaveLength(22);
+      expect(mockConverter.textToLayout).toHaveBeenCalledWith('HELLO WORLD');
+      expect(mockHttpClient.post).toHaveBeenCalledWith(mockLayout);
     });
 
     it('should handle empty text', async () => {
+      const emptyLayout = Array(6)
+        .fill(null)
+        .map(() => Array(22).fill(0));
+      mockConverter.textToLayout.mockReturnValueOnce(emptyLayout);
       mockHttpClient.post.mockResolvedValueOnce(undefined);
 
       await client.sendText('');
 
+      expect(mockConverter.textToLayout).toHaveBeenCalledWith('');
       expect(mockHttpClient.post).toHaveBeenCalledTimes(1);
     });
 
-    it('should convert lowercase to uppercase', async () => {
+    it('should use injected converter for text conversion', async () => {
+      const mockLayout = [
+        [8, 5, 12, 12, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      ];
+      mockConverter.textToLayout.mockReturnValueOnce(mockLayout);
       mockHttpClient.post.mockResolvedValueOnce(undefined);
 
       await client.sendText('hello');
 
-      expect(mockHttpClient.post).toHaveBeenCalledTimes(1);
-      const layout = mockHttpClient.post.mock.calls[0][0];
-      // Should have converted 'hello' to 'HELLO' (vertically centered at row 2)
-      expect(layout[2].filter((code: number) => code !== 0).length).toBeGreaterThan(0);
+      expect(mockConverter.textToLayout).toHaveBeenCalledWith('hello');
+      expect(mockHttpClient.post).toHaveBeenCalledWith(mockLayout);
     });
 
     it('should propagate HTTP client errors', async () => {
+      const mockLayout = Array(6)
+        .fill(null)
+        .map(() => Array(22).fill(0));
+      mockConverter.textToLayout.mockReturnValueOnce(mockLayout);
       const testError = new Error('Network error');
       mockHttpClient.post.mockRejectedValueOnce(testError);
 
