@@ -1,6 +1,7 @@
 import { VoteModel } from '../../../../src/storage/models/index.js';
 import { ContentModel } from '../../../../src/storage/models/index.js';
 import { Database, createDatabase } from '../../../../src/storage/database.js';
+import { SQLiteDatabase } from '../../../../src/storage/sqlite-database.js';
 
 describe('VoteModel', () => {
   let db: Database;
@@ -16,6 +17,30 @@ describe('VoteModel', () => {
     await db.run('DELETE FROM content');
     voteModel = new VoteModel(db);
     contentModel = new ContentModel(db);
+
+    // CRITICAL FIX: Foreign key constraints in SQLite are defined at TABLE CREATION TIME.
+    // If the votes table was created with FK disabled in a previous test, the constraint
+    // won't be enforced even if we enable FK later.
+    // Solution: DROP and recreate the votes table to ensure FK constraints are properly registered.
+    // This is necessary because of the shared SQLite singleton in test environment.
+    if (db instanceof SQLiteDatabase) {
+      // Drop votes table if it exists and recreate it with FK constraints enabled
+      // The PRAGMA foreign_keys = ON was already called in connect(), so this will work.
+      await db.run('DROP TABLE IF EXISTS votes', []);
+      await db.run(
+        `CREATE TABLE votes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          content_id INTEGER NOT NULL,
+          vote_type TEXT NOT NULL CHECK(vote_type IN ('good', 'bad')),
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          userAgent TEXT DEFAULT NULL,
+          ipAddress TEXT DEFAULT NULL,
+          FOREIGN KEY (content_id) REFERENCES content(id) ON DELETE CASCADE
+        )`,
+        []
+      );
+      await db.run('CREATE INDEX IF NOT EXISTS idx_votes_content_id ON votes(content_id)', []);
+    }
   });
 
   afterEach(async () => {

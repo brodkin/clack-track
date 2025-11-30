@@ -63,8 +63,8 @@ describe('ASCIIArtGenerator', () => {
         expect(result.outputMode).toBe('text');
       });
 
-      it('should be deterministic when called multiple times with same seed', async () => {
-        // This test verifies random selection works by generating multiple times
+      it('should select different patterns when Math.random returns different values', async () => {
+        // This test verifies deterministic pattern selection through mocked Math.random
         const patterns = ['Art 1', 'Art 2', 'Art 3', 'Art 4', 'Art 5'];
         const generator = new ASCIIArtGenerator(patterns);
 
@@ -73,18 +73,33 @@ describe('ASCIIArtGenerator', () => {
           timestamp: new Date('2024-01-15T12:00:00'),
         };
 
-        // Generate 10 times - should get valid patterns
+        // Mock Math.random to return predictable values that select different patterns
+        // With 5 patterns: index 0 (0.0-0.2), 1 (0.2-0.4), 2 (0.4-0.6), 3 (0.6-0.8), 4 (0.8-1.0)
+        const mockRandom = jest.spyOn(Math, 'random');
+        mockRandom
+          .mockReturnValueOnce(0.05) // Selects index 0: 'Art 1'
+          .mockReturnValueOnce(0.25) // Selects index 1: 'Art 2'
+          .mockReturnValueOnce(0.45) // Selects index 2: 'Art 3'
+          .mockReturnValueOnce(0.65) // Selects index 3: 'Art 4'
+          .mockReturnValueOnce(0.95); // Selects index 4: 'Art 5'
+
+        // Generate 5 times with mocked values - should get all different patterns
         const results: string[] = [];
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 5; i++) {
           const result = await generator.generate(context);
           results.push(result.text);
           expect(patterns).toContain(result.text);
         }
 
-        // Should have gotten at least some variation (not all the same)
-        // This is probabilistic but with 10 tries from 5 patterns, very unlikely to fail
+        // All results should be unique (deterministically selected different patterns)
         const uniqueResults = new Set(results);
-        expect(uniqueResults.size).toBeGreaterThan(1);
+        expect(uniqueResults.size).toBe(5);
+        expect(results).toEqual(['Art 1', 'Art 2', 'Art 3', 'Art 4', 'Art 5']);
+
+        // Verify Math.random was called for each generation
+        expect(mockRandom).toHaveBeenCalledTimes(5);
+
+        mockRandom.mockRestore();
       });
     });
 
