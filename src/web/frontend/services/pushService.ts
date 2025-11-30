@@ -63,7 +63,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
  */
 export async function subscribe(vapidPublicKey: string): Promise<PushSubscriptionData> {
   const registration = await navigator.serviceWorker.ready;
-  const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+  const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey) as unknown as ArrayBuffer;
 
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
