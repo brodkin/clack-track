@@ -20,6 +20,7 @@ The application provides a web debugging interface for content management, quali
 - 📰 **Rich Data Sources** - RSS feeds, RapidAPI integrations, and weather data
 - 🎯 **Prompt Management** - Organized system and user prompts for customizable AI behavior
 - 🌐 **Web Debugging Interface** - View content, vote on quality, and access debug logs
+- 📱 **Progressive Web App** - Installable, offline-capable, with push notifications
 - 🛡️ **Rate Limiting** - API rate limiting (100 req/15min) with configurable thresholds
 - 🚀 **Built with Node.js 20** - Modern JavaScript runtime with TypeScript
 - 🐳 **Devcontainer Support** - Consistent development environments
@@ -133,6 +134,95 @@ The web frontend is built with:
 - `/flipside` - Content history with metadata and voting
 - `/account` - User profile and passkey management
 - `/login` - Passkey-only authentication
+
+### Progressive Web App (PWA)
+
+Clack Track includes PWA support for an enhanced mobile experience:
+
+- **Installable** - Add to home screen on iOS/Android for native-like access
+- **Offline Support** - Service worker caches assets for offline viewing
+- **Push Notifications** - Receive alerts when new content is generated (optional)
+
+#### PWA Setup
+
+The PWA is built using [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) with Workbox for service worker generation.
+
+**Prerequisites:**
+
+- PWA icons in `public/` directory:
+  - `pwa-192x192.png` - Standard PWA icon
+  - `pwa-512x512.png` - Large icon (also used as maskable icon)
+  - `apple-touch-icon.png` - iOS home screen icon
+
+> **Note:** PWA icons are not yet created. See issue `clack-37ai` for icon creation task.
+
+#### Service Worker Caching Strategies
+
+The service worker uses different caching strategies for different content types:
+
+| Content Type                           | Strategy     | Cache Duration   |
+| -------------------------------------- | ------------ | ---------------- |
+| API requests (`/api/*`)                | NetworkFirst | 5 minutes        |
+| Images (`.png`, `.jpg`, etc.)          | CacheFirst   | 30 days          |
+| Google Fonts                           | CacheFirst   | 1 year           |
+| Static assets (`.js`, `.css`, `.html`) | Precache     | Until next build |
+
+#### Push Notification Setup (Optional)
+
+Push notifications require VAPID (Voluntary Application Server Identification) keys for secure server-to-client messaging.
+
+**1. Generate VAPID Keys:**
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+This outputs a public key and private key pair. Keep the private key secret!
+
+**2. Configure Environment Variables:**
+
+```bash
+# Add to .env file
+VAPID_PUBLIC_KEY=BIxaHtm...your-public-key
+VAPID_PRIVATE_KEY=your-private-key
+VAPID_SUBJECT=mailto:your-email@example.com
+```
+
+| Variable            | Description                                      |
+| ------------------- | ------------------------------------------------ |
+| `VAPID_PUBLIC_KEY`  | Base64-encoded public key (shared with frontend) |
+| `VAPID_PRIVATE_KEY` | Base64-encoded private key (server-side only)    |
+| `VAPID_SUBJECT`     | Contact email as `mailto:` URI                   |
+
+**3. Push Notification API Endpoints:**
+
+| Method | Endpoint                     | Description                                  |
+| ------ | ---------------------------- | -------------------------------------------- |
+| GET    | `/api/push/vapid-public-key` | Get VAPID public key for client subscription |
+| POST   | `/api/push/subscribe`        | Store a push subscription                    |
+| DELETE | `/api/push/unsubscribe`      | Remove a push subscription                   |
+| POST   | `/api/push/test`             | Send test notification (dev only)            |
+
+#### Testing PWA Installation
+
+**iOS (Safari):**
+
+1. Open Clack Track in Safari
+2. Tap the Share button
+3. Select "Add to Home Screen"
+4. Name the app and tap "Add"
+
+**Android (Chrome):**
+
+1. Open Clack Track in Chrome
+2. Tap the three-dot menu
+3. Select "Install app" or "Add to Home Screen"
+4. Confirm installation
+
+**Desktop (Chrome/Edge):**
+
+1. Look for the install icon in the address bar
+2. Click "Install"
 
 ### API Rate Limiting
 
