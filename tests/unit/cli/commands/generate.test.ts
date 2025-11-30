@@ -256,17 +256,22 @@ describe('generate command', () => {
     });
 
     it('should use fresh timestamp for each command execution', async () => {
-      await generateCommand({ type: 'major' });
-      const firstTimestamp = mockOrchestrator.generateAndSend.mock.calls[0][0].timestamp;
+      jest.useFakeTimers();
+      try {
+        await generateCommand({ type: 'major' });
+        const firstTimestamp = mockOrchestrator.generateAndSend.mock.calls[0][0].timestamp;
 
-      // Wait a bit
-      await new Promise(resolve => setTimeout(resolve, 10));
+        // Advance time deterministically
+        jest.advanceTimersByTime(1000);
 
-      mockOrchestrator.generateAndSend.mockClear();
-      await generateCommand({ type: 'major' });
-      const secondTimestamp = mockOrchestrator.generateAndSend.mock.calls[0][0].timestamp;
+        mockOrchestrator.generateAndSend.mockClear();
+        await generateCommand({ type: 'major' });
+        const secondTimestamp = mockOrchestrator.generateAndSend.mock.calls[0][0].timestamp;
 
-      expect(secondTimestamp.getTime()).toBeGreaterThan(firstTimestamp.getTime());
+        expect(secondTimestamp.getTime()).toBeGreaterThan(firstTimestamp.getTime());
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 
