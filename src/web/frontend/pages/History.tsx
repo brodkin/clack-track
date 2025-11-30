@@ -39,15 +39,18 @@ export function History() {
         const currentCount = append ? contents.length : 0;
         const response = await apiClient.getContentHistory({ limit: PAGE_SIZE + currentCount });
 
+        // Backend sends ContentRecord[] directly in data (not wrapped in { contents: ..., total: ... })
+        // Total count comes from response.pagination.count
         if (response.data) {
+          const dataArray = response.data;
           if (append) {
             // For "load more", we get all items up to new limit, then slice to get new ones
-            const newContents = response.data.contents.slice(currentCount);
+            const newContents = dataArray.slice(currentCount);
             setContents(prev => [...prev, ...newContents]);
           } else {
-            setContents(response.data.contents);
+            setContents(dataArray);
           }
-          setTotal(response.data.total);
+          setTotal(response.pagination?.count ?? dataArray.length);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load history');
