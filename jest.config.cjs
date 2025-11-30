@@ -60,7 +60,6 @@ module.exports = {
         '^.+\\.ts$': [
           'ts-jest',
           {
-            isolatedModules: true,
             diagnostics: {
               ignoreCodes: [151002, 2339, 2307],
             },
@@ -89,7 +88,6 @@ module.exports = {
         '^.+\\.ts$': [
           'ts-jest',
           {
-            isolatedModules: true,
             diagnostics: {
               ignoreCodes: [151002, 2339, 2307, 7016, 2322, 2345],
             },
