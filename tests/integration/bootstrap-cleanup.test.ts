@@ -1,5 +1,21 @@
 // Set environment variables BEFORE any imports that call bootstrap
 process.env.OPENAI_API_KEY = 'test-key';
+process.env.VESTABOARD_LOCAL_API_KEY = 'test-vestaboard-key';
+process.env.VESTABOARD_LOCAL_API_URL = 'http://localhost:7000';
+
+// Mock VestaboardHTTPClient to avoid real API calls
+jest.mock('../../src/api/vestaboard/http-client.js', () => {
+  // Create a 6x22 empty board layout (all zeros)
+  const emptyBoard = Array.from({ length: 6 }, () => Array.from({ length: 22 }, () => 0));
+
+  return {
+    VestaboardHTTPClient: jest.fn().mockImplementation(() => ({
+      post: jest.fn().mockResolvedValue(undefined),
+      postWithAnimation: jest.fn().mockResolvedValue(undefined),
+      get: jest.fn().mockResolvedValue(emptyBoard),
+    })),
+  };
+});
 
 import { bootstrap } from '../../src/bootstrap.js';
 import { Database, createDatabase } from '../../src/storage/database.js';
