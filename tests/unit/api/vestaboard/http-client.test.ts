@@ -35,17 +35,23 @@ describe('VestaboardHTTPClient', () => {
   describe('constructor', () => {
     it('should use default baseUrl if not provided', () => {
       const defaultClient = new VestaboardHTTPClient({ apiKey: mockApiKey });
-      expect(defaultClient).toBeDefined();
+
+      // Verify default baseUrl is set to the expected constant
+      expect(defaultClient['baseUrl']).toBe('http://vestaboard.local:7000');
     });
 
     it('should use default timeout if not provided', () => {
       const defaultClient = new VestaboardHTTPClient({ apiKey: mockApiKey });
-      expect(defaultClient).toBeDefined();
+
+      // Verify default timeout is set to 5000ms
+      expect(defaultClient['timeoutMs']).toBe(5000);
     });
 
     it('should use default maxRetries if not provided', () => {
       const defaultClient = new VestaboardHTTPClient({ apiKey: mockApiKey });
-      expect(defaultClient).toBeDefined();
+
+      // Verify default maxRetries is 2 (allowing 3 total attempts: initial + 2 retries)
+      expect(defaultClient['maxRetries']).toBe(2);
     });
   });
 

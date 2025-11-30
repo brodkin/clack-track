@@ -47,7 +47,7 @@ describe('Model Tiers Configuration', () => {
   });
 
   describe('Type Safety', () => {
-    it('should allow accessing models with valid tier names', () => {
+    it('should allow dynamic tier-based access to models', () => {
       const tier: ModelTier = 'medium';
       const openaiModel = MODEL_TIERS.openai[tier];
       const anthropicModel = MODEL_TIERS.anthropic[tier];
@@ -56,13 +56,27 @@ describe('Model Tiers Configuration', () => {
       expect(anthropicModel).toBe('claude-sonnet-4-5-20250929');
     });
 
-    it('should allow accessing models with valid provider names', () => {
+    it('should allow dynamic provider-based access to model tiers', () => {
       const provider: AIProviderType = 'openai';
       const models = MODEL_TIERS[provider];
 
       expect(models.light).toBe('gpt-4.1-nano');
       expect(models.medium).toBe('gpt-4.1-mini');
       expect(models.heavy).toBe('gpt-4.1');
+    });
+
+    it('should support iterating over all tiers for a provider', () => {
+      const tiers: ModelTier[] = ['light', 'medium', 'heavy'];
+      const openaiModels = tiers.map(tier => MODEL_TIERS.openai[tier]);
+
+      expect(openaiModels).toEqual(['gpt-4.1-nano', 'gpt-4.1-mini', 'gpt-4.1']);
+    });
+
+    it('should support iterating over all providers for a tier', () => {
+      const providers: AIProviderType[] = ['openai', 'anthropic'];
+      const mediumModels = providers.map(provider => MODEL_TIERS[provider].medium);
+
+      expect(mediumModels).toEqual(['gpt-4.1-mini', 'claude-sonnet-4-5-20250929']);
     });
   });
 

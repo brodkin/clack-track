@@ -404,15 +404,6 @@ describe('CronScheduler Minor Update Integration', () => {
       expect(() => scheduler.start()).not.toThrow();
       scheduler.stop();
     });
-
-    it('should use 60-second interval for recurring updates', () => {
-      // Verify the interval constant is correct
-      const MINUTE_IN_MS = 60 * 1000;
-      expect(MINUTE_IN_MS).toBe(60000);
-
-      // The scheduler uses this exact value for setInterval
-      // This test documents the expected interval duration
-    });
   });
 
   describe('skip logic for full-frame content', () => {
