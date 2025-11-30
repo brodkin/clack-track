@@ -1,3 +1,4 @@
+import { Router } from 'express';
 import { Request, Response } from '../types.js';
 import { LogModel, LogLevel } from '../../storage/models/log.js';
 import { Database } from '../../storage/database.js';
@@ -5,13 +6,18 @@ import { Database } from '../../storage/database.js';
 // Singleton model instance
 let logModel: LogModel | null = null;
 let database: Database | null = null;
+let dbConnected = false;
 
 /**
- * Get or create Database instance
+ * Get or create Database instance and ensure connected
  */
-function getDatabase(): Database {
+async function getDatabase(): Promise<Database> {
   if (!database) {
     database = new Database();
+  }
+  if (!dbConnected) {
+    await database.connect();
+    dbConnected = true;
   }
   return database;
 }
@@ -19,9 +25,9 @@ function getDatabase(): Database {
 /**
  * Get or create LogModel instance
  */
-function getLogModel(): LogModel {
+async function getLogModel(): Promise<LogModel> {
   if (!logModel) {
-    const db = getDatabase();
+    const db = await getDatabase();
     logModel = new LogModel(db);
   }
   return logModel;
@@ -45,12 +51,9 @@ function isValidLogLevel(level: unknown): level is LogLevel {
  * @param res - Express response object
  * @param model - Optional LogModel for testing (defaults to singleton)
  */
-export async function getDebugLogs(
-  req: Request,
-  res: Response,
-  model: LogModel = getLogModel()
-): Promise<void> {
+export async function getDebugLogs(req: Request, res: Response, model?: LogModel): Promise<void> {
   try {
+    const logModelInstance = model ?? (await getLogModel());
     // Parse and validate limit parameter
     const limitParam = req.query.limit;
     let limit = 100; // Default limit
@@ -70,7 +73,7 @@ export async function getDebugLogs(
       level = levelParam;
     }
 
-    const logs = await model.findRecent(limit, level);
+    const logs = await logModelInstance.findRecent(limit, level);
 
     res.json({
       success: true,
@@ -96,12 +99,9 @@ export async function getDebugLogs(
  * @param res - Express response object
  * @param model - Optional LogModel for testing (defaults to singleton)
  */
-export async function clearLogs(
-  req: Request,
-  res: Response,
-  model: LogModel = getLogModel()
-): Promise<void> {
+export async function clearLogs(req: Request, res: Response, model?: LogModel): Promise<void> {
   try {
+    const logModelInstance = model ?? (await getLogModel());
     // Parse and validate days parameter
     const daysParam = req.query.days;
     let days = 30; // Default to 30 days
@@ -113,7 +113,7 @@ export async function clearLogs(
       }
     }
 
-    const deletedCount = await model.deleteOlderThan(days);
+    const deletedCount = await logModelInstance.deleteOlderThan(days);
 
     res.json({
       success: true,
@@ -127,4 +127,18 @@ export async function clearLogs(
       error: 'Failed to clear logs',
     });
   }
+}
+
+/**
+ * Create and configure logs router
+ *
+ * @returns Express router with logs routes
+ */
+export function createLogsRouter(): Router {
+  const router = Router();
+
+  router.get('/', (req, res) => getDebugLogs(req as Request, res as Response));
+  router.delete('/', (req, res) => clearLogs(req as Request, res as Response));
+
+  return router;
 }

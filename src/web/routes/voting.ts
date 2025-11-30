@@ -1,3 +1,4 @@
+import { Router } from 'express';
 import { Request, Response } from '../types.js';
 import { VoteRepository } from '../../storage/repositories/vote-repo.js';
 import { VoteModel } from '../../storage/models/vote.js';
@@ -6,13 +7,18 @@ import { Database } from '../../storage/database.js';
 // Singleton repository instance
 let voteRepository: VoteRepository | null = null;
 let database: Database | null = null;
+let dbConnected = false;
 
 /**
- * Get or create Database instance
+ * Get or create Database instance and ensure connected
  */
-function getDatabase(): Database {
+async function getDatabase(): Promise<Database> {
   if (!database) {
     database = new Database();
+  }
+  if (!dbConnected) {
+    await database.connect();
+    dbConnected = true;
   }
   return database;
 }
@@ -21,9 +27,9 @@ function getDatabase(): Database {
  * Get or create VoteRepository instance
  * Uses dependency injection pattern for testability
  */
-function getVoteRepository(): VoteRepository {
+async function getVoteRepository(): Promise<VoteRepository> {
   if (!voteRepository) {
-    const db = getDatabase();
+    const db = await getDatabase();
     const model = new VoteModel(db);
     voteRepository = new VoteRepository(model);
   }
@@ -49,9 +55,10 @@ function isValidVote(vote: unknown): vote is 'good' | 'bad' {
 export async function submitVote(
   req: Request,
   res: Response,
-  repository: VoteRepository = getVoteRepository()
+  repository?: VoteRepository
 ): Promise<void> {
   try {
+    const repo = repository ?? (await getVoteRepository());
     // Validate request body
     const body = req.body;
 
@@ -84,7 +91,7 @@ export async function submitVote(
     }
 
     // Submit vote to repository
-    const voteRecord = await repository.submitVote(Number(contentId), vote);
+    const voteRecord = await repo.submitVote(Number(contentId), vote);
 
     res.json({
       success: true,
@@ -110,10 +117,11 @@ export async function submitVote(
 export async function getVoteStats(
   req: Request,
   res: Response,
-  repository: VoteRepository = getVoteRepository()
+  repository?: VoteRepository
 ): Promise<void> {
   try {
-    const stats = await repository.getOverallStats();
+    const repo = repository ?? (await getVoteRepository());
+    const stats = await repo.getOverallStats();
 
     res.json({
       success: true,
@@ -126,4 +134,18 @@ export async function getVoteStats(
       error: 'Failed to retrieve vote statistics',
     });
   }
+}
+
+/**
+ * Create and configure voting router
+ *
+ * @returns Express router with voting routes
+ */
+export function createVotingRouter(): Router {
+  const router = Router();
+
+  router.post('/', (req, res) => submitVote(req as Request, res as Response));
+  router.get('/stats', (req, res) => getVoteStats(req as Request, res as Response));
+
+  return router;
 }

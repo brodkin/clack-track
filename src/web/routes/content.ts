@@ -1,3 +1,4 @@
+import { Router } from 'express';
 import { Request, Response } from '../types.js';
 import { ContentRepository } from '../../storage/repositories/content-repo.js';
 import { ContentModel } from '../../storage/models/content.js';
@@ -6,13 +7,18 @@ import { Database } from '../../storage/database.js';
 // Singleton repository instance
 let contentRepository: ContentRepository | null = null;
 let database: Database | null = null;
+let dbConnected = false;
 
 /**
- * Get or create Database instance
+ * Get or create Database instance and ensure connected
  */
-function getDatabase(): Database {
+async function getDatabase(): Promise<Database> {
   if (!database) {
     database = new Database();
+  }
+  if (!dbConnected) {
+    await database.connect();
+    dbConnected = true;
   }
   return database;
 }
@@ -21,9 +27,9 @@ function getDatabase(): Database {
  * Get or create ContentRepository instance
  * Uses dependency injection pattern for testability
  */
-function getContentRepository(): ContentRepository {
+async function getContentRepository(): Promise<ContentRepository> {
   if (!contentRepository) {
-    const db = getDatabase();
+    const db = await getDatabase();
     const model = new ContentModel(db);
     contentRepository = new ContentRepository(model);
   }
@@ -41,10 +47,11 @@ function getContentRepository(): ContentRepository {
 export async function getLatestContent(
   req: Request,
   res: Response,
-  repository: ContentRepository = getContentRepository()
+  repository?: ContentRepository
 ): Promise<void> {
   try {
-    const content = await repository.getLatestContent();
+    const repo = repository ?? (await getContentRepository());
+    const content = await repo.getLatestContent();
 
     if (!content) {
       res.status(404).json({
@@ -80,9 +87,10 @@ export async function getLatestContent(
 export async function getContentHistory(
   req: Request,
   res: Response,
-  repository: ContentRepository = getContentRepository()
+  repository?: ContentRepository
 ): Promise<void> {
   try {
+    const repo = repository ?? (await getContentRepository());
     // Parse and validate limit parameter
     const limitParam = req.query.limit;
     let limit = 20; // Default limit
@@ -94,7 +102,7 @@ export async function getContentHistory(
       }
     }
 
-    const history = await repository.getContentHistory(limit);
+    const history = await repo.getContentHistory(limit);
 
     res.json({
       success: true,
@@ -111,4 +119,18 @@ export async function getContentHistory(
       error: 'Failed to retrieve content history',
     });
   }
+}
+
+/**
+ * Create and configure content router
+ *
+ * @returns Express router with content routes
+ */
+export function createContentRouter(): Router {
+  const router = Router();
+
+  router.get('/latest', (req, res) => getLatestContent(req as Request, res as Response));
+  router.get('/history', (req, res) => getContentHistory(req as Request, res as Response));
+
+  return router;
 }

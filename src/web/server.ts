@@ -7,6 +7,9 @@ import { log } from '../utils/logger.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createAccountRouter } from './routes/account.js';
+import { createContentRouter } from './routes/content.js';
+import { createLogsRouter } from './routes/logs.js';
+import { createVotingRouter } from './routes/voting.js';
 import { pushRouter } from './routes/push.js';
 
 export interface WebServerConfig {
@@ -141,6 +144,18 @@ export class WebServer {
 
     // Push notification routes
     this.app.use('/api/push', pushRouter);
+
+    // Content routes
+    const contentRouter = createContentRouter();
+    this.app.use('/api/content', contentRouter);
+
+    // Logs routes
+    const logsRouter = createLogsRouter();
+    this.app.use('/api/logs', logsRouter);
+
+    // Voting routes
+    const votingRouter = createVotingRouter();
+    this.app.use('/api/vote', votingRouter);
   }
 
   private registerSignalHandlers(): void {
