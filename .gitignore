@@ -48,3 +48,6 @@ trees/
 
 # Husky
 .husky/_
+
+# Beads issue tracking (synced via beads/sync branch)
+.beads/
