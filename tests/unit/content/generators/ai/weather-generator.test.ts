@@ -18,6 +18,7 @@ import { WeatherService } from '@/services/weather-service';
 import { ModelTier } from '@/types/content-generator';
 import type { GenerationContext } from '@/types/content-generator';
 import type { WeatherData } from '@/services/weather-service';
+import type { AIProvider } from '@/types/ai';
 
 // Helper type for accessing protected members in tests
 type ProtectedWeatherGenerator = WeatherGenerator & {
@@ -30,6 +31,7 @@ describe('WeatherGenerator', () => {
   let mockPromptLoader: jest.Mocked<PromptLoader>;
   let mockModelTierSelector: jest.Mocked<ModelTierSelector>;
   let mockWeatherService: jest.Mocked<WeatherService>;
+  let mockAIProvider: jest.Mocked<AIProvider>;
 
   const mockWeatherData: WeatherData = {
     temperature: 72,
@@ -67,6 +69,16 @@ describe('WeatherGenerator', () => {
     mockWeatherService = {
       getWeather: jest.fn().mockResolvedValue(mockWeatherData),
     } as unknown as jest.Mocked<WeatherService>;
+
+    // Mock AIProvider with successful response
+    mockAIProvider = {
+      generate: jest.fn().mockResolvedValue({
+        text: 'Generated weather content',
+        model: 'gpt-4.1-nano',
+        tokensUsed: 100,
+      }),
+      validateConnection: jest.fn().mockResolvedValue(true),
+    } as unknown as jest.Mocked<AIProvider>;
   });
 
   describe('constructor', () => {
@@ -154,6 +166,17 @@ describe('WeatherGenerator', () => {
   });
 
   describe('generate()', () => {
+    beforeEach(() => {
+      // Mock createProvider to return our AI provider mock for each test
+      jest
+        .spyOn(WeatherGenerator.prototype as { createProvider: () => unknown }, 'createProvider')
+        .mockReturnValue(mockAIProvider);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('should fetch weather data from WeatherService when provided', async () => {
       const generator = new WeatherGenerator(
         mockPromptLoader,
@@ -162,12 +185,7 @@ describe('WeatherGenerator', () => {
         mockWeatherService
       );
 
-      // Since we can't easily mock the AI provider, we'll just test that weatherService was called
-      try {
-        await generator.generate(mockContext);
-      } catch {
-        // Expected to fail due to AI provider - but we can check weather was fetched
-      }
+      await generator.generate(mockContext);
 
       expect(mockWeatherService.getWeather).toHaveBeenCalled();
     });
@@ -180,11 +198,7 @@ describe('WeatherGenerator', () => {
         mockWeatherService
       );
 
-      try {
-        await generator.generate(mockContext);
-      } catch {
-        // Expected to fail due to AI provider
-      }
+      await generator.generate(mockContext);
 
       // Verify loadPromptWithVariables was called with weather data
       expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
@@ -204,24 +218,24 @@ describe('WeatherGenerator', () => {
         mockWeatherService
       );
 
-      try {
-        await generator.generate(mockContext);
-      } catch {
-        // Expected to fail due to AI provider
-      }
+      await generator.generate(mockContext);
 
-      // Check that the weather template variable includes all fields
-      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
-        (call: unknown[]) => call[0] === 'user'
-      );
+      // User prompt is the second call (index 1) - system prompt is first (index 0)
+      const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
+      expect(calls.length).toBeGreaterThanOrEqual(2);
 
-      expect(userPromptCall).toBeDefined();
-      const weatherVar = userPromptCall?.[2]?.weather as string;
-      expect(weatherVar).toContain('CURRENT WEATHER:');
-      expect(weatherVar).toContain('Condition: sunny');
-      expect(weatherVar).toContain('Temperature: 72°F');
-      expect(weatherVar).toContain('Humidity: 45%');
-      expect(weatherVar).toContain('Feels like: 74°F');
+      const userPromptCall = calls[1];
+      expect(userPromptCall[0]).toBe('user');
+      expect(userPromptCall[1]).toBe('weather-focus.txt');
+
+      const weatherVar = userPromptCall[2] as Record<string, unknown>;
+      const weatherText = weatherVar.weather as string;
+
+      expect(weatherText).toContain('CURRENT WEATHER:');
+      expect(weatherText).toContain('Condition: sunny');
+      expect(weatherText).toContain('Temperature: 72°F');
+      expect(weatherText).toContain('Humidity: 45%');
+      expect(weatherText).toContain('Feels like: 74°F');
     });
 
     it('should use fallback text when WeatherService not provided', async () => {
@@ -230,11 +244,7 @@ describe('WeatherGenerator', () => {
       });
       // No weatherService injected
 
-      try {
-        await generator.generate(mockContext);
-      } catch {
-        // Expected to fail due to AI provider
-      }
+      await generator.generate(mockContext);
 
       // Verify fallback weather text was used
       expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
@@ -256,11 +266,7 @@ describe('WeatherGenerator', () => {
         mockWeatherService
       );
 
-      try {
-        await generator.generate(mockContext);
-      } catch {
-        // Expected to fail due to AI provider
-      }
+      await generator.generate(mockContext);
 
       // Verify fallback weather text was used
       expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
@@ -285,11 +291,7 @@ describe('WeatherGenerator', () => {
       // Spy on console.error to verify error logging
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      try {
-        await generator.generate(mockContext);
-      } catch {
-        // Expected to fail due to AI provider
-      }
+      await generator.generate(mockContext);
 
       // Verify fallback weather text was used
       expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
@@ -326,22 +328,24 @@ describe('WeatherGenerator', () => {
         mockWeatherService
       );
 
-      try {
-        await generator.generate(mockContext);
-      } catch {
-        // Expected to fail due to AI provider
-      }
+      await generator.generate(mockContext);
 
-      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
-        (call: unknown[]) => call[0] === 'user'
-      );
+      // User prompt is the second call (index 1) - system prompt is first (index 0)
+      const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
+      expect(calls.length).toBeGreaterThanOrEqual(2);
 
-      const weatherVar = userPromptCall?.[2]?.weather as string;
-      expect(weatherVar).toContain('CURRENT WEATHER:');
-      expect(weatherVar).toContain('Condition: cloudy');
-      expect(weatherVar).toContain('Temperature: 68°C');
-      expect(weatherVar).not.toContain('Humidity');
-      expect(weatherVar).not.toContain('Feels like');
+      const userPromptCall = calls[1];
+      expect(userPromptCall[0]).toBe('user');
+      expect(userPromptCall[1]).toBe('weather-focus.txt');
+
+      const weatherVar = userPromptCall[2] as Record<string, unknown>;
+      const weatherText = weatherVar.weather as string;
+
+      expect(weatherText).toContain('CURRENT WEATHER:');
+      expect(weatherText).toContain('Condition: cloudy');
+      expect(weatherText).toContain('Temperature: 68°C');
+      expect(weatherText).not.toContain('Humidity');
+      expect(weatherText).not.toContain('Feels like');
     });
 
     it('should load system prompt with personality variables', async () => {
@@ -352,11 +356,7 @@ describe('WeatherGenerator', () => {
         mockWeatherService
       );
 
-      try {
-        await generator.generate(mockContext);
-      } catch {
-        // Expected to fail due to AI provider
-      }
+      await generator.generate(mockContext);
 
       // Verify system prompt was loaded with personality variables
       expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
@@ -380,11 +380,7 @@ describe('WeatherGenerator', () => {
         mockWeatherService
       ) as ProtectedWeatherGenerator;
 
-      try {
-        await generator.generate(mockContext);
-      } catch {
-        // Expected to fail due to AI provider
-      }
+      await generator.generate(mockContext);
 
       expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
     });
