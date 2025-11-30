@@ -52,3 +52,4 @@ trees/
 
 # Beads issue tracking (synced via beads/sync branch)
 .beads/
+.playwright-mcp/
