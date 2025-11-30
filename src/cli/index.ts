@@ -67,7 +67,21 @@ export async function runCLI(args: string[]): Promise<void> {
     }
     case 'frame': {
       const options = parseOptions(args);
-      const textArg = args[3] && !args[3].startsWith('--') ? args[3] : undefined;
+      // Find the first positional argument (not a flag or flag value)
+      let textArg: string | undefined;
+      for (let i = 3; i < args.length; i++) {
+        const arg = args[i];
+        if (!arg.startsWith('--')) {
+          // Check if this is a value for a preceding non-boolean flag
+          const prevArg = args[i - 1];
+          if (prevArg?.startsWith('--') && !BOOLEAN_FLAGS.has(prevArg.slice(2))) {
+            // This is a value for a flag, skip it
+            continue;
+          }
+          textArg = arg;
+          break;
+        }
+      }
       await frameCommand({
         text: typeof options.text === 'string' ? options.text : textArg,
         skipWeather: options['skip-weather'] === true,
