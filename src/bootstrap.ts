@@ -273,6 +273,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
     try {
       database = await createDatabase();
       await database.connect();
+      // Run Knex migrations (migrate() now delegates to Knex internally)
       await database.migrate();
 
       // Create content model and repository
