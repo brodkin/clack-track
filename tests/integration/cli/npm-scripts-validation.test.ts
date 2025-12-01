@@ -11,7 +11,8 @@ interface ExecSyncErrorWithMessage extends Error {
 }
 
 describe('Database npm scripts validation', () => {
-  const worktreePath = '/workspace/trees/clack-mggy-npm-scripts';
+  // Use current working directory (or workspace root)
+  const worktreePath = process.cwd();
 
   describe('Knex migration scripts', () => {
     it('db:migrate should use correct knexfile path', () => {
