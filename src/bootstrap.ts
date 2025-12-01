@@ -36,8 +36,8 @@ import { ContentDataProvider } from './services/content-data-provider.js';
 import { WeatherService } from './services/weather-service.js';
 import { ColorBarService } from './content/frame/color-bar.js';
 import { Database, createDatabase } from './storage/database.js';
-import { ContentModel } from './storage/models/content.js';
-import { ContentRepository } from './storage/repositories/content-repo.js';
+import { ContentModel, VoteModel, LogModel } from './storage/models/index.js';
+import { ContentRepository, VoteRepository } from './storage/repositories/index.js';
 import type { AIProvider } from './types/ai.js';
 
 /**
@@ -56,6 +56,12 @@ export interface BootstrapResult {
   haClient: HomeAssistantClient | null;
   /** Database connection (null if not configured) - call disconnect() to clean up */
   database: Database | null;
+  /** Content repository for storing content records (undefined if database not configured) */
+  contentRepository: ContentRepository | undefined;
+  /** Vote repository for storing votes (undefined if database not configured) */
+  voteRepository: VoteRepository | undefined;
+  /** Log model for storing logs (undefined if database not configured) */
+  logModel: LogModel | undefined;
 }
 
 /**
@@ -258,6 +264,8 @@ export async function bootstrap(): Promise<BootstrapResult> {
   // Step 4.5: Initialize Database (if configured)
   let database: Database | null = null;
   let contentRepository: ContentRepository | undefined;
+  let voteRepository: VoteRepository | undefined;
+  let logModel: LogModel | undefined;
 
   // In test environment, always use in-memory SQLite via factory
   // In production, require DATABASE_URL to be configured
@@ -267,8 +275,16 @@ export async function bootstrap(): Promise<BootstrapResult> {
       await database.connect();
       await database.migrate();
 
+      // Create content model and repository
       const contentModel = new ContentModel(database);
       contentRepository = new ContentRepository(contentModel);
+
+      // Create vote model and repository
+      const voteModel = new VoteModel(database);
+      voteRepository = new VoteRepository(voteModel);
+
+      // Create log model (no repository wrapper needed - direct model access)
+      logModel = new LogModel(database);
 
       // Run 90-day retention cleanup on startup (fire-and-forget)
       contentRepository.cleanupOldRecords(90).catch(cleanupError => {
@@ -285,6 +301,8 @@ export async function bootstrap(): Promise<BootstrapResult> {
       );
       database = null;
       contentRepository = undefined;
+      voteRepository = undefined;
+      logModel = undefined;
     }
   }
 
@@ -350,5 +368,8 @@ export async function bootstrap(): Promise<BootstrapResult> {
     registry,
     haClient,
     database,
+    contentRepository,
+    voteRepository,
+    logModel,
   };
 }
