@@ -113,6 +113,20 @@ module.exports = {
       testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
       testTimeout: 60000, // E2E tests may take longer
       extensionsToTreatAsEsm: ['.ts'],
+      transform: {
+        '^.+\\.ts$': [
+          'ts-jest',
+          {
+            diagnostics: {
+              ignoreCodes: [151002, 2339, 2307, 7016, 2322, 2345],
+            },
+            tsconfig: {
+              module: 'commonjs',
+              esModuleInterop: true,
+            },
+          },
+        ],
+      },
       moduleNameMapper: {
         '^@/(.*)\\.js$': '<rootDir>/src/$1',
         '^@/(.*)$': '<rootDir>/src/$1',
