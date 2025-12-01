@@ -5,6 +5,7 @@ import {
   testHACommand,
   contentListCommand,
   contentTestCommand,
+  dbResetCommand,
 } from './commands/index.js';
 import { frameCommand } from './commands/frame.js';
 
@@ -17,6 +18,9 @@ const BOOLEAN_FLAGS = new Set([
   'interactive',
   'list',
   'with-frame',
+  'truncate',
+  'seed',
+  'force',
 ]);
 
 export async function runCLI(args: string[]): Promise<void> {
@@ -102,6 +106,15 @@ export async function runCLI(args: string[]): Promise<void> {
       });
       break;
     }
+    case 'db:reset': {
+      const options = parseOptions(args);
+      await dbResetCommand({
+        truncate: options.truncate === true,
+        seed: options.seed === true,
+        force: options.force === true,
+      });
+      break;
+    }
     default:
       console.log(`
 Clack Track CLI
@@ -114,6 +127,7 @@ Usage:
   npm run frame [text] [options]        Generate and preview a Vestaboard frame
   npm run content:list                  List all registered content generators
   npm run content:test <id> [options]   Test a specific generator without sending
+  npm run db:reset [options]            Reset database (development/test only)
 
 Available commands:
   generate        Generate new content and send to Vestaboard
@@ -123,6 +137,7 @@ Available commands:
   frame           Generate and preview a Vestaboard frame
   content:list    List all registered content generators
   content:test    Test a specific generator (dry run)
+  db:reset        Reset database with safety guards (dev/test only)
 
 Test AI Options:
   --provider <name>    Provider to test: openai, anthropic, or all (default: all)
@@ -141,6 +156,11 @@ Frame Options:
 
 Content Test Options:
   --with-frame         Apply frame decoration to generated content
+
+DB Reset Options:
+  --truncate           Truncate tables instead of dropping (keeps schema)
+  --seed               Run seeds after reset
+  --force              Skip confirmation prompts (for CI/CD)
       `);
   }
 }
