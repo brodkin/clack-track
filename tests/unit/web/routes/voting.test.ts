@@ -104,7 +104,13 @@ describe('Voting API Routes', () => {
         vote: 'good',
       };
 
-      await submitVote(mockRequest, mockResponse);
+      const mockRepository = {
+        submitVote: jest.fn(),
+        getVotesByContent: jest.fn(),
+        getOverallStats: jest.fn(),
+      } as unknown as VoteRepository;
+
+      await submitVote(mockRequest, mockResponse, mockRepository);
 
       expect(statusSpy).toHaveBeenCalledWith(400);
       expect(jsonSpy).toHaveBeenCalledWith({
@@ -118,7 +124,13 @@ describe('Voting API Routes', () => {
         contentId: '456',
       };
 
-      await submitVote(mockRequest, mockResponse);
+      const mockRepository = {
+        submitVote: jest.fn(),
+        getVotesByContent: jest.fn(),
+        getOverallStats: jest.fn(),
+      } as unknown as VoteRepository;
+
+      await submitVote(mockRequest, mockResponse, mockRepository);
 
       expect(statusSpy).toHaveBeenCalledWith(400);
       expect(jsonSpy).toHaveBeenCalledWith({
@@ -133,7 +145,13 @@ describe('Voting API Routes', () => {
         vote: 'excellent',
       };
 
-      await submitVote(mockRequest, mockResponse);
+      const mockRepository = {
+        submitVote: jest.fn(),
+        getVotesByContent: jest.fn(),
+        getOverallStats: jest.fn(),
+      } as unknown as VoteRepository;
+
+      await submitVote(mockRequest, mockResponse, mockRepository);
 
       expect(statusSpy).toHaveBeenCalledWith(400);
       expect(jsonSpy).toHaveBeenCalledWith({
@@ -145,7 +163,13 @@ describe('Voting API Routes', () => {
     it('should return 400 for non-object body', async () => {
       mockRequest.body = 'invalid';
 
-      await submitVote(mockRequest, mockResponse);
+      const mockRepository = {
+        submitVote: jest.fn(),
+        getVotesByContent: jest.fn(),
+        getOverallStats: jest.fn(),
+      } as unknown as VoteRepository;
+
+      await submitVote(mockRequest, mockResponse, mockRepository);
 
       expect(statusSpy).toHaveBeenCalledWith(400);
       expect(jsonSpy).toHaveBeenCalledWith({

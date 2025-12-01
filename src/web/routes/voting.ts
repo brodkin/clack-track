@@ -1,40 +1,6 @@
 import { Router } from 'express';
-import { Request, Response } from '../types.js';
+import { Request, Response, WebDependencies } from '../types.js';
 import { VoteRepository } from '../../storage/repositories/vote-repo.js';
-import { VoteModel } from '../../storage/models/vote.js';
-import { Database } from '../../storage/database.js';
-
-// Singleton repository instance
-let voteRepository: VoteRepository | null = null;
-let database: Database | null = null;
-let dbConnected = false;
-
-/**
- * Get or create Database instance and ensure connected
- */
-async function getDatabase(): Promise<Database> {
-  if (!database) {
-    database = new Database();
-  }
-  if (!dbConnected) {
-    await database.connect();
-    dbConnected = true;
-  }
-  return database;
-}
-
-/**
- * Get or create VoteRepository instance
- * Uses dependency injection pattern for testability
- */
-async function getVoteRepository(): Promise<VoteRepository> {
-  if (!voteRepository) {
-    const db = await getDatabase();
-    const model = new VoteModel(db);
-    voteRepository = new VoteRepository(model);
-  }
-  return voteRepository;
-}
 
 /**
  * Validate vote value
@@ -50,15 +16,23 @@ function isValidVote(vote: unknown): vote is 'good' | 'bad' {
  *
  * @param req - Express request object
  * @param res - Express response object
- * @param repository - Optional VoteRepository for testing (defaults to singleton)
+ * @param repository - VoteRepository instance (required for operation)
  */
 export async function submitVote(
   req: Request,
   res: Response,
   repository?: VoteRepository
 ): Promise<void> {
+  // Return 503 if repository not available (graceful degradation)
+  if (!repository) {
+    res.status(503).json({
+      success: false,
+      error: 'Voting service unavailable',
+    });
+    return;
+  }
+
   try {
-    const repo = repository ?? (await getVoteRepository());
     // Validate request body
     const body = req.body;
 
@@ -91,7 +65,7 @@ export async function submitVote(
     }
 
     // Submit vote to repository
-    const voteRecord = await repo.submitVote(Number(contentId), vote);
+    const voteRecord = await repository.submitVote(Number(contentId), vote);
 
     res.json({
       success: true,
@@ -112,16 +86,24 @@ export async function submitVote(
  *
  * @param req - Express request object
  * @param res - Express response object
- * @param repository - Optional VoteRepository for testing (defaults to singleton)
+ * @param repository - VoteRepository instance (required for operation)
  */
 export async function getVoteStats(
   req: Request,
   res: Response,
   repository?: VoteRepository
 ): Promise<void> {
+  // Return 503 if repository not available (graceful degradation)
+  if (!repository) {
+    res.status(503).json({
+      success: false,
+      error: 'Voting service unavailable',
+    });
+    return;
+  }
+
   try {
-    const repo = repository ?? (await getVoteRepository());
-    const stats = await repo.getOverallStats();
+    const stats = await repository.getOverallStats();
 
     res.json({
       success: true,
@@ -139,13 +121,15 @@ export async function getVoteStats(
 /**
  * Create and configure voting router
  *
+ * @param dependencies - WebDependencies containing voteRepository
  * @returns Express router with voting routes
  */
-export function createVotingRouter(): Router {
+export function createVotingRouter(dependencies: WebDependencies = {}): Router {
   const router = Router();
+  const { voteRepository } = dependencies;
 
-  router.post('/', (req, res) => submitVote(req as Request, res as Response));
-  router.get('/stats', (req, res) => getVoteStats(req as Request, res as Response));
+  router.post('/', (req, res) => submitVote(req as Request, res as Response, voteRepository));
+  router.get('/stats', (req, res) => getVoteStats(req as Request, res as Response, voteRepository));
 
   return router;
 }

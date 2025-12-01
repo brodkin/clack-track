@@ -1,40 +1,6 @@
 import { Router } from 'express';
-import { Request, Response } from '../types.js';
+import { Request, Response, WebDependencies } from '../types.js';
 import { ContentRepository } from '../../storage/repositories/content-repo.js';
-import { ContentModel } from '../../storage/models/content.js';
-import { Database } from '../../storage/database.js';
-
-// Singleton repository instance
-let contentRepository: ContentRepository | null = null;
-let database: Database | null = null;
-let dbConnected = false;
-
-/**
- * Get or create Database instance and ensure connected
- */
-async function getDatabase(): Promise<Database> {
-  if (!database) {
-    database = new Database();
-  }
-  if (!dbConnected) {
-    await database.connect();
-    dbConnected = true;
-  }
-  return database;
-}
-
-/**
- * Get or create ContentRepository instance
- * Uses dependency injection pattern for testability
- */
-async function getContentRepository(): Promise<ContentRepository> {
-  if (!contentRepository) {
-    const db = await getDatabase();
-    const model = new ContentModel(db);
-    contentRepository = new ContentRepository(model);
-  }
-  return contentRepository;
-}
 
 /**
  * GET /api/content/latest
@@ -42,16 +8,24 @@ async function getContentRepository(): Promise<ContentRepository> {
  *
  * @param req - Express request object
  * @param res - Express response object
- * @param repository - Optional ContentRepository for testing (defaults to singleton)
+ * @param repository - ContentRepository instance (required for operation)
  */
 export async function getLatestContent(
   req: Request,
   res: Response,
   repository?: ContentRepository
 ): Promise<void> {
+  // Return 503 if repository not available (graceful degradation)
+  if (!repository) {
+    res.status(503).json({
+      success: false,
+      error: 'Content service unavailable',
+    });
+    return;
+  }
+
   try {
-    const repo = repository ?? (await getContentRepository());
-    const content = await repo.getLatestContent();
+    const content = await repository.getLatestContent();
 
     if (!content) {
       res.status(404).json({
@@ -82,15 +56,23 @@ export async function getLatestContent(
  *
  * @param req - Express request object
  * @param res - Express response object
- * @param repository - Optional ContentRepository for testing (defaults to singleton)
+ * @param repository - ContentRepository instance (required for operation)
  */
 export async function getContentHistory(
   req: Request,
   res: Response,
   repository?: ContentRepository
 ): Promise<void> {
+  // Return 503 if repository not available (graceful degradation)
+  if (!repository) {
+    res.status(503).json({
+      success: false,
+      error: 'Content service unavailable',
+    });
+    return;
+  }
+
   try {
-    const repo = repository ?? (await getContentRepository());
     // Parse and validate limit parameter
     const limitParam = req.query.limit;
     let limit = 20; // Default limit
@@ -102,7 +84,7 @@ export async function getContentHistory(
       }
     }
 
-    const history = await repo.getContentHistory(limit);
+    const history = await repository.getContentHistory(limit);
 
     res.json({
       success: true,
@@ -124,13 +106,19 @@ export async function getContentHistory(
 /**
  * Create and configure content router
  *
+ * @param dependencies - WebDependencies containing contentRepository
  * @returns Express router with content routes
  */
-export function createContentRouter(): Router {
+export function createContentRouter(dependencies: WebDependencies = {}): Router {
   const router = Router();
+  const { contentRepository } = dependencies;
 
-  router.get('/latest', (req, res) => getLatestContent(req as Request, res as Response));
-  router.get('/history', (req, res) => getContentHistory(req as Request, res as Response));
+  router.get('/latest', (req, res) =>
+    getLatestContent(req as Request, res as Response, contentRepository)
+  );
+  router.get('/history', (req, res) =>
+    getContentHistory(req as Request, res as Response, contentRepository)
+  );
 
   return router;
 }
