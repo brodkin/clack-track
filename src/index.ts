@@ -11,6 +11,7 @@ import { WebServer } from './web/server.js';
 import { config } from './config/env.js';
 import { runCLI } from './cli/index.js';
 import { bootstrap } from './bootstrap.js';
+import { closeKnexInstance } from './storage/knex.js';
 
 async function main() {
   // Check if running as CLI command
@@ -44,8 +45,8 @@ async function main() {
     return;
   }
 
-  // Bootstrap to get database and repositories
-  const { database, contentRepository, voteRepository, logModel, scheduler, eventHandler } =
+  // Bootstrap to get knex and repositories
+  const { knex, contentRepository, voteRepository, logModel, scheduler, eventHandler } =
     await bootstrap();
 
   // Create WebServer with dependencies
@@ -72,7 +73,7 @@ async function main() {
         await webServer.stop();
         scheduler.stop();
         if (eventHandler) await eventHandler.shutdown();
-        if (database) await database.disconnect();
+        if (knex) await closeKnexInstance();
         process.exit(0);
       } catch (error) {
         console.error('Error during graceful shutdown:', error);
@@ -96,7 +97,7 @@ async function main() {
     console.error('Failed to start web server:', error);
     scheduler.stop();
     if (eventHandler) await eventHandler.shutdown();
-    if (database) await database.disconnect();
+    if (knex) await closeKnexInstance();
     process.exit(1);
   }
 }

@@ -1,4 +1,4 @@
-import { Database, DatabaseRow } from '../database.js';
+import { Knex } from 'knex';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
@@ -18,7 +18,7 @@ export type LogRecord = LogEntry;
  * Manages application logs for debugging and monitoring
  */
 export class LogModel {
-  constructor(private db: Database) {}
+  constructor(private knex: Knex) {}
 
   /**
    * Create a new log record in the database
@@ -27,17 +27,18 @@ export class LogModel {
     const now = new Date();
     const metadataJson = log.metadata ? JSON.stringify(log.metadata) : null;
 
-    const result = await this.db.run(
-      'INSERT INTO logs (level, message, metadata) VALUES (?, ?, ?)',
-      [log.level, log.message, metadataJson]
-    );
+    const [id] = await this.knex('logs').insert({
+      level: log.level,
+      message: log.message,
+      metadata: metadataJson,
+    });
 
-    if (!result.lastID) {
+    if (!id) {
       throw new Error('Failed to create log record');
     }
 
     return {
-      id: result.lastID,
+      id,
       level: log.level,
       message: log.message,
       created_at: now,
@@ -49,20 +50,16 @@ export class LogModel {
    * Find recent log records, optionally filtered by level
    */
   async findRecent(limit: number = 100, level?: LogLevel): Promise<LogEntry[]> {
-    let rows: DatabaseRow[];
+    let query = this.knex('logs')
+      .select('id', 'level', 'message', 'created_at', 'metadata')
+      .orderBy('created_at', 'desc')
+      .limit(limit);
 
     if (level) {
-      rows = await this.db.all(
-        'SELECT id, level, message, created_at, metadata FROM logs WHERE level = ? ORDER BY created_at DESC LIMIT ?',
-        [level, limit]
-      );
-    } else {
-      rows = await this.db.all(
-        'SELECT id, level, message, created_at, metadata FROM logs ORDER BY created_at DESC LIMIT ?',
-        [limit]
-      );
+      query = query.where('level', level);
     }
 
+    const rows = await query;
     return rows.map(row => this.mapRowToLogEntry(row));
   }
 
@@ -77,10 +74,10 @@ export class LogModel {
    * Find a log by ID
    */
   async findById(id: number): Promise<LogEntry | null> {
-    const row = await this.db.get(
-      'SELECT id, level, message, created_at, metadata FROM logs WHERE id = ?',
-      [id]
-    );
+    const row = await this.knex('logs')
+      .select('id', 'level', 'message', 'created_at', 'metadata')
+      .where('id', id)
+      .first();
 
     if (!row) {
       return null;
@@ -96,17 +93,18 @@ export class LogModel {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
-    const result = await this.db.run('DELETE FROM logs WHERE created_at < ?', [
-      cutoffDate.toISOString(),
-    ]);
-    return result.changes || 0;
+    const deletedCount = await this.knex('logs')
+      .where('created_at', '<', cutoffDate.toISOString())
+      .del();
+
+    return deletedCount;
   }
 
   /**
    * Get count of log records by level
    */
   async countByLevel(): Promise<Record<LogLevel, number>> {
-    const rows = await this.db.all('SELECT level, COUNT(*) as count FROM logs GROUP BY level', []);
+    const rows = await this.knex('logs').select('level').count('* as count').groupBy('level');
 
     const counts: Record<LogLevel, number> = {
       debug: 0,
@@ -130,11 +128,11 @@ export class LogModel {
    * Clear all logs (caution: deletes all log records)
    */
   async clear(): Promise<number> {
-    const result = await this.db.run('DELETE FROM logs', []);
-    return result.changes || 0;
+    const deletedCount = await this.knex('logs').del();
+    return deletedCount;
   }
 
-  private mapRowToLogEntry(row: DatabaseRow): LogEntry {
+  private mapRowToLogEntry(row: Record<string, unknown>): LogEntry {
     let metadata: Record<string, unknown> | undefined;
     try {
       const metadataStr = row.metadata as string | null;

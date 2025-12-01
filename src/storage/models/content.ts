@@ -1,4 +1,4 @@
-import { Database, DatabaseRow } from '../database.js';
+import { Knex } from 'knex';
 
 export interface ContentRecord {
   id: number;
@@ -32,13 +32,29 @@ export class ContentModel {
    * Standard SELECT fields for content records
    * Includes all columns from the enhanced schema
    */
-  private static readonly SELECT_FIELDS = `
-    id, text, type, generatedAt, sentAt, aiProvider, metadata,
-    status, generatorId, generatorName, priority, aiModel, modelTier,
-    failedOver, primaryProvider, primaryError, errorType, errorMessage, tokensUsed
-  `.trim();
+  private static readonly SELECT_FIELDS = [
+    'id',
+    'text',
+    'type',
+    'generatedAt',
+    'sentAt',
+    'aiProvider',
+    'metadata',
+    'status',
+    'generatorId',
+    'generatorName',
+    'priority',
+    'aiModel',
+    'modelTier',
+    'failedOver',
+    'primaryProvider',
+    'primaryError',
+    'errorType',
+    'errorMessage',
+    'tokensUsed',
+  ];
 
-  constructor(private db: Database) {}
+  constructor(private knex: Knex) {}
 
   /**
    * Validate and sanitize LIMIT clause value to prevent SQL injection
@@ -64,40 +80,33 @@ export class ContentModel {
   async create(content: Omit<ContentRecord, 'id'>): Promise<ContentRecord> {
     const metadataJson = content.metadata ? JSON.stringify(content.metadata) : null;
 
-    const result = await this.db.run(
-      `INSERT INTO content (
-        text, type, generatedAt, sentAt, aiProvider, metadata,
-        status, generatorId, generatorName, priority, aiModel, modelTier,
-        failedOver, primaryProvider, primaryError, errorType, errorMessage, tokensUsed
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        content.text,
-        content.type,
-        this.toMySQLDateTime(content.generatedAt),
-        content.sentAt ? this.toMySQLDateTime(content.sentAt) : null,
-        content.aiProvider,
-        metadataJson,
-        content.status || 'success',
-        content.generatorId || null,
-        content.generatorName || null,
-        content.priority !== undefined ? content.priority : null,
-        content.aiModel || null,
-        content.modelTier || null,
-        content.failedOver !== undefined ? content.failedOver : null,
-        content.primaryProvider || null,
-        content.primaryError || null,
-        content.errorType || null,
-        content.errorMessage || null,
-        content.tokensUsed !== undefined ? content.tokensUsed : null,
-      ]
-    );
+    const [id] = await this.knex('content').insert({
+      text: content.text,
+      type: content.type,
+      generatedAt: this.toMySQLDateTime(content.generatedAt),
+      sentAt: content.sentAt ? this.toMySQLDateTime(content.sentAt) : null,
+      aiProvider: content.aiProvider,
+      metadata: metadataJson,
+      status: content.status || 'success',
+      generatorId: content.generatorId || null,
+      generatorName: content.generatorName || null,
+      priority: content.priority !== undefined ? content.priority : null,
+      aiModel: content.aiModel || null,
+      modelTier: content.modelTier || null,
+      failedOver: content.failedOver !== undefined ? content.failedOver : null,
+      primaryProvider: content.primaryProvider || null,
+      primaryError: content.primaryError || null,
+      errorType: content.errorType || null,
+      errorMessage: content.errorMessage || null,
+      tokensUsed: content.tokensUsed !== undefined ? content.tokensUsed : null,
+    });
 
-    if (!result.lastID) {
+    if (!id) {
       throw new Error('Failed to create content record');
     }
 
     return {
-      id: result.lastID,
+      id: id,
       text: content.text,
       type: content.type,
       generatedAt: content.generatedAt,
@@ -123,10 +132,10 @@ export class ContentModel {
    * Find a content record by ID
    */
   async findById(id: number): Promise<ContentRecord | null> {
-    const row = await this.db.get(
-      `SELECT ${ContentModel.SELECT_FIELDS} FROM content WHERE id = ?`,
-      [id]
-    );
+    const row = await this.knex('content')
+      .select(ContentModel.SELECT_FIELDS)
+      .where('id', id)
+      .first();
 
     if (!row) {
       return null;
@@ -140,10 +149,10 @@ export class ContentModel {
    */
   async findLatest(limit: number = 10): Promise<ContentRecord[]> {
     const safeLimit = this.safeLimit(limit);
-    const rows = await this.db.all(
-      `SELECT ${ContentModel.SELECT_FIELDS} FROM content ORDER BY generatedAt DESC LIMIT ${safeLimit}`,
-      []
-    );
+    const rows = await this.knex('content')
+      .select(ContentModel.SELECT_FIELDS)
+      .orderBy('generatedAt', 'desc')
+      .limit(safeLimit);
 
     return rows.map(row => this.mapRowToContentRecord(row));
   }
@@ -153,10 +162,11 @@ export class ContentModel {
    */
   async findByType(type: 'major' | 'minor', limit: number = 10): Promise<ContentRecord[]> {
     const safeLimit = this.safeLimit(limit);
-    const rows = await this.db.all(
-      `SELECT ${ContentModel.SELECT_FIELDS} FROM content WHERE type = ? ORDER BY generatedAt DESC LIMIT ${safeLimit}`,
-      [type]
-    );
+    const rows = await this.knex('content')
+      .select(ContentModel.SELECT_FIELDS)
+      .where('type', type)
+      .orderBy('generatedAt', 'desc')
+      .limit(safeLimit);
 
     return rows.map(row => this.mapRowToContentRecord(row));
   }
@@ -165,10 +175,11 @@ export class ContentModel {
    * Find the most recent successfully sent content
    */
   async findLatestSent(): Promise<ContentRecord | null> {
-    const row = await this.db.get(
-      `SELECT ${ContentModel.SELECT_FIELDS} FROM content WHERE sentAt IS NOT NULL ORDER BY sentAt DESC LIMIT 1`,
-      []
-    );
+    const row = await this.knex('content')
+      .select(ContentModel.SELECT_FIELDS)
+      .whereNotNull('sentAt')
+      .orderBy('sentAt', 'desc')
+      .first();
 
     if (!row) {
       return null;
@@ -183,10 +194,11 @@ export class ContentModel {
   async markSent(id: number): Promise<ContentRecord | null> {
     const now = new Date();
 
-    await this.db.run('UPDATE content SET sentAt = ? WHERE id = ?', [
-      this.toMySQLDateTime(now),
-      id,
-    ]);
+    await this.knex('content')
+      .where('id', id)
+      .update({
+        sentAt: this.toMySQLDateTime(now),
+      });
 
     return this.findById(id);
   }
@@ -198,10 +210,11 @@ export class ContentModel {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
-    const result = await this.db.run('DELETE FROM content WHERE generatedAt < ?', [
-      this.toMySQLDateTime(cutoffDate),
-    ]);
-    return result.changes || 0;
+    const deletedCount = await this.knex('content')
+      .where('generatedAt', '<', this.toMySQLDateTime(cutoffDate))
+      .del();
+
+    return deletedCount;
   }
 
   /**
@@ -209,10 +222,11 @@ export class ContentModel {
    */
   async findByStatus(status: 'success' | 'failed', limit: number = 10): Promise<ContentRecord[]> {
     const safeLimit = this.safeLimit(limit);
-    const rows = await this.db.all(
-      `SELECT ${ContentModel.SELECT_FIELDS} FROM content WHERE status = ? ORDER BY generatedAt DESC LIMIT ${safeLimit}`,
-      [status]
-    );
+    const rows = await this.knex('content')
+      .select(ContentModel.SELECT_FIELDS)
+      .where('status', status)
+      .orderBy('generatedAt', 'desc')
+      .limit(safeLimit);
 
     return rows.map(row => this.mapRowToContentRecord(row));
   }
@@ -224,7 +238,7 @@ export class ContentModel {
     return this.findByStatus('failed', limit);
   }
 
-  private mapRowToContentRecord(row: DatabaseRow): ContentRecord {
+  private mapRowToContentRecord(row: Record<string, unknown>): ContentRecord {
     let metadata: Record<string, unknown> | undefined;
     try {
       const metadataStr = row.metadata as string | null;

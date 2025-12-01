@@ -1,4 +1,4 @@
-import { Database, DatabaseRow } from '../database.js';
+import { Knex } from 'knex';
 
 export interface Vote {
   id: number;
@@ -17,7 +17,7 @@ export type VoteRecord = Vote;
  * Manages user feedback (good/bad) on generated content
  */
 export class VoteModel {
-  constructor(private db: Database) {}
+  constructor(private knex: Knex) {}
 
   /**
    * Create a new vote record in the database
@@ -25,17 +25,19 @@ export class VoteModel {
   async create(vote: Omit<Vote, 'id' | 'created_at'>): Promise<Vote> {
     const now = new Date();
 
-    const result = await this.db.run(
-      'INSERT INTO votes (content_id, vote_type, userAgent, ipAddress) VALUES (?, ?, ?, ?)',
-      [vote.content_id, vote.vote_type, vote.userAgent || null, vote.ipAddress || null]
-    );
+    const [id] = await this.knex('votes').insert({
+      content_id: vote.content_id,
+      vote_type: vote.vote_type,
+      userAgent: vote.userAgent || null,
+      ipAddress: vote.ipAddress || null,
+    });
 
-    if (!result.lastID) {
+    if (!id) {
       throw new Error('Failed to create vote record');
     }
 
     return {
-      id: result.lastID,
+      id: id,
       content_id: vote.content_id,
       vote_type: vote.vote_type,
       created_at: now,
@@ -48,10 +50,11 @@ export class VoteModel {
    * Find all votes for a specific content piece
    */
   async findByContentId(contentId: number): Promise<Vote[]> {
-    const rows = await this.db.all(
-      'SELECT id, content_id, vote_type, created_at, userAgent, ipAddress FROM votes WHERE content_id = ? ORDER BY created_at DESC, id DESC',
-      [contentId]
-    );
+    const rows = await this.knex('votes')
+      .select('id', 'content_id', 'vote_type', 'created_at', 'userAgent', 'ipAddress')
+      .where('content_id', contentId)
+      .orderBy('created_at', 'desc')
+      .orderBy('id', 'desc');
 
     return rows.map(row => this.mapRowToVote(row));
   }
@@ -60,7 +63,7 @@ export class VoteModel {
    * Get overall vote statistics across all content
    */
   async getStats(): Promise<{ good: number; bad: number; ratio: number }> {
-    const rows = await this.db.all('SELECT vote_type FROM votes', []);
+    const rows = await this.knex('votes').select('vote_type');
 
     const good = rows.filter(row => row.vote_type === 'good').length;
     const bad = rows.filter(row => row.vote_type === 'bad').length;
@@ -74,10 +77,10 @@ export class VoteModel {
    * Find a vote by ID
    */
   async findById(id: number): Promise<Vote | null> {
-    const row = await this.db.get(
-      'SELECT id, content_id, vote_type, created_at, userAgent, ipAddress FROM votes WHERE id = ?',
-      [id]
-    );
+    const row = await this.knex('votes')
+      .select('id', 'content_id', 'vote_type', 'created_at', 'userAgent', 'ipAddress')
+      .where('id', id)
+      .first();
 
     if (!row) {
       return null;
@@ -90,11 +93,11 @@ export class VoteModel {
    * Delete all votes for a specific content
    */
   async deleteByContentId(contentId: number): Promise<number> {
-    const result = await this.db.run('DELETE FROM votes WHERE content_id = ?', [contentId]);
-    return result.changes || 0;
+    const deletedCount = await this.knex('votes').where('content_id', contentId).del();
+    return deletedCount;
   }
 
-  private mapRowToVote(row: DatabaseRow): Vote {
+  private mapRowToVote(row: Record<string, unknown>): Vote {
     return {
       id: row.id as number,
       content_id: row.content_id as number,

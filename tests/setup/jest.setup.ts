@@ -11,7 +11,7 @@
 
 // Import jest-dom matchers for web tests
 import '@testing-library/jest-dom';
-import { SQLiteDatabase } from '../../src/storage/sqlite-database.js';
+import { closeKnexInstance } from '../../src/storage/knex.js';
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
@@ -41,9 +41,9 @@ jest.setTimeout(30000);
 //   error: jest.fn(),
 // };
 
-// Clean up shared SQLite database instance after all tests complete
-afterAll(() => {
-  SQLiteDatabase.resetSharedInstance();
+// Clean up Knex instance after all tests complete
+afterAll(async () => {
+  await closeKnexInstance();
 });
 
 export {};

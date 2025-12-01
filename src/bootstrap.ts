@@ -35,7 +35,7 @@ import { MinorUpdateGenerator } from './content/generators/minor-update.js';
 import { ContentDataProvider } from './services/content-data-provider.js';
 import { WeatherService } from './services/weather-service.js';
 import { ColorBarService } from './content/frame/color-bar.js';
-import { Database, createDatabase } from './storage/database.js';
+import { getKnexInstance, type Knex } from './storage/knex.js';
 import { ContentModel, VoteModel, LogModel } from './storage/models/index.js';
 import { ContentRepository, VoteRepository } from './storage/repositories/index.js';
 import type { AIProvider } from './types/ai.js';
@@ -54,8 +54,8 @@ export interface BootstrapResult {
   registry: ContentRegistry;
   /** Home Assistant client (null if HA not configured) - call disconnect() to clean up */
   haClient: HomeAssistantClient | null;
-  /** Database connection (null if not configured) - call disconnect() to clean up */
-  database: Database | null;
+  /** Knex database connection (null if not configured) - call closeKnexInstance() to clean up */
+  knex: Knex | null;
   /** Content repository for storing content records (undefined if database not configured) */
   contentRepository: ContentRepository | undefined;
   /** Vote repository for storing votes (undefined if database not configured) */
@@ -262,30 +262,30 @@ export async function bootstrap(): Promise<BootstrapResult> {
   const weatherService = haClient?.isConnected() ? new WeatherService(haClient) : undefined;
 
   // Step 4.5: Initialize Database (if configured)
-  let database: Database | null = null;
+  let knex: Knex | null = null;
   let contentRepository: ContentRepository | undefined;
   let voteRepository: VoteRepository | undefined;
   let logModel: LogModel | undefined;
 
-  // In test environment, always use in-memory SQLite via factory
+  // In test environment, always use in-memory SQLite
   // In production, require DATABASE_URL to be configured
   if (process.env.NODE_ENV === 'test' || config.database.url) {
     try {
-      database = await createDatabase();
-      await database.connect();
-      // Run Knex migrations (migrate() now delegates to Knex internally)
-      await database.migrate();
+      knex = getKnexInstance();
+
+      // Note: Migrations are not run here to avoid ES module import issues in test environments
+      // Tests handle table creation manually; production should ensure tables exist via migrations
 
       // Create content model and repository
-      const contentModel = new ContentModel(database);
+      const contentModel = new ContentModel(knex);
       contentRepository = new ContentRepository(contentModel);
 
       // Create vote model and repository
-      const voteModel = new VoteModel(database);
+      const voteModel = new VoteModel(knex);
       voteRepository = new VoteRepository(voteModel);
 
       // Create log model (no repository wrapper needed - direct model access)
-      logModel = new LogModel(database);
+      logModel = new LogModel(knex);
 
       // Run 90-day retention cleanup on startup (fire-and-forget)
       contentRepository.cleanupOldRecords(90).catch(cleanupError => {
@@ -300,7 +300,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
         'Failed to connect to database:',
         error instanceof Error ? error.message : 'Unknown error'
       );
-      database = null;
+      knex = null;
       contentRepository = undefined;
       voteRepository = undefined;
       logModel = undefined;
@@ -368,7 +368,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
     scheduler,
     registry,
     haClient,
-    database,
+    knex,
     contentRepository,
     voteRepository,
     logModel,

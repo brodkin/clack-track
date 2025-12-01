@@ -1,5 +1,6 @@
 import { log, error } from '../../utils/logger.js';
 import { bootstrap, type BootstrapResult } from '../../bootstrap.js';
+import { closeKnexInstance } from '../../storage/knex.js';
 
 /**
  * Generate Command
@@ -13,7 +14,7 @@ import { bootstrap, type BootstrapResult } from '../../bootstrap.js';
 export async function generateCommand(options: { type?: 'major' | 'minor' }): Promise<void> {
   let scheduler: BootstrapResult['scheduler'] | null = null;
   let haClient: BootstrapResult['haClient'] = null;
-  let database: BootstrapResult['database'] = null;
+  let knex: BootstrapResult['knex'] = null;
 
   try {
     const updateType = options.type || 'major';
@@ -24,11 +25,11 @@ export async function generateCommand(options: { type?: 'major' | 'minor' }): Pr
       orchestrator,
       scheduler: bootstrapScheduler,
       haClient: bootstrapHaClient,
-      database: bootstrapDatabase,
+      knex: bootstrapKnex,
     } = await bootstrap();
     scheduler = bootstrapScheduler;
     haClient = bootstrapHaClient;
-    database = bootstrapDatabase;
+    knex = bootstrapKnex;
 
     // Step 2: Generate and send content via orchestrator
     await orchestrator.generateAndSend({
@@ -60,12 +61,12 @@ export async function generateCommand(options: { type?: 'major' | 'minor' }): Pr
       }
     }
 
-    // Disconnect database to allow process to exit
-    if (database) {
+    // Close Knex database connection to allow process to exit
+    if (knex) {
       try {
-        await database.disconnect();
+        await closeKnexInstance();
       } catch {
-        // Ignore database disconnect errors - not critical for CLI command
+        // Ignore Knex close errors - not critical for CLI command
       }
     }
   }

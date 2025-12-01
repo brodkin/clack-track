@@ -22,8 +22,8 @@ const config: { [key: string]: Knex.Config } = {
     useNullAsDefault: true,
     migrations: {
       directory: path.join(__dirname, 'migrations'),
-      extension: 'ts',
-      loadExtensions: ['.ts'],
+      extension: 'js',
+      loadExtensions: ['.js'],
     },
     seeds: {
       directory: path.join(__dirname, 'seeds'),
@@ -40,8 +40,8 @@ const config: { [key: string]: Knex.Config } = {
     useNullAsDefault: true,
     migrations: {
       directory: path.join(__dirname, 'migrations'),
-      extension: 'ts',
-      loadExtensions: ['.ts'],
+      extension: 'js',
+      loadExtensions: ['.js'],
     },
     seeds: {
       directory: path.join(__dirname, 'seeds'),
@@ -67,8 +67,8 @@ const config: { [key: string]: Knex.Config } = {
     useNullAsDefault: process.env.DB_TYPE !== 'mysql',
     migrations: {
       directory: path.join(__dirname, 'migrations'),
-      extension: 'ts',
-      loadExtensions: ['.ts'],
+      extension: 'js',
+      loadExtensions: ['.js'],
     },
     seeds: {
       directory: path.join(__dirname, 'seeds'),

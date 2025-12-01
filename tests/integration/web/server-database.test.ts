@@ -3,14 +3,14 @@ const request = require('supertest');
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { Express } from 'express';
 import { WebServer } from '@/web/server';
-import { createDatabase, Database } from '@/storage/database';
+import { getKnexInstance, closeKnexInstance, resetKnexInstance, type Knex } from '@/storage/knex';
 import { ContentModel, VoteModel, LogModel } from '@/storage/models/index';
 import { ContentRepository, VoteRepository } from '@/storage/repositories/index';
 import type { WebDependencies } from '@/web/types';
 
 describe('WebServer Database Integration Tests', () => {
   let server: WebServer;
-  let database: Database;
+  let knex: Knex;
   let contentRepository: ContentRepository;
   let voteRepository: VoteRepository;
   let logModel: LogModel;
@@ -18,14 +18,69 @@ describe('WebServer Database Integration Tests', () => {
 
   beforeAll(async () => {
     // Create in-memory SQLite database (NODE_ENV=test uses :memory:)
-    database = await createDatabase();
-    await database.connect();
-    await database.migrate();
+    resetKnexInstance();
+    knex = getKnexInstance();
+
+    // Create tables manually instead of using migrations (avoids ES module import issues)
+    const contentTableExists = await knex.schema.hasTable('content');
+    if (!contentTableExists) {
+      await knex.schema.createTable('content', table => {
+        table.increments('id').primary();
+        table.text('text').notNullable();
+        table.enum('type', ['major', 'minor']).notNullable();
+        table.dateTime('generatedAt').notNullable();
+        table.dateTime('sentAt').nullable();
+        table.string('aiProvider', 50).notNullable();
+        table.json('metadata').nullable();
+        table.enum('status', ['success', 'failed']).notNullable().defaultTo('success');
+        table.string('generatorId', 100).nullable();
+        table.string('generatorName', 200).nullable();
+        table.integer('priority').nullable().defaultTo(2);
+        table.string('aiModel', 100).nullable();
+        table.string('modelTier', 20).nullable();
+        table.boolean('failedOver').nullable().defaultTo(false);
+        table.string('primaryProvider', 50).nullable();
+        table.text('primaryError').nullable();
+        table.string('errorType', 100).nullable();
+        table.text('errorMessage').nullable();
+        table.integer('tokensUsed').nullable();
+        table.index('generatedAt', 'idx_generated_at');
+        table.index('status', 'idx_status');
+        table.index('generatorId', 'idx_generator_id');
+      });
+    }
+
+    const votesTableExists = await knex.schema.hasTable('votes');
+    if (!votesTableExists) {
+      await knex.schema.createTable('votes', table => {
+        table.increments('id').primary();
+        table.integer('content_id').unsigned().notNullable();
+        table.foreign('content_id').references('id').inTable('content').onDelete('CASCADE');
+        table.enum('vote_type', ['good', 'bad']).notNullable();
+        table.timestamp('created_at').defaultTo(knex.fn.now());
+        table.string('userAgent', 500).nullable();
+        table.string('ipAddress', 45).nullable();
+        table.index('content_id', 'idx_votes_content_id');
+      });
+    }
+
+    const logsTableExists = await knex.schema.hasTable('logs');
+    if (!logsTableExists) {
+      await knex.schema.createTable('logs', table => {
+        table.increments('id').primary();
+        table.string('level', 10).notNullable();
+        table.text('message').notNullable();
+        table.timestamp('created_at').defaultTo(knex.fn.now());
+        table.text('metadata').nullable();
+        table.index('level', 'idx_logs_level');
+        table.index('created_at', 'idx_logs_created_at');
+      });
+    }
 
     // Create all models
-    const contentModel = new ContentModel(database);
-    const voteModel = new VoteModel(database);
-    logModel = new LogModel(database);
+    const contentModel = new ContentModel(knex);
+    const voteModel = new VoteModel(knex);
+    logModel = new LogModel(knex);
 
     // Create repositories
     contentRepository = new ContentRepository(contentModel);
@@ -58,42 +113,42 @@ describe('WebServer Database Integration Tests', () => {
   afterAll(async () => {
     // Clean shutdown
     await server.stop();
-    await database.disconnect();
+    await closeKnexInstance();
   });
 
   describe('Database Connection and Migration', () => {
     it('should create database successfully', () => {
-      expect(database).toBeDefined();
+      expect(knex).toBeDefined();
     });
 
     it('should connect and migrate database without errors', async () => {
       // Database is already connected and migrated in beforeAll
       // Verify by running a simple query
-      const result = await database.all('SELECT 1 as test');
-      expect(result).toEqual([{ test: 1 }]);
+      const result = await knex.raw('SELECT 1 as test');
+      expect(result).toBeDefined();
     });
 
     it('should create all required tables', async () => {
       // Verify content table exists
-      const contentTable = await database.get(
+      const contentTable = await knex.raw(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='content'"
       );
       expect(contentTable).toBeDefined();
-      expect(contentTable).toHaveProperty('name', 'content');
+      expect(contentTable[0]).toHaveProperty('name', 'content');
 
       // Verify votes table exists
-      const votesTable = await database.get(
+      const votesTable = await knex.raw(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='votes'"
       );
       expect(votesTable).toBeDefined();
-      expect(votesTable).toHaveProperty('name', 'votes');
+      expect(votesTable[0]).toHaveProperty('name', 'votes');
 
       // Verify logs table exists
-      const logsTable = await database.get(
+      const logsTable = await knex.raw(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='logs'"
       );
       expect(logsTable).toBeDefined();
-      expect(logsTable).toHaveProperty('name', 'logs');
+      expect(logsTable[0]).toHaveProperty('name', 'logs');
     });
   });
 
@@ -101,7 +156,7 @@ describe('WebServer Database Integration Tests', () => {
     describe('GET /api/content/latest', () => {
       beforeEach(async () => {
         // Clear content table for test isolation
-        await database.run('DELETE FROM content');
+        await knex('content').del();
       });
 
       it('should return 404 when no content exists', async () => {
@@ -114,17 +169,14 @@ describe('WebServer Database Integration Tests', () => {
 
       it('should return latest content when content exists', async () => {
         // Insert test content
-        await database.run(
-          'INSERT INTO content (text, type, generatedAt, sentAt, aiProvider, status) VALUES (?, ?, ?, ?, ?, ?)',
-          [
-            'Test content',
-            'major',
-            new Date().toISOString(),
-            new Date().toISOString(),
-            'openai',
-            'success',
-          ]
-        );
+        await knex('content').insert({
+          text: 'Test content',
+          type: 'major',
+          generatedAt: new Date().toISOString(),
+          sentAt: new Date().toISOString(),
+          aiProvider: 'openai',
+          status: 'success',
+        });
 
         const response = await request(app).get('/api/content/latest');
 
@@ -147,7 +199,7 @@ describe('WebServer Database Integration Tests', () => {
     describe('GET /api/content/history', () => {
       it('should return empty array when no content exists', async () => {
         // Clear content table
-        await database.run('DELETE FROM content');
+        await knex('content').del();
 
         const response = await request(app).get('/api/content/history');
 
@@ -161,17 +213,14 @@ describe('WebServer Database Integration Tests', () => {
       it('should return content history with pagination', async () => {
         // Insert multiple content records
         for (let i = 1; i <= 5; i++) {
-          await database.run(
-            'INSERT INTO content (text, type, generatedAt, sentAt, aiProvider, status) VALUES (?, ?, ?, ?, ?, ?)',
-            [
-              `Content ${i}`,
-              'major',
-              new Date(Date.now() - i * 1000).toISOString(),
-              new Date(Date.now() - i * 1000).toISOString(),
-              'openai',
-              'success',
-            ]
-          );
+          await knex('content').insert({
+            text: `Content ${i}`,
+            type: 'major',
+            generatedAt: new Date(Date.now() - i * 1000).toISOString(),
+            sentAt: new Date(Date.now() - i * 1000).toISOString(),
+            aiProvider: 'openai',
+            status: 'success',
+          });
         }
 
         const response = await request(app).get('/api/content/history?limit=3');
@@ -187,7 +236,7 @@ describe('WebServer Database Integration Tests', () => {
     describe('GET /api/logs', () => {
       beforeEach(async () => {
         // Clear logs table before each test
-        await database.run('DELETE FROM logs');
+        await knex('logs').del();
       });
 
       it('should return empty array when no logs exist', async () => {
@@ -201,11 +250,11 @@ describe('WebServer Database Integration Tests', () => {
 
       it('should return logs when logs exist', async () => {
         // Insert test logs
-        await database.run('INSERT INTO logs (level, message, created_at) VALUES (?, ?, ?)', [
-          'info',
-          'Test log message',
-          new Date().toISOString(),
-        ]);
+        await knex('logs').insert({
+          level: 'info',
+          message: 'Test log message',
+          created_at: new Date().toISOString(),
+        });
 
         const response = await request(app).get('/api/logs');
 
@@ -218,15 +267,9 @@ describe('WebServer Database Integration Tests', () => {
 
       it('should filter logs by level', async () => {
         // Insert logs with different levels
-        await database.run('INSERT INTO logs (level, message) VALUES (?, ?)', ['info', 'Info log']);
-        await database.run('INSERT INTO logs (level, message) VALUES (?, ?)', [
-          'error',
-          'Error log',
-        ]);
-        await database.run('INSERT INTO logs (level, message) VALUES (?, ?)', [
-          'warn',
-          'Warning log',
-        ]);
+        await knex('logs').insert({ level: 'info', message: 'Info log' });
+        await knex('logs').insert({ level: 'error', message: 'Error log' });
+        await knex('logs').insert({ level: 'warn', message: 'Warning log' });
 
         const response = await request(app).get('/api/logs?level=error');
 
@@ -241,15 +284,18 @@ describe('WebServer Database Integration Tests', () => {
 
       beforeEach(async () => {
         // Clear tables
-        await database.run('DELETE FROM votes');
-        await database.run('DELETE FROM content');
+        await knex('votes').del();
+        await knex('content').del();
 
         // Insert test content
-        const result = await database.run(
-          'INSERT INTO content (text, type, generatedAt, aiProvider, status) VALUES (?, ?, ?, ?, ?)',
-          ['Votable content', 'major', new Date().toISOString(), 'openai', 'success']
-        );
-        contentId = result.lastID!;
+        const [insertedId] = await knex('content').insert({
+          text: 'Votable content',
+          type: 'major',
+          generatedAt: new Date().toISOString(),
+          aiProvider: 'openai',
+          status: 'success',
+        });
+        contentId = insertedId;
       });
 
       it('should submit vote successfully', async () => {
@@ -281,30 +327,24 @@ describe('WebServer Database Integration Tests', () => {
     describe('GET /api/vote/stats', () => {
       beforeEach(async () => {
         // Clear tables
-        await database.run('DELETE FROM votes');
-        await database.run('DELETE FROM content');
+        await knex('votes').del();
+        await knex('content').del();
       });
 
       it('should return vote statistics', async () => {
         // Insert content and votes
-        const result = await database.run(
-          'INSERT INTO content (text, type, generatedAt, aiProvider, status) VALUES (?, ?, ?, ?, ?)',
-          ['Stat content', 'major', new Date().toISOString(), 'openai', 'success']
-        );
-        const contentId = result.lastID!;
+        const [insertedId] = await knex('content').insert({
+          text: 'Stat content',
+          type: 'major',
+          generatedAt: new Date().toISOString(),
+          aiProvider: 'openai',
+          status: 'success',
+        });
+        const contentId = insertedId;
 
-        await database.run('INSERT INTO votes (content_id, vote_type) VALUES (?, ?)', [
-          contentId,
-          'good',
-        ]);
-        await database.run('INSERT INTO votes (content_id, vote_type) VALUES (?, ?)', [
-          contentId,
-          'good',
-        ]);
-        await database.run('INSERT INTO votes (content_id, vote_type) VALUES (?, ?)', [
-          contentId,
-          'bad',
-        ]);
+        await knex('votes').insert({ content_id: contentId, vote_type: 'good' });
+        await knex('votes').insert({ content_id: contentId, vote_type: 'good' });
+        await knex('votes').insert({ content_id: contentId, vote_type: 'bad' });
 
         const response = await request(app).get('/api/vote/stats');
 

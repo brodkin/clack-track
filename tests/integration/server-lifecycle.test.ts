@@ -153,8 +153,8 @@ describe('WebServer Configuration Integration', () => {
     let mockHAClient: {
       disconnect: jest.Mock;
     } | null;
-    let mockDatabase: {
-      disconnect: jest.Mock;
+    let mockKnex: {
+      destroy: jest.Mock;
     } | null;
 
     beforeEach(() => {
@@ -179,13 +179,13 @@ describe('WebServer Configuration Integration', () => {
         disconnect: jest.fn().mockResolvedValue(undefined),
       };
 
-      mockDatabase = {
-        disconnect: jest.fn().mockResolvedValue(undefined),
+      mockKnex = {
+        destroy: jest.fn().mockResolvedValue(undefined),
       };
 
       // Mock bootstrap to return mocked components
       mockBootstrap = jest.fn().mockResolvedValue({
-        database: mockDatabase,
+        knex: mockKnex,
         contentRepository: { list: jest.fn() },
         voteRepository: { create: jest.fn() },
         logModel: { log: jest.fn() },
@@ -200,7 +200,7 @@ describe('WebServer Configuration Integration', () => {
     it('should call bootstrap and pass dependencies to WebServer', async () => {
       // This test validates the integration pattern we expect in index.ts:
       // 1. Call bootstrap()
-      // 2. Extract database and repositories
+      // 2. Extract knex and repositories
       // 3. Pass to WebServer constructor via dependencies parameter
 
       const bootstrapResult = await mockBootstrap();
@@ -209,7 +209,7 @@ describe('WebServer Configuration Integration', () => {
       expect(mockBootstrap).toHaveBeenCalled();
 
       // Verify bootstrap returns expected dependencies
-      expect(bootstrapResult.database).toBeDefined();
+      expect(bootstrapResult.knex).toBeDefined();
       expect(bootstrapResult.contentRepository).toBeDefined();
       expect(bootstrapResult.voteRepository).toBeDefined();
       expect(bootstrapResult.logModel).toBeDefined();
@@ -267,7 +267,7 @@ describe('WebServer Configuration Integration', () => {
     it('should handle missing eventHandler gracefully', async () => {
       // Arrange - Bootstrap returns null eventHandler (HA not configured)
       mockBootstrap.mockResolvedValueOnce({
-        database: mockDatabase,
+        knex: mockKnex,
         contentRepository: { list: jest.fn() },
         voteRepository: { create: jest.fn() },
         logModel: { log: jest.fn() },
@@ -320,7 +320,7 @@ describe('WebServer Configuration Integration', () => {
       expect(bootstrapResult.haClient?.disconnect).toHaveBeenCalled();
     });
 
-    it('should cleanup database on WebServer start failure', async () => {
+    it('should cleanup knex on WebServer start failure', async () => {
       // Arrange
       const bootstrapResult = await mockBootstrap();
       const startError = new Error('Failed to bind to port');
@@ -332,15 +332,15 @@ describe('WebServer Configuration Integration', () => {
       // Cleanup should be called in correct order
       bootstrapResult.scheduler.stop();
       if (bootstrapResult.haClient) await bootstrapResult.haClient.disconnect();
-      if (bootstrapResult.database) await bootstrapResult.database.disconnect();
+      if (bootstrapResult.knex) await bootstrapResult.knex.destroy();
 
-      expect(bootstrapResult.database?.disconnect).toHaveBeenCalled();
+      expect(bootstrapResult.knex?.destroy).toHaveBeenCalled();
     });
 
-    it('should handle null haClient and database gracefully during cleanup', async () => {
+    it('should handle null haClient and knex gracefully during cleanup', async () => {
       // Arrange - Bootstrap returns null for optional components
       mockBootstrap.mockResolvedValueOnce({
-        database: null,
+        knex: null,
         contentRepository: undefined,
         voteRepository: undefined,
         logModel: undefined,
@@ -361,12 +361,12 @@ describe('WebServer Configuration Integration', () => {
       // Cleanup with null checks
       bootstrapResult.scheduler.stop();
       if (bootstrapResult.haClient) await bootstrapResult.haClient.disconnect();
-      if (bootstrapResult.database) await bootstrapResult.database.disconnect();
+      if (bootstrapResult.knex) await bootstrapResult.knex.destroy();
 
       // Should complete without errors
       expect(bootstrapResult.scheduler.stop).toHaveBeenCalled();
       expect(bootstrapResult.haClient).toBeNull();
-      expect(bootstrapResult.database).toBeNull();
+      expect(bootstrapResult.knex).toBeNull();
     });
   });
 
@@ -383,8 +383,8 @@ describe('WebServer Configuration Integration', () => {
       initialize: jest.Mock;
       shutdown: jest.Mock;
     } | null;
-    let mockDatabase: {
-      disconnect: jest.Mock;
+    let mockKnex: {
+      destroy: jest.Mock;
     } | null;
     let mockProcessExit: jest.SpyInstance;
     let mockConsoleError: jest.SpyInstance;
@@ -409,8 +409,8 @@ describe('WebServer Configuration Integration', () => {
         shutdown: jest.fn().mockResolvedValue(undefined),
       };
 
-      mockDatabase = {
-        disconnect: jest.fn().mockResolvedValue(undefined),
+      mockKnex = {
+        destroy: jest.fn().mockResolvedValue(undefined),
       };
 
       // Mock process.exit to prevent test termination
@@ -446,7 +446,7 @@ describe('WebServer Configuration Integration', () => {
         await mockWebServer.stop();
         mockScheduler.stop();
         if (mockEventHandler) await mockEventHandler.shutdown();
-        if (mockDatabase) await mockDatabase.disconnect();
+        if (mockKnex) await mockKnex.destroy();
       };
 
       process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -465,7 +465,7 @@ describe('WebServer Configuration Integration', () => {
         await mockWebServer.stop();
         mockScheduler.stop();
         if (mockEventHandler) await mockEventHandler.shutdown();
-        if (mockDatabase) await mockDatabase.disconnect();
+        if (mockKnex) await mockKnex.destroy();
       };
 
       process.on('SIGINT', () => gracefulShutdown('SIGINT'));
@@ -483,7 +483,7 @@ describe('WebServer Configuration Integration', () => {
         await mockWebServer.stop();
         mockScheduler.stop();
         if (mockEventHandler) await mockEventHandler.shutdown();
-        if (mockDatabase) await mockDatabase.disconnect();
+        if (mockKnex) await mockKnex.destroy();
       };
 
       process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -503,7 +503,7 @@ describe('WebServer Configuration Integration', () => {
         await mockWebServer.stop();
         mockScheduler.stop();
         if (mockEventHandler) await mockEventHandler.shutdown();
-        if (mockDatabase) await mockDatabase.disconnect();
+        if (mockKnex) await mockKnex.destroy();
       };
 
       process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -523,7 +523,7 @@ describe('WebServer Configuration Integration', () => {
         await mockWebServer.stop();
         mockScheduler.stop();
         if (mockEventHandler) await mockEventHandler.shutdown();
-        if (mockDatabase) await mockDatabase.disconnect();
+        if (mockKnex) await mockKnex.destroy();
       };
 
       process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -535,7 +535,7 @@ describe('WebServer Configuration Integration', () => {
       expect(mockEventHandler?.shutdown).toHaveBeenCalled();
     });
 
-    it('should call database.disconnect() on SIGTERM', async () => {
+    it('should call knex.destroy() on SIGTERM', async () => {
       // Arrange
       await mockWebServer.start();
 
@@ -543,7 +543,7 @@ describe('WebServer Configuration Integration', () => {
         await mockWebServer.stop();
         mockScheduler.stop();
         if (mockEventHandler) await mockEventHandler.shutdown();
-        if (mockDatabase) await mockDatabase.disconnect();
+        if (mockKnex) await mockKnex.destroy();
       };
 
       process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -552,10 +552,10 @@ describe('WebServer Configuration Integration', () => {
       await signalHandlers['SIGTERM']('SIGTERM');
 
       // Assert
-      expect(mockDatabase?.disconnect).toHaveBeenCalled();
+      expect(mockKnex?.destroy).toHaveBeenCalled();
     });
 
-    it('should cleanup in correct order on SIGTERM: webServer → scheduler → eventHandler → database', async () => {
+    it('should cleanup in correct order on SIGTERM: webServer → scheduler → eventHandler → knex', async () => {
       // Arrange
       await mockWebServer.start();
 
@@ -563,7 +563,7 @@ describe('WebServer Configuration Integration', () => {
         await mockWebServer.stop();
         mockScheduler.stop();
         if (mockEventHandler) await mockEventHandler.shutdown();
-        if (mockDatabase) await mockDatabase.disconnect();
+        if (mockKnex) await mockKnex.destroy();
       };
 
       process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -576,12 +576,12 @@ describe('WebServer Configuration Integration', () => {
         mockWebServer.stop,
         mockScheduler.stop,
         mockEventHandler?.shutdown,
-        mockDatabase?.disconnect,
+        mockKnex?.destroy,
       ].map(fn => fn?.mock.invocationCallOrder?.[0]);
 
       expect(callOrder[0]).toBeLessThan(callOrder[1]!); // webServer before scheduler
       expect(callOrder[1]!).toBeLessThan(callOrder[2]!); // scheduler before eventHandler
-      expect(callOrder[2]!).toBeLessThan(callOrder[3]!); // eventHandler before database
+      expect(callOrder[2]!).toBeLessThan(callOrder[3]!); // eventHandler before knex
     });
 
     it('should handle null eventHandler during SIGTERM cleanup', async () => {
@@ -593,7 +593,7 @@ describe('WebServer Configuration Integration', () => {
         await mockWebServer.stop();
         mockScheduler.stop();
         if (nullEventHandler) await nullEventHandler.shutdown();
-        if (mockDatabase) await mockDatabase.disconnect();
+        if (mockKnex) await mockKnex.destroy();
       };
 
       process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -602,19 +602,19 @@ describe('WebServer Configuration Integration', () => {
       await expect(signalHandlers['SIGTERM']('SIGTERM')).resolves.not.toThrow();
       expect(mockWebServer.stop).toHaveBeenCalled();
       expect(mockScheduler.stop).toHaveBeenCalled();
-      expect(mockDatabase?.disconnect).toHaveBeenCalled();
+      expect(mockKnex?.destroy).toHaveBeenCalled();
     });
 
-    it('should handle null database during SIGTERM cleanup', async () => {
+    it('should handle null knex during SIGTERM cleanup', async () => {
       // Arrange
-      const nullDatabase = null;
+      const nullKnex = null;
       await mockWebServer.start();
 
       const gracefulShutdown = async (_signal: string) => {
         await mockWebServer.stop();
         mockScheduler.stop();
         if (mockEventHandler) await mockEventHandler.shutdown();
-        if (nullDatabase) await nullDatabase.disconnect();
+        if (nullKnex) await nullKnex.destroy();
       };
 
       process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -644,7 +644,7 @@ describe('WebServer Configuration Integration', () => {
           await mockWebServer.stop();
           mockScheduler.stop();
           if (mockEventHandler) await mockEventHandler.shutdown();
-          if (mockDatabase) await mockDatabase.disconnect();
+          if (mockKnex) await mockKnex.destroy();
           process.exit(0);
         } catch (error) {
           console.error('Error during graceful shutdown:', error);
@@ -685,7 +685,7 @@ describe('WebServer Configuration Integration', () => {
           await mockWebServer.stop();
           mockScheduler.stop();
           if (mockEventHandler) await mockEventHandler.shutdown();
-          if (mockDatabase) await mockDatabase.disconnect();
+          if (mockKnex) await mockKnex.destroy();
           process.exit(0);
         } catch (error) {
           console.error('Error during graceful shutdown:', error);
@@ -712,10 +712,10 @@ describe('WebServer Configuration Integration', () => {
       expect(mockProcessExit).toHaveBeenCalledWith(1);
     });
 
-    it('should handle database.disconnect() error in SIGTERM handler', async () => {
+    it('should handle knex.destroy() error in SIGTERM handler', async () => {
       // Arrange
-      const disconnectError = new Error('Failed to disconnect database');
-      mockDatabase!.disconnect.mockRejectedValueOnce(disconnectError);
+      const destroyError = new Error('Failed to destroy knex connection');
+      mockKnex!.destroy.mockRejectedValueOnce(destroyError);
       await mockWebServer.start();
 
       // Override process.exit to NOT throw
@@ -728,7 +728,7 @@ describe('WebServer Configuration Integration', () => {
           await mockWebServer.stop();
           mockScheduler.stop();
           if (mockEventHandler) await mockEventHandler.shutdown();
-          if (mockDatabase) await mockDatabase.disconnect();
+          if (mockKnex) await mockKnex.destroy();
           process.exit(0);
         } catch (error) {
           console.error('Error during graceful shutdown:', error);
@@ -750,7 +750,7 @@ describe('WebServer Configuration Integration', () => {
       // Assert
       expect(mockConsoleError).toHaveBeenCalledWith(
         'Error during graceful shutdown:',
-        disconnectError
+        destroyError
       );
       expect(mockProcessExit).toHaveBeenCalledWith(1);
     });
@@ -771,7 +771,7 @@ describe('WebServer Configuration Integration', () => {
           await mockWebServer.stop();
           mockScheduler.stop();
           if (mockEventHandler) await mockEventHandler.shutdown();
-          if (mockDatabase) await mockDatabase.disconnect();
+          if (mockKnex) await mockKnex.destroy();
           process.exit(0);
         } catch (error) {
           console.error('Error during graceful shutdown:', error);
@@ -809,7 +809,7 @@ describe('WebServer Configuration Integration', () => {
           await mockWebServer.stop();
           mockScheduler.stop();
           if (mockEventHandler) await mockEventHandler.shutdown();
-          if (mockDatabase) await mockDatabase.disconnect();
+          if (mockKnex) await mockKnex.destroy();
           process.exit(0);
         } catch (error) {
           console.error('Error during graceful shutdown:', error);
@@ -832,7 +832,7 @@ describe('WebServer Configuration Integration', () => {
       expect(mockWebServer.stop).toHaveBeenCalled();
       expect(mockScheduler.stop).toHaveBeenCalled();
       expect(mockEventHandler?.shutdown).toHaveBeenCalled();
-      expect(mockDatabase?.disconnect).toHaveBeenCalled();
+      expect(mockKnex?.destroy).toHaveBeenCalled();
       expect(mockProcessExit).toHaveBeenCalledWith(0);
     });
   });
@@ -851,8 +851,8 @@ describe('WebServer Configuration Integration', () => {
       initialize: jest.Mock;
       shutdown: jest.Mock;
     } | null;
-    let mockDatabase: {
-      disconnect: jest.Mock;
+    let mockKnex: {
+      destroy: jest.Mock;
     } | null;
 
     beforeEach(() => {
@@ -874,13 +874,13 @@ describe('WebServer Configuration Integration', () => {
         shutdown: jest.fn().mockResolvedValue(undefined),
       };
 
-      mockDatabase = {
-        disconnect: jest.fn().mockResolvedValue(undefined),
+      mockKnex = {
+        destroy: jest.fn().mockResolvedValue(undefined),
       };
 
       // Mock bootstrap to return mocked components
       mockBootstrap = jest.fn().mockResolvedValue({
-        database: mockDatabase,
+        knex: mockKnex,
         contentRepository: { list: jest.fn() },
         voteRepository: { create: jest.fn() },
         logModel: { log: jest.fn() },
@@ -903,7 +903,7 @@ describe('WebServer Configuration Integration', () => {
       // Cleanup should use eventHandler.shutdown()
       bootstrapResult.scheduler.stop();
       if (bootstrapResult.eventHandler) await bootstrapResult.eventHandler.shutdown();
-      if (bootstrapResult.database) await bootstrapResult.database.disconnect();
+      if (bootstrapResult.knex) await bootstrapResult.knex.destroy();
 
       expect(bootstrapResult.eventHandler?.shutdown).toHaveBeenCalled();
     });
@@ -915,7 +915,7 @@ describe('WebServer Configuration Integration', () => {
       };
 
       mockBootstrap.mockResolvedValueOnce({
-        database: mockDatabase,
+        knex: mockKnex,
         contentRepository: { list: jest.fn() },
         voteRepository: { create: jest.fn() },
         logModel: { log: jest.fn() },
@@ -936,7 +936,7 @@ describe('WebServer Configuration Integration', () => {
       // Cleanup should use eventHandler.shutdown() which internally handles haClient
       bootstrapResult.scheduler.stop();
       if (bootstrapResult.eventHandler) await bootstrapResult.eventHandler.shutdown();
-      if (bootstrapResult.database) await bootstrapResult.database.disconnect();
+      if (bootstrapResult.knex) await bootstrapResult.knex.destroy();
 
       // haClient.disconnect should NOT be called directly
       expect(mockHAClient.disconnect).not.toHaveBeenCalled();

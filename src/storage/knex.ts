@@ -27,13 +27,13 @@ function loadKnexConfig(environment: string): Knex.Config {
       useNullAsDefault: true,
       migrations: {
         directory: migrationsDir,
-        extension: 'ts',
-        loadExtensions: ['.ts'],
+        loadExtensions: ['.js'],
+        // Use CommonJS require for migrations in test environment
+        disableMigrationsListValidation: true,
       },
       seeds: {
         directory: seedsDir,
-        extension: 'ts',
-        loadExtensions: ['.ts'],
+        loadExtensions: ['.js'],
       },
     };
   }
@@ -50,13 +50,11 @@ function loadKnexConfig(environment: string): Knex.Config {
       },
       migrations: {
         directory: migrationsDir,
-        extension: 'ts',
-        loadExtensions: ['.ts'],
+        loadExtensions: ['.js'],
       },
       seeds: {
         directory: seedsDir,
-        extension: 'ts',
-        loadExtensions: ['.ts'],
+        loadExtensions: ['.js'],
       },
       pool: {
         min: 2,
@@ -74,13 +72,11 @@ function loadKnexConfig(environment: string): Knex.Config {
     useNullAsDefault: true,
     migrations: {
       directory: migrationsDir,
-      extension: 'ts',
-      loadExtensions: ['.ts'],
+      loadExtensions: ['.js'],
     },
     seeds: {
       directory: seedsDir,
-      extension: 'ts',
-      loadExtensions: ['.ts'],
+      loadExtensions: ['.js'],
     },
   };
 }
@@ -155,6 +151,60 @@ export async function closeKnexInstance(): Promise<void> {
  */
 export function resetKnexInstance(): void {
   knexInstance = null;
+}
+
+/**
+ * Initialize Knex connection and run migrations
+ *
+ * This function provides a unified initialization point for database setup,
+ * combining connection establishment with schema migrations.
+ *
+ * Following SOLID principles:
+ * - Single Responsibility: Handles database initialization lifecycle
+ * - Dependency Inversion: Returns Knex interface, not concrete implementation
+ *
+ * @returns Promise resolving to the initialized Knex instance
+ * @throws Error if migration fails
+ */
+export async function initializeKnex(): Promise<Knex> {
+  const knex = getKnexInstance();
+
+  try {
+    const [batchNo, migrationFiles] = await knex.migrate.latest();
+    log(`Database migrations completed: batch ${batchNo}, files: ${migrationFiles.join(', ')}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    log(`Migration error: ${errorMessage}`);
+    throw error;
+  }
+
+  return knex;
+}
+
+/**
+ * Check if Knex database connection is active
+ *
+ * Executes a simple query to verify connectivity. Useful for health checks
+ * and application startup validation.
+ *
+ * Following SOLID principles:
+ * - Single Responsibility: Only checks connection health
+ * - Open/Closed: Returns boolean for easy extension
+ *
+ * @returns Promise resolving to true if connected, false otherwise
+ */
+export async function isKnexConnected(): Promise<boolean> {
+  // Return false if no instance exists (don't create one)
+  if (!knexInstance) {
+    return false;
+  }
+
+  try {
+    await knexInstance.raw('SELECT 1');
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**

@@ -1,14 +1,28 @@
-import { createKnexInstance, getKnexInstance, closeKnexInstance } from '@/storage/knex.js';
+import {
+  createKnexInstance,
+  getKnexInstance,
+  closeKnexInstance,
+  initializeKnex,
+  isKnexConnected,
+} from '@/storage/knex.js';
 import type { Knex } from 'knex';
 
 // Mock knex module
 jest.mock('knex', () => {
+  const mockMigrateLatest = jest.fn().mockResolvedValue([1, ['migration_1']]);
+  const mockRaw = jest.fn().mockResolvedValue({ rows: [{ '1': 1 }] });
   const mockDestroy = jest.fn().mockResolvedValue(undefined);
   const mockKnex = jest.fn(() => ({
     destroy: mockDestroy,
+    migrate: {
+      latest: mockMigrateLatest,
+    },
+    raw: mockRaw,
     client: { config: { client: 'sqlite3' } },
   }));
   mockKnex.mockDestroy = mockDestroy;
+  mockKnex.mockMigrateLatest = mockMigrateLatest;
+  mockKnex.mockRaw = mockRaw;
   return mockKnex;
 });
 
@@ -127,6 +141,18 @@ describe('Knex Factory and Singleton', () => {
 
       expect(knexMock).toHaveBeenCalled();
     });
+
+    it('should handle errors during destroy gracefully', async () => {
+      getKnexInstance();
+      const destroyMock = (knexMock as jest.Mock & { mockDestroy: jest.Mock }).mockDestroy;
+      destroyMock.mockRejectedValueOnce(new Error('Destroy failed'));
+
+      await expect(closeKnexInstance()).resolves.not.toThrow();
+
+      // Verify isKnexConnected returns false after failed cleanup
+      const connected = await isKnexConnected();
+      expect(connected).toBe(false);
+    });
   });
 
   describe('Environment-specific configuration loading', () => {
@@ -173,6 +199,82 @@ describe('Knex Factory and Singleton', () => {
       process.env.DB_PASSWORD = originalDbPassword;
       process.env.DB_NAME = originalDbName;
       process.env.DB_PORT = originalDbPort;
+    });
+  });
+
+  describe('initializeKnex()', () => {
+    it('should create a Knex instance and run migrations', async () => {
+      const instance = await initializeKnex();
+
+      expect(instance).toBeDefined();
+      expect(knexMock).toHaveBeenCalled();
+
+      const mockInstance = knexMock.mock.results[0].value;
+      expect(mockInstance.migrate.latest).toHaveBeenCalled();
+    });
+
+    it('should return the same singleton instance on subsequent calls', async () => {
+      const instance1 = await initializeKnex();
+      const instance2 = await initializeKnex();
+
+      expect(instance1).toBe(instance2);
+    });
+
+    it('should handle migration errors gracefully', async () => {
+      // Mock migration failure
+      const migrateMock = (knexMock as jest.Mock & { mockMigrateLatest: jest.Mock })
+        .mockMigrateLatest;
+      migrateMock.mockRejectedValueOnce(new Error('Migration failed'));
+
+      await expect(initializeKnex()).rejects.toThrow('Migration failed');
+    });
+
+    it('should log migration results', async () => {
+      const migrateMock = (knexMock as jest.Mock & { mockMigrateLatest: jest.Mock })
+        .mockMigrateLatest;
+      migrateMock.mockResolvedValueOnce([1, ['20231201_initial_schema.ts']]);
+
+      const instance = await initializeKnex();
+
+      expect(instance).toBeDefined();
+      expect(migrateMock).toHaveBeenCalled();
+    });
+  });
+
+  describe('isKnexConnected()', () => {
+    it('should return true when database connection is active', async () => {
+      getKnexInstance();
+
+      const result = await isKnexConnected();
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when database query fails', async () => {
+      getKnexInstance();
+
+      const rawMock = (knexMock as jest.Mock & { mockRaw: jest.Mock }).mockRaw;
+      rawMock.mockRejectedValueOnce(new Error('Connection failed'));
+
+      const result = await isKnexConnected();
+
+      expect(result).toBe(false);
+    });
+
+    it('should execute a simple query to test connection', async () => {
+      getKnexInstance();
+
+      await isKnexConnected();
+
+      const rawMock = (knexMock as jest.Mock & { mockRaw: jest.Mock }).mockRaw;
+      expect(rawMock).toHaveBeenCalledWith('SELECT 1');
+    });
+
+    it('should handle missing instance gracefully', async () => {
+      // No instance created yet
+      const result = await isKnexConnected();
+
+      expect(result).toBe(false);
     });
   });
 });
