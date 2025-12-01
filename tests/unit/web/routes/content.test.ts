@@ -40,6 +40,16 @@ describe('Content API Routes', () => {
   });
 
   describe('GET /api/content/latest', () => {
+    it('should return 503 when repository is undefined', async () => {
+      await getLatestContent(mockRequest, mockResponse, undefined);
+
+      expect(statusSpy).toHaveBeenCalledWith(503);
+      expect(jsonSpy).toHaveBeenCalledWith({
+        success: false,
+        error: 'Content service unavailable',
+      });
+    });
+
     it('should return latest content when available', async () => {
       const mockContent: ContentRecord = {
         id: 123,
@@ -105,6 +115,16 @@ describe('Content API Routes', () => {
   });
 
   describe('GET /api/content/history', () => {
+    it('should return 503 when repository is undefined', async () => {
+      await getContentHistory(mockRequest, mockResponse, undefined);
+
+      expect(statusSpy).toHaveBeenCalledWith(503);
+      expect(jsonSpy).toHaveBeenCalledWith({
+        success: false,
+        error: 'Content service unavailable',
+      });
+    });
+
     it('should return content history with default limit', async () => {
       const mockHistory: ContentRecord[] = [
         {

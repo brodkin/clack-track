@@ -4,8 +4,9 @@ import { VoteRepository } from '../../storage/repositories/vote-repo.js';
 
 /**
  * Validate vote value
+ * @internal Exported for testing purposes
  */
-function isValidVote(vote: unknown): vote is 'good' | 'bad' {
+export function isValidVote(vote: unknown): vote is 'good' | 'bad' {
   return vote === 'good' || vote === 'bad';
 }
 
