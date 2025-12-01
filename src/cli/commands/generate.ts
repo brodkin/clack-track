@@ -13,6 +13,7 @@ import { bootstrap, type BootstrapResult } from '../../bootstrap.js';
 export async function generateCommand(options: { type?: 'major' | 'minor' }): Promise<void> {
   let scheduler: BootstrapResult['scheduler'] | null = null;
   let haClient: BootstrapResult['haClient'] = null;
+  let database: BootstrapResult['database'] = null;
 
   try {
     const updateType = options.type || 'major';
@@ -23,9 +24,11 @@ export async function generateCommand(options: { type?: 'major' | 'minor' }): Pr
       orchestrator,
       scheduler: bootstrapScheduler,
       haClient: bootstrapHaClient,
+      database: bootstrapDatabase,
     } = await bootstrap();
     scheduler = bootstrapScheduler;
     haClient = bootstrapHaClient;
+    database = bootstrapDatabase;
 
     // Step 2: Generate and send content via orchestrator
     await orchestrator.generateAndSend({
@@ -54,6 +57,15 @@ export async function generateCommand(options: { type?: 'major' | 'minor' }): Pr
         await haClient.disconnect();
       } catch {
         // Ignore disconnect errors - not critical for CLI command
+      }
+    }
+
+    // Disconnect database to allow process to exit
+    if (database) {
+      try {
+        await database.disconnect();
+      } catch {
+        // Ignore database disconnect errors - not critical for CLI command
       }
     }
   }
