@@ -5,6 +5,7 @@ import type { DatabaseRow, DatabaseResult } from './database.js';
 // Singleton in-memory database instance for test isolation
 // All SQLiteDatabase instances share the same underlying database in tests
 let sharedDbInstance: BetterSqlite3.Database | null = null;
+let sharedDbMigrated = false;
 
 /**
  * In-memory SQLite database for testing
@@ -48,75 +49,120 @@ export class SQLiteDatabase {
   }
 
   /**
-   * Run database migrations to create tables and indexes.
-   * Creates content, votes, and logs tables with appropriate indexes.
-   * Safe to call multiple times (uses IF NOT EXISTS).
+   * Run database migrations using Knex migration system
    *
-   * @returns Promise that resolves when migrations are complete
-   * @throws Error if database is not connected
+   * Creates a temporary Knex instance to run migrations, then copies the schema
+   * to our BetterSQLite3 singleton instance by re-running the migrations.
+   *
+   * This approach ensures:
+   * 1. Migrations are defined once in Knex migration files
+   * 2. SQLiteDatabase (test) and Database (production) use the same schema
+   * 3. Tests use the fast BetterSQLite3 singleton pattern
+   *
+   * IDEMPOTENT: Safe to call multiple times on the same shared database instance.
+   * Uses sharedDbMigrated flag to prevent duplicate migrations.
    */
   async migrate(): Promise<void> {
     if (!this.db) {
       throw new Error('Database not connected. Call connect() first.');
     }
 
-    // SQLite-compatible schema (mirrors MySQL schema with SQLite syntax)
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS content (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        text TEXT NOT NULL,
-        type TEXT NOT NULL CHECK(type IN ('major', 'minor')),
-        generatedAt TEXT NOT NULL,
-        sentAt TEXT DEFAULT NULL,
-        aiProvider TEXT NOT NULL,
-        metadata TEXT DEFAULT NULL,
-        status TEXT NOT NULL DEFAULT 'success' CHECK(status IN ('success', 'failed')),
-        generatorId TEXT DEFAULT NULL,
-        generatorName TEXT DEFAULT NULL,
-        priority INTEGER DEFAULT 2,
-        aiModel TEXT DEFAULT NULL,
-        modelTier TEXT DEFAULT NULL,
-        failedOver INTEGER DEFAULT 0,
-        primaryProvider TEXT DEFAULT NULL,
-        primaryError TEXT DEFAULT NULL,
-        errorType TEXT DEFAULT NULL,
-        errorMessage TEXT DEFAULT NULL,
-        tokensUsed INTEGER DEFAULT NULL
-      )
-    `);
+    // Skip if already migrated on shared instance (idempotent pattern)
+    if (sharedDbMigrated && this.db === sharedDbInstance) {
+      return;
+    }
 
-    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_generated_at ON content(generatedAt)`);
-    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_status ON content(status)`);
-    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_generator_id ON content(generatorId)`);
+    // Import migration files directly (same pattern as knex-migrations.test.ts)
+    const path = await import('path');
+    const rootDir = process.cwd();
+    const migrationsDir = path.join(rootDir, 'migrations');
 
-    // Votes table
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS votes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        content_id INTEGER NOT NULL,
-        vote_type TEXT NOT NULL CHECK(vote_type IN ('good', 'bad')),
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        userAgent TEXT DEFAULT NULL,
-        ipAddress TEXT DEFAULT NULL,
-        FOREIGN KEY (content_id) REFERENCES content(id) ON DELETE CASCADE
-      )
-    `);
-    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_votes_content_id ON votes(content_id)`);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const migration001 = require(path.join(migrationsDir, '001_create_content_table.js'));
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const migration002 = require(path.join(migrationsDir, '002_create_votes_table.js'));
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const migration003 = require(path.join(migrationsDir, '003_create_logs_table.js'));
 
-    // Logs table
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        level TEXT NOT NULL CHECK(level IN ('info', 'warn', 'error', 'debug')),
-        message TEXT NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        metadata TEXT DEFAULT NULL
-      )
-    `);
-    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level)`);
-    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at)`);
+      // Create a Knex instance using OUR BetterSQLite3 database
+      // This requires using a file path, so we'll use a workaround
+      const knex = (await import('knex')).default;
 
-    log('SQLite database migrations completed');
+      // Get the database filename if it exists (for file-based SQLite)
+      // For in-memory databases, this won't work, so we fall back to direct execution
+      const isInMemory = !this.db.name || this.db.name === ':memory:' || this.db.name === '';
+
+      if (isInMemory) {
+        // For in-memory databases, create a wrapper Knex instance
+        // We can't share the connection, so we create tables manually
+        const tempKnex = knex({
+          client: 'sqlite3',
+          connection: { filename: ':memory:' },
+          useNullAsDefault: true,
+        });
+
+        // Run migrations on temporary database
+        await migration001.up(tempKnex);
+        await migration002.up(tempKnex);
+        await migration003.up(tempKnex);
+
+        // Get the schema from temp database and replicate to ours
+        // Query sqlite_master to get CREATE TABLE statements
+        const tables = tempKnex('sqlite_master')
+          .select('sql')
+          .where('type', 'table')
+          .andWhereNot('name', 'like', 'sqlite_%');
+
+        const tableSchemas = await tables;
+
+        // Execute CREATE TABLE statements on our database
+        for (const { sql } of tableSchemas) {
+          if (sql) {
+            this.db.exec(sql);
+          }
+        }
+
+        // Get indexes too
+        const indexes = tempKnex('sqlite_master')
+          .select('sql')
+          .where('type', 'index')
+          .andWhereNot('name', 'like', 'sqlite_%');
+
+        const indexSchemas = await indexes;
+
+        for (const { sql } of indexSchemas) {
+          if (sql) {
+            this.db.exec(sql);
+          }
+        }
+
+        await tempKnex.destroy();
+      } else {
+        // For file-based SQLite, we can use Knex directly
+        const knexInstance = knex({
+          client: 'sqlite3',
+          connection: { filename: this.db.name },
+          useNullAsDefault: true,
+        });
+
+        await migration001.up(knexInstance);
+        await migration002.up(knexInstance);
+        await migration003.up(knexInstance);
+
+        await knexInstance.destroy();
+      }
+
+      // Mark shared instance as migrated (idempotent pattern)
+      if (this.db === sharedDbInstance) {
+        sharedDbMigrated = true;
+      }
+
+      log('SQLite database migrations completed (via Knex)');
+    } catch (error) {
+      log(`SQLite migration error: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
   }
 
   /**
@@ -204,6 +250,7 @@ export class SQLiteDatabase {
     if (sharedDbInstance) {
       sharedDbInstance.close();
       sharedDbInstance = null;
+      sharedDbMigrated = false; // Reset migration flag for next test suite
       log('SQLite shared instance reset');
     }
   }
