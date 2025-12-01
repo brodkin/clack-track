@@ -10,6 +10,7 @@ if (preserveNodeEnv) {
 import { WebServer } from './web/server.js';
 import { config } from './config/env.js';
 import { runCLI } from './cli/index.js';
+import { bootstrap } from './bootstrap.js';
 
 async function main() {
   // Check if running as CLI command
@@ -43,19 +44,59 @@ async function main() {
     return;
   }
 
-  // Initialize web server
-  const webServer = new WebServer({
-    port: config.web.port,
-    host: config.web.host,
-    corsEnabled: config.web.corsEnabled,
-    staticPath: config.web.staticPath,
-  });
+  // Bootstrap to get database and repositories
+  const { database, contentRepository, voteRepository, logModel, scheduler, eventHandler } =
+    await bootstrap();
+
+  // Create WebServer with dependencies
+  const webServer = new WebServer(
+    {
+      port: config.web.port,
+      host: config.web.host,
+      corsEnabled: config.web.corsEnabled,
+      staticPath: config.web.staticPath,
+    },
+    { contentRepository, voteRepository, logModel }
+  );
 
   try {
     await webServer.start();
     console.log(`Web interface available at http://${config.web.host}:${config.web.port}`);
+    scheduler.start();
+    if (eventHandler) await eventHandler.initialize();
+
+    // Register coordinated signal handlers for graceful shutdown
+    const gracefulShutdown = async (signal: string) => {
+      console.log(`Received ${signal}, shutting down gracefully...`);
+      try {
+        await webServer.stop();
+        scheduler.stop();
+        if (eventHandler) await eventHandler.shutdown();
+        if (database) await database.disconnect();
+        process.exit(0);
+      } catch (error) {
+        console.error('Error during graceful shutdown:', error);
+        process.exit(1);
+      }
+    };
+
+    process.on('SIGTERM', () => {
+      gracefulShutdown('SIGTERM').catch(err => {
+        console.error('Fatal error during shutdown:', err);
+        process.exit(1);
+      });
+    });
+    process.on('SIGINT', () => {
+      gracefulShutdown('SIGINT').catch(err => {
+        console.error('Fatal error during shutdown:', err);
+        process.exit(1);
+      });
+    });
   } catch (error) {
     console.error('Failed to start web server:', error);
+    scheduler.stop();
+    if (eventHandler) await eventHandler.shutdown();
+    if (database) await database.disconnect();
     process.exit(1);
   }
 }
