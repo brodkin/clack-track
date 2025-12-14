@@ -125,7 +125,7 @@ export async function runCLI(args: string[]): Promise<void> {
 Clack Track CLI
 
 Usage:
-  npm run generate                      Generate and send major content update
+  npm run generate [--generator <id>]   Generate and send major content update
   npm run test-board                    Test Vestaboard connection
   npm run test:ai [options]             Test AI provider connectivity
   npm run test:ha [options]             Test Home Assistant connectivity
@@ -143,6 +143,9 @@ Available commands:
   content:list    List all registered content generators
   content:test    Test a specific generator (dry run)
   db:reset        Reset database with safety guards (dev/test only)
+
+Generate Options:
+  --generator <id>     Force specific generator (use content:list to see IDs)
 
 Test AI Options:
   --provider <name>    Provider to test: openai, anthropic, or all (default: all)

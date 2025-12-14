@@ -773,6 +773,7 @@ npm run send -- "Hello, World!"
 
 # Generate AI content and display it
 npm run generate
+npm run generate -- --generator <id>  # Use specific generator (e.g., pattern-art)
 
 # Start the service for scheduled updates
 npm start

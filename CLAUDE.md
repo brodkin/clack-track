@@ -405,6 +405,7 @@ For test isolation: `ColorBarService.clearInstance()` before each test.
 
 ```bash
 npm run generate              # Generate and send major content update
+npm run generate -- --generator <id>  # Generate using specific generator
 npm run test-board            # Test Vestaboard connection
 npm run test-ai               # Test AI provider connectivity
 npm run test-ha               # Test Home Assistant connectivity
