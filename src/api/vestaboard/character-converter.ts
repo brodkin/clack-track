@@ -17,6 +17,59 @@ export const COLOR_CODES = {
  */
 export type ColorCode = (typeof COLOR_CODES)[keyof typeof COLOR_CODES];
 
+/**
+ * Emoji to color code mapping
+ * Maps color emojis to their corresponding Vestaboard color codes
+ * Includes Unicode variant selectors for maximum compatibility
+ */
+export const COLOR_EMOJI_MAP: Record<string, number> = {
+  // Red (63)
+  '🟥': 63,
+  '🔴': 63,
+  '❤️': 63, // with variation selector U+FE0F
+  '❤': 63, // without variation selector
+  '🔺': 63,
+  '🔻': 63,
+  // Orange (64)
+  '🟧': 64,
+  '🟠': 64,
+  '🧡': 64,
+  // Yellow (65)
+  '🟨': 65,
+  '🟡': 65,
+  '💛': 65,
+  // Green (66)
+  '🟩': 66,
+  '🟢': 66,
+  '💚': 66,
+  // Blue (67)
+  '🟦': 67,
+  '🔵': 67,
+  '💙': 67,
+  // Violet (68)
+  '🟪': 68,
+  '🟣': 68,
+  '💜': 68,
+  // White (69)
+  '⬜': 69,
+  '◻️': 69, // with variation selector U+FE0F
+  '◻': 69, // without variation selector
+  '◽': 69,
+  '▫️': 69, // with variation selector U+FE0F
+  '▫': 69, // without variation selector
+  '⚪': 69,
+  '🤍': 69,
+  // Black → Blank (0)
+  '⬛': 0,
+  '◼️': 0, // with variation selector U+FE0F
+  '◼': 0, // without variation selector
+  '◾': 0,
+  '▪️': 0, // with variation selector U+FE0F
+  '▪': 0, // without variation selector
+  '⚫': 0,
+  '🖤': 0,
+};
+
 const CHARACTER_MAP: Record<string, number> = {
   ' ': 0,
   A: 1,
@@ -95,10 +148,17 @@ const CODE_TO_CHAR_MAP: Record<number, string> = Object.entries(CHARACTER_MAP).r
 
 /**
  * Converts a single character to its Vestaboard character code
- * @param char - Character to convert
+ * Checks COLOR_EMOJI_MAP first for emoji support, then CHARACTER_MAP
+ * @param char - Character or emoji to convert
  * @returns Character code (0 for unsupported characters)
  */
 export function charToCode(char: string): number {
+  // Check emoji map first (emojis are multi-character Unicode sequences)
+  if (COLOR_EMOJI_MAP[char] !== undefined) {
+    return COLOR_EMOJI_MAP[char];
+  }
+
+  // Fall back to standard character mapping
   const upperChar = char.toUpperCase();
   return CHARACTER_MAP[upperChar] ?? 0;
 }
@@ -138,6 +198,7 @@ export function codeToColorName(code: number): string | null {
 
 /**
  * Wraps text at word boundaries to fit within the specified width
+ * Properly handles multi-character emojis using grapheme cluster counting
  * @param text - Text to wrap
  * @param maxWidth - Maximum width of each line
  * @returns Array of wrapped lines
@@ -155,15 +216,18 @@ export function wrapText(text: string, maxWidth: number): string[] {
     if (!word) continue; // Skip empty strings from multiple spaces
 
     const testLine = currentLine ? `${currentLine} ${word}` : word;
+    // Use Array.from to count grapheme clusters (handles emojis correctly)
+    const testLineLength = Array.from(testLine).length;
 
-    if (testLine.length <= maxWidth) {
+    if (testLineLength <= maxWidth) {
       currentLine = testLine;
     } else {
       if (currentLine) {
         lines.push(currentLine);
       }
       // If single word is longer than maxWidth, truncate it
-      currentLine = word.length > maxWidth ? word.substring(0, maxWidth) : word;
+      const wordLength = Array.from(word).length;
+      currentLine = wordLength > maxWidth ? Array.from(word).slice(0, maxWidth).join('') : word;
     }
   }
 
@@ -176,16 +240,20 @@ export function wrapText(text: string, maxWidth: number): string[] {
 
 /**
  * Centers text within a given width
+ * Properly handles multi-character emojis using grapheme cluster counting
  * @param text - Text to center
  * @param width - Total width
  * @returns Centered text with padding
  */
 function centerText(text: string, width: number): string {
-  if (text.length >= width) {
-    return text.substring(0, width);
+  // Use Array.from to count grapheme clusters (handles emojis correctly)
+  const textLength = Array.from(text).length;
+
+  if (textLength >= width) {
+    return Array.from(text).slice(0, width).join('');
   }
 
-  const padding = width - text.length;
+  const padding = width - textLength;
   const leftPadding = Math.floor(padding / 2);
   const rightPadding = padding - leftPadding;
 
@@ -194,7 +262,7 @@ function centerText(text: string, width: number): string {
 
 /**
  * Converts text to a 6x22 Vestaboard layout
- * - Converts to uppercase
+ * - Converts to uppercase (preserves emojis)
  * - Auto-wraps long lines at word boundaries
  * - Centers text horizontally and vertically
  * - Replaces unsupported characters with blanks
@@ -215,9 +283,8 @@ export function textToLayout(text: string): number[][] {
     return layout;
   }
 
-  // Convert to uppercase and split by newlines
-  const upperText = text.toUpperCase();
-  const explicitLines = upperText.split('\n');
+  // Split by newlines BEFORE converting to uppercase to preserve emojis
+  const explicitLines = text.split('\n');
 
   // Wrap each line to fit within column width
   const allLines: string[] = [];
@@ -241,8 +308,10 @@ export function textToLayout(text: string): number[][] {
     const centeredLine = centerText(line, COLS);
 
     // Convert to character codes
+    // Use Array.from or [...string] to properly handle multi-character emojis
+    const chars = Array.from(centeredLine);
     for (let col = 0; col < COLS; col++) {
-      layout[rowIndex][col] = charToCode(centeredLine[col] || ' ');
+      layout[rowIndex][col] = charToCode(chars[col] || ' ');
     }
   });
 

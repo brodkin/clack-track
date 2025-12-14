@@ -12,6 +12,7 @@ import {
   validateLayoutContent,
   findInvalidCharacters,
   normalizeText,
+  SUPPORTED_COLOR_EMOJIS,
 } from '@/utils/validators';
 import type { GeneratedContent, VestaboardLayout } from '@/types/index';
 import { VESTABOARD } from '@/config/constants';
@@ -635,6 +636,212 @@ describe('findInvalidCharacters', () => {
     const invalid = findInvalidCharacters(supported);
 
     expect(invalid).toHaveLength(0);
+  });
+});
+
+describe('color emoji validation', () => {
+  describe('SUPPORTED_COLOR_EMOJIS export', () => {
+    it('should export SUPPORTED_COLOR_EMOJIS Set', () => {
+      expect(SUPPORTED_COLOR_EMOJIS).toBeDefined();
+      expect(SUPPORTED_COLOR_EMOJIS).toBeInstanceOf(Set);
+    });
+
+    it('should contain all color emojis from COLOR_EMOJI_MAP', () => {
+      // Test a sample of known color emojis
+      expect(SUPPORTED_COLOR_EMOJIS.has('🟥')).toBe(true);
+      expect(SUPPORTED_COLOR_EMOJIS.has('🟦')).toBe(true);
+      expect(SUPPORTED_COLOR_EMOJIS.has('🟩')).toBe(true);
+      expect(SUPPORTED_COLOR_EMOJIS.has('❤️')).toBe(true);
+      expect(SUPPORTED_COLOR_EMOJIS.has('❤')).toBe(true);
+      expect(SUPPORTED_COLOR_EMOJIS.has('⬛')).toBe(true);
+    });
+
+    it('should not contain non-color emojis', () => {
+      expect(SUPPORTED_COLOR_EMOJIS.has('😀')).toBe(false);
+      expect(SUPPORTED_COLOR_EMOJIS.has('🎉')).toBe(false);
+      expect(SUPPORTED_COLOR_EMOJIS.has('☕')).toBe(false);
+    });
+  });
+
+  describe('supported color emojis should pass validation', () => {
+    it('should accept color square emojis', () => {
+      const content: GeneratedContent = {
+        text: 'HELLO 🟥🟦🟩 WORLD',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept all red emoji variants', () => {
+      const content: GeneratedContent = {
+        text: '🟥 🔴 ❤️ ❤ 🔺',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept all blue emoji variants', () => {
+      const content: GeneratedContent = {
+        text: '🟦 🔵 💙',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept all green emoji variants', () => {
+      const content: GeneratedContent = {
+        text: '🟩 🟢 💚',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept white emoji variants with Unicode selectors', () => {
+      const content: GeneratedContent = {
+        text: '⬜ ◻️ ◻ ◽ ⚪ 🤍',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept black emoji variants', () => {
+      const content: GeneratedContent = {
+        text: '⬛ ◼️ ◼ ◾ ⚫ 🖤',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept mixed standard text and color emojis', () => {
+      const content: GeneratedContent = {
+        text: 'STATUS: 🟩 OK',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept adjacent color emojis', () => {
+      const content: GeneratedContent = {
+        text: '🟥🟥🟥🟦🟦🟩',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept color emojis in layout mode', () => {
+      const layout: VestaboardLayout = {
+        rows: [
+          '🟥 RED ALERT 🟥',
+          '🟦 INFO 🟦',
+          'B'.repeat(22),
+          'C'.repeat(22),
+          'D'.repeat(22),
+          'E'.repeat(22),
+        ],
+      };
+      const content: GeneratedContent = {
+        text: 'Layout content',
+        outputMode: 'layout',
+        layout: layout,
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+  });
+
+  describe('non-color emojis should fail validation', () => {
+    it('should reject smiley face emoji', () => {
+      const content: GeneratedContent = {
+        text: 'HELLO 😀 WORLD',
+        outputMode: 'text',
+      };
+
+      expect(() => validateGeneratorOutput(content)).toThrow('contains invalid characters');
+    });
+
+    it('should reject party popper emoji', () => {
+      const content: GeneratedContent = {
+        text: 'PARTY 🎉 TIME',
+        outputMode: 'text',
+      };
+
+      expect(() => validateGeneratorOutput(content)).toThrow('contains invalid characters');
+    });
+
+    it('should reject coffee emoji', () => {
+      const content: GeneratedContent = {
+        text: 'COFFEE ☕ BREAK',
+        outputMode: 'text',
+      };
+
+      expect(() => validateGeneratorOutput(content)).toThrow('contains invalid characters');
+    });
+
+    it('should reject sparkles emoji', () => {
+      const content: GeneratedContent = {
+        text: 'SPARKLE ✨ TEXT',
+        outputMode: 'text',
+      };
+
+      expect(() => validateGeneratorOutput(content)).toThrow('contains invalid characters');
+    });
+  });
+
+  describe('findInvalidCharacters with color emojis', () => {
+    it('should not report color emojis as invalid', () => {
+      const invalid = findInvalidCharacters('HELLO 🟥🟦🟩 WORLD');
+
+      expect(invalid).toHaveLength(0);
+    });
+
+    it('should report non-color emojis as invalid', () => {
+      const invalid = findInvalidCharacters('HELLO 😀 WORLD');
+
+      expect(invalid).toContain('😀');
+      expect(invalid.length).toBeGreaterThan(0);
+    });
+
+    it('should distinguish between color and non-color emojis', () => {
+      const invalid = findInvalidCharacters('STATUS 🟩 PARTY 🎉');
+
+      expect(invalid).not.toContain('🟩');
+      expect(invalid).toContain('🎉');
+    });
+
+    it('should handle emoji variants correctly', () => {
+      // Both with and without variant selectors should be valid
+      const invalidWithVariant = findInvalidCharacters('❤️ HEART');
+      const invalidWithout = findInvalidCharacters('❤ HEART');
+
+      expect(invalidWithVariant).toHaveLength(0);
+      expect(invalidWithout).toHaveLength(0);
+    });
   });
 });
 
