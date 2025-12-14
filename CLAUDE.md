@@ -218,18 +218,45 @@ WebSocket client for event-driven content updates. Supports:
 
 **Dual-Subscription Pattern**: EventHandler subscribes to TWO event types:
 
-1. `content_trigger` - Explicit update triggers → P2 major updates
-2. `state_changed` - All entity changes → P0 notification pattern matching
+1. `vestaboard_refresh` - Custom event for explicit update triggers → P2 major updates
+2. `state_changed` - Entity changes matched against trigger configuration → major updates
+
+**Trigger Configuration System** (`TRIGGER_CONFIG_PATH`):
+
+When `TRIGGER_CONFIG_PATH` is set, the system loads a YAML configuration file defining which entity state changes trigger Vestaboard updates:
+
+```yaml
+# config/triggers.yaml
+triggers:
+  - name: 'Person Arrival'
+    entity_pattern: 'person.*' # Glob pattern
+    state_filter: 'home' # Only trigger on "home" state
+    debounce_seconds: 60 # Prevent rapid re-triggers
+```
+
+**Key Components:**
+
+- `TriggerConfigLoader` (`src/config/trigger-config.ts`) - YAML loading with hot-reload via chokidar
+- `TriggerMatcher` (`src/scheduler/trigger-matcher.ts`) - Pattern matching (exact, glob, regex) with per-trigger debouncing
+- `EventHandler` - Integrates TriggerMatcher for state_changed event processing
+
+**Pattern Types:**
+
+- Exact: `"binary_sensor.front_door"`
+- Glob: `"person.*"`, `"sensor.*_temperature"` (uses minimatch)
+- Regex: `"/^cover\\..*garage.*$/i"` (JavaScript regex syntax)
+
+**Flow:**
 
 ```
-state_changed event → EventHandler → ContentOrchestrator → ContentSelector
-                                                              ↓
-                                              P0 regex pattern matching
-                                              (match: immediate notification)
-                                              (no match: skip to P2 selection)
+state_changed event → EventHandler → TriggerMatcher.match(entityId, newState)
+                                          ↓
+                        pattern match + state filter + debounce check
+                                          ↓
+                        (match && !debounced) → orchestrator.generateAndSend()
 ```
 
-**Conditional Initialization**: EventHandler only created if HA is configured. Check for `null` before use:
+**Conditional Initialization**: EventHandler only created if HA is configured. TriggerMatcher only injected if `TRIGGER_CONFIG_PATH` is set:
 
 ```typescript
 const { eventHandler } = await bootstrap();
@@ -239,6 +266,7 @@ if (eventHandler) {
 ```
 
 **For detailed API documentation**, see `src/api/data-sources/CLAUDE.md` (loaded on-demand when working with HA integration).
+**For user setup guide**, see `docs/HOME_ASSISTANT_SETUP.md` (includes Trigger Configuration section).
 
 ### Security Features
 
@@ -315,6 +343,8 @@ if (eventHandler) {
 | Test config       | `jest.config.cjs`                                                                 |
 | Commit rules      | `commitlint.config.cjs`                                                           |
 | HA API docs       | `src/api/data-sources/CLAUDE.md`                                                  |
+| HA setup guide    | `docs/HOME_ASSISTANT_SETUP.md`                                                    |
+| Trigger config    | `config/triggers.example.yaml`                                                    |
 | AI fixtures       | `tests/fixtures/openai-responses.json`, `tests/fixtures/anthropic-responses.json` |
 | Test mocks        | `tests/__mocks__/`                                                                |
 
