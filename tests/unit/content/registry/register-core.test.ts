@@ -51,6 +51,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -73,6 +74,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -95,6 +97,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -117,13 +120,14 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      expect(normalPriorityGens.length).toBe(6); // motivational, globalNews, techNews, localNews, weather, greeting
+      expect(normalPriorityGens.length).toBe(7); // motivational, globalNews, techNews, localNews, weather, greeting, haiku
     });
   });
 
@@ -136,6 +140,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -158,6 +163,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -177,6 +183,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         asciiArt: createMockGenerator('asciiArt'),
         staticFallback: createMockGenerator('fallback'),
       };
@@ -200,6 +207,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -208,12 +216,12 @@ describe('registerCoreContent', () => {
       const registered = registry.getById('ascii-art');
       expect(registered).toBeUndefined();
 
-      // Should still register 6 P2 generators
+      // Should still register 7 P2 generators (including haiku)
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      expect(normalPriorityGens.length).toBe(6);
+      expect(normalPriorityGens.length).toBe(7);
     });
 
-    it('should register 7 P2 generators when asciiArt is provided', () => {
+    it('should register 8 P2 generators when asciiArt is provided', () => {
       const generators = {
         motivational: createMockGenerator('motivational'),
         globalNews: createMockGenerator('globalNews'),
@@ -221,6 +229,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         asciiArt: createMockGenerator('asciiArt'),
         staticFallback: createMockGenerator('fallback'),
       };
@@ -228,7 +237,7 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      expect(normalPriorityGens.length).toBe(7); // motivational, globalNews, techNews, localNews, weather, greeting, asciiArt
+      expect(normalPriorityGens.length).toBe(8); // motivational, globalNews, techNews, localNews, weather, greeting, haiku, asciiArt
     });
   });
 
@@ -241,6 +250,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         asciiArt: createMockGenerator('asciiArt'),
         staticFallback: createMockGenerator('fallback'),
       };
@@ -248,7 +258,7 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const allGenerators = registry.getAll();
-      expect(allGenerators.length).toBe(8); // 7 P2 + 1 P3
+      expect(allGenerators.length).toBe(9); // 8 P2 + 1 P3
     });
 
     it('should maintain correct priority distribution', () => {
@@ -259,6 +269,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         asciiArt: createMockGenerator('asciiArt'),
         staticFallback: createMockGenerator('fallback'),
       };
@@ -269,7 +280,7 @@ describe('registerCoreContent', () => {
       const fallbackGens = registry.getByPriority(ContentPriority.FALLBACK);
       const notificationGens = registry.getByPriority(ContentPriority.NOTIFICATION);
 
-      expect(normalGens.length).toBe(7);
+      expect(normalGens.length).toBe(8);
       expect(fallbackGens.length).toBe(1);
       expect(notificationGens.length).toBe(0);
     });
@@ -282,6 +293,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -298,6 +310,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -321,6 +334,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -344,6 +358,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -367,14 +382,15 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      // motivational, globalNews, techNews, localNews, weather, greeting = 6
-      expect(normalPriorityGens.length).toBe(6);
+      // motivational, globalNews, techNews, localNews, weather, greeting, haiku = 7
+      expect(normalPriorityGens.length).toBe(7);
     });
 
     it('should not register old news-summary generator', () => {
@@ -385,6 +401,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -402,6 +419,7 @@ describe('registerCoreContent', () => {
         localNews: createMockGenerator('localNews'),
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
+        haiku: createMockGenerator('haiku'),
         staticFallback: createMockGenerator('fallback'),
       };
 
