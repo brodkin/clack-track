@@ -3,6 +3,39 @@ import { ContentValidationError } from '../types/errors.js';
 import { VESTABOARD } from '../config/constants.js';
 
 /**
+ * Character normalization map for converting typographic variants to ASCII equivalents.
+ * AI providers often generate "smart" quotes and other typographic characters that
+ * Vestaboard doesn't support. This map enables silent conversion to supported characters.
+ */
+const TEXT_NORMALIZATIONS: Record<string, string> = {
+  '\u201C': '"', // left double quote "
+  '\u201D': '"', // right double quote "
+  '\u201E': '"', // low double quote „
+  '\u2018': "'", // left single quote '
+  '\u2019': "'", // right single quote '
+  '\u201A': "'", // low single quote ‚
+  '\u2014': '-', // em-dash —
+  '\u2013': '-', // en-dash –
+  '\u2026': '...', // ellipsis …
+};
+
+/**
+ * Normalize text by converting typographic characters to their ASCII equivalents.
+ * This silently converts curly quotes, smart apostrophes, em-dashes, etc.
+ * to characters supported by Vestaboard.
+ *
+ * @param text - Text to normalize
+ * @returns Normalized text with typographic characters replaced
+ */
+export function normalizeText(text: string): string {
+  let normalized = text;
+  for (const [from, to] of Object.entries(TEXT_NORMALIZATIONS)) {
+    normalized = normalized.replaceAll(from, to);
+  }
+  return normalized;
+}
+
+/**
  * Result of generator output validation
  */
 export interface ValidationResult {
@@ -73,8 +106,11 @@ export function validateTextContent(text: string): ValidationResult {
     errors.push('text content cannot be empty');
   }
 
+  // Normalize typographic characters (curly quotes, em-dashes, etc.) to ASCII equivalents
+  const normalizedText = normalizeText(text);
+
   // Split into lines and count (trim trailing newline if present)
-  const lines = text.replace(/\n$/, '').split('\n');
+  const lines = normalizedText.replace(/\n$/, '').split('\n');
   const lineCount = lines.length;
   const maxLineLength = Math.max(...lines.map(line => line.length), 0);
 
@@ -124,8 +160,12 @@ export function validateTextContent(text: string): ValidationResult {
  */
 export function validateLayoutContent(layout: VestaboardLayout): ValidationResult {
   const errors: string[] = [];
+
+  // Normalize typographic characters (curly quotes, em-dashes, etc.) to ASCII equivalents
+  const normalizedRows = layout.rows.map(row => normalizeText(row));
+
   // Uppercase before validation since text gets uppercased later in the pipeline
-  const allText = layout.rows.join('').toUpperCase();
+  const allText = normalizedRows.join('').toUpperCase();
   const invalidChars = findInvalidCharacters(allText);
 
   const rowCount = layout.rows.length;

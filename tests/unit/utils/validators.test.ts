@@ -11,6 +11,7 @@ import {
   validateTextContent,
   validateLayoutContent,
   findInvalidCharacters,
+  normalizeText,
 } from '@/utils/validators';
 import type { GeneratedContent, VestaboardLayout } from '@/types/index';
 import { VESTABOARD } from '@/config/constants';
@@ -529,5 +530,124 @@ describe('findInvalidCharacters', () => {
     const invalid = findInvalidCharacters(supported);
 
     expect(invalid).toHaveLength(0);
+  });
+});
+
+describe('normalizeText', () => {
+  describe('curly quote normalization', () => {
+    it('should convert left double curly quote to straight quote', () => {
+      const result = normalizeText('He said \u201Chello"');
+      expect(result).toBe('He said "hello"');
+    });
+
+    it('should convert right double curly quote to straight quote', () => {
+      const result = normalizeText('He said "hello\u201D');
+      expect(result).toBe('He said "hello"');
+    });
+
+    it('should convert both curly double quotes in a phrase', () => {
+      const result = normalizeText('\u201CHello World\u201D');
+      expect(result).toBe('"Hello World"');
+    });
+
+    it('should convert low double quote to straight quote', () => {
+      const result = normalizeText('\u201EHello\u201D');
+      expect(result).toBe('"Hello"');
+    });
+
+    it('should convert left single curly quote to apostrophe', () => {
+      const result = normalizeText('\u2018twas the night');
+      expect(result).toBe("'twas the night");
+    });
+
+    it('should convert right single curly quote to apostrophe', () => {
+      const result = normalizeText('it\u2019s working');
+      expect(result).toBe("it's working");
+    });
+
+    it('should convert low single quote to apostrophe', () => {
+      const result = normalizeText('\u201Ahello');
+      expect(result).toBe("'hello");
+    });
+  });
+
+  describe('dash normalization', () => {
+    it('should convert em-dash to hyphen', () => {
+      const result = normalizeText('hello\u2014world');
+      expect(result).toBe('hello-world');
+    });
+
+    it('should convert en-dash to hyphen', () => {
+      const result = normalizeText('pages 1\u201310');
+      expect(result).toBe('pages 1-10');
+    });
+  });
+
+  describe('ellipsis normalization', () => {
+    it('should convert ellipsis character to three dots', () => {
+      const result = normalizeText('wait\u2026');
+      expect(result).toBe('wait...');
+    });
+  });
+
+  describe('combined normalizations', () => {
+    it('should normalize multiple typographic characters in one string', () => {
+      const result = normalizeText('\u201CHello\u2026\u201D she said\u2014quietly');
+      expect(result).toBe('"Hello..." she said-quietly');
+    });
+
+    it('should handle text with no typographic characters', () => {
+      const text = 'PLAIN TEXT 123';
+      const result = normalizeText(text);
+      expect(result).toBe(text);
+    });
+
+    it('should handle empty string', () => {
+      expect(normalizeText('')).toBe('');
+    });
+  });
+
+  describe('integration with validation', () => {
+    it('should allow text with curly quotes to pass validation after normalization', () => {
+      // This would have failed before normalization was added
+      const content: GeneratedContent = {
+        text: '\u201CHELLO WORLD\u201D',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+    });
+
+    it('should allow text with em-dash to pass validation after normalization', () => {
+      const content: GeneratedContent = {
+        text: 'HELLO\u2014WORLD',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+    });
+
+    it('should allow layout with curly quotes to pass validation after normalization', () => {
+      const layout: VestaboardLayout = {
+        rows: [
+          '\u201CQUOTED TEXT\u201D',
+          'B'.repeat(22),
+          'C'.repeat(22),
+          'D'.repeat(22),
+          'E'.repeat(22),
+          'F'.repeat(22),
+        ],
+      };
+      const content: GeneratedContent = {
+        text: 'Layout content',
+        outputMode: 'layout',
+        layout: layout,
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+    });
   });
 });
