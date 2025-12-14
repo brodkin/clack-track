@@ -45,9 +45,14 @@ export async function runCLI(args: string[]): Promise<void> {
   };
 
   switch (command) {
-    case 'generate':
-      await generateCommand({ type: 'major' });
+    case 'generate': {
+      const options = parseOptions(args);
+      await generateCommand({
+        type: 'major',
+        generator: typeof options.generator === 'string' ? options.generator : undefined,
+      });
       break;
+    }
     case 'test-board':
       await testBoardCommand();
       break;

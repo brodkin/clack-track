@@ -278,6 +278,51 @@ export function validateTextContent(text: string): ValidationResult {
 export function validateLayoutContent(layout: VestaboardLayout): ValidationResult {
   const errors: string[] = [];
 
+  // Check if we have characterCodes (numeric array) - used by pattern generators
+  if (layout.characterCodes && layout.characterCodes.length > 0) {
+    const rowCount = layout.characterCodes.length;
+    const maxRowLength = Math.max(...layout.characterCodes.map(row => row.length), 0);
+
+    // Validate row count (must be exactly 6)
+    if (rowCount !== VESTABOARD.MAX_ROWS) {
+      errors.push(`layout must have exactly ${VESTABOARD.MAX_ROWS} rows (found: ${rowCount})`);
+    }
+
+    // Validate column count (must be exactly 22)
+    const invalidRows = layout.characterCodes
+      .map((row, idx) => ({ idx, length: row.length }))
+      .filter(info => info.length !== VESTABOARD.MAX_COLS);
+
+    if (invalidRows.length > 0) {
+      const first = invalidRows[0];
+      errors.push(
+        `layout row ${first.idx} must have exactly ${VESTABOARD.MAX_COLS} columns (found: ${first.length})`
+      );
+    }
+
+    // Validate character codes (must be 0-69)
+    // Vestaboard codes: 0=blank, 1-26=A-Z, 27-36=0-9, 37-62=symbols, 63-69=colors
+    for (let row = 0; row < layout.characterCodes.length; row++) {
+      for (let col = 0; col < layout.characterCodes[row].length; col++) {
+        const code = layout.characterCodes[row][col];
+        if (code < 0 || code > 69) {
+          errors.push(`Invalid character code ${code} at row ${row}, col ${col} (must be 0-69)`);
+          break; // Only report first invalid code
+        }
+      }
+      if (errors.length > 0) break;
+    }
+
+    return {
+      valid: errors.length === 0,
+      lineCount: rowCount,
+      maxLineLength: maxRowLength,
+      invalidChars: [],
+      errors,
+    };
+  }
+
+  // Fall back to text-based rows validation
   // Normalize typographic characters (curly quotes, em-dashes, etc.) to ASCII equivalents
   const normalizedRows = layout.rows.map(row => normalizeText(row));
 

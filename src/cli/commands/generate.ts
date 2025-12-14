@@ -10,15 +10,25 @@ import { closeKnexInstance } from '../../storage/knex.js';
  *
  * @param options - Command options
  * @param options.type - Update type ('major' or 'minor', defaults to 'major')
+ * @param options.generator - Optional generator ID to force a specific generator
  */
-export async function generateCommand(options: { type?: 'major' | 'minor' }): Promise<void> {
+export async function generateCommand(options: {
+  type?: 'major' | 'minor';
+  generator?: string;
+}): Promise<void> {
   let scheduler: BootstrapResult['scheduler'] | null = null;
   let haClient: BootstrapResult['haClient'] = null;
   let knex: BootstrapResult['knex'] = null;
 
   try {
     const updateType = options.type || 'major';
-    log(`Generating ${updateType} content update...`);
+    const generatorId = options.generator;
+
+    if (generatorId) {
+      log(`Generating ${updateType} content update using generator: ${generatorId}`);
+    } else {
+      log(`Generating ${updateType} content update...`);
+    }
 
     // Step 1: Bootstrap the application to initialize all dependencies
     const {
@@ -35,6 +45,7 @@ export async function generateCommand(options: { type?: 'major' | 'minor' }): Pr
     await orchestrator.generateAndSend({
       updateType,
       timestamp: new Date(),
+      generatorId,
     });
 
     // Step 3: Log success

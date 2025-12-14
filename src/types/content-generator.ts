@@ -100,6 +100,11 @@ export interface GenerationContext {
    * Provided by ContentDataProvider before generation to avoid duplicate fetches.
    */
   data?: ContentData;
+  /**
+   * Optional generator ID to force a specific generator instead of random selection.
+   * When provided, bypasses ContentSelector and uses the specified generator directly.
+   */
+  generatorId?: string;
 }
 
 /**
