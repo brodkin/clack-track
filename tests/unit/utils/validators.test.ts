@@ -57,16 +57,18 @@ describe('validateGeneratorOutput', () => {
       );
     });
 
-    it('should reject text with line exceeding 21 characters', () => {
-      const longLine = 'A'.repeat(22);
+    it('should wrap text with line slightly exceeding 21 characters (safety net)', () => {
+      // 22 chars gets wrapped to 2 lines that fit
+      const longLine = 'GOOD MORNING LAKEWOOD CA'; // 24 chars
       const content: GeneratedContent = {
-        text: `SHORT\n${longLine}`,
+        text: longLine,
         outputMode: 'text',
       };
 
-      expect(() => validateGeneratorOutput(content)).toThrow(
-        /text mode line \d+ exceeds 21 characters/
-      );
+      // Should pass because wrapping salvages the content
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.wrappingApplied).toBe(true);
     });
 
     it('should reject empty text content', () => {
@@ -325,12 +327,18 @@ describe('validateTextContent', () => {
     expect(result.errors).toContain('text mode content must have at most 5 lines (found: 6)');
   });
 
-  it('should return detailed error for line too long', () => {
-    const longLine = 'A'.repeat(22);
-    const result = validateTextContent(longLine);
+  it('should wrap and pass for line slightly exceeding 21 characters', () => {
+    // 22 chars gets wrapped - wrapping salvages the content
+    const longLine = 'GOOD MORNING EVERYONE'; // 21 chars exactly
+    const slightlyLong = 'GOOD MORNING EVERYONE!'; // 22 chars - will be wrapped
 
-    expect(result.valid).toBe(false);
-    expect(result.errors[0]).toMatch(/line \d+ exceeds 21 characters/);
+    const resultExact = validateTextContent(longLine);
+    expect(resultExact.valid).toBe(true);
+    expect(resultExact.wrappingApplied).toBeFalsy();
+
+    const resultWrapped = validateTextContent(slightlyLong);
+    expect(resultWrapped.valid).toBe(true);
+    expect(resultWrapped.wrappingApplied).toBe(true);
   });
 
   it('should detect invalid characters in text', () => {
@@ -369,6 +377,103 @@ describe('validateTextContent', () => {
     // Lowercase letters should NOT be in invalidChars
     expect(result.invalidChars).not.toContain('h');
     expect(result.invalidChars).not.toContain('e');
+  });
+});
+
+describe('pre-validation wrapping (safety net)', () => {
+  it('should wrap line exceeding 21 chars and pass validation', () => {
+    // "GOOD MORNING LAKEWOOD CA" is 24 chars
+    // Should wrap to "GOOD MORNING LAKEWOOD" (21) and "CA" (2)
+    const result = validateTextContent('GOOD MORNING LAKEWOOD CA');
+
+    expect(result.valid).toBe(true);
+    expect(result.wrappingApplied).toBe(true);
+    expect(result.originalMaxLength).toBe(24);
+    expect(result.lineCount).toBe(2);
+  });
+
+  it('should set wrapping metadata correctly', () => {
+    const longLine = 'THIS LINE IS TOO LONG FOR DISPLAY'; // 33 chars
+    const result = validateTextContent(longLine);
+
+    expect(result.wrappingApplied).toBe(true);
+    expect(result.originalMaxLength).toBe(longLine.length);
+    expect(result.normalizedText).toBeDefined();
+  });
+
+  it('should not apply wrapping when content fits', () => {
+    const result = validateTextContent('SHORT LINE\nANOTHER SHORT');
+
+    expect(result.valid).toBe(true);
+    expect(result.wrappingApplied).toBe(false);
+    expect(result.originalMaxLength).toBeUndefined();
+  });
+
+  it('should FAIL when wrapping causes line count to exceed 5', () => {
+    // Create content where wrapping will cause >5 lines
+    // 4 short lines + 1 very long line that wraps to 3+ lines = >5 total
+    const veryLongLine = 'THIS IS A VERY LONG LINE THAT WILL WRAP TO MULTIPLE LINES';
+    const content = `LINE 1\nLINE 2\nLINE 3\nLINE 4\n${veryLongLine}`;
+
+    const result = validateTextContent(content);
+
+    expect(result.valid).toBe(false);
+    expect(result.wrappingApplied).toBe(true);
+    expect(result.errors[0]).toMatch(/exceeds 5 lines after wrapping/);
+  });
+
+  it('should preserve wrapped text in normalizedText', () => {
+    const result = validateTextContent('HELLO WORLD EVERYONE TODAY');
+
+    expect(result.valid).toBe(true);
+    expect(result.normalizedText).toBeDefined();
+    // Check that each line in normalized text is ≤21 chars
+    const lines = result.normalizedText!.split('\n');
+    lines.forEach(line => {
+      expect(line.length).toBeLessThanOrEqual(21);
+    });
+  });
+
+  it('should handle multiple long lines needing wrapping', () => {
+    // Both lines exceed 21 chars
+    const content = 'FIRST LONG LINE HERE TODAY\nSECOND LONG LINE ALSO';
+
+    const result = validateTextContent(content);
+
+    expect(result.wrappingApplied).toBe(true);
+    expect(result.lineCount).toBeGreaterThan(2);
+  });
+
+  it('should truncate single word longer than 21 chars', () => {
+    // wrapText truncates single words that exceed maxWidth
+    const veryLongWord = 'A'.repeat(25);
+    const result = validateTextContent(veryLongWord);
+
+    expect(result.valid).toBe(true);
+    expect(result.wrappingApplied).toBe(true);
+    expect(result.maxLineLength).toBeLessThanOrEqual(21);
+  });
+
+  it('should work with text mode through validateGeneratorOutput', () => {
+    const content: GeneratedContent = {
+      text: 'THIS LINE EXCEEDS THE LIMIT',
+      outputMode: 'text',
+    };
+
+    const result = validateGeneratorOutput(content);
+
+    expect(result.valid).toBe(true);
+    expect(result.wrappingApplied).toBe(true);
+  });
+
+  it('should throw when wrapping exceeds 5 lines through validateGeneratorOutput', () => {
+    // 5 lines already + long line that wraps = >5 lines
+    const content: GeneratedContent = {
+      text: 'L1\nL2\nL3\nL4\nTHIS IS A VERY LONG LINE THAT WILL WRAP',
+      outputMode: 'text',
+    };
+
+    expect(() => validateGeneratorOutput(content)).toThrow(/exceeds 5 lines after wrapping/);
   });
 });
 

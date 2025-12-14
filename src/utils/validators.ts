@@ -1,6 +1,7 @@
 import type { GeneratedContent, VestaboardLayout } from '../types/index.js';
 import { ContentValidationError } from '../types/errors.js';
 import { VESTABOARD } from '../config/constants.js';
+import { wrapText } from '../api/vestaboard/character-converter.js';
 
 /**
  * Character normalization map for converting typographic variants to ASCII equivalents.
@@ -8,15 +9,72 @@ import { VESTABOARD } from '../config/constants.js';
  * Vestaboard doesn't support. This map enables silent conversion to supported characters.
  */
 const TEXT_NORMALIZATIONS: Record<string, string> = {
+  // Quotes
   '\u201C': '"', // left double quote "
   '\u201D': '"', // right double quote "
   '\u201E': '"', // low double quote „
   '\u2018': "'", // left single quote '
   '\u2019': "'", // right single quote '
   '\u201A': "'", // low single quote ‚
+  // Dashes
   '\u2014': '-', // em-dash —
   '\u2013': '-', // en-dash –
+  // Ellipsis
   '\u2026': '...', // ellipsis …
+  // Accented vowels → ASCII equivalents
+  À: 'A',
+  Á: 'A',
+  Â: 'A',
+  Ã: 'A',
+  Ä: 'A',
+  Å: 'A',
+  È: 'E',
+  É: 'E',
+  Ê: 'E',
+  Ë: 'E',
+  Ì: 'I',
+  Í: 'I',
+  Î: 'I',
+  Ï: 'I',
+  Ò: 'O',
+  Ó: 'O',
+  Ô: 'O',
+  Õ: 'O',
+  Ö: 'O',
+  Ù: 'U',
+  Ú: 'U',
+  Û: 'U',
+  Ü: 'U',
+  Ý: 'Y',
+  Ñ: 'N',
+  Ç: 'C',
+  // Lowercase accented (will be uppercased later but normalize anyway)
+  à: 'A',
+  á: 'A',
+  â: 'A',
+  ã: 'A',
+  ä: 'A',
+  å: 'A',
+  è: 'E',
+  é: 'E',
+  ê: 'E',
+  ë: 'E',
+  ì: 'I',
+  í: 'I',
+  î: 'I',
+  ï: 'I',
+  ò: 'O',
+  ó: 'O',
+  ô: 'O',
+  õ: 'O',
+  ö: 'O',
+  ù: 'U',
+  ú: 'U',
+  û: 'U',
+  ü: 'U',
+  ý: 'Y',
+  ñ: 'N',
+  ç: 'C',
 };
 
 /**
@@ -41,14 +99,20 @@ export function normalizeText(text: string): string {
 export interface ValidationResult {
   /** Whether the validation passed */
   valid: boolean;
-  /** Number of lines in the content */
+  /** Number of lines in the content (after wrapping if applied) */
   lineCount: number;
-  /** Maximum line length found */
+  /** Maximum line length found (after wrapping if applied) */
   maxLineLength: number;
   /** Array of invalid characters found */
   invalidChars: string[];
   /** Array of validation error messages */
   errors: string[];
+  /** Whether pre-validation wrapping was applied to salvage long lines */
+  wrappingApplied?: boolean;
+  /** Original max line length before wrapping (if wrapping was applied) */
+  originalMaxLength?: number;
+  /** The normalized and wrapped text (for use by caller) */
+  normalizedText?: string;
 }
 
 /**
@@ -95,6 +159,10 @@ export function validateGeneratorOutput(content: GeneratedContent): ValidationRe
  * Framed content allows maximum 5 lines × 21 characters per line
  * (reserves 1 row for time/weather frame).
  *
+ * If any lines exceed 21 characters, pre-validation wrapping is applied
+ * to salvage content that slightly exceeds limits. However, if wrapping
+ * causes the line count to exceed 5, validation fails.
+ *
  * @param text - Plain text content to validate
  * @returns {ValidationResult} validation details
  */
@@ -104,24 +172,63 @@ export function validateTextContent(text: string): ValidationResult {
   // Check for empty content
   if (text.length === 0) {
     errors.push('text content cannot be empty');
+    return {
+      valid: false,
+      lineCount: 0,
+      maxLineLength: 0,
+      invalidChars: [],
+      errors,
+    };
   }
 
   // Normalize typographic characters (curly quotes, em-dashes, etc.) to ASCII equivalents
   const normalizedText = normalizeText(text);
 
-  // Split into lines and count (trim trailing newline if present)
-  const lines = normalizedText.replace(/\n$/, '').split('\n');
+  // Split into lines (trim trailing newline if present)
+  const originalLines = normalizedText.replace(/\n$/, '').split('\n');
+  const originalMaxLength = Math.max(...originalLines.map(line => line.length), 0);
+
+  // Check if any lines exceed the character limit
+  const hasLongLines = originalLines.some(line => line.length > VESTABOARD.FRAMED_MAX_COLS);
+  let wrappingApplied = false;
+  let lines: string[];
+
+  if (hasLongLines) {
+    // Apply pre-validation wrapping to salvage content
+    wrappingApplied = true;
+    lines = [];
+    for (const line of originalLines) {
+      if (line.length > VESTABOARD.FRAMED_MAX_COLS) {
+        // Wrap long lines using word-boundary wrapping
+        const wrappedLines = wrapText(line, VESTABOARD.FRAMED_MAX_COLS);
+        lines.push(...wrappedLines);
+      } else {
+        lines.push(line);
+      }
+    }
+  } else {
+    lines = originalLines;
+  }
+
   const lineCount = lines.length;
   const maxLineLength = Math.max(...lines.map(line => line.length), 0);
 
   // Validate line count (framed mode: max 5 lines)
+  // CRITICAL: If wrapping caused line count to exceed 5, fail validation
   if (lineCount > VESTABOARD.FRAMED_MAX_ROWS) {
-    errors.push(
-      `text mode content must have at most ${VESTABOARD.FRAMED_MAX_ROWS} lines (found: ${lineCount})`
-    );
+    if (wrappingApplied) {
+      errors.push(
+        `content exceeds ${VESTABOARD.FRAMED_MAX_ROWS} lines after wrapping (found: ${lineCount})`
+      );
+    } else {
+      errors.push(
+        `text mode content must have at most ${VESTABOARD.FRAMED_MAX_ROWS} lines (found: ${lineCount})`
+      );
+    }
   }
 
-  // Validate line length (framed mode: max 21 chars per line)
+  // After wrapping, all lines should be within limit
+  // This check handles edge cases where wrapText truncates single long words
   const tooLongLines = lines
     .map((line, idx) => ({ idx, length: line.length }))
     .filter(info => info.length > VESTABOARD.FRAMED_MAX_COLS);
@@ -147,6 +254,9 @@ export function validateTextContent(text: string): ValidationResult {
     maxLineLength,
     invalidChars,
     errors,
+    wrappingApplied,
+    originalMaxLength: wrappingApplied ? originalMaxLength : undefined,
+    normalizedText: lines.join('\n'),
   };
 }
 

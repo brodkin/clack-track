@@ -11,6 +11,7 @@ import { ContentRegistry } from '../../content/registry/content-registry.js';
 import { ContentPriority } from '../../types/content-generator.js';
 import type { RegisteredGenerator } from '../../content/registry/content-registry.js';
 import { bootstrap } from '../../bootstrap.js';
+import { closeKnexInstance } from '../../storage/knex.js';
 
 /**
  * Priority group display configuration
@@ -130,7 +131,7 @@ function displayPriorityGroup(group: PriorityGroup, generators: RegisteredGenera
  */
 export async function contentListCommand(): Promise<void> {
   // Bootstrap to populate the registry with generators
-  const { scheduler } = await bootstrap();
+  const { scheduler, haClient } = await bootstrap();
 
   try {
     const registry = ContentRegistry.getInstance();
@@ -165,7 +166,21 @@ export async function contentListCommand(): Promise<void> {
     );
     console.log('');
   } finally {
-    // Clean shutdown - stop scheduler
+    // Clean shutdown - stop scheduler, disconnect HA client, close database
     scheduler.stop();
+
+    if (haClient) {
+      try {
+        await haClient.disconnect();
+      } catch {
+        // Ignore disconnect errors
+      }
+    }
+
+    try {
+      await closeKnexInstance();
+    } catch {
+      // Ignore database close errors
+    }
   }
 }

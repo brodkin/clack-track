@@ -459,23 +459,27 @@ describe('content:test command', () => {
       expect(result.errors[0]).toContain('5 lines');
     });
 
-    it('should detect line too long (exceeds 21 char limit)', () => {
-      // Arrange - Invalid content: line exceeds 21 chars
-      const invalidText = 'THIS LINE IS WAY TOO LONG FOR VESTABOARD';
+    it('should detect line too long that exceeds 5 lines after wrapping', () => {
+      // Arrange - Invalid content: line exceeds 21 chars AND wraps to >5 lines
+      // Pre-validation wrapping salvages slightly long lines, but fails if result >5 lines
+      const invalidText =
+        'LINE 1\nLINE 2\nLINE 3\nLINE 4\nTHIS LINE IS WAY TOO LONG FOR VESTABOARD AND WILL WRAP';
 
       // Act
       const result = validateTextContent(invalidText);
 
-      // Assert - Check validator detects violation
+      // Assert - Check validator detects violation after wrapping
       expect(result.valid).toBe(false);
-      expect(result.maxLineLength).toBeGreaterThan(21);
+      expect(result.wrappingApplied).toBe(true);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors[0]).toContain('21 characters');
+      expect(result.errors[0]).toContain('5 lines');
     });
 
     it('should detect invalid characters', () => {
-      // Arrange - Invalid content: lowercase and special chars
-      const invalidText = 'hello@world';
+      // Arrange - Invalid content: characters not supported by Vestaboard
+      // Note: lowercase letters are valid (uppercased before validation)
+      // Use characters that are truly invalid like ™, €, or emoji
+      const invalidText = 'HELLO™WORLD';
 
       // Act
       const result = validateTextContent(invalidText);
@@ -483,6 +487,7 @@ describe('content:test command', () => {
       // Assert - Check validator detects invalid chars
       expect(result.valid).toBe(false);
       expect(result.invalidChars.length).toBeGreaterThan(0);
+      expect(result.invalidChars).toContain('™');
       expect(result.errors.length).toBeGreaterThan(0);
     });
 

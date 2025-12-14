@@ -182,9 +182,10 @@ describe('ContentOrchestrator - Validation Integration', () => {
     });
 
     it('should trigger P3 fallback when text content has line too long (>21 chars)', async () => {
-      // ARRANGE - Invalid content (line exceeds 21 chars)
+      // ARRANGE - Invalid content (line exceeds 21 chars AND wraps to >5 lines)
+      // Pre-validation wrapping salvages slightly long lines, but fails if result >5 lines
       const invalidContent: GeneratedContent = {
-        text: 'THIS LINE IS WAY TOO LONG FOR VESTABOARD FRAMED MODE',
+        text: 'L1\nL2\nL3\nL4\nTHIS LINE IS WAY TOO LONG FOR VESTABOARD FRAMED MODE AND WILL WRAP',
         outputMode: 'text',
       };
 
