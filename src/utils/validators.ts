@@ -1,7 +1,7 @@
 import type { GeneratedContent, VestaboardLayout } from '../types/index.js';
 import { ContentValidationError } from '../types/errors.js';
 import { VESTABOARD } from '../config/constants.js';
-import { wrapText } from '../api/vestaboard/character-converter.js';
+import { wrapText, COLOR_EMOJI_MAP } from '../api/vestaboard/character-converter.js';
 
 /**
  * Character normalization map for converting typographic variants to ASCII equivalents.
@@ -76,6 +76,13 @@ const TEXT_NORMALIZATIONS: Record<string, string> = {
   ñ: 'N',
   ç: 'C',
 };
+
+/**
+ * Set of supported color emojis from COLOR_EMOJI_MAP.
+ * Used for O(1) lookup during validation to distinguish color emojis
+ * from standard characters and unsupported emojis.
+ */
+export const SUPPORTED_COLOR_EMOJIS = new Set(Object.keys(COLOR_EMOJI_MAP));
 
 /**
  * Normalize text by converting typographic characters to their ASCII equivalents.
@@ -315,8 +322,11 @@ export function validateLayoutContent(layout: VestaboardLayout): ValidationResul
 /**
  * Find invalid Vestaboard characters in text.
  *
- * Vestaboard supports: A-Z, 0-9, space, and limited punctuation.
+ * Vestaboard supports: A-Z, 0-9, space, limited punctuation, and color emojis.
  * Returns array of unique invalid characters found.
+ *
+ * Uses Array.from() for proper grapheme cluster iteration, then handles
+ * variant selectors (U+FE0F) by peeking ahead and combining when needed.
  *
  * @param text - Text to check for invalid characters
  * @returns {string[]} array of unique invalid characters
@@ -325,7 +335,29 @@ export function findInvalidCharacters(text: string): string[] {
   const supportedSet = new Set(VESTABOARD.SUPPORTED_CHARS.split(''));
   const invalidSet = new Set<string>();
 
-  for (const char of text) {
+  // Use Array.from to properly iterate over grapheme clusters (handles emoji surrogate pairs)
+  const chars = Array.from(text);
+
+  for (let i = 0; i < chars.length; i++) {
+    let char = chars[i];
+
+    // Check if next character is a variant selector (U+FE0F)
+    // If so, combine them for emoji lookup
+    if (i + 1 < chars.length && chars[i + 1] === '\uFE0F') {
+      const withVariant = char + '\uFE0F';
+      // Check if the combined emoji is a color emoji
+      if (SUPPORTED_COLOR_EMOJIS.has(withVariant)) {
+        i++; // Skip the variant selector on next iteration
+        continue;
+      }
+    }
+
+    // Check if it's a color emoji (without variant selector)
+    if (SUPPORTED_COLOR_EMOJIS.has(char)) {
+      continue;
+    }
+
+    // Check if it's a standard supported character
     if (!supportedSet.has(char)) {
       invalidSet.add(char);
     }

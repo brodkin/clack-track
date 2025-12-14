@@ -6,6 +6,7 @@ import {
   textToLayout,
   layoutToText,
   wrapText,
+  COLOR_EMOJI_MAP,
 } from '@/api/vestaboard/character-converter';
 
 /**
@@ -443,6 +444,269 @@ describe('character-converter', () => {
       expect(contentRow).toHaveLength(22);
       const nonZeroCount = contentRow.filter(code => code !== 0).length;
       expect(nonZeroCount).toBe(1); // Only 'X' should be non-zero
+    });
+  });
+
+  describe('COLOR_EMOJI_MAP', () => {
+    it('should export COLOR_EMOJI_MAP constant', () => {
+      expect(COLOR_EMOJI_MAP).toBeDefined();
+      expect(typeof COLOR_EMOJI_MAP).toBe('object');
+    });
+
+    describe('RED emojis (code 63)', () => {
+      it('should map 🟥 to RED (63)', () => {
+        expect(COLOR_EMOJI_MAP['🟥']).toBe(63);
+      });
+
+      it('should map 🔴 to RED (63)', () => {
+        expect(COLOR_EMOJI_MAP['🔴']).toBe(63);
+      });
+
+      it('should map ❤️ (with variant selector) to RED (63)', () => {
+        expect(COLOR_EMOJI_MAP['❤️']).toBe(63);
+      });
+
+      it('should map ❤ (without variant selector) to RED (63)', () => {
+        expect(COLOR_EMOJI_MAP['❤']).toBe(63);
+      });
+
+      it('should map 🔺 to RED (63)', () => {
+        expect(COLOR_EMOJI_MAP['🔺']).toBe(63);
+      });
+
+      it('should map 🔻 to RED (63)', () => {
+        expect(COLOR_EMOJI_MAP['🔻']).toBe(63);
+      });
+    });
+
+    describe('ORANGE emojis (code 64)', () => {
+      it('should map 🟧 to ORANGE (64)', () => {
+        expect(COLOR_EMOJI_MAP['🟧']).toBe(64);
+      });
+
+      it('should map 🟠 to ORANGE (64)', () => {
+        expect(COLOR_EMOJI_MAP['🟠']).toBe(64);
+      });
+
+      it('should map 🧡 to ORANGE (64)', () => {
+        expect(COLOR_EMOJI_MAP['🧡']).toBe(64);
+      });
+    });
+
+    describe('YELLOW emojis (code 65)', () => {
+      it('should map 🟨 to YELLOW (65)', () => {
+        expect(COLOR_EMOJI_MAP['🟨']).toBe(65);
+      });
+
+      it('should map 🟡 to YELLOW (65)', () => {
+        expect(COLOR_EMOJI_MAP['🟡']).toBe(65);
+      });
+
+      it('should map 💛 to YELLOW (65)', () => {
+        expect(COLOR_EMOJI_MAP['💛']).toBe(65);
+      });
+    });
+
+    describe('GREEN emojis (code 66)', () => {
+      it('should map 🟩 to GREEN (66)', () => {
+        expect(COLOR_EMOJI_MAP['🟩']).toBe(66);
+      });
+
+      it('should map 🟢 to GREEN (66)', () => {
+        expect(COLOR_EMOJI_MAP['🟢']).toBe(66);
+      });
+
+      it('should map 💚 to GREEN (66)', () => {
+        expect(COLOR_EMOJI_MAP['💚']).toBe(66);
+      });
+    });
+
+    describe('BLUE emojis (code 67)', () => {
+      it('should map 🟦 to BLUE (67)', () => {
+        expect(COLOR_EMOJI_MAP['🟦']).toBe(67);
+      });
+
+      it('should map 🔵 to BLUE (67)', () => {
+        expect(COLOR_EMOJI_MAP['🔵']).toBe(67);
+      });
+
+      it('should map 💙 to BLUE (67)', () => {
+        expect(COLOR_EMOJI_MAP['💙']).toBe(67);
+      });
+    });
+
+    describe('VIOLET emojis (code 68)', () => {
+      it('should map 🟪 to VIOLET (68)', () => {
+        expect(COLOR_EMOJI_MAP['🟪']).toBe(68);
+      });
+
+      it('should map 🟣 to VIOLET (68)', () => {
+        expect(COLOR_EMOJI_MAP['🟣']).toBe(68);
+      });
+
+      it('should map 💜 to VIOLET (68)', () => {
+        expect(COLOR_EMOJI_MAP['💜']).toBe(68);
+      });
+    });
+
+    describe('WHITE emojis (code 69)', () => {
+      it('should map ⬜ to WHITE (69)', () => {
+        expect(COLOR_EMOJI_MAP['⬜']).toBe(69);
+      });
+
+      it('should map ◻️ (with variant selector) to WHITE (69)', () => {
+        expect(COLOR_EMOJI_MAP['◻️']).toBe(69);
+      });
+
+      it('should map ◻ (without variant selector) to WHITE (69)', () => {
+        expect(COLOR_EMOJI_MAP['◻']).toBe(69);
+      });
+
+      it('should map ◽ to WHITE (69)', () => {
+        expect(COLOR_EMOJI_MAP['◽']).toBe(69);
+      });
+
+      it('should map ▫️ (with variant selector) to WHITE (69)', () => {
+        expect(COLOR_EMOJI_MAP['▫️']).toBe(69);
+      });
+
+      it('should map ▫ (without variant selector) to WHITE (69)', () => {
+        expect(COLOR_EMOJI_MAP['▫']).toBe(69);
+      });
+
+      it('should map ⚪ to WHITE (69)', () => {
+        expect(COLOR_EMOJI_MAP['⚪']).toBe(69);
+      });
+
+      it('should map 🤍 to WHITE (69)', () => {
+        expect(COLOR_EMOJI_MAP['🤍']).toBe(69);
+      });
+    });
+
+    describe('BLACK emojis (code 0 - blank)', () => {
+      it('should map ⬛ to BLANK (0)', () => {
+        expect(COLOR_EMOJI_MAP['⬛']).toBe(0);
+      });
+
+      it('should map ◼️ (with variant selector) to BLANK (0)', () => {
+        expect(COLOR_EMOJI_MAP['◼️']).toBe(0);
+      });
+
+      it('should map ◼ (without variant selector) to BLANK (0)', () => {
+        expect(COLOR_EMOJI_MAP['◼']).toBe(0);
+      });
+
+      it('should map ◾ to BLANK (0)', () => {
+        expect(COLOR_EMOJI_MAP['◾']).toBe(0);
+      });
+
+      it('should map ▪️ (with variant selector) to BLANK (0)', () => {
+        expect(COLOR_EMOJI_MAP['▪️']).toBe(0);
+      });
+
+      it('should map ▪ (without variant selector) to BLANK (0)', () => {
+        expect(COLOR_EMOJI_MAP['▪']).toBe(0);
+      });
+
+      it('should map ⚫ to BLANK (0)', () => {
+        expect(COLOR_EMOJI_MAP['⚫']).toBe(0);
+      });
+
+      it('should map 🖤 to BLANK (0)', () => {
+        expect(COLOR_EMOJI_MAP['🖤']).toBe(0);
+      });
+    });
+  });
+
+  describe('charToCode with emojis', () => {
+    it('should convert single red emoji to code 63', () => {
+      expect(charToCode('🟥')).toBe(63);
+    });
+
+    it('should convert single blue emoji to code 67', () => {
+      expect(charToCode('🔵')).toBe(67);
+    });
+
+    it('should convert single yellow emoji to code 65', () => {
+      expect(charToCode('🟡')).toBe(65);
+    });
+
+    it('should handle emoji with variant selector ❤️', () => {
+      expect(charToCode('❤️')).toBe(63);
+    });
+
+    it('should handle emoji without variant selector ❤', () => {
+      expect(charToCode('❤')).toBe(63);
+    });
+
+    it('should handle white emoji variants', () => {
+      expect(charToCode('⬜')).toBe(69);
+      expect(charToCode('◻️')).toBe(69);
+      expect(charToCode('◻')).toBe(69);
+    });
+
+    it('should handle black emoji variants as blank', () => {
+      expect(charToCode('⬛')).toBe(0);
+      expect(charToCode('◼️')).toBe(0);
+      expect(charToCode('◼')).toBe(0);
+    });
+
+    it('should handle unknown emojis as blank (0)', () => {
+      expect(charToCode('😀')).toBe(0); // Smiley face not in COLOR_EMOJI_MAP
+      expect(charToCode('🎉')).toBe(0); // Party popper not in COLOR_EMOJI_MAP
+    });
+
+    it('should prioritize emoji mapping over character mapping', () => {
+      // Emojis should be checked first, before CHARACTER_MAP
+      expect(charToCode('🟥')).toBe(63); // Should be RED, not blank
+    });
+
+    it('should still convert regular characters after emoji addition', () => {
+      // Ensure CHARACTER_MAP still works
+      expect(charToCode('A')).toBe(1);
+      expect(charToCode('Z')).toBe(26);
+      expect(charToCode('1')).toBe(27);
+      expect(charToCode('!')).toBe(37);
+    });
+  });
+
+  describe('textToLayout with emojis', () => {
+    it('should handle adjacent emojis 🟥🟥🟥', () => {
+      const result = textToLayout('🟥🟥🟥');
+      // Content should be vertically centered (row 2 for single line)
+      const contentRow = result[2];
+      const codes = contentRow.filter(code => code !== 0);
+      expect(codes).toEqual([63, 63, 63]);
+    });
+
+    it('should handle mixed content A🟥B', () => {
+      const result = textToLayout('A🟥B');
+      const contentRow = result[2];
+      const codes = contentRow.filter(code => code !== 0);
+      expect(codes).toEqual([1, 63, 2]); // A, RED, B
+    });
+
+    it('should handle emoji rainbow 🟥🟧🟨🟩🟦🟪', () => {
+      const result = textToLayout('🟥🟧🟨🟩🟦🟪');
+      const contentRow = result[2];
+      const codes = contentRow.filter(code => code !== 0);
+      expect(codes).toEqual([63, 64, 65, 66, 67, 68]); // RED through VIOLET
+    });
+
+    it('should handle emojis with text HELLO🟥WORLD', () => {
+      const result = textToLayout('HELLO🟥WORLD');
+      const contentRow = result[2];
+      const codes = contentRow.filter(code => code !== 0);
+      // H=8, E=5, L=12, L=12, O=15, RED=63, W=23, O=15, R=18, L=12, D=4
+      expect(codes).toEqual([8, 5, 12, 12, 15, 63, 23, 15, 18, 12, 4]);
+    });
+
+    it('should handle black emojis as blanks in layout', () => {
+      const result = textToLayout('A⬛B');
+      const contentRow = result[2];
+      const codes = contentRow.filter(code => code !== 0);
+      // A, (blank filtered out), B
+      expect(codes).toEqual([1, 2]);
     });
   });
 });
