@@ -48,6 +48,7 @@ export interface EnvironmentConfig {
       websocketUrl?: string;
       reconnectDelayMs?: number;
       maxReconnectAttempts?: number;
+      triggerConfigPath?: string;
     };
   };
 
@@ -154,6 +155,7 @@ export function loadConfig(): EnvironmentConfig {
               websocketUrl,
               reconnectDelayMs,
               maxReconnectAttempts,
+              triggerConfigPath: getOptionalEnv('TRIGGER_CONFIG_PATH'),
             };
           })()
         : undefined,
