@@ -345,6 +345,30 @@ describe('validateTextContent', () => {
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('text content cannot be empty');
   });
+
+  it('should accept lowercase letters (uppercased during validation)', () => {
+    const result = validateTextContent('hello world');
+
+    expect(result.valid).toBe(true);
+    expect(result.invalidChars).toHaveLength(0);
+  });
+
+  it('should accept mixed case text', () => {
+    const result = validateTextContent('Hello World');
+
+    expect(result.valid).toBe(true);
+    expect(result.invalidChars).toHaveLength(0);
+  });
+
+  it('should still reject invalid chars even with lowercase', () => {
+    const result = validateTextContent('hello™ world');
+
+    expect(result.valid).toBe(false);
+    expect(result.invalidChars).toContain('™');
+    // Lowercase letters should NOT be in invalidChars
+    expect(result.invalidChars).not.toContain('h');
+    expect(result.invalidChars).not.toContain('e');
+  });
 });
 
 describe('validateLayoutContent', () => {
@@ -412,6 +436,43 @@ describe('validateLayoutContent', () => {
 
     expect(result.valid).toBe(false);
     expect(result.invalidChars).toContain('™');
+  });
+
+  it('should accept lowercase letters in layout (uppercased during validation)', () => {
+    const layout: VestaboardLayout = {
+      rows: [
+        'hello world test row',
+        'B'.repeat(22),
+        'C'.repeat(22),
+        'D'.repeat(22),
+        'E'.repeat(22),
+        'F'.repeat(22),
+      ],
+    };
+
+    const result = validateLayoutContent(layout);
+
+    expect(result.valid).toBe(true);
+    expect(result.invalidChars).toHaveLength(0);
+  });
+
+  it('should still reject invalid chars in layout even with lowercase', () => {
+    const layout: VestaboardLayout = {
+      rows: [
+        'hello™ world',
+        'B'.repeat(22),
+        'C'.repeat(22),
+        'D'.repeat(22),
+        'E'.repeat(22),
+        'F'.repeat(22),
+      ],
+    };
+
+    const result = validateLayoutContent(layout);
+
+    expect(result.valid).toBe(false);
+    expect(result.invalidChars).toContain('™');
+    expect(result.invalidChars).not.toContain('h');
   });
 });
 

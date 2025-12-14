@@ -165,7 +165,7 @@ export class ContentOrchestrator {
 
       // Step 3: P3 fallback on retry failure or validation error
       console.warn(
-        'Generator failed, using P3 fallback:',
+        `Generator "${registeredGenerator.registration.name}" (${registeredGenerator.registration.id}) failed, using P3 fallback:`,
         error instanceof Error ? error.message : 'Unknown error'
       );
 

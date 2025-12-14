@@ -395,6 +395,66 @@ describe('ContentOrchestrator', () => {
       const cached = orchestrator.getCachedContent();
       expect(cached).toEqual(fallbackContent);
     });
+
+    it('should log generator name and id when P3 fallback triggers', async () => {
+      // Arrange
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn(),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      const registeredGenerator: RegisteredGenerator = {
+        registration: {
+          id: 'weather-focus',
+          name: 'Weather Forecast',
+          priority: 2,
+          modelTier: ModelTier.MEDIUM,
+          applyFrame: true,
+        },
+        generator: mockGenerator,
+      };
+
+      const fallbackContent: GeneratedContent = {
+        text: 'Static fallback content',
+        outputMode: 'text',
+      };
+
+      mockSelector.select.mockReturnValue(registeredGenerator);
+      (generateWithRetry as jest.Mock).mockRejectedValue(new RateLimitError('Rate limit exceeded'));
+      mockFallbackGenerator.generate.mockResolvedValue(fallbackContent);
+      mockDecorator.decorate.mockResolvedValue({
+        layout: [[1, 2, 3]],
+        warnings: [],
+      });
+
+      // Spy on console.warn
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      // Act
+      await orchestrator.generateAndSend(context);
+
+      // Assert - console.warn should include generator name and id
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Weather Forecast'),
+        expect.any(String)
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('weather-focus'),
+        expect.any(String)
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('P3 fallback'),
+        expect.any(String)
+      );
+
+      // Cleanup
+      warnSpy.mockRestore();
+    });
   });
 
   describe('generateAndSend - Error Handling', () => {

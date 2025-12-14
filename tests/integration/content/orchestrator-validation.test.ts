@@ -76,15 +76,12 @@ describe('ContentOrchestrator - Validation Integration', () => {
       };
 
       mockSelector.select.mockReturnValue({
-        id: 'test-generator',
-        generator: mockGenerator,
-        metadata: {
-          id: 'test',
-          name: 'Test',
-          description: 'Test',
-          priority: 'P2',
-          enabled: true,
+        registration: {
+          id: 'test-generator',
+          name: 'Test Generator',
+          priority: 2,
         },
+        generator: mockGenerator,
       });
 
       const context: GenerationContext = {
@@ -125,15 +122,12 @@ describe('ContentOrchestrator - Validation Integration', () => {
       };
 
       mockSelector.select.mockReturnValue({
-        id: 'test-generator',
-        generator: mockGenerator,
-        metadata: {
-          id: 'test',
-          name: 'Test',
-          description: 'Test',
-          priority: 'P2',
-          enabled: true,
+        registration: {
+          id: 'test-generator',
+          name: 'Test Generator',
+          priority: 2,
         },
+        generator: mockGenerator,
       });
 
       const context: GenerationContext = {
@@ -165,15 +159,12 @@ describe('ContentOrchestrator - Validation Integration', () => {
       };
 
       mockSelector.select.mockReturnValue({
-        id: 'test-generator',
-        generator: mockGenerator,
-        metadata: {
-          id: 'test',
-          name: 'Test',
-          description: 'Test',
-          priority: 'P2',
-          enabled: true,
+        registration: {
+          id: 'test-generator',
+          name: 'Test Generator',
+          priority: 2,
         },
+        generator: mockGenerator,
       });
 
       const context: GenerationContext = {
@@ -202,15 +193,12 @@ describe('ContentOrchestrator - Validation Integration', () => {
       };
 
       mockSelector.select.mockReturnValue({
-        id: 'test-generator',
-        generator: mockGenerator,
-        metadata: {
-          id: 'test',
-          name: 'Test',
-          description: 'Test',
-          priority: 'P2',
-          enabled: true,
+        registration: {
+          id: 'test-generator',
+          name: 'Test Generator',
+          priority: 2,
         },
+        generator: mockGenerator,
       });
 
       const context: GenerationContext = {
@@ -239,15 +227,12 @@ describe('ContentOrchestrator - Validation Integration', () => {
       };
 
       mockSelector.select.mockReturnValue({
-        id: 'test-generator',
-        generator: mockGenerator,
-        metadata: {
-          id: 'test',
-          name: 'Test',
-          description: 'Test',
-          priority: 'P2',
-          enabled: true,
+        registration: {
+          id: 'test-generator',
+          name: 'Test Generator',
+          priority: 2,
         },
+        generator: mockGenerator,
       });
 
       const context: GenerationContext = {
@@ -286,15 +271,12 @@ describe('ContentOrchestrator - Validation Integration', () => {
       };
 
       mockSelector.select.mockReturnValue({
-        id: 'test-generator',
-        generator: mockGenerator,
-        metadata: {
-          id: 'test',
-          name: 'Test',
-          description: 'Test',
-          priority: 'P2',
-          enabled: true,
+        registration: {
+          id: 'test-generator',
+          name: 'Test Generator',
+          priority: 2,
         },
+        generator: mockGenerator,
       });
 
       const context: GenerationContext = {
@@ -323,15 +305,12 @@ describe('ContentOrchestrator - Validation Integration', () => {
       };
 
       mockSelector.select.mockReturnValue({
-        id: 'test-generator',
-        generator: mockGenerator,
-        metadata: {
-          id: 'test',
-          name: 'Test',
-          description: 'Test',
-          priority: 'P2',
-          enabled: true,
+        registration: {
+          id: 'test-generator',
+          name: 'Test Generator',
+          priority: 2,
         },
+        generator: mockGenerator,
       });
 
       const context: GenerationContext = {
@@ -362,15 +341,12 @@ describe('ContentOrchestrator - Validation Integration', () => {
       };
 
       mockSelector.select.mockReturnValue({
-        id: 'test-generator',
-        generator: mockGenerator,
-        metadata: {
-          id: 'test',
-          name: 'Test',
-          description: 'Test',
-          priority: 'P2',
-          enabled: true,
+        registration: {
+          id: 'test-generator',
+          name: 'Test Generator',
+          priority: 2,
         },
+        generator: mockGenerator,
       });
 
       const context: GenerationContext = {
@@ -387,7 +363,7 @@ describe('ContentOrchestrator - Validation Integration', () => {
       // ASSERT
       expect(mockFallbackGenerator.generate).toHaveBeenCalledWith(context);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Generator failed, using P3 fallback:',
+        expect.stringContaining('Test Generator'),
         expect.stringContaining('text mode content must have at most 5 lines')
       );
 

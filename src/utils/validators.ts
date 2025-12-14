@@ -98,7 +98,8 @@ export function validateTextContent(text: string): ValidationResult {
   }
 
   // Validate character set (check each line, not the text with newlines)
-  const invalidChars = findInvalidCharacters(lines.join(''));
+  // Uppercase before validation since text gets uppercased later in the pipeline
+  const invalidChars = findInvalidCharacters(lines.join('').toUpperCase());
 
   if (invalidChars.length > 0) {
     errors.push(`text contains invalid characters: ${invalidChars.join(', ')}`);
@@ -123,7 +124,8 @@ export function validateTextContent(text: string): ValidationResult {
  */
 export function validateLayoutContent(layout: VestaboardLayout): ValidationResult {
   const errors: string[] = [];
-  const allText = layout.rows.join('');
+  // Uppercase before validation since text gets uppercased later in the pipeline
+  const allText = layout.rows.join('').toUpperCase();
   const invalidChars = findInvalidCharacters(allText);
 
   const rowCount = layout.rows.length;
