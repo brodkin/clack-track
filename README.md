@@ -6,7 +6,7 @@
 
 Clack Track is a smart display manager for Vestaboard split-flap displays that creates engaging, AI-powered content and displays it via the Vestaboard local API. The system intelligently manages content updates through two modes:
 
-- **Major Updates**: Full content refreshes triggered by Home Assistant events or manual CLI commands, generating fresh quotes, news, weather, and custom content
+- **Major Updates**: Full content refreshes triggered by Home Assistant `vestaboard_refresh` events or manual CLI commands, generating fresh quotes, news, weather, and custom content
 - **Minor Updates**: Every-minute time and weather updates that preserve the main content while keeping information current
 
 The application provides a web debugging interface for content management, quality voting, and system logs.
@@ -44,7 +44,70 @@ Content is enriched with real-time data from multiple sources:
 
 - **RSS Feeds** - News summaries and headlines from configured RSS sources
 - **RapidAPI** - Weather, events, and other third-party API data
-- **Home Assistant API** - Smart home event triggers and sensor data
+- **Home Assistant API** - Weather data and event-driven refresh triggers
+
+### Home Assistant Integration
+
+Clack Track integrates with Home Assistant to trigger content refreshes based on smart home events.
+
+#### Triggering a Refresh
+
+Fire the `vestaboard_refresh` custom event from any Home Assistant automation to trigger a major content update:
+
+**Example Automation (YAML):**
+
+```yaml
+automation:
+  - alias: 'Refresh Vestaboard on Person Arrival'
+    trigger:
+      - platform: state
+        entity_id: person.john
+        to: 'home'
+    action:
+      - event: vestaboard_refresh
+        event_data:
+          trigger: 'person_arrived'
+          person: '{{ trigger.to_state.name }}'
+
+  - alias: 'Refresh Vestaboard Every 30 Minutes'
+    trigger:
+      - platform: time_pattern
+        minutes: '/30'
+    action:
+      - event: vestaboard_refresh
+        event_data:
+          trigger: 'scheduled'
+```
+
+**Example Service Call:**
+
+```yaml
+service: homeassistant.fire_event
+data:
+  event_type: vestaboard_refresh
+  event_data:
+    trigger: 'manual'
+```
+
+#### Event Data
+
+The `event_data` is optional and passed to the content orchestrator. You can include any metadata useful for debugging or future content customization.
+
+#### Configuration
+
+Set up Home Assistant connection in your `.env` file:
+
+```bash
+HOME_ASSISTANT_URL=http://homeassistant.local:8123
+HOME_ASSISTANT_TOKEN=your-long-lived-access-token
+```
+
+To create a long-lived access token:
+
+1. Open Home Assistant
+2. Click your profile (bottom left)
+3. Scroll to "Long-Lived Access Tokens"
+4. Create a new token and copy it to your `.env`
 
 ### Update Mechanism
 
@@ -54,9 +117,9 @@ The system operates in two distinct modes:
 
 Triggered by:
 
-- Home Assistant events (e.g., "person arrived home", "door opened")
-- Manual CLI commands
-- Scheduled intervals (configurable)
+- Home Assistant `vestaboard_refresh` custom event (see [Home Assistant Integration](#home-assistant-integration))
+- Manual CLI commands (`npm run generate`)
+- On daemon startup (initial content)
 
 Generates completely new content including:
 

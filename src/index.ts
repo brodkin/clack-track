@@ -45,9 +45,16 @@ async function main() {
     return;
   }
 
-  // Bootstrap to get knex and repositories
-  const { knex, contentRepository, voteRepository, logModel, scheduler, eventHandler } =
-    await bootstrap();
+  // Bootstrap to get knex, repositories, and orchestrator
+  const {
+    knex,
+    contentRepository,
+    voteRepository,
+    logModel,
+    scheduler,
+    eventHandler,
+    orchestrator,
+  } = await bootstrap();
 
   // Create WebServer with dependencies
   const webServer = new WebServer(
@@ -63,6 +70,20 @@ async function main() {
   try {
     await webServer.start();
     console.log(`Web interface available at http://${config.web.host}:${config.web.port}`);
+
+    // Run initial major update to populate cache for minor updates
+    // This ensures the first minor update has content to work with
+    try {
+      console.log('Running initial major content update...');
+      await orchestrator.generateAndSend({
+        updateType: 'major',
+        timestamp: new Date(),
+      });
+      console.log('Initial major update completed');
+    } catch (error) {
+      console.warn('Initial major update failed, minor updates will retry:', error);
+    }
+
     scheduler.start();
     if (eventHandler) await eventHandler.initialize();
 
