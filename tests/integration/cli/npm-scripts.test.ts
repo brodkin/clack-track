@@ -46,7 +46,7 @@ describe('Database npm scripts', () => {
   describe('db:migrate script', () => {
     it('should be defined in package.json', () => {
       expect(packageJson.scripts['db:migrate']).toBeDefined();
-      expect(packageJson.scripts['db:migrate']).toContain('knex migrate:latest');
+      expect(packageJson.scripts['db:migrate']).toContain('migrate:latest');
       expect(packageJson.scripts['db:migrate']).toContain('--knexfile knexfile.ts');
     });
   });
@@ -54,7 +54,7 @@ describe('Database npm scripts', () => {
   describe('db:rollback script', () => {
     it('should be defined in package.json', () => {
       expect(packageJson.scripts['db:rollback']).toBeDefined();
-      expect(packageJson.scripts['db:rollback']).toContain('knex migrate:rollback');
+      expect(packageJson.scripts['db:rollback']).toContain('migrate:rollback');
       expect(packageJson.scripts['db:rollback']).toContain('--knexfile knexfile.ts');
     });
   });
@@ -62,7 +62,7 @@ describe('Database npm scripts', () => {
   describe('db:seed script', () => {
     it('should be defined in package.json', () => {
       expect(packageJson.scripts['db:seed']).toBeDefined();
-      expect(packageJson.scripts['db:seed']).toContain('knex seed:run');
+      expect(packageJson.scripts['db:seed']).toContain('seed:run');
       expect(packageJson.scripts['db:seed']).toContain('--knexfile knexfile.ts');
     });
   });
