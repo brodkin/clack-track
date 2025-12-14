@@ -27,7 +27,7 @@ function loadKnexConfig(environment: string): Knex.Config {
       useNullAsDefault: true,
       migrations: {
         directory: migrationsDir,
-        loadExtensions: ['.js'],
+        loadExtensions: ['.cjs'],
         // Use CommonJS require for migrations in test environment
         disableMigrationsListValidation: true,
       },
@@ -50,7 +50,7 @@ function loadKnexConfig(environment: string): Knex.Config {
       },
       migrations: {
         directory: migrationsDir,
-        loadExtensions: ['.js'],
+        loadExtensions: ['.cjs'],
       },
       seeds: {
         directory: seedsDir,
@@ -72,7 +72,7 @@ function loadKnexConfig(environment: string): Knex.Config {
     useNullAsDefault: true,
     migrations: {
       directory: migrationsDir,
-      loadExtensions: ['.js'],
+      loadExtensions: ['.cjs'],
     },
     seeds: {
       directory: seedsDir,
