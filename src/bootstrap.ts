@@ -27,6 +27,7 @@ import { TechNewsGenerator } from './content/generators/ai/tech-news-generator.j
 import { LocalNewsGenerator } from './content/generators/ai/local-news-generator.js';
 import { WeatherGenerator } from './content/generators/ai/weather-generator.js';
 import { HaikuGenerator } from './content/generators/ai/haiku-generator.js';
+import { SeasonalGenerator } from './content/generators/ai/seasonal-generator.js';
 import { GreetingGenerator } from './content/generators/programmatic/greeting-generator.js';
 import { ASCIIArtGenerator } from './content/generators/programmatic/ascii-art-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
@@ -164,6 +165,7 @@ function createCoreGenerators(
     weather: new WeatherGenerator(promptLoader, modelTierSelector, apiKeys, weatherService),
     greeting: new GreetingGenerator(),
     haiku: new HaikuGenerator(promptLoader, modelTierSelector, apiKeys),
+    seasonal: new SeasonalGenerator(promptLoader, modelTierSelector, apiKeys),
     asciiArt: new ASCIIArtGenerator(['HELLO', 'WORLD', 'WELCOME']),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };

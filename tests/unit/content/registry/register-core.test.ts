@@ -52,6 +52,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -75,6 +76,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -98,6 +100,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -121,13 +124,14 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      expect(normalPriorityGens.length).toBe(7); // motivational, globalNews, techNews, localNews, weather, greeting, haiku
+      expect(normalPriorityGens.length).toBe(8); // motivational, globalNews, techNews, localNews, weather, greeting, haiku, seasonal
     });
   });
 
@@ -141,6 +145,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -164,6 +169,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -184,6 +190,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         asciiArt: createMockGenerator('asciiArt'),
         staticFallback: createMockGenerator('fallback'),
       };
@@ -208,6 +215,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -216,12 +224,12 @@ describe('registerCoreContent', () => {
       const registered = registry.getById('ascii-art');
       expect(registered).toBeUndefined();
 
-      // Should still register 7 P2 generators (including haiku)
+      // Should still register 8 P2 generators (including haiku and seasonal)
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      expect(normalPriorityGens.length).toBe(7);
+      expect(normalPriorityGens.length).toBe(8);
     });
 
-    it('should register 8 P2 generators when asciiArt is provided', () => {
+    it('should register 9 P2 generators when asciiArt is provided', () => {
       const generators = {
         motivational: createMockGenerator('motivational'),
         globalNews: createMockGenerator('globalNews'),
@@ -230,6 +238,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         asciiArt: createMockGenerator('asciiArt'),
         staticFallback: createMockGenerator('fallback'),
       };
@@ -237,7 +246,7 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      expect(normalPriorityGens.length).toBe(8); // motivational, globalNews, techNews, localNews, weather, greeting, haiku, asciiArt
+      expect(normalPriorityGens.length).toBe(9); // motivational, globalNews, techNews, localNews, weather, greeting, haiku, seasonal, asciiArt
     });
   });
 
@@ -251,6 +260,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         asciiArt: createMockGenerator('asciiArt'),
         staticFallback: createMockGenerator('fallback'),
       };
@@ -258,7 +268,7 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const allGenerators = registry.getAll();
-      expect(allGenerators.length).toBe(9); // 8 P2 + 1 P3
+      expect(allGenerators.length).toBe(10); // 9 P2 + 1 P3
     });
 
     it('should maintain correct priority distribution', () => {
@@ -270,6 +280,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         asciiArt: createMockGenerator('asciiArt'),
         staticFallback: createMockGenerator('fallback'),
       };
@@ -280,7 +291,7 @@ describe('registerCoreContent', () => {
       const fallbackGens = registry.getByPriority(ContentPriority.FALLBACK);
       const notificationGens = registry.getByPriority(ContentPriority.NOTIFICATION);
 
-      expect(normalGens.length).toBe(8);
+      expect(normalGens.length).toBe(9);
       expect(fallbackGens.length).toBe(1);
       expect(notificationGens.length).toBe(0);
     });
@@ -294,6 +305,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -311,6 +323,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -335,6 +348,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -359,6 +373,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -383,14 +398,15 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      // motivational, globalNews, techNews, localNews, weather, greeting, haiku = 7
-      expect(normalPriorityGens.length).toBe(7);
+      // motivational, globalNews, techNews, localNews, weather, greeting, haiku, seasonal = 8
+      expect(normalPriorityGens.length).toBe(8);
     });
 
     it('should not register old news-summary generator', () => {
@@ -402,6 +418,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
@@ -420,6 +437,7 @@ describe('registerCoreContent', () => {
         weather: createMockGenerator('weather'),
         greeting: createMockGenerator('greeting'),
         haiku: createMockGenerator('haiku'),
+        seasonal: createMockGenerator('seasonal'),
         staticFallback: createMockGenerator('fallback'),
       };
 
