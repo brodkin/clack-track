@@ -54,6 +54,8 @@ export interface CoreGenerators {
   weather: ContentGenerator;
   /** Greeting generator (P2, LIGHT, programmatic) */
   greeting: ContentGenerator;
+  /** Haiku generator (P2, LIGHT, AI-powered) */
+  haiku: ContentGenerator;
   /** Optional ASCII art generator (P2, LIGHT, programmatic) */
   asciiArt?: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
@@ -162,6 +164,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.greeting
+  );
+
+  registry.register(
+    {
+      id: 'haiku',
+      name: 'Haiku Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.haiku
   );
 
   // Register optional asciiArt generator if provided

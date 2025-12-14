@@ -1,0 +1,5 @@
+Write a humorous haiku.
+ALWAYS center the text.
+CRITICAL!!! You MUST say something unexpected and deeply novel.
+
+Your topic is: {{payload}}
