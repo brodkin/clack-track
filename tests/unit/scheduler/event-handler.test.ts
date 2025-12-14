@@ -2,12 +2,15 @@
  * EventHandler Unit Tests
  *
  * Tests EventHandler integration with ContentOrchestrator via vestaboard_refresh events
+ * and TriggerMatcher for state_changed event filtering
  */
 
 import { EventHandler } from '../../../src/scheduler/event-handler.js';
 import type { HomeAssistantClient } from '../../../src/api/data-sources/index.js';
 import type { ContentOrchestrator } from '../../../src/content/orchestrator.js';
 import type { HomeAssistantEvent } from '../../../src/types/home-assistant.js';
+import { TriggerMatcher } from '../../../src/scheduler/trigger-matcher.js';
+import type { TriggerConfig } from '../../../src/config/trigger-schema.js';
 
 describe('EventHandler', () => {
   let mockHomeAssistant: jest.Mocked<HomeAssistantClient>;
@@ -209,6 +212,215 @@ describe('EventHandler', () => {
       expect(callArgs.timestamp).toBeInstanceOf(Date);
       expect(callArgs.timestamp.getTime()).toBeGreaterThanOrEqual(beforeCall.getTime());
       expect(callArgs.timestamp.getTime()).toBeLessThanOrEqual(afterCall.getTime());
+    });
+  });
+
+  describe('TriggerMatcher Integration', () => {
+    let triggerMatcher: TriggerMatcher;
+    const personArrivalTrigger: TriggerConfig = {
+      name: 'Person Arrival',
+      entity_pattern: 'person.*',
+      state_filter: 'home',
+      debounce_seconds: 60,
+    };
+
+    beforeEach(() => {
+      triggerMatcher = new TriggerMatcher([personArrivalTrigger]);
+    });
+
+    describe('constructor with triggerMatcher', () => {
+      it('should accept optional triggerMatcher parameter', () => {
+        const handler = new EventHandler(mockHomeAssistant, mockOrchestrator, triggerMatcher);
+        expect(handler).toBeInstanceOf(EventHandler);
+      });
+
+      it('should work without triggerMatcher (backward compatibility)', () => {
+        const handler = new EventHandler(mockHomeAssistant, mockOrchestrator);
+        expect(handler).toBeInstanceOf(EventHandler);
+      });
+    });
+
+    describe('initialize with triggerMatcher', () => {
+      it('should subscribe to state_changed events when triggerMatcher is provided', async () => {
+        const handler = new EventHandler(mockHomeAssistant, mockOrchestrator, triggerMatcher);
+        await handler.initialize();
+
+        // Should have subscribed to BOTH vestaboard_refresh AND state_changed
+        expect(mockHomeAssistant.subscribeToEvents).toHaveBeenCalledTimes(2);
+        expect(mockHomeAssistant.subscribeToEvents).toHaveBeenCalledWith(
+          'vestaboard_refresh',
+          expect.any(Function)
+        );
+        expect(mockHomeAssistant.subscribeToEvents).toHaveBeenCalledWith(
+          'state_changed',
+          expect.any(Function)
+        );
+      });
+
+      it('should NOT subscribe to state_changed when triggerMatcher is not provided', async () => {
+        const handler = new EventHandler(mockHomeAssistant, mockOrchestrator);
+        await handler.initialize();
+
+        // Should only subscribe to vestaboard_refresh
+        expect(mockHomeAssistant.subscribeToEvents).toHaveBeenCalledTimes(1);
+        expect(mockHomeAssistant.subscribeToEvents).toHaveBeenCalledWith(
+          'vestaboard_refresh',
+          expect.any(Function)
+        );
+      });
+    });
+
+    describe('handleStateChange', () => {
+      let stateChangedCallback: (event: HomeAssistantEvent) => void;
+
+      beforeEach(async () => {
+        const handler = new EventHandler(mockHomeAssistant, mockOrchestrator, triggerMatcher);
+        await handler.initialize();
+
+        // Extract the state_changed callback
+        const stateChangedCall = (mockHomeAssistant.subscribeToEvents as jest.Mock).mock.calls.find(
+          call => call[0] === 'state_changed'
+        );
+        stateChangedCallback = stateChangedCall[1];
+      });
+
+      it('should trigger orchestrator on matching state_changed event', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'state_changed',
+          data: {
+            entity_id: 'person.john',
+            new_state: { state: 'home' },
+            old_state: { state: 'away' },
+          },
+        };
+
+        await stateChangedCallback(event);
+
+        expect(mockOrchestrator.generateAndSend).toHaveBeenCalledWith({
+          updateType: 'major',
+          timestamp: expect.any(Date),
+          eventData: event.data,
+        });
+      });
+
+      it('should NOT trigger orchestrator on non-matching entity', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'state_changed',
+          data: {
+            entity_id: 'sensor.temperature',
+            new_state: { state: '72' },
+            old_state: { state: '71' },
+          },
+        };
+
+        await stateChangedCallback(event);
+
+        expect(mockOrchestrator.generateAndSend).not.toHaveBeenCalled();
+      });
+
+      it('should NOT trigger orchestrator on non-matching state', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'state_changed',
+          data: {
+            entity_id: 'person.john',
+            new_state: { state: 'away' },
+            old_state: { state: 'home' },
+          },
+        };
+
+        await stateChangedCallback(event);
+
+        expect(mockOrchestrator.generateAndSend).not.toHaveBeenCalled();
+      });
+
+      it('should NOT trigger orchestrator when debounced', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'state_changed',
+          data: {
+            entity_id: 'person.john',
+            new_state: { state: 'home' },
+            old_state: { state: 'away' },
+          },
+        };
+
+        // First trigger should work
+        await stateChangedCallback(event);
+        expect(mockOrchestrator.generateAndSend).toHaveBeenCalledTimes(1);
+
+        // Second trigger within debounce window should NOT work
+        await stateChangedCallback(event);
+        expect(mockOrchestrator.generateAndSend).toHaveBeenCalledTimes(1);
+      });
+
+      it('should handle missing entity_id gracefully', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'state_changed',
+          data: {
+            new_state: { state: 'home' },
+          },
+        };
+
+        // Should not crash
+        await stateChangedCallback(event);
+        expect(mockOrchestrator.generateAndSend).not.toHaveBeenCalled();
+      });
+
+      it('should handle missing new_state gracefully', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'state_changed',
+          data: {
+            entity_id: 'person.john',
+          },
+        };
+
+        // Should not crash
+        await stateChangedCallback(event);
+        expect(mockOrchestrator.generateAndSend).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('updateTriggerMatcher', () => {
+      it('should update trigger matcher and cleanup old one', () => {
+        const handler = new EventHandler(mockHomeAssistant, mockOrchestrator, triggerMatcher);
+        const cleanupSpy = jest.spyOn(triggerMatcher, 'cleanup');
+
+        const newTrigger: TriggerConfig = {
+          name: 'Door Open',
+          entity_pattern: 'binary_sensor.front_door',
+          state_filter: 'on',
+        };
+        const newMatcher = new TriggerMatcher([newTrigger]);
+
+        handler.updateTriggerMatcher(newMatcher);
+
+        expect(cleanupSpy).toHaveBeenCalled();
+      });
+
+      it('should accept null to clear trigger matcher', () => {
+        const handler = new EventHandler(mockHomeAssistant, mockOrchestrator, triggerMatcher);
+        const cleanupSpy = jest.spyOn(triggerMatcher, 'cleanup');
+
+        handler.updateTriggerMatcher(null);
+
+        expect(cleanupSpy).toHaveBeenCalled();
+      });
+    });
+
+    describe('shutdown with triggerMatcher', () => {
+      it('should cleanup triggerMatcher on shutdown', async () => {
+        const handler = new EventHandler(mockHomeAssistant, mockOrchestrator, triggerMatcher);
+        const cleanupSpy = jest.spyOn(triggerMatcher, 'cleanup');
+
+        await handler.shutdown();
+
+        expect(cleanupSpy).toHaveBeenCalled();
+        expect(mockHomeAssistant.disconnect).toHaveBeenCalled();
+      });
+
+      it('should handle shutdown gracefully without triggerMatcher', async () => {
+        const handler = new EventHandler(mockHomeAssistant, mockOrchestrator);
+        await expect(handler.shutdown()).resolves.not.toThrow();
+      });
     });
   });
 });

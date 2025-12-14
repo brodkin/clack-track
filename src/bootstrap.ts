@@ -40,6 +40,9 @@ import { getKnexInstance, type Knex } from './storage/knex.js';
 import { ContentModel, VoteModel, LogModel } from './storage/models/index.js';
 import { ContentRepository, VoteRepository } from './storage/repositories/index.js';
 import type { AIProvider } from './types/ai.js';
+import { TriggerConfigLoader } from './config/trigger-config.js';
+import { TriggerMatcher } from './scheduler/trigger-matcher.js';
+import { log as logMessage, warn } from './utils/logger.js';
 
 /**
  * Bootstrap result containing all initialized components
@@ -63,6 +66,8 @@ export interface BootstrapResult {
   voteRepository: VoteRepository | undefined;
   /** Log model for storing logs (undefined if database not configured) */
   logModel: LogModel | undefined;
+  /** Trigger config loader (null if not configured) - call stopWatching() to clean up */
+  triggerConfigLoader: TriggerConfigLoader | null;
 }
 
 /**
@@ -356,10 +361,41 @@ export async function bootstrap(): Promise<BootstrapResult> {
     contentRepository,
   });
 
-  // Step 10: Create EventHandler (only if Home Assistant configured)
-  const eventHandler = haClient ? new EventHandler(haClient, orchestrator) : null;
+  // Step 10: Load trigger configuration (if configured)
+  let triggerMatcher: TriggerMatcher | null = null;
+  let triggerConfigLoader: TriggerConfigLoader | null = null;
 
-  // Step 11: Create CronScheduler for periodic updates
+  const triggerConfigPath = config.dataSources.homeAssistant?.triggerConfigPath;
+  if (triggerConfigPath) {
+    try {
+      triggerConfigLoader = new TriggerConfigLoader(triggerConfigPath);
+      const triggersConfig = await triggerConfigLoader.load();
+      triggerMatcher = new TriggerMatcher(triggersConfig.triggers);
+
+      // Set up hot-reload
+      triggerConfigLoader.on('configReloaded', newConfig => {
+        triggerMatcher?.updateTriggers(newConfig.triggers);
+        logMessage('Trigger configuration reloaded');
+      });
+
+      triggerConfigLoader.on('error', err => {
+        warn('Trigger config reload error:', err);
+      });
+
+      triggerConfigLoader.startWatching();
+      logMessage(`Loaded trigger configuration from ${triggerConfigPath}`);
+    } catch (error) {
+      warn(`Failed to load trigger config from ${triggerConfigPath}:`, error);
+      // Continue without triggers - graceful degradation
+    }
+  }
+
+  // Step 11: Create EventHandler (only if Home Assistant configured)
+  const eventHandler = haClient
+    ? new EventHandler(haClient, orchestrator, triggerMatcher ?? undefined)
+    : null;
+
+  // Step 12: Create CronScheduler for periodic updates
   const minorUpdateGenerator = new MinorUpdateGenerator(orchestrator, frameDecorator);
   const scheduler = new CronScheduler(minorUpdateGenerator, vestaboardClient);
 
@@ -374,5 +410,6 @@ export async function bootstrap(): Promise<BootstrapResult> {
     contentRepository,
     voteRepository,
     logModel,
+    triggerConfigLoader,
   };
 }
