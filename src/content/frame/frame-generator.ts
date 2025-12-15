@@ -145,7 +145,7 @@ interface ContentResult {
 }
 
 /**
- * Process text content: validate characters, word wrap, pad/trim lines.
+ * Process text content: validate characters, word wrap, pad/trim lines, vertically center.
  */
 function processContent(text: string): ContentResult {
   const warnings: string[] = [];
@@ -161,11 +161,30 @@ function processContent(text: string): ContentResult {
   // Word wrap the sanitized text
   const wrappedLines = wrapText(sanitized, MAX_COLS);
 
-  // Limit to 5 rows, pad each to exactly 21 chars
+  // Determine actual content lines (capped at MAX_ROWS)
+  const contentLineCount = Math.min(wrappedLines.length, MAX_ROWS);
+
+  // Calculate vertical centering padding
+  const topPadding = Math.floor((MAX_ROWS - contentLineCount) / 2);
+
+  // Build lines array with vertical centering
   const lines: string[] = [];
-  for (let i = 0; i < MAX_ROWS; i++) {
+  const emptyLine = ' '.repeat(MAX_COLS);
+
+  // Add top padding (blank rows)
+  for (let i = 0; i < topPadding; i++) {
+    lines.push(emptyLine);
+  }
+
+  // Add content lines
+  for (let i = 0; i < contentLineCount; i++) {
     const line = wrappedLines[i] ?? '';
     lines.push(line.padEnd(MAX_COLS, ' ').substring(0, MAX_COLS));
+  }
+
+  // Add bottom padding to reach MAX_ROWS
+  while (lines.length < MAX_ROWS) {
+    lines.push(emptyLine);
   }
 
   // Warn if content was truncated
