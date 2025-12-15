@@ -155,11 +155,11 @@ describe('generateFrame', () => {
       const result = await generateFrame(options);
 
       // Check that emoji was replaced with space
-      // 'A🚀B' becomes 'A B' which is codes [1, 0, 2, ...]
-      const firstRow = result.layout[0];
-      expect(firstRow[0]).toBe(1); // A
-      expect(firstRow[1]).toBe(0); // space (replaced emoji)
-      expect(firstRow[2]).toBe(2); // B
+      // 'A🚀B' becomes 'A B' which is 1 line, centered at row 2 (2 blank rows above)
+      const contentRow = result.layout[2]; // Row 2 is center for 1-line content
+      expect(contentRow[0]).toBe(1); // A
+      expect(contentRow[1]).toBe(0); // space (replaced emoji)
+      expect(contentRow[2]).toBe(2); // B
     });
   });
 
@@ -467,6 +467,120 @@ describe('generateFrame', () => {
       expect(result.timing!.find(t => t.operation.includes('ColorBar'))).toBeDefined();
       expect(result.timing!.find(t => t.operation.includes('info bar'))).toBeDefined();
       expect(result.timing!.find(t => t.operation.includes('assembled'))).toBeDefined();
+    });
+  });
+
+  describe('vertical centering', () => {
+    it('should vertically center 1-line content (2 blank rows above, 2 below)', async () => {
+      const options: FrameOptions = {
+        text: 'HELLO',
+        dateTime: new Date('2025-11-26T10:30:00'),
+      };
+
+      const result = await generateFrame(options);
+
+      // Row 0: blank (padding)
+      expect(result.layout[0].slice(0, 21).every(code => code === 0)).toBe(true);
+      // Row 1: blank (padding)
+      expect(result.layout[1].slice(0, 21).every(code => code === 0)).toBe(true);
+      // Row 2: "HELLO                " (content centered)
+      expect(result.layout[2][0]).toBe(8); // H
+      expect(result.layout[2][1]).toBe(5); // E
+      expect(result.layout[2][2]).toBe(12); // L
+      expect(result.layout[2][3]).toBe(12); // L
+      expect(result.layout[2][4]).toBe(15); // O
+      // Row 3: blank (padding)
+      expect(result.layout[3].slice(0, 21).every(code => code === 0)).toBe(true);
+      // Row 4: blank (padding)
+      expect(result.layout[4].slice(0, 21).every(code => code === 0)).toBe(true);
+    });
+
+    it('should vertically center 2-line content (1 blank row above, 2 below)', async () => {
+      const options: FrameOptions = {
+        text: 'FIRST LINE AND SECOND LINE HERE', // Wraps to 2 lines at 21 chars
+        dateTime: new Date('2025-11-26T10:30:00'),
+      };
+
+      const result = await generateFrame(options);
+
+      // Row 0: blank (padding)
+      expect(result.layout[0].slice(0, 21).every(code => code === 0)).toBe(true);
+      // Row 1: First wrapped line
+      expect(result.layout[1][0]).toBe(6); // F (FIRST)
+      // Row 2: Second wrapped line
+      expect(result.layout[2].slice(0, 21).some(code => code !== 0)).toBe(true);
+      // Row 3: blank (padding)
+      expect(result.layout[3].slice(0, 21).every(code => code === 0)).toBe(true);
+      // Row 4: blank (padding)
+      expect(result.layout[4].slice(0, 21).every(code => code === 0)).toBe(true);
+    });
+
+    it('should vertically center 3-line content (1 blank row above, 1 below)', async () => {
+      const options: FrameOptions = {
+        text: 'THIS IS LINE ONE AND HERE IS LINE TWO AND FINALLY LINE THREE', // Wraps to 3 lines
+        dateTime: new Date('2025-11-26T10:30:00'),
+      };
+
+      const result = await generateFrame(options);
+
+      // Row 0: blank (padding)
+      expect(result.layout[0].slice(0, 21).every(code => code === 0)).toBe(true);
+      // Rows 1-3: Content lines
+      expect(result.layout[1].slice(0, 21).some(code => code !== 0)).toBe(true);
+      expect(result.layout[2].slice(0, 21).some(code => code !== 0)).toBe(true);
+      expect(result.layout[3].slice(0, 21).some(code => code !== 0)).toBe(true);
+      // Row 4: blank (padding)
+      expect(result.layout[4].slice(0, 21).every(code => code === 0)).toBe(true);
+    });
+
+    it('should vertically center 4-line content (0 blank rows above, 1 below)', async () => {
+      const options: FrameOptions = {
+        text: 'HERE IS SOME TEXT THAT SHOULD WRAP TO EXACTLY FOUR LINES WHEN WE TEST IT', // Wraps to exactly 4 lines
+        dateTime: new Date('2025-11-26T10:30:00'),
+      };
+
+      const result = await generateFrame(options);
+
+      // Rows 0-3: Content lines (no top padding)
+      expect(result.layout[0].slice(0, 21).some(code => code !== 0)).toBe(true);
+      expect(result.layout[1].slice(0, 21).some(code => code !== 0)).toBe(true);
+      expect(result.layout[2].slice(0, 21).some(code => code !== 0)).toBe(true);
+      expect(result.layout[3].slice(0, 21).some(code => code !== 0)).toBe(true);
+      // Row 4: blank (padding)
+      expect(result.layout[4].slice(0, 21).every(code => code === 0)).toBe(true);
+    });
+
+    it('should not add padding for 5-line content (uses all rows)', async () => {
+      const options: FrameOptions = {
+        text: 'THIS IS A VERY LONG TEXT THAT WILL DEFINITELY WRAP TO FIVE COMPLETE LINES WHEN DISPLAYED ON THE VESTABOARD WITH TWENTY ONE CHARACTERS PER LINE', // Wraps to 5+ lines
+        dateTime: new Date('2025-11-26T10:30:00'),
+      };
+
+      const result = await generateFrame(options);
+
+      // All 5 rows should contain content (no blank rows)
+      for (let row = 0; row < 5; row++) {
+        expect(result.layout[row].slice(0, 21).some(code => code !== 0)).toBe(true);
+      }
+    });
+
+    it('should handle word-wrapped content that results in fewer than 5 lines', async () => {
+      // This text wraps to 2 lines at 21 chars
+      const options: FrameOptions = {
+        text: 'BRIEF MESSAGE HERE FOR TESTING', // Wraps to 2 lines
+        dateTime: new Date('2025-11-26T10:30:00'),
+      };
+
+      const result = await generateFrame(options);
+
+      // Should have 1 blank row above (topPadding = floor((5-2)/2) = 1)
+      expect(result.layout[0].slice(0, 21).every(code => code === 0)).toBe(true);
+      // Rows 1-2 should have content
+      expect(result.layout[1].slice(0, 21).some(code => code !== 0)).toBe(true);
+      expect(result.layout[2].slice(0, 21).some(code => code !== 0)).toBe(true);
+      // Rows 3-4 should be blank
+      expect(result.layout[3].slice(0, 21).every(code => code === 0)).toBe(true);
+      expect(result.layout[4].slice(0, 21).every(code => code === 0)).toBe(true);
     });
   });
 
