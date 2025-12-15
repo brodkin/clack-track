@@ -15,7 +15,7 @@
  * @module content/orchestrator
  */
 
-import { generateWithRetry } from './orchestrator-retry.js';
+import { generateWithRetry, type GeneratorFactory } from './orchestrator-retry.js';
 import { validateGeneratorOutput } from '../utils/validators.js';
 import type { ContentSelector } from './registry/content-selector.js';
 import type { ContentRegistry } from './registry/content-registry.js';
@@ -165,9 +165,17 @@ export class ContentOrchestrator {
     let generationError: Error | null = null;
 
     try {
-      // Step 3: Generate with retry logic
+      // Step 3: Generate with retry logic using factory pattern
+      // Create a factory that returns the selected generator instance
+      // Note: Current generator architecture doesn't use injected provider yet
+      // (provider injection will be added in future refactoring)
+      // For now, factory ignores provider parameter and returns pre-existing generator
+      const generatorFactory: GeneratorFactory = (_provider: AIProvider) => {
+        return registeredGenerator.generator;
+      };
+
       content = await generateWithRetry(
-        registeredGenerator.generator,
+        generatorFactory,
         context,
         this.preferredProvider,
         this.alternateProvider

@@ -5,6 +5,7 @@ import {
   RateLimitError,
   AuthenticationError,
   InvalidRequestError,
+  OverloadedError,
 } from '../../types/errors.js';
 
 export class OpenAIClient implements AIProvider {
@@ -80,6 +81,10 @@ export class OpenAIClient implements AIProvider {
 
     if (statusCode === 400) {
       throw new InvalidRequestError(message, 'OpenAI', err as Error, statusCode);
+    }
+
+    if (statusCode === 529 || statusCode === 503) {
+      throw new OverloadedError(message, 'OpenAI', err as Error, statusCode);
     }
 
     // Generic error for other cases
