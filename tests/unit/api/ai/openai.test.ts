@@ -5,6 +5,7 @@ import {
   AuthenticationError,
   InvalidRequestError,
   AIProviderError,
+  OverloadedError,
 } from '@/types/errors';
 import OpenAI from 'openai';
 import { openaiFixtures } from '@tests/fixtures/index';
@@ -159,6 +160,37 @@ describe('OpenAIClient', () => {
       await expect(client.generate(request)).rejects.toMatchObject({
         provider: 'OpenAI',
         statusCode: 400,
+      });
+    });
+
+    it('should throw OverloadedError when API returns 529 status', async () => {
+      const error = new Error('Service is overloaded') as Error & {
+        status: number;
+        error: unknown;
+      };
+      error.status = 529;
+      error.error = { message: 'Service temporarily overloaded' };
+
+      mockOpenAI.chat.completions.create.mockRejectedValue(error);
+
+      await expect(client.generate(request)).rejects.toThrow(OverloadedError);
+      await expect(client.generate(request)).rejects.toMatchObject({
+        provider: 'OpenAI',
+        statusCode: 529,
+      });
+    });
+
+    it('should throw OverloadedError when API returns 503 status', async () => {
+      const error = new Error('Service unavailable') as Error & { status: number; error: unknown };
+      error.status = 503;
+      error.error = { message: 'Service temporarily unavailable' };
+
+      mockOpenAI.chat.completions.create.mockRejectedValue(error);
+
+      await expect(client.generate(request)).rejects.toThrow(OverloadedError);
+      await expect(client.generate(request)).rejects.toMatchObject({
+        provider: 'OpenAI',
+        statusCode: 503,
       });
     });
 

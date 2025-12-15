@@ -4,6 +4,8 @@ import {
   RateLimitError,
   InvalidRequestError,
   AuthenticationError,
+  OverloadedError,
+  ContentValidationError,
 } from '@/types/errors';
 
 describe('AI Provider Error Types', () => {
@@ -159,6 +161,40 @@ describe('AI Provider Error Types', () => {
     });
   });
 
+  describe('OverloadedError', () => {
+    it('should extend AIProviderError', () => {
+      const error = new OverloadedError('Service overloaded', 'openai');
+      expect(error).toBeInstanceOf(AIProviderError);
+      expect(error).toBeInstanceOf(OverloadedError);
+    });
+
+    it('should have correct error name', () => {
+      const error = new OverloadedError('Service overloaded', 'openai');
+      expect(error.name).toBe('OverloadedError');
+    });
+
+    it('should default to 503 status code', () => {
+      const error = new OverloadedError('Service overloaded', 'openai');
+      expect(error.statusCode).toBe(503);
+    });
+
+    it('should allow custom status code', () => {
+      const error = new OverloadedError('Service overloaded', 'openai', undefined, 503);
+      expect(error.statusCode).toBe(503);
+    });
+
+    it('should store provider name', () => {
+      const error = new OverloadedError('Service overloaded', 'anthropic');
+      expect(error.provider).toBe('anthropic');
+    });
+
+    it('should store original error', () => {
+      const originalError = new Error('Upstream overload');
+      const error = new OverloadedError('Service overloaded', 'openai', originalError);
+      expect(error.originalError).toBe(originalError);
+    });
+  });
+
   describe('Error Serialization', () => {
     it('should serialize AIProviderError to JSON', () => {
       const error = new AIProviderError('Test error', 'openai', undefined, 500);
@@ -183,21 +219,27 @@ describe('AI Provider Error Types', () => {
       const rateLimitError = new RateLimitError('Too many requests', 'openai');
       const invalidRequestError = new InvalidRequestError('Bad params', 'openai');
       const authError = new AuthenticationError('No auth', 'openai');
+      const overloadedError = new OverloadedError('Service overloaded', 'openai');
 
       // All should be instances of Error
       expect(rateLimitError).toBeInstanceOf(Error);
       expect(invalidRequestError).toBeInstanceOf(Error);
       expect(authError).toBeInstanceOf(Error);
+      expect(overloadedError).toBeInstanceOf(Error);
 
       // All should be instances of AIProviderError
       expect(rateLimitError).toBeInstanceOf(AIProviderError);
       expect(invalidRequestError).toBeInstanceOf(AIProviderError);
       expect(authError).toBeInstanceOf(AIProviderError);
+      expect(overloadedError).toBeInstanceOf(AIProviderError);
 
       // But not instances of each other's specific types
       expect(rateLimitError).not.toBeInstanceOf(InvalidRequestError);
       expect(rateLimitError).not.toBeInstanceOf(AuthenticationError);
+      expect(rateLimitError).not.toBeInstanceOf(OverloadedError);
       expect(invalidRequestError).not.toBeInstanceOf(RateLimitError);
+      expect(overloadedError).not.toBeInstanceOf(RateLimitError);
+      expect(overloadedError).not.toBeInstanceOf(AuthenticationError);
     });
   });
 
@@ -232,6 +274,73 @@ describe('AI Provider Error Types', () => {
       expect(error.message).toContain('API key');
       expect(error.provider).toBe('openai');
       expect(error.statusCode).toBe(401);
+    });
+
+    it('should provide useful context for debugging service overload', () => {
+      const error = new OverloadedError(
+        'Service temporarily overloaded',
+        'anthropic',
+        undefined,
+        529
+      );
+
+      expect(error.name).toBe('OverloadedError');
+      expect(error.message).toContain('overloaded');
+      expect(error.provider).toBe('anthropic');
+      expect(error.statusCode).toBe(529);
+    });
+  });
+
+  describe('ContentValidationError', () => {
+    it('should extend Error class', () => {
+      const error = new ContentValidationError('Content validation failed');
+      expect(error).toBeInstanceOf(Error);
+      expect(error).toBeInstanceOf(ContentValidationError);
+    });
+
+    it('should have correct error name', () => {
+      const error = new ContentValidationError('Content validation failed');
+      expect(error.name).toBe('ContentValidationError');
+    });
+
+    it('should store error message', () => {
+      const error = new ContentValidationError('Content exceeds maximum length');
+      expect(error.message).toBe('Content exceeds maximum length');
+    });
+
+    it('should store validation details when provided', () => {
+      const error = new ContentValidationError('Invalid content', {
+        invalidChars: ['©', '™'],
+        lineCount: 7,
+        maxLineLength: 25,
+      });
+
+      expect(error.invalidChars).toEqual(['©', '™']);
+      expect(error.lineCount).toBe(7);
+      expect(error.maxLineLength).toBe(25);
+    });
+
+    it('should have undefined details when not provided', () => {
+      const error = new ContentValidationError('Content validation failed');
+      expect(error.invalidChars).toBeUndefined();
+      expect(error.lineCount).toBeUndefined();
+      expect(error.maxLineLength).toBeUndefined();
+    });
+
+    it('should maintain stack trace', () => {
+      const error = new ContentValidationError('Content validation failed');
+      expect(error.stack).toBeDefined();
+      expect(error.stack).toContain('ContentValidationError');
+    });
+
+    it('should allow partial details', () => {
+      const error = new ContentValidationError('Too many lines', {
+        lineCount: 8,
+      });
+
+      expect(error.lineCount).toBe(8);
+      expect(error.invalidChars).toBeUndefined();
+      expect(error.maxLineLength).toBeUndefined();
     });
   });
 });
