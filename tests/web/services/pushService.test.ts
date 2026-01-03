@@ -37,6 +37,13 @@ beforeEach(() => {
     configurable: true,
   });
 
+  // Mock PushManager (required for isSupported check)
+  Object.defineProperty(global, 'PushManager', {
+    value: class PushManager {},
+    writable: true,
+    configurable: true,
+  });
+
   // Mock Notification API
   Object.defineProperty(global, 'Notification', {
     value: {
@@ -79,11 +86,9 @@ describe('pushService', () => {
     });
 
     it('should return false when service worker is not supported', () => {
-      Object.defineProperty(global.navigator, 'serviceWorker', {
-        value: undefined,
-        writable: true,
-        configurable: true,
-      });
+      // Delete the serviceWorker property - 'in' checks property existence, not value
+      const nav = global.navigator as any;
+      delete nav.serviceWorker;
 
       expect(isSupported()).toBe(false);
     });

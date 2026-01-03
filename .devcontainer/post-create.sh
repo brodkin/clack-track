@@ -165,6 +165,19 @@ else
     echo "   If you see socket chmod errors, rebuild the devcontainer to use the Docker volume"
 fi
 
+# Ensure .claude directory has correct permissions
+echo "🔑 Setting up Claude Code home directory..."
+if [ -d /home/vscode/.claude ]; then
+    CLAUDE_OWNER=$(stat -c '%U' /home/vscode/.claude 2>/dev/null || echo "unknown")
+    if [ "$CLAUDE_OWNER" = "root" ]; then
+        echo "   Fixing .claude directory ownership..."
+        sudo chown -R vscode:vscode /home/vscode/.claude
+    fi
+    echo "✅ Claude Code home directory ready"
+else
+    echo "   Claude Code home directory will be created on first run"
+fi
+
 # Install Beads CLI
 echo "🔵 Installing Beads CLI..."
 if ! command -v bd &> /dev/null; then

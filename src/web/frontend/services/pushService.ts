@@ -27,7 +27,7 @@ export function isSupported(): boolean {
  * @returns Permission status ('granted', 'denied', or 'default')
  */
 export async function requestPermission(): Promise<PushPermission> {
-  if (!('Notification' in window)) {
+  if (typeof Notification === 'undefined') {
     return 'denied';
   }
 
@@ -67,7 +67,7 @@ export async function subscribe(vapidPublicKey: string): Promise<PushSubscriptio
 
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
-    applicationServerKey,
+    applicationServerKey: applicationServerKey as BufferSource,
   });
 
   return subscription.toJSON() as PushSubscriptionData;

@@ -16,15 +16,6 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     python3-pip \
     python3-venv \
     python3-virtualenv \
-    # ACLI dependencies
-    gnupg2 \
-    # Install Atlassian CLI (acli) for Jira integration
-    && mkdir -p -m 755 /etc/apt/keyrings \
-    && wget -nv -O- https://acli.atlassian.com/gpg/public-key.asc | gpg --dearmor -o /etc/apt/keyrings/acli-archive-keyring.gpg \
-    && chmod go+r /etc/apt/keyrings/acli-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/acli-archive-keyring.gpg] https://acli.atlassian.com/linux/deb stable main" | tee /etc/apt/sources.list.d/acli.list > /dev/null \
-    && apt-get update \
-    && apt-get install -y acli \
     # Clean up to reduce image size
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*

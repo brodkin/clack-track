@@ -5,10 +5,8 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ..:/workspace:cached
-      # Host authentication mounts for Claude Code
-      # Cross-platform compatible (works on macOS, Linux, and Windows)
-      - ~/.claude:/home/vscode/.claude
-      - ~/.config/atlassian-cli:/home/vscode/.config/atlassian-cli:ro
+      # Persistent Claude Code home directory (user settings, credentials, history)
+      - claude-home-clack-track:/home/vscode/.claude
       # Persistent command history and config volumes
       - command-history-clack-track:/home/vscode/history
       - claude-config-clack-track:/home/vscode/.config/claude-code
@@ -41,6 +39,8 @@ services:
       - mysql-data:/var/lib/mysql
 
 volumes:
+  # Persistent Claude Code home directory
+  claude-home-clack-track:
   # Persistent command history volume
   command-history-clack-track:
   # Persistent Claude Code configuration volume

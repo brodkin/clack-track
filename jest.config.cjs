@@ -128,6 +128,7 @@ module.exports = {
       extensionsToTreatAsEsm: ['.ts', '.tsx'],
       moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
       moduleNameMapper: {
+        '^@/(.*)\\.js$': '<rootDir>/src/$1',
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@tests/(.*)$': '<rootDir>/tests/$1',
         '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
@@ -143,6 +144,7 @@ module.exports = {
               jsx: 'react-jsx',
               module: 'esnext',
               target: 'es2022',
+              lib: ['ES2022', 'DOM', 'DOM.Iterable'],
               types: ['jest', 'node'],
             },
           },
