@@ -72,6 +72,7 @@ module.exports = {
         ],
       },
       moduleNameMapper: {
+        '^@/(.*)\\.js$': '<rootDir>/src/$1',
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@tests/(.*)$': '<rootDir>/tests/$1',
         '^(\\.{1,2}/.*)\\.js$': '$1',
@@ -100,6 +101,7 @@ module.exports = {
         ],
       },
       moduleNameMapper: {
+        '^@/(.*)\\.js$': '<rootDir>/src/$1',
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@tests/(.*)$': '<rootDir>/tests/$1',
         '^(\\.{1,2}/.*)\\.js$': '$1',
@@ -114,6 +116,7 @@ module.exports = {
       testTimeout: 60000, // E2E tests may take longer
       extensionsToTreatAsEsm: ['.ts'],
       moduleNameMapper: {
+        '^@/(.*)\\.js$': '<rootDir>/src/$1',
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@tests/(.*)$': '<rootDir>/tests/$1',
         '^(\\.{1,2}/.*)\\.js$': '$1',
