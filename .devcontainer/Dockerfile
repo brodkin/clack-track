@@ -20,6 +20,13 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Docker CLI (not daemon) for remote Docker operations
+# Uses SSH to communicate with remote Docker hosts via DOCKER_HOST=ssh://user@host
+RUN curl -fsSL https://get.docker.com | sh \
+    && rm -rf /var/lib/docker \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install Python package manager and UV for Claude MCP support
 RUN python3 -m pip install --break-system-packages pipx \
     && pipx install --global uv
