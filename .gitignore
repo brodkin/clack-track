@@ -32,7 +32,7 @@ yarn-error.log*
 Thumbs.db
 
 # IDE
-.vscode/
+.vscode/*
 !.vscode/settings.json
 .idea/
 *.swp
