@@ -103,6 +103,20 @@ volumes:
   mysql_data:
 
 # Secrets are created externally via secrets.sh
+#
+# SECRET VERSIONING PATTERN:
+#   For zero-downtime secret rotation, use: ./secrets.sh rotate <secret_name>
+#   This creates versioned secrets (e.g., database_password_v1, _v2) and updates
+#   this file automatically. The old unversioned names below are the initial state.
+#
+#   Example rotation workflow:
+#     1. Update secret value in .env.production
+#     2. Run: ./secrets.sh rotate database_password
+#     3. Script creates database_password_v1, updates this file, triggers service update
+#     4. Optionally remove old secret when prompted
+#
+#   After rotation, entries below will show versioned names (e.g., database_password_v1)
+#
 secrets:
   database_password:
     external: true
