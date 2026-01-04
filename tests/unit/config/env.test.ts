@@ -135,13 +135,13 @@ describe('Environment Configuration', () => {
         expect(config.port).toBe(3000);
       });
 
-      it('should use default WEB_PORT as 4000', () => {
-        delete process.env.WEB_PORT;
+      it('should use default WEB_SERVER_PORT as 3000', () => {
+        delete process.env.WEB_SERVER_PORT;
 
         const envModule = require('@/config/env');
         const config = envModule.loadConfig();
 
-        expect(config.web.port).toBe(4000);
+        expect(config.web.port).toBe(3000);
       });
 
       it('should use default WEB_HOST as 0.0.0.0', () => {
@@ -322,7 +322,7 @@ describe('Environment Configuration', () => {
       });
 
       it('should load custom web port', () => {
-        process.env.WEB_PORT = '8080';
+        process.env.WEB_SERVER_PORT = '8080';
 
         const envModule = require('@/config/env');
         const config = envModule.loadConfig();
@@ -602,7 +602,7 @@ describe('Environment Configuration', () => {
       expect(config.ai.openai?.apiKey).toBe('sk-test-openai-key');
 
       // Web
-      expect(config.web.port).toBe(4000);
+      expect(config.web.port).toBe(3000);
       expect(config.web.host).toBe('0.0.0.0');
     });
   });

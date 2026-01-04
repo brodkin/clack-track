@@ -112,7 +112,7 @@ export function loadConfig(): EnvironmentConfig {
 
     web: {
       enabled: getOptionalEnv('WEB_SERVER_ENABLED', 'true') !== 'false',
-      port: parseInt(getOptionalEnv('WEB_PORT', '4000'), 10),
+      port: parseInt(getOptionalEnv('WEB_SERVER_PORT', '3000'), 10),
       host: getOptionalEnv('WEB_HOST', '0.0.0.0'),
       corsEnabled:
         getOptionalEnv('CORS_ENABLED', nodeEnv === 'development' ? 'true' : 'false') === 'true',

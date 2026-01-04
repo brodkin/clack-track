@@ -91,7 +91,7 @@ describe('WebServer Configuration Integration', () => {
     it('should handle WEB_SERVER_ENABLED with other web config', async () => {
       // Arrange
       process.env.WEB_SERVER_ENABLED = 'false';
-      process.env.WEB_PORT = '8080';
+      process.env.WEB_SERVER_PORT = '8080';
       process.env.WEB_HOST = 'localhost';
       process.env.CORS_ENABLED = 'true';
       const loadConfig = await getLoadConfigFunction();
@@ -124,7 +124,7 @@ describe('WebServer Configuration Integration', () => {
     it('should maintain backward compatibility when WEB_SERVER_ENABLED is omitted', async () => {
       // Arrange - Simulate existing .env files without WEB_SERVER_ENABLED
       delete process.env.WEB_SERVER_ENABLED;
-      process.env.WEB_PORT = '3000';
+      process.env.WEB_SERVER_PORT = '3000';
       const loadConfig = await getLoadConfigFunction();
 
       // Act
