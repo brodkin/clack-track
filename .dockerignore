@@ -1,0 +1,53 @@
+# Dependencies (rebuilt in container)
+node_modules/
+
+# Build output (rebuilt in container)
+dist/
+dev-dist/
+coverage/
+
+# Development files
+.devcontainer/
+.git/
+.gitignore
+.env
+.env.local
+.env.production
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Tests
+tests/
+*.test.ts
+*.spec.ts
+jest.config.cjs
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Deployment scripts (not needed in image)
+deploy.sh
+secrets.sh
+docker-compose.prod.yml
+stack.yml
+
+# Beads issue tracking
+.beads/
+trees/

@@ -1,0 +1,75 @@
+# Production Docker Compose for Clack Track
+# Deploy with: docker compose -f docker-compose.prod.yml up -d
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: clack-track:latest
+    container_name: clack-track
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_TYPE=${DATABASE_TYPE:-mysql}
+      - VESTABOARD_LOCAL_API_KEY=${VESTABOARD_LOCAL_API_KEY}
+      - VESTABOARD_LOCAL_API_URL=${VESTABOARD_LOCAL_API_URL}
+      - AI_PROVIDER=${AI_PROVIDER:-openai}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - HOME_ASSISTANT_URL=${HOME_ASSISTANT_URL:-}
+      - HOME_ASSISTANT_TOKEN=${HOME_ASSISTANT_TOKEN:-}
+      - WEATHER_ENTITY=${WEATHER_ENTITY:-weather.apple}
+      - UPDATE_INTERVAL=${UPDATE_INTERVAL:-60}
+      - TZ=${TZ:-America/Los_Angeles}
+      - WEB_SERVER_ENABLED=${WEB_SERVER_ENABLED:-true}
+      - WEB_SERVER_PORT=3000
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_SUBJECT=${VAPID_SUBJECT:-}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - clack-network
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000/').then(() => process.exit(0)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  mysql:
+    image: mysql:8.0
+    container_name: clack-track-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-clacktrack}
+      - MYSQL_DATABASE=clack_track
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - clack-network
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  clack-network:
+    driver: bridge
+
+volumes:
+  mysql_data:

@@ -53,6 +53,13 @@ beforeEach(() => {
     configurable: true,
   });
 
+  // Mock PushManager (required for isSupported check)
+  Object.defineProperty(global, 'PushManager', {
+    value: class PushManager {},
+    writable: true,
+    configurable: true,
+  });
+
   // Mock Notification API
   const notificationMock = {
     permission: 'default',

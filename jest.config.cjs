@@ -159,6 +159,7 @@ module.exports = {
               jsx: 'react-jsx',
               module: 'esnext',
               target: 'es2022',
+              lib: ['ES2022', 'DOM', 'DOM.Iterable'],
               types: ['jest', 'node', 'dom'],
             },
           },

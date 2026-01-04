@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+.env.production
 
 # Dependencies
 node_modules/
@@ -32,7 +33,7 @@ yarn-error.log*
 Thumbs.db
 
 # IDE
-.vscode/
+.vscode/*
 !.vscode/settings.json
 .idea/
 *.swp
@@ -52,5 +53,9 @@ trees/
 
 # Beads issue tracking (synced via beads/sync branch)
 .beads/
+
+# Playwright MCP
 .playwright-mcp/
+
+# SQLite dev database
 data/clack-track-dev.sqlite

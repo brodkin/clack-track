@@ -1,4 +1,7 @@
 {
+  "terminal.integrated.env.linux": {
+    "BEADS_SYNC_BRANCH": "beads-sync"
+  },
   "sqltools.connections": [
     {
       "name": "Clack Track Dev",

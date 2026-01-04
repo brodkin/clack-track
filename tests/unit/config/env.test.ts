@@ -49,24 +49,30 @@ describe('Environment Configuration', () => {
         expect(config.ai.openai?.apiKey).toBe('sk-test-key');
       });
 
-      it('should throw error when OpenAI provider is selected but OPENAI_API_KEY is missing', () => {
+      it('should allow OpenAI provider with empty API key (Docker Swarm secrets pattern)', () => {
         process.env.VESTABOARD_LOCAL_API_KEY = 'test-key';
         process.env.AI_PROVIDER = 'openai';
         delete process.env.OPENAI_API_KEY;
 
-        expect(() => {
-          require('@/config/env');
-        }).toThrow('Missing required environment variable: OPENAI_API_KEY');
+        // getSecretOrEnv returns empty string if not found - API key validation
+        // happens at runtime when AI provider is actually used, not at config load
+        const envModule = require('@/config/env');
+        const config = envModule.loadConfig();
+
+        expect(config.ai.openai?.apiKey).toBe('');
       });
 
-      it('should throw error when Anthropic provider is selected but ANTHROPIC_API_KEY is missing', () => {
+      it('should allow Anthropic provider with empty API key (Docker Swarm secrets pattern)', () => {
         process.env.VESTABOARD_LOCAL_API_KEY = 'test-key';
         process.env.AI_PROVIDER = 'anthropic';
         delete process.env.ANTHROPIC_API_KEY;
 
-        expect(() => {
-          require('@/config/env');
-        }).toThrow('Missing required environment variable: ANTHROPIC_API_KEY');
+        // getSecretOrEnv returns empty string if not found - API key validation
+        // happens at runtime when AI provider is actually used, not at config load
+        const envModule = require('@/config/env');
+        const config = envModule.loadConfig();
+
+        expect(config.ai.anthropic?.apiKey).toBe('');
       });
 
       it('should throw error when RAPIDAPI_KEY is provided but RAPIDAPI_HOST is missing', () => {
@@ -80,15 +86,18 @@ describe('Environment Configuration', () => {
         }).toThrow('Missing required environment variable: RAPIDAPI_HOST');
       });
 
-      it('should throw error when HOME_ASSISTANT_URL is provided but HOME_ASSISTANT_TOKEN is missing', () => {
+      it('should not load Home Assistant config when token is missing (graceful degradation)', () => {
         process.env.VESTABOARD_LOCAL_API_KEY = 'test-key';
         process.env.OPENAI_API_KEY = 'sk-test';
         process.env.HOME_ASSISTANT_URL = 'http://homeassistant.local:8123';
         delete process.env.HOME_ASSISTANT_TOKEN;
 
-        expect(() => {
-          require('@/config/env');
-        }).toThrow('Missing required environment variable: HOME_ASSISTANT_TOKEN');
+        // HA config requires both URL and token - if either missing, returns undefined
+        // This is graceful degradation, not an error
+        const envModule = require('@/config/env');
+        const config = envModule.loadConfig();
+
+        expect(config.dataSources.homeAssistant).toBeUndefined();
       });
     });
 
@@ -192,7 +201,7 @@ describe('Environment Configuration', () => {
         expect(config.ai.openai?.model).toBe('gpt-4');
       });
 
-      it('should use default ANTHROPIC_MODEL as claude-sonnet-4', () => {
+      it('should use default ANTHROPIC_MODEL as claude-sonnet-4-5-20250929', () => {
         process.env.AI_PROVIDER = 'anthropic';
         process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
         delete process.env.ANTHROPIC_MODEL;
@@ -200,7 +209,7 @@ describe('Environment Configuration', () => {
         const envModule = require('@/config/env');
         const config = envModule.loadConfig();
 
-        expect(config.ai.anthropic?.model).toBe('claude-sonnet-4');
+        expect(config.ai.anthropic?.model).toBe('claude-sonnet-4-5-20250929');
       });
 
       it('should use default DATABASE_TYPE as sqlite', () => {

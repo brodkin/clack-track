@@ -12,6 +12,7 @@
 
 import { Router, type Request, type Response } from 'express';
 import webpush from 'web-push';
+import { getSecretOrEnv } from '../../utils/secrets.js';
 
 const router = Router();
 
@@ -19,10 +20,10 @@ const router = Router();
 // TODO: Replace with database storage in production
 const pushSubscriptions = new Map<string, webpush.PushSubscription>();
 
-// Configure VAPID keys from environment
-const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
-const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
+// Configure VAPID keys from secrets or environment
+const vapidPublicKey = getSecretOrEnv('vapid_public_key', 'VAPID_PUBLIC_KEY');
+const vapidPrivateKey = getSecretOrEnv('vapid_private_key', 'VAPID_PRIVATE_KEY');
+const vapidSubject = getSecretOrEnv('vapid_subject', 'VAPID_SUBJECT', 'mailto:admin@example.com');
 
 if (vapidPublicKey && vapidPrivateKey) {
   webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
