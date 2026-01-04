@@ -69,9 +69,18 @@ async function main() {
   console.log('Scheduler started for periodic minor updates');
 
   // Initialize Home Assistant event handler if configured
+  // HA connection failures are non-fatal - app continues without event-driven updates
   if (eventHandler) {
-    await eventHandler.initialize();
-    console.log('Home Assistant event handler initialized');
+    try {
+      await eventHandler.initialize();
+      console.log('Home Assistant event handler initialized');
+    } catch (error) {
+      console.error(
+        'Home Assistant event handler failed to initialize:',
+        error instanceof Error ? error.message : String(error)
+      );
+      console.log('Continuing without Home Assistant integration');
+    }
   }
 
   // Register graceful shutdown handlers

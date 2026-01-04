@@ -246,6 +246,37 @@ describe('Daemon Mode', () => {
       expect(console.log).toHaveBeenCalledWith('Scheduler started for periodic minor updates');
       expect(console.log).toHaveBeenCalledWith('Clack Track daemon running');
     });
+
+    it('should continue running when HA event handler initialization fails', async () => {
+      // Set up eventHandler.initialize to throw an error
+      const mockFailingEventHandler = {
+        initialize: jest.fn().mockRejectedValue(new Error('Connection failed')),
+      };
+
+      mockBootstrap.mockResolvedValue({
+        scheduler: mockScheduler,
+        eventHandler: mockFailingEventHandler,
+        haClient: mockHaClient,
+        database: mockDatabase,
+        orchestrator: mockOrchestrator,
+        registry: mockRegistry,
+      });
+
+      const { main } = await import('@/index.js');
+
+      // Should not throw - HA failures are non-fatal
+      await main();
+
+      // Verify the error was logged
+      expect(console.error).toHaveBeenCalledWith(
+        'Home Assistant event handler failed to initialize:',
+        'Connection failed'
+      );
+      expect(console.log).toHaveBeenCalledWith('Continuing without Home Assistant integration');
+
+      // Verify the app continued to run
+      expect(console.log).toHaveBeenCalledWith('Clack Track daemon running');
+    });
   });
 
   describe('graceful shutdown', () => {
