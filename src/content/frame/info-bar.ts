@@ -72,7 +72,7 @@ function reformatDateMonth(formatted: string): string {
     return formatted; // Fallback to original if unexpected format
   }
   const [month, day] = parts;
-  return `${day}${month}`; // "26NOV" or "5NOV"
+  return `${day.padStart(2, '0')}${month}`; // "26NOV" or "05NOV"
 }
 
 function formatTemperature(weather: WeatherData): string {
