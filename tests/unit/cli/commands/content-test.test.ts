@@ -6,9 +6,17 @@
 
 // Set environment variables BEFORE any imports that call bootstrap
 process.env.OPENAI_API_KEY = 'test-key';
+process.env.VESTABOARD_API_KEY = 'test-vestaboard-key';
+process.env.VESTABOARD_API_URL = 'http://localhost:7000';
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import type { BootstrapResult } from '../../../../src/bootstrap.js';
+import type { CronScheduler } from '../../../../src/scheduler/cron.js';
+
+// Mock bootstrap module BEFORE importing the command
+jest.mock('../../../../src/bootstrap.js');
+
 import { contentTestCommand } from '../../../../src/cli/commands/content-test.js';
+import * as bootstrapModule from '../../../../src/bootstrap.js';
 import { ContentRegistry } from '../../../../src/content/registry/content-registry.js';
 import { FrameDecorator } from '../../../../src/content/frame/frame-decorator.js';
 import type {
@@ -25,8 +33,11 @@ describe('content:test command', () => {
   let consoleErrorSpy: jest.SpyInstance;
   let processExitSpy: jest.SpyInstance;
   let registry: ContentRegistry;
+  let mockScheduler: jest.Mocked<CronScheduler>;
 
   beforeEach(() => {
+    jest.clearAllMocks();
+
     // Reset registry before each test
     ContentRegistry.reset();
     registry = ContentRegistry.getInstance();
@@ -35,6 +46,21 @@ describe('content:test command', () => {
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
     processExitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+    // Create mock scheduler
+    mockScheduler = {
+      start: jest.fn(),
+      stop: jest.fn(),
+    } as unknown as jest.Mocked<CronScheduler>;
+
+    // Mock bootstrap function - spy setup for mock implementation
+    jest.spyOn(bootstrapModule, 'bootstrap').mockResolvedValue({
+      orchestrator: {} as BootstrapResult['orchestrator'],
+      eventHandler: null,
+      scheduler: mockScheduler,
+      registry: registry,
+      haClient: null,
+    } as BootstrapResult);
 
     // Mock FrameDecorator
     (FrameDecorator as jest.Mock).mockImplementation(() => ({
@@ -46,7 +72,6 @@ describe('content:test command', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
     ContentRegistry.reset();
   });
 

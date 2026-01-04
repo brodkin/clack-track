@@ -1,5 +1,7 @@
 // Set environment variables BEFORE any imports that call bootstrap
 process.env.OPENAI_API_KEY = 'test-key';
+process.env.VESTABOARD_LOCAL_API_KEY = 'test-vestaboard-key';
+process.env.VESTABOARD_LOCAL_API_URL = 'http://localhost:7000';
 
 import { bootstrap } from '../../src/bootstrap.js';
 import { Database, createDatabase } from '../../src/storage/database.js';
