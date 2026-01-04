@@ -81,7 +81,10 @@ async function main() {
       });
       console.log('Initial major update completed');
     } catch (error) {
-      console.warn('Initial major update failed, minor updates will retry:', error);
+      console.warn('Initial major update failed:', error);
+      console.log(
+        "Minor updates will wait for content. Run 'npm run generate' manually or wait for a Home Assistant event to populate the cache."
+      );
     }
 
     scheduler.start();
