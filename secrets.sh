@@ -166,9 +166,9 @@ get_secret_version() {
     local base_name="$1"
 
     # Check stack.yml for versioned reference (e.g., database_password_v2)
-    # Look for pattern: base_name_v<number>
+    # Look for pattern: base_name_v<number> (excluding comment lines)
     local versioned_match
-    versioned_match=$(grep -oP "${base_name}_v\K[0-9]+" "$STACK_FILE" 2>/dev/null | sort -n | tail -1)
+    versioned_match=$(grep -v '^\s*#' "$STACK_FILE" 2>/dev/null | grep -oP "${base_name}_v\K[0-9]+" | sort -n | tail -1)
 
     if [ -n "$versioned_match" ]; then
         echo "$versioned_match"
