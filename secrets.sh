@@ -44,6 +44,11 @@ load_env() {
     source "$ENV_FILE"
     set +a
 
+    # Export DOCKER_API_VERSION if set (for older Docker hosts)
+    if [ -n "$DOCKER_API_VERSION" ]; then
+        export DOCKER_API_VERSION
+    fi
+
     # Verify DOCKER_HOST is set
     if [ -z "$DOCKER_HOST" ]; then
         echo -e "${RED}Error: DOCKER_HOST not set in $ENV_FILE${NC}"
