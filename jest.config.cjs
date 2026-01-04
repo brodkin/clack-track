@@ -55,12 +55,11 @@ module.exports = {
       displayName: 'unit',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/unit/**/*.test.ts'],
-      testPathIgnorePatterns: ['/node_modules/', '/dist/', '/trees/', '/.beads/'],
+      testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
       transform: {
         '^.+\\.ts$': [
           'ts-jest',
           {
-            isolatedModules: true,
             diagnostics: {
               ignoreCodes: [151002, 2339, 2307],
             },
@@ -83,13 +82,12 @@ module.exports = {
       preset: 'ts-jest',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/integration/**/*.test.ts'],
-      testPathIgnorePatterns: ['/node_modules/', '/dist/', '/trees/', '/.beads/'],
+      testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
       extensionsToTreatAsEsm: ['.ts'],
       transform: {
         '^.+\\.ts$': [
           'ts-jest',
           {
-            isolatedModules: true,
             diagnostics: {
               ignoreCodes: [151002, 2339, 2307, 7016, 2322, 2345],
             },
@@ -112,9 +110,23 @@ module.exports = {
       preset: 'ts-jest',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/e2e/**/*.test.ts'],
-      testPathIgnorePatterns: ['/node_modules/', '/dist/', '/trees/', '/.beads/'],
+      testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
       testTimeout: 60000, // E2E tests may take longer
       extensionsToTreatAsEsm: ['.ts'],
+      transform: {
+        '^.+\\.ts$': [
+          'ts-jest',
+          {
+            diagnostics: {
+              ignoreCodes: [151002, 2339, 2307, 7016, 2322, 2345],
+            },
+            tsconfig: {
+              module: 'commonjs',
+              esModuleInterop: true,
+            },
+          },
+        ],
+      },
       moduleNameMapper: {
         '^@/(.*)\\.js$': '<rootDir>/src/$1',
         '^@/(.*)$': '<rootDir>/src/$1',
@@ -127,7 +139,7 @@ module.exports = {
       preset: 'ts-jest',
       testEnvironment: 'jsdom', // Web UI tests need DOM
       testMatch: ['<rootDir>/tests/web/**/*.test.ts', '<rootDir>/tests/web/**/*.test.tsx'],
-      testPathIgnorePatterns: ['/node_modules/', '/dist/', '/trees/', '/.beads/'],
+      testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
       extensionsToTreatAsEsm: ['.ts', '.tsx'],
       moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
       moduleNameMapper: {
@@ -148,7 +160,7 @@ module.exports = {
               module: 'esnext',
               target: 'es2022',
               lib: ['ES2022', 'DOM', 'DOM.Iterable'],
-              types: ['jest', 'node'],
+              types: ['jest', 'node', 'dom'],
             },
           },
         ],
@@ -158,24 +170,25 @@ module.exports = {
 
   // Module name mapping for mocks
   moduleNameMapper: {
+    '^@/(.*)\\.js$': '<rootDir>/src/$1',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@tests/(.*)$': '<rootDir>/tests/$1',
   },
 
   // Ignore patterns for test discovery (clack-od7z)
   // Note: These are regex patterns, not glob patterns
+  // Note: /trees/ pattern removed because this config IS IN a worktree
   testPathIgnorePatterns: [
     '/node_modules/',
     '/dist/',
-    '/trees/', // Ignore all worktrees (matches any path containing /trees/)
     '/.beads/', // Ignore beads database
   ],
 
   // Coverage ignore patterns (clack-od7z)
+  // Note: /trees/ pattern removed because this config IS IN a worktree
   coveragePathIgnorePatterns: [
     '/node_modules/',
     '/dist/',
-    '/trees/', // Ignore all worktrees
     '/__mocks__/', // Ignore mock files
     '/__fixtures__/', // Ignore fixture files
     '/.beads/', // Ignore beads database

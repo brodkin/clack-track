@@ -43,10 +43,7 @@ const SKIP_LIVE = process.env.VESTABOARD_LIVE_TEST !== 'true';
   });
 
   it('should send text message to Vestaboard', async () => {
-    await client.sendText('LIVE TEST\nFROM JEST');
-
-    // If no error thrown, message was sent successfully
-    expect(true).toBe(true);
+    await expect(client.sendText('LIVE TEST\nFROM JEST')).resolves.not.toThrow();
     console.log('Text message sent successfully');
   });
 
@@ -71,7 +68,7 @@ const SKIP_LIVE = process.env.VESTABOARD_LIVE_TEST !== 'true';
       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
 
-    await client.sendLayout(layout);
+    await expect(client.sendLayout(layout)).resolves.not.toThrow();
     console.log('Layout sent successfully');
   });
 

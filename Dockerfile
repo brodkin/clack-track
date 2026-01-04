@@ -4,6 +4,13 @@
 # Stage 1: Build
 FROM node:20-bookworm-slim AS builder
 
+# Install build dependencies for native modules (better-sqlite3)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy package files
@@ -15,9 +22,9 @@ RUN npm ci
 # Copy source files
 COPY tsconfig.json ./
 COPY vite.config.ts ./
-COPY tailwind.config.js ./
-COPY postcss.config.js ./
-COPY index.html ./
+COPY tailwind.config.ts ./
+COPY postcss.config.cjs ./
+COPY public/ ./public/
 COPY src/ ./src/
 COPY prompts/ ./prompts/
 
@@ -37,8 +44,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies only
-RUN npm ci --omit=dev && npm cache clean --force
+# Install production dependencies only (skip prepare/husky scripts)
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist

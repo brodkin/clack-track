@@ -3,5 +3,7 @@
     "allow": ["Bash(mount:*)", "Bash(python3:*)", "mcp__plugin_beads_beads__*"],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": false,
+  "enabledMcpjsonServers": ["context7", "playwright"]
 }

@@ -10,6 +10,8 @@ if (preserveNodeEnv) {
 import { WebServer } from './web/server.js';
 import { config } from './config/env.js';
 import { runCLI } from './cli/index.js';
+import { bootstrap } from './bootstrap.js';
+import { closeKnexInstance } from './storage/knex.js';
 
 async function main() {
   // Check if running as CLI command
@@ -43,19 +45,83 @@ async function main() {
     return;
   }
 
-  // Initialize web server
-  const webServer = new WebServer({
-    port: config.web.port,
-    host: config.web.host,
-    corsEnabled: config.web.corsEnabled,
-    staticPath: config.web.staticPath,
-  });
+  // Bootstrap to get knex, repositories, and orchestrator
+  const {
+    knex,
+    contentRepository,
+    voteRepository,
+    logModel,
+    scheduler,
+    eventHandler,
+    orchestrator,
+  } = await bootstrap();
+
+  // Create WebServer with dependencies
+  const webServer = new WebServer(
+    {
+      port: config.web.port,
+      host: config.web.host,
+      corsEnabled: config.web.corsEnabled,
+      staticPath: config.web.staticPath,
+    },
+    { contentRepository, voteRepository, logModel }
+  );
 
   try {
     await webServer.start();
     console.log(`Web interface available at http://${config.web.host}:${config.web.port}`);
+
+    // Run initial major update to populate cache for minor updates
+    // This ensures the first minor update has content to work with
+    try {
+      console.log('Running initial major content update...');
+      await orchestrator.generateAndSend({
+        updateType: 'major',
+        timestamp: new Date(),
+      });
+      console.log('Initial major update completed');
+    } catch (error) {
+      console.warn('Initial major update failed:', error);
+      console.log(
+        "Minor updates will wait for content. Run 'npm run generate' manually or wait for a Home Assistant event to populate the cache."
+      );
+    }
+
+    scheduler.start();
+    if (eventHandler) await eventHandler.initialize();
+
+    // Register coordinated signal handlers for graceful shutdown
+    const gracefulShutdown = async (signal: string) => {
+      console.log(`Received ${signal}, shutting down gracefully...`);
+      try {
+        await webServer.stop();
+        scheduler.stop();
+        if (eventHandler) await eventHandler.shutdown();
+        if (knex) await closeKnexInstance();
+        process.exit(0);
+      } catch (error) {
+        console.error('Error during graceful shutdown:', error);
+        process.exit(1);
+      }
+    };
+
+    process.on('SIGTERM', () => {
+      gracefulShutdown('SIGTERM').catch(err => {
+        console.error('Fatal error during shutdown:', err);
+        process.exit(1);
+      });
+    });
+    process.on('SIGINT', () => {
+      gracefulShutdown('SIGINT').catch(err => {
+        console.error('Fatal error during shutdown:', err);
+        process.exit(1);
+      });
+    });
   } catch (error) {
     console.error('Failed to start web server:', error);
+    scheduler.stop();
+    if (eventHandler) await eventHandler.shutdown();
+    if (knex) await closeKnexInstance();
     process.exit(1);
   }
 }

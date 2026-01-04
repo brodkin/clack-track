@@ -1,0 +1,36 @@
+# Clack Track - Home Assistant Trigger Configuration
+# Copy this file to config/triggers.yaml and customize
+#
+# Each trigger defines:
+#   name: Human-readable name (required)
+#   entity_pattern: Pattern to match entity IDs (required)
+#     - Exact: "binary_sensor.front_door"
+#     - Glob: "person.*" or "sensor.*_temperature"
+#     - Regex: "/^cover\\..*garage.*$/i"
+#   state_filter: Only trigger on specific state(s) (optional)
+#   debounce_seconds: Prevent rapid re-triggers (optional, default: 0)
+
+triggers:
+  # Trigger when any person arrives home
+  - name: 'Person Arrival'
+    entity_pattern: 'person.*'
+    state_filter: 'home'
+    debounce_seconds: 60
+
+  # Trigger when front door opens
+  - name: 'Front Door Open'
+    entity_pattern: 'binary_sensor.front_door'
+    state_filter: 'on'
+    debounce_seconds: 30
+
+  # Trigger when any garage door opens (regex example)
+  - name: 'Garage Door'
+    entity_pattern: "/^cover\\..*garage.*$/i"
+    state_filter: 'open'
+    debounce_seconds: 120
+
+  # Trigger on motion detection in living room
+  - name: 'Living Room Motion'
+    entity_pattern: 'binary_sensor.living_room_motion'
+    state_filter: 'on'
+    debounce_seconds: 300

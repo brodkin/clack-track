@@ -1,21 +1,41 @@
 import { LogModel, LogLevel } from '../../../../src/storage/models/index.js';
-import { Database, createDatabase } from '../../../../src/storage/database.js';
+import {
+  getKnexInstance,
+  closeKnexInstance,
+  resetKnexInstance,
+} from '../../../../src/storage/knex.js';
+import { Knex } from 'knex';
 
 describe('LogModel', () => {
-  let db: Database;
+  let knex: Knex;
   let logModel: LogModel;
 
   beforeEach(async () => {
-    db = await createDatabase();
-    await db.connect();
-    await db.migrate();
-    // Clean tables for isolated tests (DELETE works in both MySQL and SQLite)
-    await db.run('DELETE FROM logs');
-    logModel = new LogModel(db);
+    // Reset singleton to ensure clean state
+    resetKnexInstance();
+    knex = getKnexInstance();
+
+    // Create logs table manually instead of using migrations (avoids ES module import issues)
+    const tableExists = await knex.schema.hasTable('logs');
+    if (!tableExists) {
+      await knex.schema.createTable('logs', table => {
+        table.increments('id').primary();
+        table.string('level', 10).notNullable();
+        table.text('message').notNullable();
+        table.timestamp('created_at').defaultTo(knex.fn.now());
+        table.text('metadata').nullable();
+        table.index('level', 'idx_logs_level');
+        table.index('created_at', 'idx_logs_created_at');
+      });
+    }
+
+    // Clean tables for isolated tests
+    await knex('logs').del();
+    logModel = new LogModel(knex);
   });
 
   afterEach(async () => {
-    await db.disconnect();
+    await closeKnexInstance();
   });
 
   describe('create', () => {

@@ -72,6 +72,7 @@ export interface EnvironmentConfig {
       websocketUrl?: string;
       reconnectDelayMs?: number;
       maxReconnectAttempts?: number;
+      triggerConfigPath?: string;
     };
   };
 
@@ -111,7 +112,7 @@ export function loadConfig(): EnvironmentConfig {
 
     web: {
       enabled: getOptionalEnv('WEB_SERVER_ENABLED', 'true') !== 'false',
-      port: parseInt(getOptionalEnv('WEB_PORT', '3000'), 10),
+      port: parseInt(getOptionalEnv('WEB_SERVER_PORT', '3000'), 10),
       host: getOptionalEnv('WEB_HOST', '0.0.0.0'),
       corsEnabled:
         getOptionalEnv('CORS_ENABLED', nodeEnv === 'development' ? 'true' : 'false') === 'true',
@@ -141,7 +142,7 @@ export function loadConfig(): EnvironmentConfig {
         aiProvider === 'anthropic'
           ? {
               apiKey: getSecretOrEnv('anthropic_api_key', 'ANTHROPIC_API_KEY'),
-              model: getOptionalEnv('ANTHROPIC_MODEL', 'claude-sonnet-4'),
+              model: getOptionalEnv('ANTHROPIC_MODEL', 'claude-sonnet-4-5-20250929'),
             }
           : undefined,
     },
@@ -183,6 +184,7 @@ export function loadConfig(): EnvironmentConfig {
           websocketUrl,
           reconnectDelayMs,
           maxReconnectAttempts,
+          triggerConfigPath: getOptionalEnv('TRIGGER_CONFIG_PATH'),
         };
       })(),
     },

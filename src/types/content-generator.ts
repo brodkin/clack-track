@@ -100,6 +100,63 @@ export interface GenerationContext {
    * Provided by ContentDataProvider before generation to avoid duplicate fetches.
    */
   data?: ContentData;
+  /**
+   * Optional generator ID to force a specific generator instead of random selection.
+   * When provided, bypasses ContentSelector and uses the specified generator directly.
+   */
+  generatorId?: string;
+}
+
+/**
+ * Failover retry metadata for observability and diagnostics.
+ *
+ * Tracks all retry attempts across providers to help diagnose issues
+ * and tune retry configuration.
+ *
+ * @interface FailoverMetadata
+ * @property {number} totalAttempts - Total number of generation attempts across all providers
+ * @property {number} preferredAttempts - Number of attempts using preferred provider
+ * @property {number} alternateAttempts - Number of attempts using alternate provider
+ * @property {boolean} failedOver - Whether failover to alternate provider occurred
+ * @property {string} primaryProvider - Primary AI provider name (e.g., 'openai')
+ * @property {string} finalProvider - Provider that succeeded (e.g., 'anthropic')
+ * @property {Array<{ provider: string; attempt: number; error: string }>} errors - Failed attempts with error details
+ * @property {number} totalDurationMs - Total time spent on all retry attempts in milliseconds
+ *
+ * @example
+ * ```typescript
+ * const failoverMetadata: FailoverMetadata = {
+ *   totalAttempts: 3,
+ *   preferredAttempts: 2,
+ *   alternateAttempts: 1,
+ *   failedOver: true,
+ *   primaryProvider: 'openai',
+ *   finalProvider: 'anthropic',
+ *   errors: [
+ *     { provider: 'openai', attempt: 1, error: 'Rate limit exceeded' },
+ *     { provider: 'openai', attempt: 2, error: 'Rate limit exceeded' }
+ *   ],
+ *   totalDurationMs: 3250
+ * };
+ * ```
+ */
+export interface FailoverMetadata {
+  /** Total number of generation attempts across all providers */
+  totalAttempts: number;
+  /** Number of attempts using preferred provider */
+  preferredAttempts: number;
+  /** Number of attempts using alternate provider */
+  alternateAttempts: number;
+  /** Whether failover to alternate provider occurred */
+  failedOver: boolean;
+  /** Primary AI provider name (e.g., 'openai') */
+  primaryProvider: string;
+  /** Provider that succeeded (e.g., 'anthropic') */
+  finalProvider: string;
+  /** Failed attempts with error details */
+  errors: Array<{ provider: string; attempt: number; error: string }>;
+  /** Total time spent on all retry attempts in milliseconds */
+  totalDurationMs: number;
 }
 
 /**
@@ -117,6 +174,7 @@ export interface GenerationContext {
  * @property {string} [primaryError] - Error message from primary provider (if failover occurred)
  * @property {string} [systemPrompt] - System prompt sent to the AI provider
  * @property {string} [userPrompt] - User prompt sent to the AI provider
+ * @property {FailoverMetadata} [failover] - Detailed failover retry metadata
  *
  * @example
  * ```typescript
@@ -126,7 +184,17 @@ export interface GenerationContext {
  *   provider: 'openai',
  *   tokensUsed: 150,
  *   systemPrompt: 'You are a helpful assistant...',
- *   userPrompt: 'Generate a motivational quote about...'
+ *   userPrompt: 'Generate a motivational quote about...',
+ *   failover: {
+ *     totalAttempts: 1,
+ *     preferredAttempts: 1,
+ *     alternateAttempts: 0,
+ *     failedOver: false,
+ *     primaryProvider: 'openai',
+ *     finalProvider: 'openai',
+ *     errors: [],
+ *     totalDurationMs: 1250
+ *   }
  * };
  * ```
  */
@@ -147,6 +215,8 @@ export interface GenerationMetadata {
   systemPrompt?: string;
   /** User prompt sent to the AI provider */
   userPrompt?: string;
+  /** Detailed failover retry metadata */
+  failover?: FailoverMetadata;
   /** Additional metadata fields */
   [key: string]: unknown;
 }

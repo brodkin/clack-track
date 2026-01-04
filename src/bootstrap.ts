@@ -26,8 +26,11 @@ import { GlobalNewsGenerator } from './content/generators/ai/global-news-generat
 import { TechNewsGenerator } from './content/generators/ai/tech-news-generator.js';
 import { LocalNewsGenerator } from './content/generators/ai/local-news-generator.js';
 import { WeatherGenerator } from './content/generators/ai/weather-generator.js';
+import { HaikuGenerator } from './content/generators/ai/haiku-generator.js';
+import { SeasonalGenerator } from './content/generators/ai/seasonal-generator.js';
 import { GreetingGenerator } from './content/generators/programmatic/greeting-generator.js';
 import { ASCIIArtGenerator } from './content/generators/programmatic/ascii-art-generator.js';
+import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
 import { RSSClient } from './api/data-sources/rss-client.js';
 import { PromptLoader } from './content/prompt-loader.js';
@@ -35,10 +38,13 @@ import { MinorUpdateGenerator } from './content/generators/minor-update.js';
 import { ContentDataProvider } from './services/content-data-provider.js';
 import { WeatherService } from './services/weather-service.js';
 import { ColorBarService } from './content/frame/color-bar.js';
-import { Database, createDatabase } from './storage/database.js';
-import { ContentModel } from './storage/models/content.js';
-import { ContentRepository } from './storage/repositories/content-repo.js';
+import { getKnexInstance, type Knex } from './storage/knex.js';
+import { ContentModel, VoteModel, LogModel } from './storage/models/index.js';
+import { ContentRepository, VoteRepository } from './storage/repositories/index.js';
 import type { AIProvider } from './types/ai.js';
+import { TriggerConfigLoader } from './config/trigger-config.js';
+import { TriggerMatcher } from './scheduler/trigger-matcher.js';
+import { log as logMessage, warn } from './utils/logger.js';
 
 /**
  * Bootstrap result containing all initialized components
@@ -54,8 +60,16 @@ export interface BootstrapResult {
   registry: ContentRegistry;
   /** Home Assistant client (null if HA not configured) - call disconnect() to clean up */
   haClient: HomeAssistantClient | null;
-  /** Database connection (null if not configured) - call disconnect() to clean up */
-  database: Database | null;
+  /** Knex database connection (null if not configured) - call closeKnexInstance() to clean up */
+  knex: Knex | null;
+  /** Content repository for storing content records (undefined if database not configured) */
+  contentRepository: ContentRepository | undefined;
+  /** Vote repository for storing votes (undefined if database not configured) */
+  voteRepository: VoteRepository | undefined;
+  /** Log model for storing logs (undefined if database not configured) */
+  logModel: LogModel | undefined;
+  /** Trigger config loader (null if not configured) - call stopWatching() to clean up */
+  triggerConfigLoader: TriggerConfigLoader | null;
 }
 
 /**
@@ -156,6 +170,9 @@ function createCoreGenerators(
     localNews: new LocalNewsGenerator(promptLoader, modelTierSelector, apiKeys, rssClient),
     weather: new WeatherGenerator(promptLoader, modelTierSelector, apiKeys, weatherService),
     greeting: new GreetingGenerator(),
+    haiku: new HaikuGenerator(promptLoader, modelTierSelector, apiKeys),
+    seasonal: new SeasonalGenerator(promptLoader, modelTierSelector, apiKeys),
+    pattern: new PatternGenerator(),
     asciiArt: new ASCIIArtGenerator(['HELLO', 'WORLD', 'WELCOME']),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
@@ -256,19 +273,30 @@ export async function bootstrap(): Promise<BootstrapResult> {
   const weatherService = haClient?.isConnected() ? new WeatherService(haClient) : undefined;
 
   // Step 4.5: Initialize Database (if configured)
-  let database: Database | null = null;
+  let knex: Knex | null = null;
   let contentRepository: ContentRepository | undefined;
+  let voteRepository: VoteRepository | undefined;
+  let logModel: LogModel | undefined;
 
-  // In test environment, always use in-memory SQLite via factory
+  // In test environment, always use in-memory SQLite
   // In production, require DATABASE_URL to be configured
   if (process.env.NODE_ENV === 'test' || config.database.url) {
     try {
-      database = await createDatabase();
-      await database.connect();
-      await database.migrate();
+      knex = getKnexInstance();
 
-      const contentModel = new ContentModel(database);
+      // Note: Migrations are not run here to avoid ES module import issues in test environments
+      // Tests handle table creation manually; production should ensure tables exist via migrations
+
+      // Create content model and repository
+      const contentModel = new ContentModel(knex);
       contentRepository = new ContentRepository(contentModel);
+
+      // Create vote model and repository
+      const voteModel = new VoteModel(knex);
+      voteRepository = new VoteRepository(voteModel);
+
+      // Create log model (no repository wrapper needed - direct model access)
+      logModel = new LogModel(knex);
 
       // Run 90-day retention cleanup on startup (fire-and-forget)
       contentRepository.cleanupOldRecords(90).catch(cleanupError => {
@@ -283,8 +311,10 @@ export async function bootstrap(): Promise<BootstrapResult> {
         'Failed to connect to database:',
         error instanceof Error ? error.message : 'Unknown error'
       );
-      database = null;
+      knex = null;
       contentRepository = undefined;
+      voteRepository = undefined;
+      logModel = undefined;
     }
   }
 
@@ -326,6 +356,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
   // Step 9: Create ContentOrchestrator
   const orchestrator = new ContentOrchestrator({
     selector,
+    registry,
     decorator: frameDecorator,
     vestaboardClient,
     fallbackGenerator: coreGenerators.staticFallback as StaticFallbackGenerator,
@@ -335,12 +366,43 @@ export async function bootstrap(): Promise<BootstrapResult> {
     contentRepository,
   });
 
-  // Step 10: Create EventHandler (only if Home Assistant configured)
-  const eventHandler = haClient ? new EventHandler(haClient, orchestrator) : null;
+  // Step 10: Load trigger configuration (if configured)
+  let triggerMatcher: TriggerMatcher | null = null;
+  let triggerConfigLoader: TriggerConfigLoader | null = null;
 
-  // Step 11: Create CronScheduler for periodic updates
+  const triggerConfigPath = config.dataSources.homeAssistant?.triggerConfigPath;
+  if (triggerConfigPath) {
+    try {
+      triggerConfigLoader = new TriggerConfigLoader(triggerConfigPath);
+      const triggersConfig = await triggerConfigLoader.load();
+      triggerMatcher = new TriggerMatcher(triggersConfig.triggers);
+
+      // Set up hot-reload
+      triggerConfigLoader.on('configReloaded', newConfig => {
+        triggerMatcher?.updateTriggers(newConfig.triggers);
+        logMessage('Trigger configuration reloaded');
+      });
+
+      triggerConfigLoader.on('error', err => {
+        warn('Trigger config reload error:', err);
+      });
+
+      triggerConfigLoader.startWatching();
+      logMessage(`Loaded trigger configuration from ${triggerConfigPath}`);
+    } catch (error) {
+      warn(`Failed to load trigger config from ${triggerConfigPath}:`, error);
+      // Continue without triggers - graceful degradation
+    }
+  }
+
+  // Step 11: Create EventHandler (only if Home Assistant configured)
+  const eventHandler = haClient
+    ? new EventHandler(haClient, orchestrator, triggerMatcher ?? undefined)
+    : null;
+
+  // Step 12: Create CronScheduler for periodic updates
   const minorUpdateGenerator = new MinorUpdateGenerator(orchestrator, frameDecorator);
-  const scheduler = new CronScheduler(minorUpdateGenerator, vestaboardClient);
+  const scheduler = new CronScheduler(minorUpdateGenerator, vestaboardClient, orchestrator);
 
   // Return all initialized components
   return {
@@ -349,6 +411,10 @@ export async function bootstrap(): Promise<BootstrapResult> {
     scheduler,
     registry,
     haClient,
-    database,
+    knex,
+    contentRepository,
+    voteRepository,
+    logModel,
+    triggerConfigLoader,
   };
 }

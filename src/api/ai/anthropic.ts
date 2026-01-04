@@ -5,6 +5,7 @@ import {
   RateLimitError,
   AuthenticationError,
   InvalidRequestError,
+  OverloadedError,
 } from '../../types/errors.js';
 
 export class AnthropicClient implements AIProvider {
@@ -88,6 +89,10 @@ export class AnthropicClient implements AIProvider {
 
     if (statusCode === 400 || errorType === 'invalid_request_error') {
       throw new InvalidRequestError(message, 'Anthropic', err as Error, statusCode || 400);
+    }
+
+    if (statusCode === 529 || errorType === 'overloaded_error') {
+      throw new OverloadedError(message, 'Anthropic', err as Error, statusCode || 529);
     }
 
     // Generic error for other cases

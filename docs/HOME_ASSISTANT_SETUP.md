@@ -280,10 +280,11 @@ If a token is compromised:
 
 ### Optional Variables
 
-| Variable                                | Description                         | Default |
-| --------------------------------------- | ----------------------------------- | ------- |
-| `HOME_ASSISTANT_RECONNECT_DELAY`        | Delay between reconnection attempts | `5000`  |
-| `HOME_ASSISTANT_MAX_RECONNECT_ATTEMPTS` | Maximum reconnection attempts       | `10`    |
+| Variable                                | Description                              | Default   |
+| --------------------------------------- | ---------------------------------------- | --------- |
+| `HOME_ASSISTANT_RECONNECT_DELAY`        | Delay between reconnection attempts (ms) | `5000`    |
+| `HOME_ASSISTANT_MAX_RECONNECT_ATTEMPTS` | Maximum reconnection attempts            | `10`      |
+| `TRIGGER_CONFIG_PATH`                   | Path to trigger configuration YAML file  | (not set) |
 
 ### Complete Example
 
@@ -295,6 +296,9 @@ HOME_ASSISTANT_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI4ZjY...
 # Optional: Customize reconnection behavior
 HOME_ASSISTANT_RECONNECT_DELAY=3000
 HOME_ASSISTANT_MAX_RECONNECT_ATTEMPTS=20
+
+# Optional: Enable entity-based triggers (see "Trigger Configuration" section)
+TRIGGER_CONFIG_PATH=./config/triggers.yaml
 ```
 
 ## Troubleshooting
@@ -416,6 +420,171 @@ nc -zv homeassistant.local 8123
 1. Create token from admin account
 2. Grant required permissions to token user
 3. Check Home Assistant configuration.yaml for access restrictions
+
+## Trigger Configuration
+
+### Overview
+
+Clack Track supports a YAML-based trigger configuration system that automatically refreshes your Vestaboard when specific Home Assistant entity states change. This is separate from the `vestaboard_refresh` custom event and provides fine-grained control over which entities trigger updates.
+
+### Quick Start
+
+1. Copy the example configuration:
+
+   ```bash
+   cp config/triggers.example.yaml config/triggers.yaml
+   ```
+
+2. Add the config path to your `.env`:
+
+   ```bash
+   TRIGGER_CONFIG_PATH=./config/triggers.yaml
+   ```
+
+3. Customize `config/triggers.yaml` with your entities
+4. Restart the daemon - it will automatically subscribe to `state_changed` events
+
+### Configuration Format
+
+```yaml
+triggers:
+  - name: 'Person Arrival' # Human-readable name (required)
+    entity_pattern: 'person.*' # Pattern to match entity IDs (required)
+    state_filter: 'home' # Only trigger on this state (optional)
+    debounce_seconds: 60 # Prevent rapid re-triggers (optional)
+```
+
+### Pattern Types
+
+**Exact Match** - Match a specific entity ID:
+
+```yaml
+entity_pattern: 'binary_sensor.front_door'
+```
+
+**Glob Pattern** - Use wildcards for flexible matching:
+
+```yaml
+entity_pattern: "person.*"              # Any person entity
+entity_pattern: "sensor.*_temperature"  # Any temperature sensor
+entity_pattern: "light.living_room_*"   # Living room lights
+```
+
+**Regex Pattern** - Use regular expressions for complex matching:
+
+```yaml
+entity_pattern: "/^cover\\..*garage.*$/i"  # Case-insensitive garage covers
+entity_pattern: "/^binary_sensor\\.(front|back)_door$/"  # Front or back door
+```
+
+Regex patterns must be enclosed in `/` delimiters. Supported flags: `i` (case-insensitive).
+
+### State Filtering
+
+Control which state changes trigger updates:
+
+**No filter** - Trigger on any state change:
+
+```yaml
+- name: 'Any Door Change'
+  entity_pattern: 'binary_sensor.*_door'
+  # No state_filter - triggers on open AND close
+```
+
+**Single state** - Trigger only on specific state:
+
+```yaml
+- name: 'Person Arrives'
+  entity_pattern: 'person.*'
+  state_filter: 'home' # Only when state becomes "home"
+```
+
+**Multiple states** - Trigger on any of several states:
+
+```yaml
+- name: 'Garage Activity'
+  entity_pattern: 'cover.garage_door'
+  state_filter: ['open', 'opening'] # Either state
+```
+
+### Debouncing
+
+Prevent rapid-fire updates when an entity changes state frequently:
+
+```yaml
+- name: 'Motion Detection'
+  entity_pattern: 'binary_sensor.living_room_motion'
+  state_filter: 'on'
+  debounce_seconds: 300 # Max one trigger per 5 minutes
+```
+
+- `debounce_seconds: 0` (default) - No debouncing, trigger on every match
+- Each trigger has an independent debounce timer
+- Timer resets after each successful trigger
+
+### Hot Reload
+
+The trigger configuration supports hot reload - edit `config/triggers.yaml` and changes take effect automatically without restarting the daemon. The system watches the file for changes with a 500ms debounce to handle rapid saves.
+
+### Complete Example
+
+```yaml
+# config/triggers.yaml
+triggers:
+  # Welcome message when someone arrives home
+  - name: 'Person Arrival'
+    entity_pattern: 'person.*'
+    state_filter: 'home'
+    debounce_seconds: 60
+
+  # Front door notifications
+  - name: 'Front Door Open'
+    entity_pattern: 'binary_sensor.front_door'
+    state_filter: 'on'
+    debounce_seconds: 30
+
+  # Garage door (using regex for flexibility)
+  - name: 'Garage Door'
+    entity_pattern: "/^cover\\..*garage.*$/i"
+    state_filter: 'open'
+    debounce_seconds: 120
+
+  # Motion-triggered updates (longer debounce)
+  - name: 'Living Room Motion'
+    entity_pattern: 'binary_sensor.living_room_motion'
+    state_filter: 'on'
+    debounce_seconds: 300
+```
+
+### Troubleshooting Triggers
+
+**Triggers not firing:**
+
+1. Check `TRIGGER_CONFIG_PATH` is set in `.env`
+2. Verify YAML syntax: `npm run test:ha` will report config errors
+3. Use `npm run test:ha -- --watch state_changed` to see what events fire
+4. Confirm entity IDs match your patterns exactly
+
+**Too many triggers:**
+
+- Add `state_filter` to limit which states trigger
+- Increase `debounce_seconds` to prevent rapid updates
+
+**Pattern not matching:**
+
+- For glob patterns, `*` matches any characters except `.`
+- For regex, escape special characters: `\\.` for literal `.`
+- Test patterns with `npm run test:ha -- --entity <entity_id>`
+
+### Environment Variables
+
+| Variable              | Description                | Default   |
+| --------------------- | -------------------------- | --------- |
+| `TRIGGER_CONFIG_PATH` | Path to triggers YAML file | (not set) |
+
+When `TRIGGER_CONFIG_PATH` is not set, trigger-based updates are disabled and only `vestaboard_refresh` custom events will trigger major updates.
+
+---
 
 ## Integration Usage Examples
 
@@ -557,6 +726,8 @@ If you encounter issues not covered in this guide:
 
 Before considering setup complete, verify:
 
+**Required:**
+
 - [ ] Long-lived access token created in Home Assistant
 - [ ] Token copied and stored securely
 - [ ] `HOME_ASSISTANT_URL` configured in `.env`
@@ -567,4 +738,11 @@ Before considering setup complete, verify:
 - [ ] Security best practices followed (no token in git)
 - [ ] Token rotation schedule established (recommended: 90 days)
 
-Once all items are checked, your Home Assistant integration is ready to use!
+**Optional (Trigger Configuration):**
+
+- [ ] `config/triggers.yaml` created from example
+- [ ] `TRIGGER_CONFIG_PATH` configured in `.env`
+- [ ] Entity patterns match your Home Assistant entities
+- [ ] Debounce values appropriate for your use case
+
+Once all required items are checked, your Home Assistant integration is ready to use!

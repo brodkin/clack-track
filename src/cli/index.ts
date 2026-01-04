@@ -5,6 +5,7 @@ import {
   testHACommand,
   contentListCommand,
   contentTestCommand,
+  dbResetCommand,
 } from './commands/index.js';
 import { frameCommand } from './commands/frame.js';
 
@@ -17,6 +18,9 @@ const BOOLEAN_FLAGS = new Set([
   'interactive',
   'list',
   'with-frame',
+  'truncate',
+  'seed',
+  'force',
 ]);
 
 export async function runCLI(args: string[]): Promise<void> {
@@ -41,9 +45,14 @@ export async function runCLI(args: string[]): Promise<void> {
   };
 
   switch (command) {
-    case 'generate':
-      await generateCommand({ type: 'major' });
+    case 'generate': {
+      const options = parseOptions(args);
+      await generateCommand({
+        type: 'major',
+        generator: typeof options.generator === 'string' ? options.generator : undefined,
+      });
       break;
+    }
     case 'test-board':
       await testBoardCommand();
       break;
@@ -67,7 +76,21 @@ export async function runCLI(args: string[]): Promise<void> {
     }
     case 'frame': {
       const options = parseOptions(args);
-      const textArg = args[3] && !args[3].startsWith('--') ? args[3] : undefined;
+      // Find the first positional argument (not a flag or flag value)
+      let textArg: string | undefined;
+      for (let i = 3; i < args.length; i++) {
+        const arg = args[i];
+        if (!arg.startsWith('--')) {
+          // Check if this is a value for a preceding non-boolean flag
+          const prevArg = args[i - 1];
+          if (prevArg?.startsWith('--') && !BOOLEAN_FLAGS.has(prevArg.slice(2))) {
+            // This is a value for a flag, skip it
+            continue;
+          }
+          textArg = arg;
+          break;
+        }
+      }
       await frameCommand({
         text: typeof options.text === 'string' ? options.text : textArg,
         skipWeather: options['skip-weather'] === true,
@@ -88,18 +111,28 @@ export async function runCLI(args: string[]): Promise<void> {
       });
       break;
     }
+    case 'db:reset': {
+      const options = parseOptions(args);
+      await dbResetCommand({
+        truncate: options.truncate === true,
+        seed: options.seed === true,
+        force: options.force === true,
+      });
+      break;
+    }
     default:
       console.log(`
 Clack Track CLI
 
 Usage:
-  npm run generate                      Generate and send major content update
+  npm run generate [--generator <id>]   Generate and send major content update
   npm run test-board                    Test Vestaboard connection
   npm run test:ai [options]             Test AI provider connectivity
   npm run test:ha [options]             Test Home Assistant connectivity
   npm run frame [text] [options]        Generate and preview a Vestaboard frame
   npm run content:list                  List all registered content generators
   npm run content:test <id> [options]   Test a specific generator without sending
+  npm run db:reset [options]            Reset database (development/test only)
 
 Available commands:
   generate        Generate new content and send to Vestaboard
@@ -109,6 +142,10 @@ Available commands:
   frame           Generate and preview a Vestaboard frame
   content:list    List all registered content generators
   content:test    Test a specific generator (dry run)
+  db:reset        Reset database with safety guards (dev/test only)
+
+Generate Options:
+  --generator <id>     Force specific generator (use content:list to see IDs)
 
 Test AI Options:
   --provider <name>    Provider to test: openai, anthropic, or all (default: all)
@@ -127,6 +164,11 @@ Frame Options:
 
 Content Test Options:
   --with-frame         Apply frame decoration to generated content
+
+DB Reset Options:
+  --truncate           Truncate tables instead of dropping (keeps schema)
+  --seed               Run seeds after reset
+  --force              Skip confirmation prompts (for CI/CD)
       `);
   }
 }

@@ -15,6 +15,7 @@ import { HomeAssistantClient } from '../../api/data-sources/home-assistant.js';
 import { createAIProvider, AIProviderType } from '../../api/ai/index.js';
 import type { AIProvider } from '../../types/ai.js';
 import { renderAsciiPreview } from '../display.js';
+import { closeKnexInstance } from '../../storage/knex.js';
 
 /**
  * Options for content:test command
@@ -254,7 +255,7 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
     error('Failed to test content generator:', err);
     process.exit(1);
   } finally {
-    // Clean shutdown - stop scheduler and disconnect HA clients
+    // Clean shutdown - stop scheduler, disconnect HA clients, close database
     scheduler.stop();
 
     // Disconnect bootstrap HA client
@@ -273,6 +274,13 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
       } catch {
         // Ignore disconnect errors
       }
+    }
+
+    // Close database connection
+    try {
+      await closeKnexInstance();
+    } catch {
+      // Ignore database close errors
     }
   }
 }

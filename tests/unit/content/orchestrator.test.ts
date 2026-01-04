@@ -148,12 +148,19 @@ describe('ContentOrchestrator', () => {
 
       // Assert
       expect(mockSelector.select).toHaveBeenCalledWith(context);
-      expect(generateWithRetry).toHaveBeenCalledWith(
-        mockGenerator,
-        context,
-        mockPreferredProvider,
-        mockAlternateProvider
-      );
+
+      // Verify generateWithRetry was called with a factory function
+      expect(generateWithRetry).toHaveBeenCalledTimes(1);
+      const factoryCall = (generateWithRetry as jest.Mock).mock.calls[0];
+      expect(factoryCall[0]).toBeInstanceOf(Function); // First arg is factory
+      expect(factoryCall[1]).toEqual(context);
+      expect(factoryCall[2]).toBe(mockPreferredProvider);
+      expect(factoryCall[3]).toBe(mockAlternateProvider);
+
+      // Verify factory creates generator with provider
+      const factory = factoryCall[0];
+      const createdGenerator = factory(mockPreferredProvider);
+      expect(createdGenerator).toBe(mockGenerator);
       expect(mockDecorator.decorate).toHaveBeenCalledWith(
         'TEST CONTENT',
         context.timestamp,
@@ -267,12 +274,14 @@ describe('ContentOrchestrator', () => {
       await orchestrator.generateAndSend(context);
 
       // Assert
-      expect(generateWithRetry).toHaveBeenCalledWith(
-        mockGenerator,
-        context,
-        mockPreferredProvider,
-        mockAlternateProvider
-      );
+      // Verify generateWithRetry was called with a factory function
+      expect(generateWithRetry).toHaveBeenCalledTimes(1);
+      const factoryCall = (generateWithRetry as jest.Mock).mock.calls[0];
+      expect(factoryCall[0]).toBeInstanceOf(Function); // First arg is factory
+      expect(factoryCall[1]).toEqual(context);
+      expect(factoryCall[2]).toBe(mockPreferredProvider);
+      expect(factoryCall[3]).toBe(mockAlternateProvider);
+
       expect(mockVestaboardClient.sendLayout).toHaveBeenCalledWith(decoratedLayout);
 
       // Verify cached content
@@ -394,6 +403,66 @@ describe('ContentOrchestrator', () => {
       // Verify cached content
       const cached = orchestrator.getCachedContent();
       expect(cached).toEqual(fallbackContent);
+    });
+
+    it('should log generator name and id when P3 fallback triggers', async () => {
+      // Arrange
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn(),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      const registeredGenerator: RegisteredGenerator = {
+        registration: {
+          id: 'weather-focus',
+          name: 'Weather Forecast',
+          priority: 2,
+          modelTier: ModelTier.MEDIUM,
+          applyFrame: true,
+        },
+        generator: mockGenerator,
+      };
+
+      const fallbackContent: GeneratedContent = {
+        text: 'Static fallback content',
+        outputMode: 'text',
+      };
+
+      mockSelector.select.mockReturnValue(registeredGenerator);
+      (generateWithRetry as jest.Mock).mockRejectedValue(new RateLimitError('Rate limit exceeded'));
+      mockFallbackGenerator.generate.mockResolvedValue(fallbackContent);
+      mockDecorator.decorate.mockResolvedValue({
+        layout: [[1, 2, 3]],
+        warnings: [],
+      });
+
+      // Spy on console.warn
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      // Act
+      await orchestrator.generateAndSend(context);
+
+      // Assert - console.warn should include generator name and id
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Weather Forecast'),
+        expect.any(String)
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('weather-focus'),
+        expect.any(String)
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('P3 fallback'),
+        expect.any(String)
+      );
+
+      // Cleanup
+      warnSpy.mockRestore();
     });
   });
 

@@ -1,31 +1,6 @@
-import { Request, Response } from '../types.js';
+import { Router } from 'express';
+import { Request, Response, WebDependencies } from '../types.js';
 import { LogModel, LogLevel } from '../../storage/models/log.js';
-import { Database } from '../../storage/database.js';
-
-// Singleton model instance
-let logModel: LogModel | null = null;
-let database: Database | null = null;
-
-/**
- * Get or create Database instance
- */
-function getDatabase(): Database {
-  if (!database) {
-    database = new Database();
-  }
-  return database;
-}
-
-/**
- * Get or create LogModel instance
- */
-function getLogModel(): LogModel {
-  if (!logModel) {
-    const db = getDatabase();
-    logModel = new LogModel(db);
-  }
-  return logModel;
-}
 
 /**
  * Validate log level
@@ -43,13 +18,18 @@ function isValidLogLevel(level: unknown): level is LogLevel {
  *
  * @param req - Express request object
  * @param res - Express response object
- * @param model - Optional LogModel for testing (defaults to singleton)
+ * @param model - LogModel instance (required for operation)
  */
-export async function getDebugLogs(
-  req: Request,
-  res: Response,
-  model: LogModel = getLogModel()
-): Promise<void> {
+export async function getDebugLogs(req: Request, res: Response, model?: LogModel): Promise<void> {
+  // Return 503 if model not available (graceful degradation)
+  if (!model) {
+    res.status(503).json({
+      success: false,
+      error: 'Logs service unavailable',
+    });
+    return;
+  }
+
   try {
     // Parse and validate limit parameter
     const limitParam = req.query.limit;
@@ -94,13 +74,18 @@ export async function getDebugLogs(
  *
  * @param req - Express request object
  * @param res - Express response object
- * @param model - Optional LogModel for testing (defaults to singleton)
+ * @param model - LogModel instance (required for operation)
  */
-export async function clearLogs(
-  req: Request,
-  res: Response,
-  model: LogModel = getLogModel()
-): Promise<void> {
+export async function clearLogs(req: Request, res: Response, model?: LogModel): Promise<void> {
+  // Return 503 if model not available (graceful degradation)
+  if (!model) {
+    res.status(503).json({
+      success: false,
+      error: 'Logs service unavailable',
+    });
+    return;
+  }
+
   try {
     // Parse and validate days parameter
     const daysParam = req.query.days;
@@ -127,4 +112,20 @@ export async function clearLogs(
       error: 'Failed to clear logs',
     });
   }
+}
+
+/**
+ * Create and configure logs router
+ *
+ * @param dependencies - WebDependencies containing logModel
+ * @returns Express router with logs routes
+ */
+export function createLogsRouter(dependencies: WebDependencies = {}): Router {
+  const router = Router();
+  const { logModel } = dependencies;
+
+  router.get('/', (req, res) => getDebugLogs(req as Request, res as Response, logModel));
+  router.delete('/', (req, res) => clearLogs(req as Request, res as Response, logModel));
+
+  return router;
 }

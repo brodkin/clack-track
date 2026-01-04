@@ -1,21 +1,78 @@
 import { ContentModel } from '../../../../src/storage/models/index.js';
-import { Database, createDatabase } from '../../../../src/storage/database.js';
+import {
+  getKnexInstance,
+  closeKnexInstance,
+  resetKnexInstance,
+  type Knex,
+} from '../../../../src/storage/knex.js';
 
 describe('ContentModel', () => {
-  let db: Database;
+  let knex: Knex;
   let contentModel: ContentModel;
 
   beforeEach(async () => {
-    db = await createDatabase();
-    await db.connect();
-    await db.migrate();
-    // Clean table for isolated tests (DELETE works in both MySQL and SQLite)
-    await db.run('DELETE FROM content');
-    contentModel = new ContentModel(db);
+    // Reset singleton to ensure clean state
+    resetKnexInstance();
+    knex = getKnexInstance();
+
+    // Create table manually instead of using migrations (avoids ES module import issues)
+    // This pattern matches VoteModel and LogModel tests
+    const contentTableExists = await knex.schema.hasTable('content');
+    if (!contentTableExists) {
+      await knex.schema.createTable('content', table => {
+        // Primary key
+        table.increments('id').primary();
+
+        // Content data
+        table.text('text').notNullable();
+        table.enum('type', ['major', 'minor']).notNullable();
+
+        // Timestamps
+        table.dateTime('generatedAt').notNullable();
+        table.dateTime('sentAt').nullable();
+
+        // AI Provider information
+        table.string('aiProvider', 50).notNullable();
+        table.json('metadata').nullable();
+
+        // Status tracking
+        table.enum('status', ['success', 'failed']).notNullable().defaultTo('success');
+
+        // Generator information
+        table.string('generatorId', 100).nullable();
+        table.string('generatorName', 200).nullable();
+        table.integer('priority').nullable().defaultTo(2);
+
+        // AI Model details
+        table.string('aiModel', 100).nullable();
+        table.string('modelTier', 20).nullable();
+
+        // Failover tracking
+        table.boolean('failedOver').nullable().defaultTo(false);
+        table.string('primaryProvider', 50).nullable();
+        table.text('primaryError').nullable();
+
+        // Error tracking
+        table.string('errorType', 100).nullable();
+        table.text('errorMessage').nullable();
+
+        // Token usage
+        table.integer('tokensUsed').nullable();
+
+        // Indexes for common queries
+        table.index('generatedAt', 'idx_generated_at');
+        table.index('status', 'idx_status');
+        table.index('generatorId', 'idx_generator_id');
+      });
+    }
+
+    // Clean table for isolated tests
+    await knex('content').del();
+    contentModel = new ContentModel(knex);
   });
 
   afterEach(async () => {
-    await db.disconnect();
+    await closeKnexInstance();
   });
 
   describe('create', () => {

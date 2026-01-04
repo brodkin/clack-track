@@ -51,8 +51,11 @@ trees/
 # Husky
 .husky/_
 
-# Beads issue tracking (synced via beads/sync orphan branch)
+# Beads issue tracking (synced via beads/sync branch)
 .beads/
 
 # Playwright MCP
 .playwright-mcp/
+
+# SQLite dev database
+data/clack-track-dev.sqlite

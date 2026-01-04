@@ -277,6 +277,48 @@ describe('bootstrap', () => {
     expect(result).toHaveProperty('registry');
   });
 
+  it('should return contentRepository, voteRepository, and logModel when database configured', async () => {
+    // Arrange
+    const mockConfig = {
+      nodeEnv: 'test',
+      port: 3000,
+      web: {
+        enabled: false,
+        port: 3000,
+        host: '0.0.0.0',
+        corsEnabled: false,
+        staticPath: './dist',
+      },
+      vestaboard: { apiKey: 'test-key', apiUrl: 'http://localhost:7000' },
+      ai: {
+        provider: 'openai' as const,
+        openai: { apiKey: 'test-openai-key', model: 'gpt-4' },
+      },
+      dataSources: {},
+      database: { type: 'sqlite' as const },
+    };
+
+    (envModule.loadConfig as jest.Mock).mockReturnValue(mockConfig);
+
+    const mockProvider = {
+      generate: jest.fn(),
+      validateConnection: jest.fn(),
+    };
+
+    (aiModule.createAIProvider as jest.Mock).mockReturnValue(mockProvider);
+
+    // Act
+    const result = await bootstrap();
+
+    // Assert - In test environment, database is always configured (in-memory)
+    expect(result).toHaveProperty('contentRepository');
+    expect(result).toHaveProperty('voteRepository');
+    expect(result).toHaveProperty('logModel');
+    expect(result.contentRepository).toBeDefined();
+    expect(result.voteRepository).toBeDefined();
+    expect(result.logModel).toBeDefined();
+  });
+
   it('should handle missing Vestaboard config gracefully', async () => {
     // Arrange
     const mockConfig = {

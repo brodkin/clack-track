@@ -11,6 +11,8 @@ import {
   validateTextContent,
   validateLayoutContent,
   findInvalidCharacters,
+  normalizeText,
+  SUPPORTED_COLOR_EMOJIS,
 } from '@/utils/validators';
 import type { GeneratedContent, VestaboardLayout } from '@/types/index';
 import { VESTABOARD } from '@/config/constants';
@@ -56,16 +58,18 @@ describe('validateGeneratorOutput', () => {
       );
     });
 
-    it('should reject text with line exceeding 21 characters', () => {
-      const longLine = 'A'.repeat(22);
+    it('should wrap text with line slightly exceeding 21 characters (safety net)', () => {
+      // 22 chars gets wrapped to 2 lines that fit
+      const longLine = 'GOOD MORNING LAKEWOOD CA'; // 24 chars
       const content: GeneratedContent = {
-        text: `SHORT\n${longLine}`,
+        text: longLine,
         outputMode: 'text',
       };
 
-      expect(() => validateGeneratorOutput(content)).toThrow(
-        /text mode line \d+ exceeds 21 characters/
-      );
+      // Should pass because wrapping salvages the content
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.wrappingApplied).toBe(true);
     });
 
     it('should reject empty text content', () => {
@@ -324,12 +328,18 @@ describe('validateTextContent', () => {
     expect(result.errors).toContain('text mode content must have at most 5 lines (found: 6)');
   });
 
-  it('should return detailed error for line too long', () => {
-    const longLine = 'A'.repeat(22);
-    const result = validateTextContent(longLine);
+  it('should wrap and pass for line slightly exceeding 21 characters', () => {
+    // 22 chars gets wrapped - wrapping salvages the content
+    const longLine = 'GOOD MORNING EVERYONE'; // 21 chars exactly
+    const slightlyLong = 'GOOD MORNING EVERYONE!'; // 22 chars - will be wrapped
 
-    expect(result.valid).toBe(false);
-    expect(result.errors[0]).toMatch(/line \d+ exceeds 21 characters/);
+    const resultExact = validateTextContent(longLine);
+    expect(resultExact.valid).toBe(true);
+    expect(resultExact.wrappingApplied).toBeFalsy();
+
+    const resultWrapped = validateTextContent(slightlyLong);
+    expect(resultWrapped.valid).toBe(true);
+    expect(resultWrapped.wrappingApplied).toBe(true);
   });
 
   it('should detect invalid characters in text', () => {
@@ -344,6 +354,127 @@ describe('validateTextContent', () => {
 
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('text content cannot be empty');
+  });
+
+  it('should accept lowercase letters (uppercased during validation)', () => {
+    const result = validateTextContent('hello world');
+
+    expect(result.valid).toBe(true);
+    expect(result.invalidChars).toHaveLength(0);
+  });
+
+  it('should accept mixed case text', () => {
+    const result = validateTextContent('Hello World');
+
+    expect(result.valid).toBe(true);
+    expect(result.invalidChars).toHaveLength(0);
+  });
+
+  it('should still reject invalid chars even with lowercase', () => {
+    const result = validateTextContent('hello™ world');
+
+    expect(result.valid).toBe(false);
+    expect(result.invalidChars).toContain('™');
+    // Lowercase letters should NOT be in invalidChars
+    expect(result.invalidChars).not.toContain('h');
+    expect(result.invalidChars).not.toContain('e');
+  });
+});
+
+describe('pre-validation wrapping (safety net)', () => {
+  it('should wrap line exceeding 21 chars and pass validation', () => {
+    // "GOOD MORNING LAKEWOOD CA" is 24 chars
+    // Should wrap to "GOOD MORNING LAKEWOOD" (21) and "CA" (2)
+    const result = validateTextContent('GOOD MORNING LAKEWOOD CA');
+
+    expect(result.valid).toBe(true);
+    expect(result.wrappingApplied).toBe(true);
+    expect(result.originalMaxLength).toBe(24);
+    expect(result.lineCount).toBe(2);
+  });
+
+  it('should set wrapping metadata correctly', () => {
+    const longLine = 'THIS LINE IS TOO LONG FOR DISPLAY'; // 33 chars
+    const result = validateTextContent(longLine);
+
+    expect(result.wrappingApplied).toBe(true);
+    expect(result.originalMaxLength).toBe(longLine.length);
+    expect(result.normalizedText).toBeDefined();
+  });
+
+  it('should not apply wrapping when content fits', () => {
+    const result = validateTextContent('SHORT LINE\nANOTHER SHORT');
+
+    expect(result.valid).toBe(true);
+    expect(result.wrappingApplied).toBe(false);
+    expect(result.originalMaxLength).toBeUndefined();
+  });
+
+  it('should FAIL when wrapping causes line count to exceed 5', () => {
+    // Create content where wrapping will cause >5 lines
+    // 4 short lines + 1 very long line that wraps to 3+ lines = >5 total
+    const veryLongLine = 'THIS IS A VERY LONG LINE THAT WILL WRAP TO MULTIPLE LINES';
+    const content = `LINE 1\nLINE 2\nLINE 3\nLINE 4\n${veryLongLine}`;
+
+    const result = validateTextContent(content);
+
+    expect(result.valid).toBe(false);
+    expect(result.wrappingApplied).toBe(true);
+    expect(result.errors[0]).toMatch(/exceeds 5 lines after wrapping/);
+  });
+
+  it('should preserve wrapped text in normalizedText', () => {
+    const result = validateTextContent('HELLO WORLD EVERYONE TODAY');
+
+    expect(result.valid).toBe(true);
+    expect(result.normalizedText).toBeDefined();
+    // Check that each line in normalized text is ≤21 chars
+    const lines = result.normalizedText!.split('\n');
+    lines.forEach(line => {
+      expect(line.length).toBeLessThanOrEqual(21);
+    });
+  });
+
+  it('should handle multiple long lines needing wrapping', () => {
+    // Both lines exceed 21 chars
+    const content = 'FIRST LONG LINE HERE TODAY\nSECOND LONG LINE ALSO';
+
+    const result = validateTextContent(content);
+
+    expect(result.wrappingApplied).toBe(true);
+    expect(result.lineCount).toBeGreaterThan(2);
+  });
+
+  it('should truncate single word longer than 21 chars', () => {
+    // wrapText truncates single words that exceed maxWidth
+    const veryLongWord = 'A'.repeat(25);
+    const result = validateTextContent(veryLongWord);
+
+    expect(result.valid).toBe(true);
+    expect(result.wrappingApplied).toBe(true);
+    expect(result.maxLineLength).toBeLessThanOrEqual(21);
+  });
+
+  it('should work with text mode through validateGeneratorOutput', () => {
+    const content: GeneratedContent = {
+      text: 'THIS LINE EXCEEDS THE LIMIT',
+      outputMode: 'text',
+    };
+
+    const result = validateGeneratorOutput(content);
+
+    expect(result.valid).toBe(true);
+    expect(result.wrappingApplied).toBe(true);
+  });
+
+  it('should throw when wrapping exceeds 5 lines through validateGeneratorOutput', () => {
+    // 5 lines already + long line that wraps = >5 lines
+    const content: GeneratedContent = {
+      text: 'L1\nL2\nL3\nL4\nTHIS IS A VERY LONG LINE THAT WILL WRAP',
+      outputMode: 'text',
+    };
+
+    expect(() => validateGeneratorOutput(content)).toThrow(/exceeds 5 lines after wrapping/);
   });
 });
 
@@ -413,6 +544,43 @@ describe('validateLayoutContent', () => {
     expect(result.valid).toBe(false);
     expect(result.invalidChars).toContain('™');
   });
+
+  it('should accept lowercase letters in layout (uppercased during validation)', () => {
+    const layout: VestaboardLayout = {
+      rows: [
+        'hello world test row',
+        'B'.repeat(22),
+        'C'.repeat(22),
+        'D'.repeat(22),
+        'E'.repeat(22),
+        'F'.repeat(22),
+      ],
+    };
+
+    const result = validateLayoutContent(layout);
+
+    expect(result.valid).toBe(true);
+    expect(result.invalidChars).toHaveLength(0);
+  });
+
+  it('should still reject invalid chars in layout even with lowercase', () => {
+    const layout: VestaboardLayout = {
+      rows: [
+        'hello™ world',
+        'B'.repeat(22),
+        'C'.repeat(22),
+        'D'.repeat(22),
+        'E'.repeat(22),
+        'F'.repeat(22),
+      ],
+    };
+
+    const result = validateLayoutContent(layout);
+
+    expect(result.valid).toBe(false);
+    expect(result.invalidChars).toContain('™');
+    expect(result.invalidChars).not.toContain('h');
+  });
 });
 
 describe('findInvalidCharacters', () => {
@@ -468,5 +636,330 @@ describe('findInvalidCharacters', () => {
     const invalid = findInvalidCharacters(supported);
 
     expect(invalid).toHaveLength(0);
+  });
+});
+
+describe('color emoji validation', () => {
+  describe('SUPPORTED_COLOR_EMOJIS export', () => {
+    it('should export SUPPORTED_COLOR_EMOJIS Set', () => {
+      expect(SUPPORTED_COLOR_EMOJIS).toBeDefined();
+      expect(SUPPORTED_COLOR_EMOJIS).toBeInstanceOf(Set);
+    });
+
+    it('should contain all color emojis from COLOR_EMOJI_MAP', () => {
+      // Test a sample of known color emojis
+      expect(SUPPORTED_COLOR_EMOJIS.has('🟥')).toBe(true);
+      expect(SUPPORTED_COLOR_EMOJIS.has('🟦')).toBe(true);
+      expect(SUPPORTED_COLOR_EMOJIS.has('🟩')).toBe(true);
+      expect(SUPPORTED_COLOR_EMOJIS.has('❤️')).toBe(true);
+      expect(SUPPORTED_COLOR_EMOJIS.has('❤')).toBe(true);
+      expect(SUPPORTED_COLOR_EMOJIS.has('⬛')).toBe(true);
+    });
+
+    it('should not contain non-color emojis', () => {
+      expect(SUPPORTED_COLOR_EMOJIS.has('😀')).toBe(false);
+      expect(SUPPORTED_COLOR_EMOJIS.has('🎉')).toBe(false);
+      expect(SUPPORTED_COLOR_EMOJIS.has('☕')).toBe(false);
+    });
+  });
+
+  describe('supported color emojis should pass validation', () => {
+    it('should accept color square emojis', () => {
+      const content: GeneratedContent = {
+        text: 'HELLO 🟥🟦🟩 WORLD',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept all red emoji variants', () => {
+      const content: GeneratedContent = {
+        text: '🟥 🔴 ❤️ ❤ 🔺',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept all blue emoji variants', () => {
+      const content: GeneratedContent = {
+        text: '🟦 🔵 💙',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept all green emoji variants', () => {
+      const content: GeneratedContent = {
+        text: '🟩 🟢 💚',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept white emoji variants with Unicode selectors', () => {
+      const content: GeneratedContent = {
+        text: '⬜ ◻️ ◻ ◽ ⚪ 🤍',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept black emoji variants', () => {
+      const content: GeneratedContent = {
+        text: '⬛ ◼️ ◼ ◾ ⚫ 🖤',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept mixed standard text and color emojis', () => {
+      const content: GeneratedContent = {
+        text: 'STATUS: 🟩 OK',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept adjacent color emojis', () => {
+      const content: GeneratedContent = {
+        text: '🟥🟥🟥🟦🟦🟩',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should accept color emojis in layout mode', () => {
+      const layout: VestaboardLayout = {
+        rows: [
+          '🟥 RED ALERT 🟥',
+          '🟦 INFO 🟦',
+          'B'.repeat(22),
+          'C'.repeat(22),
+          'D'.repeat(22),
+          'E'.repeat(22),
+        ],
+      };
+      const content: GeneratedContent = {
+        text: 'Layout content',
+        outputMode: 'layout',
+        layout: layout,
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+  });
+
+  describe('non-color emojis should fail validation', () => {
+    it('should reject smiley face emoji', () => {
+      const content: GeneratedContent = {
+        text: 'HELLO 😀 WORLD',
+        outputMode: 'text',
+      };
+
+      expect(() => validateGeneratorOutput(content)).toThrow('contains invalid characters');
+    });
+
+    it('should reject party popper emoji', () => {
+      const content: GeneratedContent = {
+        text: 'PARTY 🎉 TIME',
+        outputMode: 'text',
+      };
+
+      expect(() => validateGeneratorOutput(content)).toThrow('contains invalid characters');
+    });
+
+    it('should reject coffee emoji', () => {
+      const content: GeneratedContent = {
+        text: 'COFFEE ☕ BREAK',
+        outputMode: 'text',
+      };
+
+      expect(() => validateGeneratorOutput(content)).toThrow('contains invalid characters');
+    });
+
+    it('should reject sparkles emoji', () => {
+      const content: GeneratedContent = {
+        text: 'SPARKLE ✨ TEXT',
+        outputMode: 'text',
+      };
+
+      expect(() => validateGeneratorOutput(content)).toThrow('contains invalid characters');
+    });
+  });
+
+  describe('findInvalidCharacters with color emojis', () => {
+    it('should not report color emojis as invalid', () => {
+      const invalid = findInvalidCharacters('HELLO 🟥🟦🟩 WORLD');
+
+      expect(invalid).toHaveLength(0);
+    });
+
+    it('should report non-color emojis as invalid', () => {
+      const invalid = findInvalidCharacters('HELLO 😀 WORLD');
+
+      expect(invalid).toContain('😀');
+      expect(invalid.length).toBeGreaterThan(0);
+    });
+
+    it('should distinguish between color and non-color emojis', () => {
+      const invalid = findInvalidCharacters('STATUS 🟩 PARTY 🎉');
+
+      expect(invalid).not.toContain('🟩');
+      expect(invalid).toContain('🎉');
+    });
+
+    it('should handle emoji variants correctly', () => {
+      // Both with and without variant selectors should be valid
+      const invalidWithVariant = findInvalidCharacters('❤️ HEART');
+      const invalidWithout = findInvalidCharacters('❤ HEART');
+
+      expect(invalidWithVariant).toHaveLength(0);
+      expect(invalidWithout).toHaveLength(0);
+    });
+  });
+});
+
+describe('normalizeText', () => {
+  describe('curly quote normalization', () => {
+    it('should convert left double curly quote to straight quote', () => {
+      const result = normalizeText('He said \u201Chello"');
+      expect(result).toBe('He said "hello"');
+    });
+
+    it('should convert right double curly quote to straight quote', () => {
+      const result = normalizeText('He said "hello\u201D');
+      expect(result).toBe('He said "hello"');
+    });
+
+    it('should convert both curly double quotes in a phrase', () => {
+      const result = normalizeText('\u201CHello World\u201D');
+      expect(result).toBe('"Hello World"');
+    });
+
+    it('should convert low double quote to straight quote', () => {
+      const result = normalizeText('\u201EHello\u201D');
+      expect(result).toBe('"Hello"');
+    });
+
+    it('should convert left single curly quote to apostrophe', () => {
+      const result = normalizeText('\u2018twas the night');
+      expect(result).toBe("'twas the night");
+    });
+
+    it('should convert right single curly quote to apostrophe', () => {
+      const result = normalizeText('it\u2019s working');
+      expect(result).toBe("it's working");
+    });
+
+    it('should convert low single quote to apostrophe', () => {
+      const result = normalizeText('\u201Ahello');
+      expect(result).toBe("'hello");
+    });
+  });
+
+  describe('dash normalization', () => {
+    it('should convert em-dash to hyphen', () => {
+      const result = normalizeText('hello\u2014world');
+      expect(result).toBe('hello-world');
+    });
+
+    it('should convert en-dash to hyphen', () => {
+      const result = normalizeText('pages 1\u201310');
+      expect(result).toBe('pages 1-10');
+    });
+  });
+
+  describe('ellipsis normalization', () => {
+    it('should convert ellipsis character to three dots', () => {
+      const result = normalizeText('wait\u2026');
+      expect(result).toBe('wait...');
+    });
+  });
+
+  describe('combined normalizations', () => {
+    it('should normalize multiple typographic characters in one string', () => {
+      const result = normalizeText('\u201CHello\u2026\u201D she said\u2014quietly');
+      expect(result).toBe('"Hello..." she said-quietly');
+    });
+
+    it('should handle text with no typographic characters', () => {
+      const text = 'PLAIN TEXT 123';
+      const result = normalizeText(text);
+      expect(result).toBe(text);
+    });
+
+    it('should handle empty string', () => {
+      expect(normalizeText('')).toBe('');
+    });
+  });
+
+  describe('integration with validation', () => {
+    it('should allow text with curly quotes to pass validation after normalization', () => {
+      // This would have failed before normalization was added
+      const content: GeneratedContent = {
+        text: '\u201CHELLO WORLD\u201D',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+    });
+
+    it('should allow text with em-dash to pass validation after normalization', () => {
+      const content: GeneratedContent = {
+        text: 'HELLO\u2014WORLD',
+        outputMode: 'text',
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+    });
+
+    it('should allow layout with curly quotes to pass validation after normalization', () => {
+      const layout: VestaboardLayout = {
+        rows: [
+          '\u201CQUOTED TEXT\u201D',
+          'B'.repeat(22),
+          'C'.repeat(22),
+          'D'.repeat(22),
+          'E'.repeat(22),
+          'F'.repeat(22),
+        ],
+      };
+      const content: GeneratedContent = {
+        text: 'Layout content',
+        outputMode: 'layout',
+        layout: layout,
+      };
+
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+    });
   });
 });

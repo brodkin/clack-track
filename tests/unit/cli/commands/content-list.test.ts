@@ -7,8 +7,8 @@
 
 // Set environment variables BEFORE any imports that call bootstrap
 process.env.OPENAI_API_KEY = 'test-key';
-process.env.VESTABOARD_API_KEY = 'test-vestaboard-key';
-process.env.VESTABOARD_API_URL = 'http://localhost:7000';
+process.env.VESTABOARD_LOCAL_API_KEY = 'test-vestaboard-key';
+process.env.VESTABOARD_LOCAL_API_URL = 'http://localhost:7000';
 
 import type { BootstrapResult } from '../../../../src/bootstrap.js';
 import type { CronScheduler } from '../../../../src/scheduler/cron.js';
@@ -28,6 +28,7 @@ import type {
 describe('content:list command', () => {
   let consoleLogSpy: jest.SpyInstance;
   let registry: ContentRegistry;
+  let bootstrapSpy: jest.SpyInstance;
   let mockScheduler: jest.Mocked<CronScheduler>;
 
   // Mock generator for testing
@@ -53,12 +54,14 @@ describe('content:list command', () => {
       stop: jest.fn(),
     } as unknown as jest.Mocked<CronScheduler>;
 
-    // Mock bootstrap function to return mock scheduler and registry
-    jest.spyOn(bootstrapModule, 'bootstrap').mockResolvedValue({
+    // Mock bootstrap function to return minimal BootstrapResult
+    bootstrapSpy = jest.spyOn(bootstrapModule, 'bootstrap').mockResolvedValue({
       orchestrator: {} as BootstrapResult['orchestrator'],
       eventHandler: null,
       scheduler: mockScheduler,
       registry: registry,
+      haClient: null,
+      database: null,
     } as BootstrapResult);
 
     // Spy on console.log to verify output
@@ -67,6 +70,7 @@ describe('content:list command', () => {
 
   afterEach(() => {
     consoleLogSpy.mockRestore();
+    bootstrapSpy.mockRestore();
     ContentRegistry.reset();
   });
 
@@ -79,7 +83,8 @@ describe('content:list command', () => {
         expect.stringContaining('Registered Content Generators')
       );
 
-      // With mocked bootstrap, registry is empty - verify total is displayed
+      // Bootstrap always registers a P3 fallback, so minimum is 1 generator
+      // The total count should reflect this
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Total:'));
     });
 

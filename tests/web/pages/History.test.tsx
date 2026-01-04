@@ -85,7 +85,8 @@ describe('History Page', () => {
     it('should display content history when loaded successfully', async () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
-        data: { contents: mockContents, total: 5 },
+        data: mockContents,
+        pagination: { limit: 20, count: 5 },
       });
 
       render(
@@ -104,7 +105,8 @@ describe('History Page', () => {
     it('should display all content items', async () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
-        data: { contents: mockContents, total: 5 },
+        data: mockContents,
+        pagination: { limit: 20, count: 5 },
       });
 
       render(
@@ -125,7 +127,8 @@ describe('History Page', () => {
     it('should display relative timestamps', async () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
-        data: { contents: [createMockContent(1, 2)], total: 1 },
+        data: [createMockContent(1, 2)],
+        pagination: { limit: 20, count: 1 },
       });
 
       render(
@@ -148,7 +151,8 @@ describe('History Page', () => {
       };
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
-        data: { contents: [recentContent], total: 1 },
+        data: [recentContent],
+        pagination: { limit: 20, count: 1 },
       });
 
       render(
@@ -169,7 +173,8 @@ describe('History Page', () => {
     it('should show empty state when no history is available', async () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
-        data: { contents: [], total: 0 },
+        data: [],
+        pagination: { limit: 20, count: 0 },
       });
 
       render(
@@ -188,7 +193,8 @@ describe('History Page', () => {
     it('should show helpful hint in empty state', async () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
-        data: { contents: [], total: 0 },
+        data: [],
+        pagination: { limit: 20, count: 0 },
       });
 
       render(
@@ -243,7 +249,8 @@ describe('History Page', () => {
         .mockRejectedValueOnce(new Error('Failed'))
         .mockResolvedValueOnce({
           success: true,
-          data: { contents: mockContents, total: 5 },
+          data: mockContents,
+          pagination: { limit: 20, count: 5 },
         });
 
       render(
@@ -267,7 +274,8 @@ describe('History Page', () => {
     it('should show Load More button when more items are available', async () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
-        data: { contents: mockContents.slice(0, 3), total: 10 },
+        data: mockContents.slice(0, 3),
+        pagination: { limit: 20, count: 10 },
       });
 
       render(
@@ -286,7 +294,8 @@ describe('History Page', () => {
     it('should show current count and total in Load More button', async () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
-        data: { contents: mockContents.slice(0, 3), total: 10 },
+        data: mockContents.slice(0, 3),
+        pagination: { limit: 20, count: 10 },
       });
 
       render(
@@ -305,7 +314,8 @@ describe('History Page', () => {
     it('should not show Load More button when all items are loaded', async () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
-        data: { contents: mockContents, total: 5 },
+        data: mockContents,
+        pagination: { limit: 20, count: 5 },
       });
 
       render(
@@ -327,11 +337,13 @@ describe('History Page', () => {
       mockApiClient.getContentHistory
         .mockResolvedValueOnce({
           success: true,
-          data: { contents: initialContents, total: 5 },
+          data: initialContents,
+          pagination: { limit: 20, count: 5 },
         })
         .mockResolvedValueOnce({
           success: true,
-          data: { contents: allContents, total: 5 },
+          data: allContents,
+          pagination: { limit: 20, count: 5 },
         });
 
       render(
@@ -353,7 +365,8 @@ describe('History Page', () => {
     it('should show loading state on Load More button while loading', async () => {
       mockApiClient.getContentHistory.mockResolvedValueOnce({
         success: true,
-        data: { contents: mockContents.slice(0, 3), total: 10 },
+        data: mockContents.slice(0, 3),
+        pagination: { limit: 20, count: 10 },
       });
 
       render(
@@ -386,7 +399,8 @@ describe('History Page', () => {
     beforeEach(() => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
-        data: { contents: mockContents, total: 5 },
+        data: mockContents,
+        pagination: { limit: 20, count: 5 },
       });
     });
 
@@ -496,7 +510,8 @@ describe('History Page', () => {
     beforeEach(() => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
-        data: { contents: mockContents, total: 5 },
+        data: mockContents,
+        pagination: { limit: 20, count: 5 },
       });
     });
 
@@ -538,7 +553,8 @@ describe('History Page', () => {
     it('should display AI provider badges', async () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
-        data: { contents: mockContents, total: 5 },
+        data: mockContents,
+        pagination: { limit: 20, count: 5 },
       });
 
       render(
@@ -556,7 +572,8 @@ describe('History Page', () => {
     it('should display content type badges', async () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
-        data: { contents: mockContents, total: 5 },
+        data: mockContents,
+        pagination: { limit: 20, count: 5 },
       });
 
       render(

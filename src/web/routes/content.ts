@@ -1,34 +1,6 @@
-import { Request, Response } from '../types.js';
+import { Router } from 'express';
+import { Request, Response, WebDependencies } from '../types.js';
 import { ContentRepository } from '../../storage/repositories/content-repo.js';
-import { ContentModel } from '../../storage/models/content.js';
-import { Database } from '../../storage/database.js';
-
-// Singleton repository instance
-let contentRepository: ContentRepository | null = null;
-let database: Database | null = null;
-
-/**
- * Get or create Database instance
- */
-function getDatabase(): Database {
-  if (!database) {
-    database = new Database();
-  }
-  return database;
-}
-
-/**
- * Get or create ContentRepository instance
- * Uses dependency injection pattern for testability
- */
-function getContentRepository(): ContentRepository {
-  if (!contentRepository) {
-    const db = getDatabase();
-    const model = new ContentModel(db);
-    contentRepository = new ContentRepository(model);
-  }
-  return contentRepository;
-}
 
 /**
  * GET /api/content/latest
@@ -36,13 +8,22 @@ function getContentRepository(): ContentRepository {
  *
  * @param req - Express request object
  * @param res - Express response object
- * @param repository - Optional ContentRepository for testing (defaults to singleton)
+ * @param repository - ContentRepository instance (required for operation)
  */
 export async function getLatestContent(
   req: Request,
   res: Response,
-  repository: ContentRepository = getContentRepository()
+  repository?: ContentRepository
 ): Promise<void> {
+  // Return 503 if repository not available (graceful degradation)
+  if (!repository) {
+    res.status(503).json({
+      success: false,
+      error: 'Content service unavailable',
+    });
+    return;
+  }
+
   try {
     const content = await repository.getLatestContent();
 
@@ -75,13 +56,22 @@ export async function getLatestContent(
  *
  * @param req - Express request object
  * @param res - Express response object
- * @param repository - Optional ContentRepository for testing (defaults to singleton)
+ * @param repository - ContentRepository instance (required for operation)
  */
 export async function getContentHistory(
   req: Request,
   res: Response,
-  repository: ContentRepository = getContentRepository()
+  repository?: ContentRepository
 ): Promise<void> {
+  // Return 503 if repository not available (graceful degradation)
+  if (!repository) {
+    res.status(503).json({
+      success: false,
+      error: 'Content service unavailable',
+    });
+    return;
+  }
+
   try {
     // Parse and validate limit parameter
     const limitParam = req.query.limit;
@@ -111,4 +101,24 @@ export async function getContentHistory(
       error: 'Failed to retrieve content history',
     });
   }
+}
+
+/**
+ * Create and configure content router
+ *
+ * @param dependencies - WebDependencies containing contentRepository
+ * @returns Express router with content routes
+ */
+export function createContentRouter(dependencies: WebDependencies = {}): Router {
+  const router = Router();
+  const { contentRepository } = dependencies;
+
+  router.get('/latest', (req, res) =>
+    getLatestContent(req as Request, res as Response, contentRepository)
+  );
+  router.get('/history', (req, res) =>
+    getContentHistory(req as Request, res as Response, contentRepository)
+  );
+
+  return router;
 }

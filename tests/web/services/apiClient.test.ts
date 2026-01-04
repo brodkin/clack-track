@@ -29,12 +29,13 @@ describe('API Client', () => {
         aiProvider: 'openai',
       };
 
+      // Backend sends ContentRecord directly in data (not wrapped in { content: ... })
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({
           success: true,
-          data: { content: mockContent },
+          data: mockContent,
         }),
       });
 
@@ -47,23 +48,24 @@ describe('API Client', () => {
         },
       });
       expect(result.success).toBe(true);
-      expect(result.data?.content).toEqual(mockContent);
+      expect(result.data).toEqual(mockContent);
     });
 
     it('should handle no content available', async () => {
+      // Backend sends null directly in data
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({
           success: true,
-          data: { content: null },
+          data: null,
         }),
       });
 
       const result = await apiClient.getLatestContent();
 
       expect(result.success).toBe(true);
-      expect(result.data?.content).toBeNull();
+      expect(result.data).toBeNull();
     });
 
     it('should handle API errors', async () => {
@@ -110,12 +112,14 @@ describe('API Client', () => {
         },
       ];
 
+      // Backend sends ContentRecord[] directly in data with pagination object
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({
           success: true,
-          data: { contents: mockContents, total: 2 },
+          data: mockContents,
+          pagination: { limit: 20, count: 2 },
         }),
       });
 
@@ -128,8 +132,8 @@ describe('API Client', () => {
         },
       });
       expect(result.success).toBe(true);
-      expect(result.data?.contents).toHaveLength(2);
-      expect(result.data?.total).toBe(2);
+      expect(result.data).toHaveLength(2);
+      expect(result.pagination?.count).toBe(2);
     });
 
     it('should fetch content history with limit param', async () => {
@@ -138,7 +142,8 @@ describe('API Client', () => {
         status: 200,
         json: async () => ({
           success: true,
-          data: { contents: [], total: 0 },
+          data: [],
+          pagination: { limit: 5, count: 0 },
         }),
       });
 
@@ -158,7 +163,8 @@ describe('API Client', () => {
         status: 200,
         json: async () => ({
           success: true,
-          data: { contents: [], total: 0 },
+          data: [],
+          pagination: { limit: 20, count: 0 },
         }),
       });
 
@@ -178,7 +184,8 @@ describe('API Client', () => {
         status: 200,
         json: async () => ({
           success: true,
-          data: { contents: [], total: 0 },
+          data: [],
+          pagination: { limit: 10, count: 0 },
         }),
       });
 
@@ -198,15 +205,16 @@ describe('API Client', () => {
         status: 200,
         json: async () => ({
           success: true,
-          data: { contents: [], total: 0 },
+          data: [],
+          pagination: { limit: 20, count: 0 },
         }),
       });
 
       const result = await apiClient.getContentHistory();
 
       expect(result.success).toBe(true);
-      expect(result.data?.contents).toEqual([]);
-      expect(result.data?.total).toBe(0);
+      expect(result.data).toEqual([]);
+      expect(result.pagination?.count).toBe(0);
     });
   });
 

@@ -36,6 +36,11 @@ if [ -f "$ENV_FILE" ]; then
     set +a
 fi
 
+# Export DOCKER_API_VERSION if set (for older Docker hosts)
+if [ -n "$DOCKER_API_VERSION" ]; then
+    export DOCKER_API_VERSION
+fi
+
 # Allow override from command line
 if [ -n "$1" ]; then
     export DOCKER_HOST="$1"

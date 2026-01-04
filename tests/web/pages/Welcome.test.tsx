@@ -56,9 +56,10 @@ describe('Welcome Page', () => {
 
   describe('Content Display', () => {
     it('should display content when loaded successfully', async () => {
+      // Backend sends ContentRecord directly in data (not wrapped)
       mockApiClient.getLatestContent.mockResolvedValue({
         success: true,
-        data: { content: mockContent },
+        data: mockContent,
       });
 
       render(
@@ -77,7 +78,7 @@ describe('Welcome Page', () => {
     it('should display the generator ID', async () => {
       mockApiClient.getLatestContent.mockResolvedValue({
         success: true,
-        data: { content: mockContent },
+        data: mockContent,
       });
 
       render(
@@ -96,7 +97,7 @@ describe('Welcome Page', () => {
     it('should display the generated timestamp', async () => {
       mockApiClient.getLatestContent.mockResolvedValue({
         success: true,
-        data: { content: mockContent },
+        data: mockContent,
       });
 
       render(
@@ -116,9 +117,10 @@ describe('Welcome Page', () => {
 
   describe('Empty State', () => {
     it('should show empty state when no content is available', async () => {
+      // Backend sends null directly in data
       mockApiClient.getLatestContent.mockResolvedValue({
         success: true,
-        data: { content: null },
+        data: null,
       });
 
       render(
@@ -173,7 +175,7 @@ describe('Welcome Page', () => {
         .mockRejectedValueOnce(new Error('Failed'))
         .mockResolvedValueOnce({
           success: true,
-          data: { content: mockContent },
+          data: mockContent,
         });
 
       render(
@@ -197,7 +199,7 @@ describe('Welcome Page', () => {
     beforeEach(() => {
       mockApiClient.getLatestContent.mockResolvedValue({
         success: true,
-        data: { content: mockContent },
+        data: mockContent,
       });
     });
 
@@ -370,7 +372,7 @@ describe('Welcome Page', () => {
     it('should render VestaboardPreview component', async () => {
       mockApiClient.getLatestContent.mockResolvedValue({
         success: true,
-        data: { content: mockContent },
+        data: mockContent,
       });
 
       render(
@@ -392,7 +394,7 @@ describe('Welcome Page', () => {
     it('should display voting help text', async () => {
       mockApiClient.getLatestContent.mockResolvedValue({
         success: true,
-        data: { content: mockContent },
+        data: mockContent,
       });
 
       render(

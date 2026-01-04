@@ -4,7 +4,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import {
   isSupported,
   requestPermission,
@@ -26,9 +26,25 @@ const mockServiceWorker: any = {
   ready: Promise.resolve(mockServiceWorkerRegistration),
 };
 
+// Store original values for restoration
+const originalNavigatorServiceWorker = Object.getOwnPropertyDescriptor(
+  global.navigator,
+  'serviceWorker'
+);
+const originalWindowPushManager = Object.getOwnPropertyDescriptor(global.window, 'PushManager');
+const originalWindowNotification = Object.getOwnPropertyDescriptor(global.window, 'Notification');
+const originalGlobalNotification = Object.getOwnPropertyDescriptor(global, 'Notification');
+
 // Setup global mocks
 beforeEach(() => {
   jest.clearAllMocks();
+
+  // Mock PushManager on window
+  Object.defineProperty(global.window, 'PushManager', {
+    value: jest.fn(),
+    writable: true,
+    configurable: true,
+  });
 
   // Mock navigator.serviceWorker
   Object.defineProperty(global.navigator, 'serviceWorker', {
@@ -45,11 +61,17 @@ beforeEach(() => {
   });
 
   // Mock Notification API
+  const notificationMock = {
+    permission: 'default',
+    requestPermission: jest.fn<() => Promise<string>>().mockResolvedValue('granted'),
+  };
+  Object.defineProperty(global.window, 'Notification', {
+    value: notificationMock,
+    writable: true,
+    configurable: true,
+  });
   Object.defineProperty(global, 'Notification', {
-    value: {
-      permission: 'default',
-      requestPermission: jest.fn<() => Promise<string>>().mockResolvedValue('granted'),
-    },
+    value: notificationMock,
     writable: true,
     configurable: true,
   });
@@ -79,6 +101,28 @@ beforeEach(() => {
   });
 });
 
+// Restore original values after each test
+afterEach(() => {
+  if (originalNavigatorServiceWorker) {
+    Object.defineProperty(global.navigator, 'serviceWorker', originalNavigatorServiceWorker);
+  }
+  if (originalWindowPushManager) {
+    Object.defineProperty(global.window, 'PushManager', originalWindowPushManager);
+  } else {
+    delete (global.window as any).PushManager;
+  }
+  if (originalWindowNotification) {
+    Object.defineProperty(global.window, 'Notification', originalWindowNotification);
+  } else {
+    delete (global.window as any).Notification;
+  }
+  if (originalGlobalNotification) {
+    Object.defineProperty(global, 'Notification', originalGlobalNotification);
+  } else {
+    delete (global as any).Notification;
+  }
+});
+
 describe('pushService', () => {
   describe('isSupported', () => {
     it('should return true when service worker and push manager are supported', () => {
@@ -86,11 +130,24 @@ describe('pushService', () => {
     });
 
     it('should return false when service worker is not supported', () => {
-      // Delete the serviceWorker property - 'in' checks property existence, not value
-      const nav = global.navigator as any;
-      delete nav.serviceWorker;
+      // Temporarily delete serviceWorker from navigator
+      const navDescriptor = Object.getOwnPropertyDescriptor(global.navigator, 'serviceWorker');
+      try {
+        delete (global.navigator as any).serviceWorker;
 
-      expect(isSupported()).toBe(false);
+        expect(isSupported()).toBe(false);
+      } finally {
+        // Restore serviceWorker
+        if (navDescriptor) {
+          Object.defineProperty(global.navigator, 'serviceWorker', navDescriptor);
+        } else {
+          Object.defineProperty(global.navigator, 'serviceWorker', {
+            value: mockServiceWorker,
+            writable: true,
+            configurable: true,
+          });
+        }
+      }
     });
   });
 
@@ -113,14 +170,24 @@ describe('pushService', () => {
     });
 
     it('should return denied when Notification API is not available', async () => {
-      Object.defineProperty(global, 'Notification', {
-        value: undefined,
-        writable: true,
-        configurable: true,
-      });
+      // Temporarily delete Notification
+      const globalNotifDescriptor = Object.getOwnPropertyDescriptor(global, 'Notification');
+      const windowNotifDescriptor = Object.getOwnPropertyDescriptor(global.window, 'Notification');
+      try {
+        delete (global as any).Notification;
+        delete (global.window as any).Notification;
 
-      const result = await requestPermission();
-      expect(result).toBe('denied');
+        const result = await requestPermission();
+        expect(result).toBe('denied');
+      } finally {
+        // Restore Notification
+        if (globalNotifDescriptor) {
+          Object.defineProperty(global, 'Notification', globalNotifDescriptor);
+        }
+        if (windowNotifDescriptor) {
+          Object.defineProperty(global.window, 'Notification', windowNotifDescriptor);
+        }
+      }
     });
   });
 

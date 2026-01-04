@@ -6,13 +6,13 @@
  * updated time/weather information.
  *
  * Design Patterns:
- * - Dependency Injection: Accepts MinorUpdateGenerator and VestaboardClient
+ * - Dependency Injection: Accepts MinorUpdateGenerator, VestaboardClient, and ContentOrchestrator
  * - Single Responsibility: Focused only on scheduling, not content generation
  * - Graceful Degradation: Logs errors but continues running
  *
  * @example
  * ```typescript
- * const scheduler = new CronScheduler(minorUpdateGenerator, vestaboardClient);
+ * const scheduler = new CronScheduler(minorUpdateGenerator, vestaboardClient, orchestrator);
  * scheduler.start(); // Begins minute-aligned updates
  * scheduler.stop();  // Stops scheduler
  * ```
@@ -20,6 +20,7 @@
 
 import { MinorUpdateGenerator } from '../content/generators/index.js';
 import type { VestaboardClient } from '../api/vestaboard/index.js';
+import type { ContentOrchestrator } from '../content/orchestrator.js';
 import { log } from '../utils/logger.js';
 
 /**
@@ -30,6 +31,7 @@ const MINUTE_INTERVAL_MS = 60 * 1000;
 export class CronScheduler {
   private readonly minorUpdateGenerator: MinorUpdateGenerator;
   private readonly vestaboardClient: VestaboardClient;
+  private readonly orchestrator: ContentOrchestrator;
   private intervalId: NodeJS.Timeout | null = null;
 
   /**
@@ -37,10 +39,16 @@ export class CronScheduler {
    *
    * @param minorUpdateGenerator - Generator for minor updates (retrieves cache, applies frame)
    * @param vestaboardClient - Client for sending content to Vestaboard
+   * @param orchestrator - ContentOrchestrator for checking cache availability
    */
-  constructor(minorUpdateGenerator: MinorUpdateGenerator, vestaboardClient: VestaboardClient) {
+  constructor(
+    minorUpdateGenerator: MinorUpdateGenerator,
+    vestaboardClient: VestaboardClient,
+    orchestrator: ContentOrchestrator
+  ) {
     this.minorUpdateGenerator = minorUpdateGenerator;
     this.vestaboardClient = vestaboardClient;
+    this.orchestrator = orchestrator;
   }
 
   /**
@@ -89,6 +97,7 @@ export class CronScheduler {
    * Execute a single minor update cycle
    *
    * Process:
+   * 0. Check if cache is available (graceful skip if no major update yet)
    * 1. Check if update should be skipped (full-frame content)
    * 2. Generate minor update with current timestamp
    * 3. Validate layout structure
@@ -100,6 +109,14 @@ export class CronScheduler {
    */
   private async runMinorUpdate(): Promise<void> {
     try {
+      // Step 0: Check if cache is available before proceeding
+      if (!this.orchestrator.getCachedContent()) {
+        log(
+          "Minor update skipped - waiting for first major update. Run 'npm run generate' or wait for Home Assistant event."
+        );
+        return;
+      }
+
       // Step 1: Check if minor update should be skipped
       if (this.minorUpdateGenerator.shouldSkip()) {
         log('Minor update skipped - cached content is full frame');

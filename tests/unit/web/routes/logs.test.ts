@@ -3,7 +3,7 @@
  * Tests GET /api/logs and DELETE /api/logs endpoints
  */
 
-import { getDebugLogs, clearLogs } from '../../../../src/web/routes/logs.js';
+import { getDebugLogs, clearLogs, createLogsRouter } from '../../../../src/web/routes/logs.js';
 import { LogModel } from '../../../../src/storage/models/log.js';
 import type { LogRecord } from '../../../../src/storage/models/log.js';
 import type { Request, Response } from '../../../../src/web/types.js';
@@ -39,6 +39,16 @@ describe('Logs API Routes', () => {
   });
 
   describe('GET /api/logs', () => {
+    it('should return 503 when logModel is undefined', async () => {
+      await getDebugLogs(mockRequest, mockResponse, undefined);
+
+      expect(statusSpy).toHaveBeenCalledWith(503);
+      expect(jsonSpy).toHaveBeenCalledWith({
+        success: false,
+        error: 'Logs service unavailable',
+      });
+    });
+
     it('should return recent logs with default limit', async () => {
       const mockLogs: LogRecord[] = [
         {
@@ -218,6 +228,16 @@ describe('Logs API Routes', () => {
   });
 
   describe('DELETE /api/logs', () => {
+    it('should return 503 when logModel is undefined', async () => {
+      await clearLogs(mockRequest, mockResponse, undefined);
+
+      expect(statusSpy).toHaveBeenCalledWith(503);
+      expect(jsonSpy).toHaveBeenCalledWith({
+        success: false,
+        error: 'Logs service unavailable',
+      });
+    });
+
     it('should clear old logs successfully', async () => {
       const mockDeleteOlderThan = jest.fn().mockResolvedValue(15);
       const mockModel = {
@@ -302,6 +322,35 @@ describe('Logs API Routes', () => {
         success: false,
         error: 'Failed to clear logs',
       });
+    });
+  });
+
+  describe('createLogsRouter', () => {
+    it('should create router with logModel from dependencies', () => {
+      const mockModel = {
+        findRecent: jest.fn(),
+        deleteOlderThan: jest.fn(),
+        create: jest.fn(),
+      } as unknown as LogModel;
+
+      const router = createLogsRouter({ logModel: mockModel });
+
+      expect(router).toBeDefined();
+      expect(typeof router).toBe('function'); // Express router is a function
+    });
+
+    it('should create router without logModel when dependencies empty', () => {
+      const router = createLogsRouter({});
+
+      expect(router).toBeDefined();
+      expect(typeof router).toBe('function');
+    });
+
+    it('should create router with default empty dependencies', () => {
+      const router = createLogsRouter();
+
+      expect(router).toBeDefined();
+      expect(typeof router).toBe('function');
     });
   });
 });

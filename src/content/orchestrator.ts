@@ -15,9 +15,10 @@
  * @module content/orchestrator
  */
 
-import { generateWithRetry } from './orchestrator-retry.js';
+import { generateWithRetry, type GeneratorFactory } from './orchestrator-retry.js';
 import { validateGeneratorOutput } from '../utils/validators.js';
 import type { ContentSelector } from './registry/content-selector.js';
+import type { ContentRegistry } from './registry/content-registry.js';
 import type { FrameDecorator } from './frame/frame-decorator.js';
 import type { StaticFallbackGenerator } from './generators/static-fallback-generator.js';
 import type { VestaboardClient } from '../api/vestaboard/types.js';
@@ -32,6 +33,8 @@ import type { ContentRepository } from '../storage/repositories/content-repo.js'
 export interface ContentOrchestratorConfig {
   /** Content generator selector */
   selector: ContentSelector;
+  /** Content registry for direct generator lookup (optional, required for --generator flag) */
+  registry?: ContentRegistry;
   /** Frame decorator for text content */
   decorator: FrameDecorator;
   /** Vestaboard client for sending content */
@@ -76,6 +79,7 @@ export interface ContentOrchestratorConfig {
  */
 export class ContentOrchestrator {
   private readonly selector: ContentSelector;
+  private readonly registry?: ContentRegistry;
   private readonly decorator: FrameDecorator;
   private readonly vestaboardClient: VestaboardClient;
   private readonly fallbackGenerator: StaticFallbackGenerator;
@@ -92,6 +96,7 @@ export class ContentOrchestrator {
    */
   constructor(config: ContentOrchestratorConfig) {
     this.selector = config.selector;
+    this.registry = config.registry;
     this.decorator = config.decorator;
     this.vestaboardClient = config.vestaboardClient;
     this.fallbackGenerator = config.fallbackGenerator;
@@ -139,19 +144,38 @@ export class ContentOrchestrator {
     }
 
     // Step 2: Select generator based on context
-    const registeredGenerator = this.selector.select(context);
-
-    if (!registeredGenerator) {
-      throw new Error('No content generator available for context');
+    // If generatorId is provided, use it directly; otherwise use selector
+    let registeredGenerator;
+    if (context.generatorId) {
+      if (!this.registry) {
+        throw new Error('ContentRegistry required when using generatorId');
+      }
+      registeredGenerator = this.registry.getById(context.generatorId);
+      if (!registeredGenerator) {
+        throw new Error(`Generator "${context.generatorId}" not found`);
+      }
+    } else {
+      registeredGenerator = this.selector.select(context);
+      if (!registeredGenerator) {
+        throw new Error('No content generator available for context');
+      }
     }
 
     let content: GeneratedContent | undefined;
     let generationError: Error | null = null;
 
     try {
-      // Step 3: Generate with retry logic
+      // Step 3: Generate with retry logic using factory pattern
+      // Create a factory that returns the selected generator instance
+      // Note: Current generator architecture doesn't use injected provider yet
+      // (provider injection will be added in future refactoring)
+      // For now, factory ignores provider parameter and returns pre-existing generator
+      const generatorFactory: GeneratorFactory = (_provider: AIProvider) => {
+        return registeredGenerator.generator;
+      };
+
       content = await generateWithRetry(
-        registeredGenerator.generator,
+        generatorFactory,
         context,
         this.preferredProvider,
         this.alternateProvider
@@ -165,7 +189,7 @@ export class ContentOrchestrator {
 
       // Step 3: P3 fallback on retry failure or validation error
       console.warn(
-        'Generator failed, using P3 fallback:',
+        `Generator "${registeredGenerator.registration.name}" (${registeredGenerator.registration.id}) failed, using P3 fallback:`,
         error instanceof Error ? error.message : 'Unknown error'
       );
 

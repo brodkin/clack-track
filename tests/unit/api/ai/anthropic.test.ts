@@ -5,6 +5,7 @@ import {
   AuthenticationError,
   InvalidRequestError,
   AIProviderError,
+  OverloadedError,
 } from '@/types/errors';
 import Anthropic from '@anthropic-ai/sdk';
 import { anthropicFixtures } from '@tests/fixtures/index';
@@ -162,6 +163,44 @@ describe('AnthropicClient', () => {
       await expect(client.generate(request)).rejects.toMatchObject({
         provider: 'Anthropic',
         statusCode: 400,
+      });
+    });
+
+    it('should throw OverloadedError when API returns 529 status', async () => {
+      const error = new Error('Service is overloaded') as Error & {
+        status: number;
+        error: { type: string; message: string };
+      };
+      error.status = 529;
+      error.error = {
+        type: 'overloaded_error',
+        message: 'Service is temporarily overloaded',
+      };
+
+      mockAnthropic.messages.create.mockRejectedValue(error);
+
+      await expect(client.generate(request)).rejects.toThrow(OverloadedError);
+      await expect(client.generate(request)).rejects.toMatchObject({
+        provider: 'Anthropic',
+        statusCode: 529,
+      });
+    });
+
+    it('should throw OverloadedError when error type is overloaded_error', async () => {
+      const error = new Error('Service is overloaded') as Error & {
+        error: { type: string; message: string };
+      };
+      error.error = {
+        type: 'overloaded_error',
+        message: 'Service is temporarily overloaded',
+      };
+
+      mockAnthropic.messages.create.mockRejectedValue(error);
+
+      await expect(client.generate(request)).rejects.toThrow(OverloadedError);
+      await expect(client.generate(request)).rejects.toMatchObject({
+        provider: 'Anthropic',
+        statusCode: 529,
       });
     });
 

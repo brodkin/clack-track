@@ -7,7 +7,11 @@ import { log } from '../utils/logger.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createAccountRouter } from './routes/account.js';
+import { createContentRouter } from './routes/content.js';
+import { createLogsRouter } from './routes/logs.js';
+import { createVotingRouter } from './routes/voting.js';
 import { pushRouter } from './routes/push.js';
+import type { WebDependencies } from './types.js';
 
 export interface WebServerConfig {
   port?: number;
@@ -35,13 +39,15 @@ export class WebServer {
   private app: Express;
   private server: Server | null = null;
   private signalHandlers: { [key: string]: NodeJS.SignalsListener } = {};
+  private dependencies: WebDependencies;
 
-  constructor(config: WebServerConfig = {}) {
+  constructor(config: WebServerConfig = {}, dependencies: WebDependencies = {}) {
     this.port = config.port ?? 3000;
     this.host = config.host ?? '0.0.0.0';
     this.corsEnabled = config.corsEnabled ?? false;
     this.staticPath = config.staticPath ?? './src/web/frontend/dist';
     this.app = express();
+    this.dependencies = dependencies;
   }
 
   async start(): Promise<void> {
@@ -141,6 +147,18 @@ export class WebServer {
 
     // Push notification routes
     this.app.use('/api/push', pushRouter);
+
+    // Content routes - inject contentRepository dependency
+    const contentRouter = createContentRouter(this.dependencies);
+    this.app.use('/api/content', contentRouter);
+
+    // Logs routes - inject logModel dependency
+    const logsRouter = createLogsRouter(this.dependencies);
+    this.app.use('/api/logs', logsRouter);
+
+    // Voting routes - inject voteRepository dependency
+    const votingRouter = createVotingRouter(this.dependencies);
+    this.app.use('/api/vote', votingRouter);
   }
 
   private registerSignalHandlers(): void {

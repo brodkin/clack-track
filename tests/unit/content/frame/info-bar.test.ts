@@ -168,7 +168,7 @@ describe('Info Bar Formatter', () => {
   });
 
   describe('formatDateMonth', () => {
-    it('should format single-digit dates without leading zero', () => {
+    it('should format single-digit dates with leading zero', () => {
       const data: InfoBarData = {
         dateTime: new Date('2024-11-01T10:00:00'),
       };
@@ -176,7 +176,7 @@ describe('Info Bar Formatter', () => {
       // Extract date/month portion (after "DAY ")
       const portion = codesToString(result.slice(4, 9));
 
-      expect(portion).toBe('1NOV '); // Note: includes trailing space
+      expect(portion).toBe('01NOV'); // Now consistent 5 chars with leading zero
     });
 
     it('should format double-digit dates correctly', () => {

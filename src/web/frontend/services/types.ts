@@ -15,24 +15,27 @@ export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+  pagination?: {
+    limit: number;
+    count: number;
+  };
 }
 
 /**
  * Content API Responses
+ *
+ * Backend sends data directly (not wrapped):
+ * - /api/content/latest returns { success: true, data: ContentRecord | null }
+ * - /api/content/history returns { success: true, data: ContentRecord[], pagination: {...} }
  */
-export interface LatestContentResponse {
-  content: ContentRecord | null;
-}
+export type LatestContentResponse = ContentRecord | null;
 
 export interface ContentHistoryParams {
   limit?: number;
   type?: 'major' | 'minor';
 }
 
-export interface ContentHistoryResponse {
-  contents: ContentRecord[];
-  total: number;
-}
+export type ContentHistoryResponse = ContentRecord[];
 
 /**
  * Voting API Types

@@ -27,8 +27,9 @@ export function Welcome() {
     setError(null);
     try {
       const response = await apiClient.getLatestContent();
-      if (response.data?.content) {
-        setContent(response.data.content);
+      // Backend sends ContentRecord directly in data (not wrapped in { content: ... })
+      if (response.data) {
+        setContent(response.data);
       } else {
         setContent(null);
       }

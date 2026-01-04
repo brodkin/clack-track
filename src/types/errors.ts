@@ -61,6 +61,23 @@ export class AuthenticationError extends AIProviderError {
 }
 
 /**
+ * Error thrown when provider is overloaded (temporary capacity issue)
+ * Default status code: 503 (Service Unavailable)
+ *
+ * Distinct from RateLimitError:
+ * - RateLimitError (429): Client exceeded their request quota
+ * - OverloadedError (503): Provider's infrastructure is at capacity
+ *
+ * Both are retryable but indicate different root causes.
+ */
+export class OverloadedError extends AIProviderError {
+  constructor(message: string, provider: string, originalError?: Error, statusCode?: number) {
+    super(message, provider, originalError, statusCode ?? 503);
+    this.name = 'OverloadedError';
+  }
+}
+
+/**
  * Error thrown when content validation fails
  *
  * Thrown when generator output doesn't meet Vestaboard constraints
