@@ -28,7 +28,7 @@ services:
       # Tell app where to find secrets
       - SECRETS_PATH=/run/secrets
     secrets:
-      - database_password_v1
+      - database_password_v2
       - vestaboard_api_key
       - vestaboard_api_url
       - openai_api_key
@@ -73,10 +73,10 @@ services:
     networks:
       - clack-network
     environment:
-      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/database_password_v1
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/database_password_v2
       - MYSQL_DATABASE=clack_track
     secrets:
-      - database_password_v1
+      - database_password_v2
     volumes:
       - mysql_data:/var/lib/mysql
     deploy:
@@ -118,7 +118,7 @@ volumes:
 #   After rotation, entries below will show versioned names (e.g., database_password_v1)
 #
 secrets:
-  database_password_v1:
+  database_password_v2:
     external: true
   vestaboard_api_key:
     external: true
