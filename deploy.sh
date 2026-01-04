@@ -84,12 +84,26 @@ if [ $MISSING_SECRETS -eq 1 ]; then
 fi
 echo -e "${GREEN}✓ Required secrets exist${NC}"
 
+# Capture git commit SHA for image tagging
+GIT_SHA=$(git rev-parse --short HEAD)
+if [ -z "$GIT_SHA" ]; then
+    echo -e "${RED}Error: Unable to get git commit SHA${NC}"
+    echo "Ensure you are running from a git repository"
+    exit 1
+fi
+export IMAGE_TAG="$GIT_SHA"
+echo -e "${CYAN}Git SHA: ${GIT_SHA}${NC}"
+
 # Build the image (happens on remote via SSH)
 echo -e "\n${CYAN}Step 1/2: Building image on remote...${NC}"
 echo -e "${YELLOW}(Sending build context over SSH - this may take a moment)${NC}"
-docker build -t clack-track:latest .
+docker build -t "clack-track:${GIT_SHA}" .
 
-# Deploy stack
+# Also tag as :latest for convenience
+docker tag "clack-track:${GIT_SHA}" clack-track:latest
+echo -e "${GREEN}Tagged image: clack-track:${GIT_SHA} (also :latest)${NC}"
+
+# Deploy stack with IMAGE_TAG environment variable
 echo -e "\n${CYAN}Step 2/2: Deploying stack...${NC}"
 docker stack deploy -c "$STACK_FILE" "$STACK_NAME"
 
