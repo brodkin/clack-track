@@ -10,11 +10,13 @@
 import { CronScheduler } from '../../../src/scheduler/cron.js';
 import type { MinorUpdateGenerator } from '../../../src/content/generators/index.js';
 import type { VestaboardClient } from '../../../src/api/vestaboard/index.js';
+import type { ContentOrchestrator } from '../../../src/content/orchestrator.js';
 import type { GeneratedContent } from '../../../src/types/content-generator.js';
 
 describe('CronScheduler', () => {
   let mockMinorUpdateGenerator: jest.Mocked<MinorUpdateGenerator>;
   let mockVestaboardClient: jest.Mocked<VestaboardClient>;
+  let mockOrchestrator: jest.Mocked<Pick<ContentOrchestrator, 'getCachedContent'>>;
   let scheduler: CronScheduler;
 
   // Sample generated content for testing
@@ -55,7 +57,16 @@ describe('CronScheduler', () => {
       validateConnection: jest.fn().mockResolvedValue({ connected: true }),
     } as unknown as jest.Mocked<VestaboardClient>;
 
-    scheduler = new CronScheduler(mockMinorUpdateGenerator, mockVestaboardClient);
+    // Create mock ContentOrchestrator (only getCachedContent is used by CronScheduler)
+    mockOrchestrator = {
+      getCachedContent: jest.fn().mockReturnValue({ text: 'cached content' }),
+    } as jest.Mocked<Pick<ContentOrchestrator, 'getCachedContent'>>;
+
+    scheduler = new CronScheduler(
+      mockMinorUpdateGenerator,
+      mockVestaboardClient,
+      mockOrchestrator as unknown as ContentOrchestrator
+    );
   });
 
   afterEach(() => {
@@ -534,6 +545,142 @@ describe('CronScheduler', () => {
 
       await jest.advanceTimersByTimeAsync(60000);
       expect(mockMinorUpdateGenerator.generate).toHaveBeenCalled();
+    });
+  });
+
+  describe('runMinorUpdate - cache miss scenarios', () => {
+    it('should skip minor update when getCachedContent returns null', async () => {
+      // Setup mock orchestrator to return null (no cache)
+      mockOrchestrator.getCachedContent.mockReturnValue(null);
+
+      jest.setSystemTime(new Date('2025-11-30T12:00:55.000Z'));
+      scheduler.start();
+
+      await jest.advanceTimersByTimeAsync(5000);
+
+      // Should check cache but not proceed to generate
+      expect(mockOrchestrator.getCachedContent).toHaveBeenCalled();
+      expect(mockMinorUpdateGenerator.shouldSkip).not.toHaveBeenCalled();
+      expect(mockMinorUpdateGenerator.generate).not.toHaveBeenCalled();
+      expect(mockVestaboardClient.sendLayout).not.toHaveBeenCalled();
+    });
+
+    it('should log user-friendly message when cache miss occurs', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      // Setup mock orchestrator to return null (no cache)
+      mockOrchestrator.getCachedContent.mockReturnValue(null);
+
+      jest.setSystemTime(new Date('2025-11-30T12:00:55.000Z'));
+      scheduler.start();
+
+      await jest.advanceTimersByTimeAsync(5000);
+
+      // Verify specific log message about waiting for first major update
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Minor update skipped - waiting for first major update')
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should continue scheduling after cache miss', async () => {
+      // First call: return null (cache miss)
+      // Subsequent calls: still null (simulating waiting for major update)
+      mockOrchestrator.getCachedContent.mockReturnValue(null);
+
+      jest.setSystemTime(new Date('2025-11-30T12:00:55.000Z'));
+      scheduler.start();
+
+      // First execution - cache miss
+      await jest.advanceTimersByTimeAsync(5000);
+      expect(mockOrchestrator.getCachedContent).toHaveBeenCalledTimes(1);
+      expect(mockMinorUpdateGenerator.generate).not.toHaveBeenCalled();
+
+      // Second execution - scheduler still running (no crash)
+      await jest.advanceTimersByTimeAsync(60000);
+      expect(mockOrchestrator.getCachedContent).toHaveBeenCalledTimes(2);
+      expect(mockMinorUpdateGenerator.generate).not.toHaveBeenCalled();
+
+      // Third execution - scheduler still running
+      await jest.advanceTimersByTimeAsync(60000);
+      expect(mockOrchestrator.getCachedContent).toHaveBeenCalledTimes(3);
+    });
+
+    it('should resume normal operation when cache is populated', async () => {
+      // First call: getCachedContent returns null (skip)
+      // Second call: getCachedContent returns content (proceed normally)
+      mockOrchestrator.getCachedContent
+        .mockReturnValueOnce(null)
+        .mockReturnValueOnce({ text: 'now cached', outputMode: 'text', metadata: {} });
+
+      jest.setSystemTime(new Date('2025-11-30T12:00:55.000Z'));
+      scheduler.start();
+
+      // First execution - cache miss, skip
+      await jest.advanceTimersByTimeAsync(5000);
+      expect(mockMinorUpdateGenerator.generate).not.toHaveBeenCalled();
+      expect(mockMinorUpdateGenerator.shouldSkip).not.toHaveBeenCalled();
+
+      // Second execution - cache available, proceed normally
+      await jest.advanceTimersByTimeAsync(60000);
+      expect(mockMinorUpdateGenerator.shouldSkip).toHaveBeenCalledTimes(1);
+      expect(mockMinorUpdateGenerator.generate).toHaveBeenCalledTimes(1);
+      expect(mockVestaboardClient.sendLayout).toHaveBeenCalledTimes(1);
+    });
+
+    it('should check cache before checking shouldSkip', async () => {
+      // Setup: cache miss
+      mockOrchestrator.getCachedContent.mockReturnValue(null);
+
+      jest.setSystemTime(new Date('2025-11-30T12:00:55.000Z'));
+      scheduler.start();
+
+      await jest.advanceTimersByTimeAsync(5000);
+
+      // getCachedContent should be called, but shouldSkip should NOT be called
+      // because cache check happens first and short-circuits
+      expect(mockOrchestrator.getCachedContent).toHaveBeenCalled();
+      expect(mockMinorUpdateGenerator.shouldSkip).not.toHaveBeenCalled();
+    });
+
+    it('should handle getCachedContent returning undefined', async () => {
+      // getCachedContent might return undefined in some edge cases
+      mockOrchestrator.getCachedContent.mockReturnValue(undefined as unknown as null);
+
+      jest.setSystemTime(new Date('2025-11-30T12:00:55.000Z'));
+      scheduler.start();
+
+      await jest.advanceTimersByTimeAsync(5000);
+
+      // Should treat undefined same as null (no cache)
+      expect(mockMinorUpdateGenerator.generate).not.toHaveBeenCalled();
+    });
+
+    it('should not error when getCachedContent throws', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // Simulate getCachedContent throwing an error
+      mockOrchestrator.getCachedContent.mockImplementation(() => {
+        throw new Error('Cache access error');
+      });
+
+      jest.setSystemTime(new Date('2025-11-30T12:00:55.000Z'));
+      scheduler.start();
+
+      await jest.advanceTimersByTimeAsync(5000);
+
+      // Should catch error and log it, scheduler continues
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to run minor update:',
+        expect.any(Error)
+      );
+
+      // Scheduler should continue running
+      await jest.advanceTimersByTimeAsync(60000);
+      expect(mockOrchestrator.getCachedContent).toHaveBeenCalledTimes(2);
+
+      consoleErrorSpy.mockRestore();
     });
   });
 });

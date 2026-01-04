@@ -402,7 +402,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
 
   // Step 12: Create CronScheduler for periodic updates
   const minorUpdateGenerator = new MinorUpdateGenerator(orchestrator, frameDecorator);
-  const scheduler = new CronScheduler(minorUpdateGenerator, vestaboardClient);
+  const scheduler = new CronScheduler(minorUpdateGenerator, vestaboardClient, orchestrator);
 
   // Return all initialized components
   return {
