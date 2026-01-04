@@ -10,6 +10,7 @@ if (preserveNodeEnv) {
 import { WebServer } from './web/server.js';
 import { config } from './config/env.js';
 import { runCLI } from './cli/index.js';
+import { bootstrap } from './bootstrap.js';
 
 async function main() {
   // Check if running as CLI command
@@ -58,6 +59,52 @@ async function main() {
     console.error('Failed to start web server:', error);
     process.exit(1);
   }
+
+  // Initialize all components via bootstrap
+  console.log('Initializing daemon components...');
+  const { scheduler, eventHandler, haClient, database } = await bootstrap();
+
+  // Start the scheduler for minute-by-minute minor updates
+  scheduler.start();
+  console.log('Scheduler started for periodic minor updates');
+
+  // Initialize Home Assistant event handler if configured
+  if (eventHandler) {
+    await eventHandler.initialize();
+    console.log('Home Assistant event handler initialized');
+  }
+
+  // Register graceful shutdown handlers
+  const gracefulShutdown = async (signal: string) => {
+    console.log(`Received ${signal}, shutting down gracefully...`);
+
+    // Stop scheduler first to prevent new updates
+    scheduler.stop();
+    console.log('Scheduler stopped');
+
+    // Disconnect Home Assistant client if configured
+    if (haClient) {
+      await haClient.disconnect();
+      console.log('Home Assistant client disconnected');
+    }
+
+    // Disconnect database if configured
+    if (database) {
+      await database.disconnect();
+      console.log('Database disconnected');
+    }
+
+    // Stop web server
+    await webServer.stop();
+    console.log('Web server stopped');
+
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+  console.log('Clack Track daemon running');
 }
 
 main();

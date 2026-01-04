@@ -141,7 +141,7 @@ export function loadConfig(): EnvironmentConfig {
         aiProvider === 'anthropic'
           ? {
               apiKey: getSecretOrEnv('anthropic_api_key', 'ANTHROPIC_API_KEY'),
-              model: getOptionalEnv('ANTHROPIC_MODEL', 'claude-sonnet-4'),
+              model: getOptionalEnv('ANTHROPIC_MODEL', 'claude-sonnet-4-5-20250929'),
             }
           : undefined,
     },

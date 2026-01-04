@@ -185,6 +185,43 @@ ssh user@your-nas-ip "docker info"
 DOCKER_HOST=ssh://user@nas-ip:2222
 ```
 
+### Home Assistant connection fails with .local hostname
+
+Docker containers cannot resolve `.local` mDNS hostnames (e.g., `homeassistant.local`). This is a fundamental limitation of how Docker networking handles multicast DNS.
+
+**Symptoms:**
+
+- `ENOTFOUND homeassistant.local` errors in logs
+- Home Assistant integration fails to connect
+- Works fine outside Docker but fails inside container
+
+**Solutions:**
+
+1. **Use IP address** (recommended):
+
+   ```bash
+   # In .env.production or secrets
+   HOME_ASSISTANT_URL=http://10.100.0.10:8123
+   ```
+
+2. **Use a proper DNS hostname** (if available):
+   ```bash
+   HOME_ASSISTANT_URL=http://ha.example.com:8123
+   ```
+
+**Finding your Home Assistant IP:**
+
+```bash
+# From a machine that can resolve mDNS
+ping homeassistant.local
+# Note the IP address in the response
+
+# Or check your router's DHCP leases
+# Or in Home Assistant: Settings → System → Network
+```
+
+**Note:** If you update the `HOME_ASSISTANT_URL` secret, you must remove and redeploy the stack for the change to take effect (see [Managing Secrets](#managing-secrets)).
+
 ## SSH Key Setup
 
 For passwordless deployment, set up SSH keys:
