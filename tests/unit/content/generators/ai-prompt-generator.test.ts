@@ -15,10 +15,11 @@
 import { AIPromptGenerator } from '@/content/generators/ai-prompt-generator';
 import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector, type ModelSelection } from '@/api/ai/model-tier-selector';
-import type { GenerationContext } from '@/types/content-generator';
+import type { GenerationContext, GeneratorFormatOptions } from '@/types/content-generator';
 import { ModelTier } from '@/types/content-generator';
 import { createMockAIProvider, createRateLimitedProvider } from '@tests/__helpers__/mockAIProvider';
 import type { PersonalityDimensions } from '@/content/personality';
+import { DimensionSubstitutor } from '@/content/dimension-substitutor';
 
 // Mock createAIProvider function
 jest.mock('@/api/ai/index.js', () => ({
@@ -57,6 +58,35 @@ class TestAIPromptGenerator extends AIPromptGenerator {
 
   protected getUserPromptFile(): string {
     return 'test-user.txt';
+  }
+}
+
+// Test implementation with format options support
+class TestAIPromptGeneratorWithFormatOptions extends AIPromptGenerator {
+  private customFormatOptions?: GeneratorFormatOptions;
+
+  constructor(
+    promptLoader: PromptLoader,
+    modelTierSelector: ModelTierSelector,
+    modelTier: ModelTier,
+    apiKeys: Record<string, string> = {},
+    formatOptions?: GeneratorFormatOptions
+  ) {
+    super(promptLoader, modelTierSelector, modelTier, apiKeys, formatOptions);
+    this.customFormatOptions = formatOptions;
+  }
+
+  protected getSystemPromptFile(): string {
+    return 'test-system.txt';
+  }
+
+  protected getUserPromptFile(): string {
+    return 'test-user.txt';
+  }
+
+  // Expose format options for testing
+  getFormatOptions(): GeneratorFormatOptions | undefined {
+    return this.customFormatOptions;
   }
 }
 
@@ -787,6 +817,274 @@ describe('AIPromptGenerator', () => {
         expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
         expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
         expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.HEAVY);
+      });
+    });
+  });
+
+  describe('format options integration', () => {
+    const mockContext: GenerationContext = {
+      updateType: 'major',
+      timestamp: new Date('2025-01-15T12:00:00Z'),
+    };
+
+    beforeEach(() => {
+      mockPromptLoader.loadPromptWithVariables.mockReset();
+      mockModelTierSelector.select.mockReturnValue({
+        provider: 'openai',
+        model: 'gpt-4o',
+      });
+
+      // Reset createAIProvider mock
+      (createAIProvider as jest.Mock).mockReturnValue(
+        createMockAIProvider({
+          response: {
+            text: 'Generated content',
+            model: 'gpt-4o',
+          },
+        })
+      );
+    });
+
+    describe('constructor with format options', () => {
+      it('should accept format options as optional parameter', () => {
+        const formatOptions: GeneratorFormatOptions = {
+          maxLines: 3,
+          maxCharsPerLine: 18,
+        };
+
+        const generator = new TestAIPromptGeneratorWithFormatOptions(
+          mockPromptLoader,
+          mockModelTierSelector,
+          ModelTier.MEDIUM,
+          mockApiKeys,
+          formatOptions
+        );
+
+        expect(generator).toBeDefined();
+        expect(generator.getFormatOptions()).toEqual(formatOptions);
+      });
+
+      it('should work without format options (backwards compatibility)', () => {
+        const generator = new TestAIPromptGenerator(
+          mockPromptLoader,
+          mockModelTierSelector,
+          ModelTier.MEDIUM,
+          mockApiKeys
+        );
+
+        expect(generator).toBeDefined();
+      });
+    });
+
+    describe('dimension substitution in prompts', () => {
+      it('should substitute {{maxChars}} and {{maxLines}} with defaults when no format options', async () => {
+        // Setup prompt that contains dimension placeholders
+        mockPromptLoader.loadPromptWithVariables
+          .mockResolvedValueOnce('System: Max {{maxChars}} chars, {{maxLines}} lines')
+          .mockResolvedValueOnce('User prompt');
+
+        const generator = new TestAIPromptGenerator(
+          mockPromptLoader,
+          mockModelTierSelector,
+          ModelTier.MEDIUM,
+          mockApiKeys
+        );
+
+        const result = await generator.generate(mockContext);
+
+        // DimensionSubstitutor should have been applied with defaults (21 chars, 5 lines)
+        // The system prompt should have dimension variables substituted
+        expect(result.metadata?.systemPrompt).toBe('System: Max 21 chars, 5 lines');
+      });
+
+      it('should substitute {{maxChars}} with custom value from format options', async () => {
+        const formatOptions: GeneratorFormatOptions = {
+          maxCharsPerLine: 15,
+        };
+
+        mockPromptLoader.loadPromptWithVariables
+          .mockResolvedValueOnce('Max {{maxChars}} characters per line')
+          .mockResolvedValueOnce('User prompt');
+
+        const generator = new TestAIPromptGeneratorWithFormatOptions(
+          mockPromptLoader,
+          mockModelTierSelector,
+          ModelTier.MEDIUM,
+          mockApiKeys,
+          formatOptions
+        );
+
+        const result = await generator.generate(mockContext);
+
+        // Should use custom maxChars (15) and default maxLines (5)
+        expect(result.metadata?.systemPrompt).toBe('Max 15 characters per line');
+      });
+
+      it('should substitute {{maxLines}} with custom value from format options', async () => {
+        const formatOptions: GeneratorFormatOptions = {
+          maxLines: 3,
+        };
+
+        mockPromptLoader.loadPromptWithVariables
+          .mockResolvedValueOnce('Use {{maxLines}} lines maximum')
+          .mockResolvedValueOnce('User prompt');
+
+        const generator = new TestAIPromptGeneratorWithFormatOptions(
+          mockPromptLoader,
+          mockModelTierSelector,
+          ModelTier.MEDIUM,
+          mockApiKeys,
+          formatOptions
+        );
+
+        const result = await generator.generate(mockContext);
+
+        // Should use default maxChars (21) and custom maxLines (3)
+        expect(result.metadata?.systemPrompt).toBe('Use 3 lines maximum');
+      });
+
+      it('should substitute both {{maxChars}} and {{maxLines}} with custom values', async () => {
+        const formatOptions: GeneratorFormatOptions = {
+          maxCharsPerLine: 18,
+          maxLines: 4,
+        };
+
+        mockPromptLoader.loadPromptWithVariables
+          .mockResolvedValueOnce('{{maxChars}} chars, {{maxLines}} lines')
+          .mockResolvedValueOnce('User prompt');
+
+        const generator = new TestAIPromptGeneratorWithFormatOptions(
+          mockPromptLoader,
+          mockModelTierSelector,
+          ModelTier.MEDIUM,
+          mockApiKeys,
+          formatOptions
+        );
+
+        const result = await generator.generate(mockContext);
+
+        expect(result.metadata?.systemPrompt).toBe('18 chars, 4 lines');
+      });
+
+      it('should preserve other template variables while substituting dimensions', async () => {
+        const formatOptions: GeneratorFormatOptions = {
+          maxCharsPerLine: 20,
+        };
+
+        // The prompt loader returns the result after personality substitution
+        // but dimension variables should still be present and need substitution
+        mockPromptLoader.loadPromptWithVariables
+          .mockResolvedValueOnce('Mood: cheerful, Max: {{maxChars}} chars')
+          .mockResolvedValueOnce('User prompt');
+
+        const generator = new TestAIPromptGeneratorWithFormatOptions(
+          mockPromptLoader,
+          mockModelTierSelector,
+          ModelTier.MEDIUM,
+          mockApiKeys,
+          formatOptions
+        );
+
+        const result = await generator.generate(mockContext);
+
+        // Dimensions should be substituted, personality should remain as-is
+        // (personality is already substituted by loadPromptWithVariables)
+        expect(result.metadata?.systemPrompt).toBe('Mood: cheerful, Max: 20 chars');
+      });
+    });
+
+    describe('format options in metadata', () => {
+      it('should include format options in generation metadata', async () => {
+        const formatOptions: GeneratorFormatOptions = {
+          maxCharsPerLine: 18,
+          maxLines: 4,
+          textAlign: 'center',
+        };
+
+        mockPromptLoader.loadPromptWithVariables
+          .mockResolvedValueOnce('System prompt')
+          .mockResolvedValueOnce('User prompt');
+
+        const generator = new TestAIPromptGeneratorWithFormatOptions(
+          mockPromptLoader,
+          mockModelTierSelector,
+          ModelTier.MEDIUM,
+          mockApiKeys,
+          formatOptions
+        );
+
+        const result = await generator.generate(mockContext);
+
+        expect(result.metadata?.formatOptions).toEqual(formatOptions);
+      });
+
+      it('should not include formatOptions in metadata when not provided', async () => {
+        mockPromptLoader.loadPromptWithVariables
+          .mockResolvedValueOnce('System prompt')
+          .mockResolvedValueOnce('User prompt');
+
+        const generator = new TestAIPromptGenerator(
+          mockPromptLoader,
+          mockModelTierSelector,
+          ModelTier.MEDIUM,
+          mockApiKeys
+        );
+
+        const result = await generator.generate(mockContext);
+
+        expect(result.metadata?.formatOptions).toBeUndefined();
+      });
+    });
+
+    describe('DimensionSubstitutor integration', () => {
+      it('should use DimensionSubstitutor for template substitution', async () => {
+        // This test verifies the integration with DimensionSubstitutor
+        const substitutor = new DimensionSubstitutor();
+        const defaults = substitutor.getDefaults();
+
+        mockPromptLoader.loadPromptWithVariables
+          .mockResolvedValueOnce('{{maxChars}} chars, {{maxLines}} lines')
+          .mockResolvedValueOnce('User prompt');
+
+        const generator = new TestAIPromptGenerator(
+          mockPromptLoader,
+          mockModelTierSelector,
+          ModelTier.MEDIUM,
+          mockApiKeys
+        );
+
+        const result = await generator.generate(mockContext);
+
+        // Should match the defaults from DimensionSubstitutor
+        expect(result.metadata?.systemPrompt).toBe(
+          `${defaults.maxChars} chars, ${defaults.maxLines} lines`
+        );
+      });
+
+      it('should apply dimension substitution after loading prompts', async () => {
+        // Verifies the order of operations:
+        // 1. Load prompt with personality variables
+        // 2. Apply dimension substitution
+        const formatOptions: GeneratorFormatOptions = {
+          maxCharsPerLine: 16,
+          maxLines: 3,
+        };
+
+        mockPromptLoader.loadPromptWithVariables
+          .mockResolvedValueOnce('LIMIT: {{maxChars}} | LINES: {{maxLines}}')
+          .mockResolvedValueOnce('User prompt');
+
+        const generator = new TestAIPromptGeneratorWithFormatOptions(
+          mockPromptLoader,
+          mockModelTierSelector,
+          ModelTier.MEDIUM,
+          mockApiKeys,
+          formatOptions
+        );
+
+        const result = await generator.generate(mockContext);
+
+        expect(result.metadata?.systemPrompt).toBe('LIMIT: 16 | LINES: 3');
       });
     });
   });
