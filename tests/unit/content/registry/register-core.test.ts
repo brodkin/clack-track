@@ -57,6 +57,7 @@ describe('registerCoreContent', () => {
     countdown: createMockGenerator('countdown'),
     hotTake: createMockGenerator('hotTake'),
     compliment: createMockGenerator('compliment'),
+    novelInsight: createMockGenerator('novelInsight'),
     staticFallback: createMockGenerator('fallback'),
   });
 
@@ -96,8 +97,8 @@ describe('registerCoreContent', () => {
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
       // motivational, globalNews, techNews, localNews, weather, haiku, seasonal, pattern,
-      // showerThought, fortuneCookie, countdown, hotTake, compliment = 13
-      expect(normalPriorityGens.length).toBe(13);
+      // showerThought, fortuneCookie, countdown, hotTake, compliment, novelInsight = 14
+      expect(normalPriorityGens.length).toBe(14);
     });
   });
 
@@ -133,8 +134,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const allGenerators = registry.getAll();
-      // 13 P2 + 1 P3 = 14 total
-      expect(allGenerators.length).toBe(14);
+      // 14 P2 + 1 P3 = 15 total
+      expect(allGenerators.length).toBe(15);
     });
 
     it('should maintain correct priority distribution', () => {
@@ -146,9 +147,9 @@ describe('registerCoreContent', () => {
       const fallbackGens = registry.getByPriority(ContentPriority.FALLBACK);
       const notificationGens = registry.getByPriority(ContentPriority.NOTIFICATION);
 
-      // 13 P2 generators: motivational, globalNews, techNews, localNews, weather, haiku,
-      // seasonal, pattern, showerThought, fortuneCookie, countdown, hotTake, compliment
-      expect(normalGens.length).toBe(13);
+      // 14 P2 generators: motivational, globalNews, techNews, localNews, weather, haiku,
+      // seasonal, pattern, showerThought, fortuneCookie, countdown, hotTake, compliment, novelInsight
+      expect(normalGens.length).toBe(14);
       expect(fallbackGens.length).toBe(1);
       expect(notificationGens.length).toBe(0);
     });
@@ -212,8 +213,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      // All 13 P2 generators including 3 news generators
-      expect(normalPriorityGens.length).toBe(13);
+      // All 14 P2 generators including 3 news generators
+      expect(normalPriorityGens.length).toBe(14);
     });
 
     it('should not register old news-summary generator', () => {
@@ -240,6 +241,23 @@ describe('registerCoreContent', () => {
       expect(newsGens.every(gen => gen.registration.priority === ContentPriority.NORMAL)).toBe(
         true
       );
+    });
+  });
+
+  describe('Novel Insight Generator', () => {
+    it('should register novel-insight generator with correct metadata', () => {
+      const generators = createFullGenerators();
+
+      registerCoreContent(registry, generators);
+
+      const registered = registry.getById('novel-insight');
+      expect(registered).toBeDefined();
+      expect(registered?.registration.id).toBe('novel-insight');
+      expect(registered?.registration.name).toBe('Novel Insight Generator');
+      expect(registered?.registration.priority).toBe(ContentPriority.NORMAL);
+      expect(registered?.registration.modelTier).toBe(ModelTier.MEDIUM);
+      expect(registered?.registration.applyFrame).toBe(true);
+      expect(registered?.generator).toBe(generators.novelInsight);
     });
   });
 });

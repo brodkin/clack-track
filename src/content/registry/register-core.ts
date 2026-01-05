@@ -28,6 +28,7 @@ import { ContentRegistry } from './content-registry.js';
  * @property {ContentGenerator} countdown - Countdown generator (P2, LIGHT)
  * @property {ContentGenerator} hotTake - Hot take generator (P2, LIGHT)
  * @property {ContentGenerator} compliment - Compliment generator (P2, LIGHT)
+ * @property {ContentGenerator} novelInsight - Novel insight generator (P2, MEDIUM)
  *
  * @example
  * ```typescript
@@ -45,6 +46,7 @@ import { ContentRegistry } from './content-registry.js';
  *   countdown: new CountdownGenerator(),
  *   hotTake: new HotTakeGenerator(),
  *   compliment: new ComplimentGenerator(),
+ *   novelInsight: new NovelInsightGenerator(),
  *   staticFallback: new StaticFallbackGenerator()
  * };
  * ```
@@ -76,6 +78,8 @@ export interface CoreGenerators {
   hotTake: ContentGenerator;
   /** Compliment generator (P2, LIGHT, AI-powered) */
   compliment: ContentGenerator;
+  /** Novel insight generator (P2, MEDIUM, AI-powered) */
+  novelInsight: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -98,6 +102,7 @@ export interface CoreGenerators {
  *   - countdown: Days until events (LIGHT, AI)
  *   - hot-take: Playful opinions (LIGHT, AI)
  *   - compliment: Uplifting affirmations (LIGHT, AI)
+ *   - novel-insight: Fresh perspectives (MEDIUM, AI)
  * - **P3 Generator (FALLBACK priority)**:
  *   - static-fallback: Static message when AI fails (LIGHT)
  *
@@ -265,6 +270,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.compliment
+  );
+
+  registry.register(
+    {
+      id: 'novel-insight',
+      name: 'Novel Insight Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.novelInsight
   );
 
   // Register P3 fallback generator (FALLBACK priority)
