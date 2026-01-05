@@ -38,15 +38,15 @@ function loadKnexConfig(environment: string): Knex.Config {
     };
   }
 
-  if (environment === 'production' && process.env.DB_TYPE === 'mysql') {
+  if (environment === 'production' && process.env.DATABASE_TYPE === 'mysql') {
     return {
       client: 'mysql2',
       connection: {
-        host: process.env.DB_HOST || 'localhost',
-        port: parseInt(process.env.DB_PORT || '3306', 10),
-        user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'clack_track',
+        host: process.env.DATABASE_HOST || 'localhost',
+        port: parseInt(process.env.DATABASE_PORT || '3306', 10),
+        user: process.env.DATABASE_USER || 'root',
+        password: process.env.DATABASE_PASSWORD || '',
+        database: process.env.DATABASE_NAME || 'clack_track',
       },
       migrations: {
         directory: migrationsDir,
