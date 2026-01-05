@@ -1,0 +1,24 @@
+Generate intellectual content about: {{topic}}
+
+OUTPUT STYLE:
+{{outputStyle}}
+
+CONTENT REQUIREMENTS:
+- Full nerd level - can reference specific theories, figures, concepts
+- Should spark "huh, I never thought of it that way" reactions
+- Aim for genuine insight, not trivia or factoids
+- Connect abstract concepts to relatable experiences when possible
+
+HARD EXCLUSIONS (never include):
+- Religion or spirituality topics
+- Heavy topics (death, doom, war, disaster, violence)
+- Current events or politics
+- Controversial social issues
+- Medical advice or health scares
+
+VESTABOARD CONSTRAINTS:
+- Maximum 132 characters total (6 rows x 22 characters)
+- UPPERCASE LETTERS ONLY
+- Limited special characters available
+- Content must be readable at a glance
+- Prioritize clarity over complexity
