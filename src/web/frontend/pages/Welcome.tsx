@@ -164,3 +164,5 @@ export function Welcome() {
     </PageLayout>
   );
 }
+
+export default Welcome;

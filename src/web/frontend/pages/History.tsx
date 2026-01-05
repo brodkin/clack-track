@@ -229,3 +229,5 @@ function formatRelativeTime(date: Date): string {
     return date.toLocaleDateString();
   }
 }
+
+export default History;

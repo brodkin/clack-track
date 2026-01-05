@@ -163,3 +163,5 @@ export function Login() {
     </PageLayout>
   );
 }
+
+export default Login;
