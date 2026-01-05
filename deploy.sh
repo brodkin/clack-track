@@ -70,7 +70,7 @@ echo -e "${GREEN}✓ Swarm mode active${NC}"
 # Check if secrets exist
 echo -e "\n${CYAN}Checking secrets...${NC}"
 MISSING_SECRETS=0
-for secret in database_password vestaboard_api_key vestaboard_api_url; do
+for secret in database_password_v2 vestaboard_api_key vestaboard_api_url; do
     if ! docker secret inspect "$secret" &>/dev/null; then
         echo -e "${RED}  ✗ Missing required secret: $secret${NC}"
         MISSING_SECRETS=1

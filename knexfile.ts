@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import * as path from 'path';
+import { getSecretOrEnv } from './src/utils/secrets.js';
 
 // For CommonJS compatibility - __dirname is available in transpiled CommonJS
 const __dirname = path.resolve();
@@ -58,7 +59,7 @@ const config: { [key: string]: Knex.Config } = {
             host: process.env.DATABASE_HOST || 'localhost',
             port: parseInt(process.env.DATABASE_PORT || '3306', 10),
             user: process.env.DATABASE_USER || 'root',
-            password: process.env.DATABASE_PASSWORD || '',
+            password: getSecretOrEnv('database_password_v2', 'DATABASE_PASSWORD', ''),
             database: process.env.DATABASE_NAME || 'clack_track',
           }
         : {

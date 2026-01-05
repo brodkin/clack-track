@@ -16,7 +16,7 @@ function getDatabaseUrl(): string {
   const port = process.env.DATABASE_PORT || '3306';
   const name = process.env.DATABASE_NAME || 'clack_track';
   const user = process.env.DATABASE_USER || 'root';
-  const password = getSecretOrEnv('database_password', 'DATABASE_PASSWORD', '');
+  const password = getSecretOrEnv('database_password_v2', 'DATABASE_PASSWORD', '');
 
   if (!password) {
     return `mysql://${user}@${host}:${port}/${name}`;

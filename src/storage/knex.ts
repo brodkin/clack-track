@@ -1,5 +1,6 @@
 import knex, { Knex } from 'knex';
 import { log } from '../utils/logger.js';
+import { getSecretOrEnv } from '../utils/secrets.js';
 import * as path from 'path';
 
 /**
@@ -45,7 +46,7 @@ function loadKnexConfig(environment: string): Knex.Config {
         host: process.env.DATABASE_HOST || 'localhost',
         port: parseInt(process.env.DATABASE_PORT || '3306', 10),
         user: process.env.DATABASE_USER || 'root',
-        password: process.env.DATABASE_PASSWORD || '',
+        password: getSecretOrEnv('database_password_v2', 'DATABASE_PASSWORD', ''),
         database: process.env.DATABASE_NAME || 'clack_track',
       },
       migrations: {
