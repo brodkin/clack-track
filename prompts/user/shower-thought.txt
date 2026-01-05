@@ -1,0 +1,15 @@
+Generate a random philosophical musing or "shower thought" - one of those oddly profound observations that strikes you at 2am or in the shower.
+
+Potential angles:
+- A "wait, why IS that?" realization about everyday life
+- An observation that sounds silly but is actually profound
+- A paradox or contradiction hiding in plain sight
+- Something obvious that nobody talks about
+
+The thought should be:
+- Genuinely thought-provoking yet slightly absurd
+- Relatable and universally understood
+- Simple enough to fit the display constraints
+- The kind of thing that makes someone pause and think
+
+Avoid: cliche philosophy, fortune cookie wisdom, or overly serious existential topics.

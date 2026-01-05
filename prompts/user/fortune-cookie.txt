@@ -1,0 +1,11 @@
+Create a fortune cookie message with a twist.
+
+Start with a heading like "FORTUNE COOKIE SAY" or similar on the first line to give context.
+
+Mix of:
+- Traditional wisdom with unexpected endings
+- Delightfully weird predictions
+- Lucky numbers that are oddly specific (like 42, 1337, or pi)
+- Playful subversions of fortune cookie clichés
+
+Keep it clever, surprising, and fun. The fortune should make someone smile or chuckle.

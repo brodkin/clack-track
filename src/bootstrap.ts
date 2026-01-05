@@ -28,6 +28,11 @@ import { LocalNewsGenerator } from './content/generators/ai/local-news-generator
 import { WeatherGenerator } from './content/generators/ai/weather-generator.js';
 import { HaikuGenerator } from './content/generators/ai/haiku-generator.js';
 import { SeasonalGenerator } from './content/generators/ai/seasonal-generator.js';
+import { ShowerThoughtGenerator } from './content/generators/ai/shower-thought-generator.js';
+import { FortuneCookieGenerator } from './content/generators/ai/fortune-cookie-generator.js';
+import { CountdownGenerator } from './content/generators/ai/countdown-generator.js';
+import { HotTakeGenerator } from './content/generators/ai/hot-take-generator.js';
+import { ComplimentGenerator } from './content/generators/ai/compliment-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
 import { RSSClient } from './api/data-sources/rss-client.js';
@@ -170,6 +175,11 @@ function createCoreGenerators(
     haiku: new HaikuGenerator(promptLoader, modelTierSelector, apiKeys),
     seasonal: new SeasonalGenerator(promptLoader, modelTierSelector, apiKeys),
     pattern: new PatternGenerator(),
+    showerThought: new ShowerThoughtGenerator(promptLoader, modelTierSelector, apiKeys),
+    fortuneCookie: new FortuneCookieGenerator(promptLoader, modelTierSelector, apiKeys),
+    countdown: new CountdownGenerator(promptLoader, modelTierSelector, apiKeys),
+    hotTake: new HotTakeGenerator(promptLoader, modelTierSelector, apiKeys),
+    compliment: new ComplimentGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }

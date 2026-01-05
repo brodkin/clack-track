@@ -42,18 +42,27 @@ describe('registerCoreContent', () => {
     ContentRegistry.reset();
   });
 
+  // Helper to create a full set of core generators
+  const createFullGenerators = () => ({
+    motivational: createMockGenerator('motivational'),
+    globalNews: createMockGenerator('globalNews'),
+    techNews: createMockGenerator('techNews'),
+    localNews: createMockGenerator('localNews'),
+    weather: createMockGenerator('weather'),
+    haiku: createMockGenerator('haiku'),
+    seasonal: createMockGenerator('seasonal'),
+    pattern: createMockGenerator('pattern'),
+    showerThought: createMockGenerator('showerThought'),
+    fortuneCookie: createMockGenerator('fortuneCookie'),
+    countdown: createMockGenerator('countdown'),
+    hotTake: createMockGenerator('hotTake'),
+    compliment: createMockGenerator('compliment'),
+    staticFallback: createMockGenerator('fallback'),
+  });
+
   describe('P2 Generator Registration', () => {
     it('should register motivational generator with correct metadata', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       registerCoreContent(registry, generators);
 
@@ -67,16 +76,7 @@ describe('registerCoreContent', () => {
     });
 
     it('should register weather generator with correct metadata', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       registerCoreContent(registry, generators);
 
@@ -90,37 +90,20 @@ describe('registerCoreContent', () => {
     });
 
     it('should register all P2 generators with NORMAL priority', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        pattern: createMockGenerator('pattern'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      expect(normalPriorityGens.length).toBe(8); // motivational, globalNews, techNews, localNews, weather, haiku, seasonal, pattern
+      // motivational, globalNews, techNews, localNews, weather, haiku, seasonal, pattern,
+      // showerThought, fortuneCookie, countdown, hotTake, compliment = 13
+      expect(normalPriorityGens.length).toBe(13);
     });
   });
 
   describe('P3 Fallback Registration', () => {
     it('should register static fallback with correct metadata', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       registerCoreContent(registry, generators);
 
@@ -134,16 +117,7 @@ describe('registerCoreContent', () => {
     });
 
     it('should register only one fallback generator', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       registerCoreContent(registry, generators);
 
@@ -154,36 +128,17 @@ describe('registerCoreContent', () => {
 
   describe('Complete Registration', () => {
     it('should register all core generators', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        pattern: createMockGenerator('pattern'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       registerCoreContent(registry, generators);
 
       const allGenerators = registry.getAll();
-      expect(allGenerators.length).toBe(9); // 8 P2 + 1 P3
+      // 13 P2 + 1 P3 = 14 total
+      expect(allGenerators.length).toBe(14);
     });
 
     it('should maintain correct priority distribution', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        pattern: createMockGenerator('pattern'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       registerCoreContent(registry, generators);
 
@@ -191,22 +146,15 @@ describe('registerCoreContent', () => {
       const fallbackGens = registry.getByPriority(ContentPriority.FALLBACK);
       const notificationGens = registry.getByPriority(ContentPriority.NOTIFICATION);
 
-      expect(normalGens.length).toBe(8);
+      // 13 P2 generators: motivational, globalNews, techNews, localNews, weather, haiku,
+      // seasonal, pattern, showerThought, fortuneCookie, countdown, hotTake, compliment
+      expect(normalGens.length).toBe(13);
       expect(fallbackGens.length).toBe(1);
       expect(notificationGens.length).toBe(0);
     });
 
     it('should not throw when called with valid generators', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       expect(() => registerCoreContent(registry, generators)).not.toThrow();
     });
@@ -214,16 +162,7 @@ describe('registerCoreContent', () => {
 
   describe('New News Generators (Global, Tech, Local)', () => {
     it('should register global-news generator with correct metadata', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       registerCoreContent(registry, generators);
 
@@ -238,16 +177,7 @@ describe('registerCoreContent', () => {
     });
 
     it('should register tech-news generator with correct metadata', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       registerCoreContent(registry, generators);
 
@@ -262,16 +192,7 @@ describe('registerCoreContent', () => {
     });
 
     it('should register local-news generator with correct metadata', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       registerCoreContent(registry, generators);
 
@@ -286,36 +207,17 @@ describe('registerCoreContent', () => {
     });
 
     it('should register all three news generators at P2 priority', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        pattern: createMockGenerator('pattern'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      // motivational, globalNews, techNews, localNews, weather, haiku, seasonal, pattern = 8
-      expect(normalPriorityGens.length).toBe(8);
+      // All 13 P2 generators including 3 news generators
+      expect(normalPriorityGens.length).toBe(13);
     });
 
     it('should not register old news-summary generator', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       registerCoreContent(registry, generators);
 
@@ -324,16 +226,7 @@ describe('registerCoreContent', () => {
     });
 
     it('should give equal selection probability to all three news generators', () => {
-      const generators = {
-        motivational: createMockGenerator('motivational'),
-        globalNews: createMockGenerator('globalNews'),
-        techNews: createMockGenerator('techNews'),
-        localNews: createMockGenerator('localNews'),
-        weather: createMockGenerator('weather'),
-        haiku: createMockGenerator('haiku'),
-        seasonal: createMockGenerator('seasonal'),
-        staticFallback: createMockGenerator('fallback'),
-      };
+      const generators = createFullGenerators();
 
       registerCoreContent(registry, generators);
 
