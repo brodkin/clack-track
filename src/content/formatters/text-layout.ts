@@ -13,13 +13,15 @@ export type TextAlignment = 'left' | 'center' | 'right';
 export interface FormatOptions {
   /** Horizontal text alignment (default: 'center') */
   alignment?: TextAlignment;
+  /** Whether to wrap at word boundaries (default: true). When false, text can break mid-word. */
+  wordWrap?: boolean;
 }
 
 /**
  * Formats VestaboardContent into a VestaboardLayout with text rows and character codes
  *
  * This formatter:
- * 1. Wraps text at word boundaries to fit 22-character rows
+ * 1. Wraps text to fit 22-character rows (word boundaries by default, or character boundaries)
  * 2. Aligns text horizontally (left, center, or right) and centers vertically
  * 3. Converts text to Vestaboard character codes
  */
@@ -41,13 +43,14 @@ export class TextLayoutFormatter {
    * Formats content into a Vestaboard layout
    *
    * @param content - The content to format
-   * @param options - Optional formatting options (alignment defaults to 'center')
+   * @param options - Optional formatting options (alignment defaults to 'center', wordWrap defaults to true)
    * @returns VestaboardLayout with rows and characterCodes
    */
   format(content: VestaboardContent, options?: FormatOptions): VestaboardLayout {
     const text = content.text || '';
     const upperText = text.toUpperCase();
     const alignment = options?.alignment ?? 'center';
+    const wordWrap = options?.wordWrap ?? true;
 
     // Split by explicit newlines first
     const explicitLines = upperText.split('\n');
@@ -55,7 +58,7 @@ export class TextLayoutFormatter {
     // Wrap each line to fit within column width
     const allLines: string[] = [];
     for (const line of explicitLines) {
-      const wrappedLines = this.wrapText(line, this.MAX_COLS);
+      const wrappedLines = this.wrapText(line, this.MAX_COLS, wordWrap);
       allLines.push(...wrappedLines);
     }
 
@@ -89,17 +92,24 @@ export class TextLayoutFormatter {
   }
 
   /**
-   * Wraps text at word boundaries to fit within the specified width
+   * Wraps text to fit within the specified width
    *
    * @param text - Text to wrap
    * @param maxWidth - Maximum width of each line
+   * @param wordWrap - Whether to wrap at word boundaries (true) or allow breaking mid-word (false)
    * @returns Array of wrapped lines
    */
-  private wrapText(text: string, maxWidth: number): string[] {
+  private wrapText(text: string, maxWidth: number, wordWrap: boolean = true): string[] {
     if (!text || text.trim() === '') {
       return [''];
     }
 
+    if (!wordWrap) {
+      // Break text at exact character boundaries
+      return this.wrapAtCharacterBoundary(text, maxWidth);
+    }
+
+    // Word-wrap mode: wrap at word boundaries
     const words = text.split(' ');
     const lines: string[] = [];
     let currentLine = '';
@@ -122,6 +132,23 @@ export class TextLayoutFormatter {
 
     if (currentLine) {
       lines.push(currentLine);
+    }
+
+    return lines.length > 0 ? lines : [''];
+  }
+
+  /**
+   * Wraps text at exact character boundaries (no word boundary consideration)
+   *
+   * @param text - Text to wrap
+   * @param maxWidth - Maximum width of each line
+   * @returns Array of wrapped lines
+   */
+  private wrapAtCharacterBoundary(text: string, maxWidth: number): string[] {
+    const lines: string[] = [];
+
+    for (let i = 0; i < text.length; i += maxWidth) {
+      lines.push(text.substring(i, i + maxWidth));
     }
 
     return lines.length > 0 ? lines : [''];
