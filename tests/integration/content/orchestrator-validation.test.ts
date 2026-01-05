@@ -217,9 +217,10 @@ describe('ContentOrchestrator - Validation Integration', () => {
     });
 
     it('should trigger P3 fallback when text content has invalid characters', async () => {
-      // ARRANGE - Invalid content (contains emoji/invalid chars)
+      // ARRANGE - Invalid content (contains trademark symbol which is not a strippable emoji)
+      // Note: Emojis like 🎉 are now stripped before validation, so we use ™ which is preserved
       const invalidContent: GeneratedContent = {
-        text: 'HELLO 🎉 WORLD',
+        text: 'HELLO™ WORLD',
         outputMode: 'text',
       };
 

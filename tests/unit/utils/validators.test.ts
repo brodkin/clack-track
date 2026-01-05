@@ -12,6 +12,7 @@ import {
   validateLayoutContent,
   findInvalidCharacters,
   normalizeText,
+  stripUnsupportedEmojis,
   SUPPORTED_COLOR_EMOJIS,
 } from '@/utils/validators';
 import type { GeneratedContent, VestaboardLayout } from '@/types/index';
@@ -775,41 +776,50 @@ describe('color emoji validation', () => {
     });
   });
 
-  describe('non-color emojis should fail validation', () => {
-    it('should reject smiley face emoji', () => {
+  describe('non-color emojis are stripped (not rejected)', () => {
+    it('should strip smiley face emoji and pass validation', () => {
       const content: GeneratedContent = {
         text: 'HELLO 😀 WORLD',
         outputMode: 'text',
       };
 
-      expect(() => validateGeneratorOutput(content)).toThrow('contains invalid characters');
+      // Previously threw, now strips the emoji and passes
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.emojisStripped).toBe(true);
     });
 
-    it('should reject party popper emoji', () => {
+    it('should strip party popper emoji and pass validation', () => {
       const content: GeneratedContent = {
         text: 'PARTY 🎉 TIME',
         outputMode: 'text',
       };
 
-      expect(() => validateGeneratorOutput(content)).toThrow('contains invalid characters');
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.emojisStripped).toBe(true);
     });
 
-    it('should reject coffee emoji', () => {
+    it('should strip coffee emoji and pass validation', () => {
       const content: GeneratedContent = {
         text: 'COFFEE ☕ BREAK',
         outputMode: 'text',
       };
 
-      expect(() => validateGeneratorOutput(content)).toThrow('contains invalid characters');
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.emojisStripped).toBe(true);
     });
 
-    it('should reject sparkles emoji', () => {
+    it('should strip sparkles emoji and pass validation', () => {
       const content: GeneratedContent = {
         text: 'SPARKLE ✨ TEXT',
         outputMode: 'text',
       };
 
-      expect(() => validateGeneratorOutput(content)).toThrow('contains invalid characters');
+      const result = validateGeneratorOutput(content);
+      expect(result.valid).toBe(true);
+      expect(result.emojisStripped).toBe(true);
     });
   });
 
@@ -960,6 +970,245 @@ describe('normalizeText', () => {
 
       const result = validateGeneratorOutput(content);
       expect(result.valid).toBe(true);
+    });
+  });
+});
+
+describe('stripUnsupportedEmojis', () => {
+  describe('basic functionality', () => {
+    it('should return unchanged text when no emojis present', () => {
+      const result = stripUnsupportedEmojis('HELLO WORLD');
+
+      expect(result.text).toBe('HELLO WORLD');
+      expect(result.emojisStripped).toBe(false);
+    });
+
+    it('should strip unsupported emoji (🎯) from text', () => {
+      const result = stripUnsupportedEmojis('GOAL 🎯 ACHIEVED');
+
+      expect(result.text).toBe('GOAL  ACHIEVED');
+      expect(result.emojisStripped).toBe(true);
+    });
+
+    it('should preserve color emoji (🔴) in output', () => {
+      const result = stripUnsupportedEmojis('STATUS 🔴 ALERT');
+
+      expect(result.text).toBe('STATUS 🔴 ALERT');
+      expect(result.emojisStripped).toBe(false);
+    });
+
+    it('should preserve color emoji (🟩) in output', () => {
+      const result = stripUnsupportedEmojis('STATUS 🟩 OK');
+
+      expect(result.text).toBe('STATUS 🟩 OK');
+      expect(result.emojisStripped).toBe(false);
+    });
+
+    it('should handle mixed content (text + unsupported + supported emoji)', () => {
+      const result = stripUnsupportedEmojis('HELLO 😀 WORLD 🟥 TEST 🎉');
+
+      expect(result.text).toBe('HELLO  WORLD 🟥 TEST ');
+      expect(result.emojisStripped).toBe(true);
+    });
+
+    it('should strip multiple unsupported emojis in single pass', () => {
+      const result = stripUnsupportedEmojis('🎯 TARGETS 🎉 PARTY 😀 SMILE');
+
+      expect(result.text).toBe(' TARGETS  PARTY  SMILE');
+      expect(result.emojisStripped).toBe(true);
+    });
+  });
+
+  describe('variant selector handling', () => {
+    it('should handle variant selectors (U+FE0F) for supported color emojis', () => {
+      // ❤️ is ❤ + U+FE0F variant selector
+      const result = stripUnsupportedEmojis('LOVE ❤️ YOU');
+
+      expect(result.text).toBe('LOVE ❤️ YOU');
+      expect(result.emojisStripped).toBe(false);
+    });
+
+    it('should handle color emoji without variant selector', () => {
+      // ❤ without variant selector
+      const result = stripUnsupportedEmojis('LOVE ❤ YOU');
+
+      expect(result.text).toBe('LOVE ❤ YOU');
+      expect(result.emojisStripped).toBe(false);
+    });
+
+    it('should handle ◻️ (white square with variant selector)', () => {
+      const result = stripUnsupportedEmojis('BOX ◻️ END');
+
+      expect(result.text).toBe('BOX ◻️ END');
+      expect(result.emojisStripped).toBe(false);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should return empty string when all content is stripped emojis', () => {
+      const result = stripUnsupportedEmojis('🎯😀🎉');
+
+      expect(result.text).toBe('');
+      expect(result.emojisStripped).toBe(true);
+    });
+
+    it('should handle empty string input', () => {
+      const result = stripUnsupportedEmojis('');
+
+      expect(result.text).toBe('');
+      expect(result.emojisStripped).toBe(false);
+    });
+
+    it('should preserve non-emoji invalid characters (for other validation to handle)', () => {
+      // ™ is not an emoji, so should be preserved (other validation handles it)
+      const result = stripUnsupportedEmojis('HELLO™ WORLD');
+
+      expect(result.text).toBe('HELLO™ WORLD');
+      expect(result.emojisStripped).toBe(false);
+    });
+
+    it('should handle adjacent emojis correctly', () => {
+      const result = stripUnsupportedEmojis('🟥🎯🟦😀🟩');
+
+      expect(result.text).toBe('🟥🟦🟩');
+      expect(result.emojisStripped).toBe(true);
+    });
+
+    it('should preserve all supported color emojis', () => {
+      // Test all color emoji variants
+      const allColorEmojis = '🟥🔴❤️❤🔺🟦🔵💙🟩🟢💚🟨🟡💛🟧🟠🧡🟪🟣💜⬜◻️◻◽⚪🤍⬛◼️◼◾⚫🖤';
+      const result = stripUnsupportedEmojis(allColorEmojis);
+
+      expect(result.text).toBe(allColorEmojis);
+      expect(result.emojisStripped).toBe(false);
+    });
+  });
+
+  describe('production error case', () => {
+    it('should strip 🎯 from motivational quote (root cause bug)', () => {
+      // This is the exact production case that triggered this feature
+      const productionQuote = 'AIM FOR THE STARS 🎯\nNEVER GIVE UP';
+      const result = stripUnsupportedEmojis(productionQuote);
+
+      expect(result.text).toBe('AIM FOR THE STARS \nNEVER GIVE UP');
+      expect(result.emojisStripped).toBe(true);
+    });
+  });
+});
+
+describe('emoji stripping integration with validation', () => {
+  describe('validateTextContent with emoji stripping', () => {
+    it('should pass validation after stripping unsupported emoji', () => {
+      // Previously this would fail with ContentValidationError
+      const result = validateTextContent('GOAL 🎯 ACHIEVED');
+
+      expect(result.valid).toBe(true);
+      expect(result.emojisStripped).toBe(true);
+    });
+
+    it('should set emojisStripped flag when emojis are stripped', () => {
+      const result = validateTextContent('PARTY 🎉 TIME');
+
+      expect(result.valid).toBe(true);
+      expect(result.emojisStripped).toBe(true);
+    });
+
+    it('should not set emojisStripped flag when no emojis stripped', () => {
+      const result = validateTextContent('HELLO WORLD');
+
+      expect(result.valid).toBe(true);
+      expect(result.emojisStripped).toBe(false);
+    });
+
+    it('should preserve color emojis in validation', () => {
+      const result = validateTextContent('STATUS 🟩 OK');
+
+      expect(result.valid).toBe(true);
+      expect(result.emojisStripped).toBe(false);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+
+    it('should strip unsupported but preserve color emojis', () => {
+      const result = validateTextContent('GOOD 🎯 BAD 🟥');
+
+      expect(result.valid).toBe(true);
+      expect(result.emojisStripped).toBe(true);
+      expect(result.invalidChars).toHaveLength(0);
+    });
+  });
+
+  describe('validateLayoutContent with emoji stripping', () => {
+    it('should pass layout validation after stripping unsupported emoji', () => {
+      const layout: VestaboardLayout = {
+        rows: [
+          'TARGET 🎯 HIT',
+          'B'.repeat(22),
+          'C'.repeat(22),
+          'D'.repeat(22),
+          'E'.repeat(22),
+          'F'.repeat(22),
+        ],
+      };
+
+      const result = validateLayoutContent(layout);
+
+      expect(result.valid).toBe(true);
+      expect(result.emojisStripped).toBe(true);
+    });
+
+    it('should preserve color emojis in layout validation', () => {
+      const layout: VestaboardLayout = {
+        rows: [
+          'STATUS 🟩 OK',
+          'B'.repeat(22),
+          'C'.repeat(22),
+          'D'.repeat(22),
+          'E'.repeat(22),
+          'F'.repeat(22),
+        ],
+      };
+
+      const result = validateLayoutContent(layout);
+
+      expect(result.valid).toBe(true);
+      expect(result.emojisStripped).toBe(false);
+    });
+  });
+
+  describe('validateGeneratorOutput with emoji stripping', () => {
+    it('should pass text mode validation after stripping unsupported emoji', () => {
+      const content: GeneratedContent = {
+        text: 'TARGET 🎯 HIT',
+        outputMode: 'text',
+      };
+
+      // Previously this would throw ContentValidationError
+      const result = validateGeneratorOutput(content);
+
+      expect(result.valid).toBe(true);
+      expect(result.emojisStripped).toBe(true);
+    });
+
+    it('should pass layout mode validation after stripping unsupported emoji', () => {
+      const content: GeneratedContent = {
+        text: 'Layout content',
+        outputMode: 'layout',
+        layout: {
+          rows: [
+            'PARTY 🎉 TIME',
+            'B'.repeat(22),
+            'C'.repeat(22),
+            'D'.repeat(22),
+            'E'.repeat(22),
+            'F'.repeat(22),
+          ],
+        },
+      };
+
+      const result = validateGeneratorOutput(content);
+
+      expect(result.valid).toBe(true);
+      expect(result.emojisStripped).toBe(true);
     });
   });
 });
