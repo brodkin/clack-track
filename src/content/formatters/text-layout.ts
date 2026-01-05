@@ -3,11 +3,24 @@ import { textToLayout as defaultTextToLayout } from '../../api/vestaboard/charac
 import type { CharacterConverter } from '../../api/vestaboard/types.js';
 
 /**
+ * Text alignment options for horizontal positioning
+ */
+export type TextAlignment = 'left' | 'center' | 'right';
+
+/**
+ * Options for formatting content
+ */
+export interface FormatOptions {
+  /** Horizontal text alignment (default: 'center') */
+  alignment?: TextAlignment;
+}
+
+/**
  * Formats VestaboardContent into a VestaboardLayout with text rows and character codes
  *
  * This formatter:
  * 1. Wraps text at word boundaries to fit 22-character rows
- * 2. Centers text horizontally and vertically
+ * 2. Aligns text horizontally (left, center, or right) and centers vertically
  * 3. Converts text to Vestaboard character codes
  */
 export class TextLayoutFormatter {
@@ -28,11 +41,13 @@ export class TextLayoutFormatter {
    * Formats content into a Vestaboard layout
    *
    * @param content - The content to format
+   * @param options - Optional formatting options (alignment defaults to 'center')
    * @returns VestaboardLayout with rows and characterCodes
    */
-  format(content: VestaboardContent): VestaboardLayout {
+  format(content: VestaboardContent, options?: FormatOptions): VestaboardLayout {
     const text = content.text || '';
     const upperText = text.toUpperCase();
+    const alignment = options?.alignment ?? 'center';
 
     // Split by explicit newlines first
     const explicitLines = upperText.split('\n');
@@ -50,14 +65,14 @@ export class TextLayoutFormatter {
     // Calculate vertical padding for centering
     const verticalPadding = Math.floor((this.MAX_ROWS - linesToUse.length) / 2);
 
-    // Build the rows array with centered text
+    // Build the rows array with aligned text
     const rows: string[] = [];
     for (let i = 0; i < this.MAX_ROWS; i++) {
       const lineIndex = i - verticalPadding;
       if (lineIndex >= 0 && lineIndex < linesToUse.length) {
-        // Center horizontally and pad to full width
-        const centeredLine = this.centerText(linesToUse[lineIndex], this.MAX_COLS);
-        rows.push(centeredLine);
+        // Align horizontally and pad to full width
+        const alignedLine = this.alignText(linesToUse[lineIndex], this.MAX_COLS, alignment);
+        rows.push(alignedLine);
       } else {
         // Empty row
         rows.push(' '.repeat(this.MAX_COLS));
@@ -113,21 +128,34 @@ export class TextLayoutFormatter {
   }
 
   /**
-   * Centers text within a given width
+   * Aligns text within a given width using the specified alignment
    *
-   * @param text - Text to center
+   * @param text - Text to align
    * @param width - Total width
-   * @returns Centered text padded to full width
+   * @param alignment - Alignment mode ('left', 'center', or 'right')
+   * @returns Aligned text padded to full width
    */
-  private centerText(text: string, width: number): string {
+  private alignText(text: string, width: number, alignment: TextAlignment): string {
     if (text.length >= width) {
       return text.substring(0, width);
     }
 
     const padding = width - text.length;
-    const leftPadding = Math.floor(padding / 2);
-    const rightPadding = padding - leftPadding;
 
-    return ' '.repeat(leftPadding) + text + ' '.repeat(rightPadding);
+    switch (alignment) {
+      case 'left':
+        // No left padding, all padding on right
+        return text + ' '.repeat(padding);
+      case 'right':
+        // All padding on left, text at end
+        return ' '.repeat(padding) + text;
+      case 'center':
+      default: {
+        // Split padding between left and right
+        const leftPadding = Math.floor(padding / 2);
+        const rightPadding = padding - leftPadding;
+        return ' '.repeat(leftPadding) + text + ' '.repeat(rightPadding);
+      }
+    }
   }
 }
