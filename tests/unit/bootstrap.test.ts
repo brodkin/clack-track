@@ -54,8 +54,6 @@ jest.mock('../../src/content/generators/static-fallback-generator.js');
 jest.mock('../../src/content/generators/ai/motivational-generator.js');
 jest.mock('../../src/content/generators/ai/news-generator.js');
 jest.mock('../../src/content/generators/ai/weather-generator.js');
-jest.mock('../../src/content/generators/programmatic/greeting-generator.js');
-jest.mock('../../src/content/generators/programmatic/ascii-art-generator.js');
 jest.mock('../../src/content/generators/minor-update.js');
 jest.mock('../../src/content/prompt-loader.js');
 

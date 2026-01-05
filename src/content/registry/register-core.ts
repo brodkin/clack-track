@@ -14,8 +14,7 @@ import { ContentRegistry } from './content-registry.js';
 /**
  * Interface defining the core generator instances to be registered.
  *
- * Includes all required P2 generators and the required P3 fallback,
- * plus an optional asciiArt generator.
+ * Includes all required P2 generators and the required P3 fallback.
  *
  * @interface CoreGenerators
  * @property {ContentGenerator} motivational - Motivational quote generator (P2, LIGHT)
@@ -23,8 +22,6 @@ import { ContentRegistry } from './content-registry.js';
  * @property {ContentGenerator} techNews - Tech news generator (P2, MEDIUM)
  * @property {ContentGenerator} localNews - Local news generator (P2, MEDIUM)
  * @property {ContentGenerator} weather - Weather focus generator (P2, LIGHT)
- * @property {ContentGenerator} greeting - Greeting generator (P2, LIGHT, programmatic)
- * @property {ContentGenerator} [asciiArt] - Optional ASCII art generator (P2, LIGHT)
  * @property {ContentGenerator} staticFallback - Static fallback generator (P3, LIGHT)
  *
  * @example
@@ -35,8 +32,9 @@ import { ContentRegistry } from './content-registry.js';
  *   techNews: new TechNewsGenerator(),
  *   localNews: new LocalNewsGenerator(),
  *   weather: new WeatherFocusGenerator(),
- *   greeting: new GreetingGenerator(),
- *   asciiArt: new AsciiArtGenerator(), // Optional
+ *   haiku: new HaikuGenerator(),
+ *   seasonal: new SeasonalGenerator(),
+ *   pattern: new PatternGenerator(),
  *   staticFallback: new StaticFallbackGenerator()
  * };
  * ```
@@ -52,16 +50,12 @@ export interface CoreGenerators {
   localNews: ContentGenerator;
   /** Weather focus generator (P2, LIGHT, AI-powered) */
   weather: ContentGenerator;
-  /** Greeting generator (P2, LIGHT, programmatic) */
-  greeting: ContentGenerator;
   /** Haiku generator (P2, LIGHT, AI-powered) */
   haiku: ContentGenerator;
   /** Seasonal generator (P2, LIGHT, AI-powered) */
   seasonal: ContentGenerator;
   /** Mathematical pattern generator (P2, LIGHT, programmatic) */
   pattern: ContentGenerator;
-  /** Optional ASCII art generator (P2, LIGHT, programmatic) */
-  asciiArt?: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -76,12 +70,13 @@ export interface CoreGenerators {
  *   - tech-news: Tech news summaries (MEDIUM, AI)
  *   - local-news: Local news summaries (MEDIUM, AI)
  *   - weather-focus: Weather updates (LIGHT, AI)
- *   - greeting: Personalized greetings (LIGHT, programmatic)
- *   - ascii-art: ASCII art (LIGHT, programmatic, optional)
+ *   - haiku: Haiku poems (LIGHT, AI)
+ *   - seasonal: Seasonal content (LIGHT, AI)
+ *   - pattern-art: Mathematical patterns (LIGHT, programmatic)
  * - **P3 Generator (FALLBACK priority)**:
  *   - static-fallback: Static message when AI fails (LIGHT)
  *
- * All generators have `applyFrame: true` to include time/weather frame.
+ * Most generators have `applyFrame: true` to include time/weather frame.
  *
  * @param {ContentRegistry} registry - The registry to register generators with
  * @param {CoreGenerators} generators - The core generator instances
@@ -161,17 +156,6 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
 
   registry.register(
     {
-      id: 'greeting',
-      name: 'Greeting Generator',
-      priority: ContentPriority.NORMAL,
-      modelTier: ModelTier.LIGHT,
-      applyFrame: true,
-    },
-    generators.greeting
-  );
-
-  registry.register(
-    {
       id: 'haiku',
       name: 'Haiku Generator',
       priority: ContentPriority.NORMAL,
@@ -202,20 +186,6 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
     },
     generators.pattern
   );
-
-  // Register optional asciiArt generator if provided
-  if (generators.asciiArt) {
-    registry.register(
-      {
-        id: 'ascii-art',
-        name: 'ASCII Art Generator',
-        priority: ContentPriority.NORMAL,
-        modelTier: ModelTier.LIGHT,
-        applyFrame: true,
-      },
-      generators.asciiArt
-    );
-  }
 
   // Register P3 fallback generator (FALLBACK priority)
   registry.register(
