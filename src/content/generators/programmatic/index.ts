@@ -7,6 +7,4 @@
  * @module content/generators/programmatic
  */
 
-export { GreetingGenerator } from './greeting-generator.js';
-export { ASCIIArtGenerator } from './ascii-art-generator.js';
 export { PatternGenerator } from './pattern-generator.js';
