@@ -5,6 +5,7 @@ import type {
   GeneratedContent,
   GeneratorValidationResult,
   ContentRegistration,
+  GeneratorFormatOptions,
 } from '@/types/content-generator';
 import { ContentPriority, ModelTier } from '@/types/content-generator';
 import type { VestaboardLayout } from '@/types/content';
@@ -480,6 +481,217 @@ describe('Content Generator Types', () => {
     });
   });
 
+  describe('GeneratorFormatOptions Interface', () => {
+    it('should allow all properties to be optional', () => {
+      // Empty object should be valid - all properties are optional
+      const options: GeneratorFormatOptions = {};
+      expect(options).toBeDefined();
+      expect(options.textAlign).toBeUndefined();
+      expect(options.maxLines).toBeUndefined();
+      expect(options.maxCharsPerLine).toBeUndefined();
+      expect(options.wordWrap).toBeUndefined();
+    });
+
+    it('should accept textAlign with left value', () => {
+      const options: GeneratorFormatOptions = {
+        textAlign: 'left',
+      };
+      expect(options.textAlign).toBe('left');
+    });
+
+    it('should accept textAlign with center value', () => {
+      const options: GeneratorFormatOptions = {
+        textAlign: 'center',
+      };
+      expect(options.textAlign).toBe('center');
+    });
+
+    it('should accept textAlign with right value', () => {
+      const options: GeneratorFormatOptions = {
+        textAlign: 'right',
+      };
+      expect(options.textAlign).toBe('right');
+    });
+
+    it('should accept maxLines within valid range (1-5)', () => {
+      // Test minimum valid value
+      const minOptions: GeneratorFormatOptions = {
+        maxLines: 1,
+      };
+      expect(minOptions.maxLines).toBe(1);
+
+      // Test maximum valid value
+      const maxOptions: GeneratorFormatOptions = {
+        maxLines: 5,
+      };
+      expect(maxOptions.maxLines).toBe(5);
+
+      // Test middle value
+      const midOptions: GeneratorFormatOptions = {
+        maxLines: 3,
+      };
+      expect(midOptions.maxLines).toBe(3);
+    });
+
+    it('should accept maxCharsPerLine within valid range (1-21)', () => {
+      // Test minimum valid value
+      const minOptions: GeneratorFormatOptions = {
+        maxCharsPerLine: 1,
+      };
+      expect(minOptions.maxCharsPerLine).toBe(1);
+
+      // Test maximum valid value (21 leaves room for frame)
+      const maxOptions: GeneratorFormatOptions = {
+        maxCharsPerLine: 21,
+      };
+      expect(maxOptions.maxCharsPerLine).toBe(21);
+
+      // Test common value
+      const commonOptions: GeneratorFormatOptions = {
+        maxCharsPerLine: 18,
+      };
+      expect(commonOptions.maxCharsPerLine).toBe(18);
+    });
+
+    it('should accept wordWrap boolean true', () => {
+      const options: GeneratorFormatOptions = {
+        wordWrap: true,
+      };
+      expect(options.wordWrap).toBe(true);
+    });
+
+    it('should accept wordWrap boolean false', () => {
+      const options: GeneratorFormatOptions = {
+        wordWrap: false,
+      };
+      expect(options.wordWrap).toBe(false);
+    });
+
+    it('should handle all properties together', () => {
+      const options: GeneratorFormatOptions = {
+        textAlign: 'center',
+        maxLines: 4,
+        maxCharsPerLine: 20,
+        wordWrap: true,
+      };
+
+      expect(options.textAlign).toBe('center');
+      expect(options.maxLines).toBe(4);
+      expect(options.maxCharsPerLine).toBe(20);
+      expect(options.wordWrap).toBe(true);
+    });
+
+    it('should allow partial property combinations', () => {
+      // Only textAlign and wordWrap
+      const options1: GeneratorFormatOptions = {
+        textAlign: 'right',
+        wordWrap: false,
+      };
+      expect(options1.textAlign).toBe('right');
+      expect(options1.wordWrap).toBe(false);
+      expect(options1.maxLines).toBeUndefined();
+      expect(options1.maxCharsPerLine).toBeUndefined();
+
+      // Only line constraints
+      const options2: GeneratorFormatOptions = {
+        maxLines: 5,
+        maxCharsPerLine: 21,
+      };
+      expect(options2.maxLines).toBe(5);
+      expect(options2.maxCharsPerLine).toBe(21);
+      expect(options2.textAlign).toBeUndefined();
+      expect(options2.wordWrap).toBeUndefined();
+    });
+  });
+
+  describe('ContentRegistration with formatOptions', () => {
+    it('should allow registration without formatOptions (backwards compatible)', () => {
+      const registration: ContentRegistration = {
+        id: 'legacy-generator',
+        name: 'Legacy Generator',
+        priority: ContentPriority.NORMAL,
+        modelTier: ModelTier.LIGHT,
+      };
+
+      expect(registration.formatOptions).toBeUndefined();
+      // Verify other required fields still work
+      expect(registration.id).toBe('legacy-generator');
+    });
+
+    it('should allow registration with formatOptions', () => {
+      const registration: ContentRegistration = {
+        id: 'formatted-generator',
+        name: 'Formatted Generator',
+        priority: ContentPriority.NORMAL,
+        modelTier: ModelTier.MEDIUM,
+        formatOptions: {
+          textAlign: 'center',
+          maxLines: 4,
+          maxCharsPerLine: 20,
+          wordWrap: true,
+        },
+      };
+
+      expect(registration.formatOptions).toBeDefined();
+      expect(registration.formatOptions?.textAlign).toBe('center');
+      expect(registration.formatOptions?.maxLines).toBe(4);
+      expect(registration.formatOptions?.maxCharsPerLine).toBe(20);
+      expect(registration.formatOptions?.wordWrap).toBe(true);
+    });
+
+    it('should allow registration with empty formatOptions', () => {
+      const registration: ContentRegistration = {
+        id: 'empty-options-generator',
+        name: 'Empty Options Generator',
+        priority: ContentPriority.NORMAL,
+        modelTier: ModelTier.LIGHT,
+        formatOptions: {},
+      };
+
+      expect(registration.formatOptions).toBeDefined();
+      expect(registration.formatOptions?.textAlign).toBeUndefined();
+    });
+
+    it('should allow registration with partial formatOptions', () => {
+      const registration: ContentRegistration = {
+        id: 'partial-options-generator',
+        name: 'Partial Options Generator',
+        priority: ContentPriority.NORMAL,
+        modelTier: ModelTier.LIGHT,
+        formatOptions: {
+          textAlign: 'left',
+        },
+      };
+
+      expect(registration.formatOptions?.textAlign).toBe('left');
+      expect(registration.formatOptions?.maxLines).toBeUndefined();
+    });
+
+    it('should allow formatOptions alongside other optional fields', () => {
+      const registration: ContentRegistration = {
+        id: 'full-options-generator',
+        name: 'Full Options Generator',
+        priority: ContentPriority.NOTIFICATION,
+        modelTier: ModelTier.HEAVY,
+        applyFrame: false,
+        eventTriggerPattern: /^test\./,
+        tags: ['test', 'formatted'],
+        formatOptions: {
+          textAlign: 'right',
+          maxLines: 5,
+          maxCharsPerLine: 21,
+          wordWrap: false,
+        },
+      };
+
+      expect(registration.applyFrame).toBe(false);
+      expect(registration.eventTriggerPattern).toBeInstanceOf(RegExp);
+      expect(registration.tags).toHaveLength(2);
+      expect(registration.formatOptions?.textAlign).toBe('right');
+      expect(registration.formatOptions?.maxLines).toBe(5);
+    });
+  });
+
   describe('Type Exports from index.ts', () => {
     it('should export all content generator types from main index', () => {
       // Static import to test module exports
@@ -499,6 +711,7 @@ describe('Content Generator Types', () => {
         priority?: ContentPriority;
         tier?: ModelTier;
         registration?: ContentRegistration;
+        formatOptions?: GeneratorFormatOptions;
       } = {};
       expect(_typeCheck).toBeDefined();
     });
