@@ -23,6 +23,11 @@ import { ContentRegistry } from './content-registry.js';
  * @property {ContentGenerator} localNews - Local news generator (P2, MEDIUM)
  * @property {ContentGenerator} weather - Weather focus generator (P2, LIGHT)
  * @property {ContentGenerator} staticFallback - Static fallback generator (P3, LIGHT)
+ * @property {ContentGenerator} showerThought - Shower thought generator (P2, LIGHT)
+ * @property {ContentGenerator} fortuneCookie - Fortune cookie generator (P2, LIGHT)
+ * @property {ContentGenerator} countdown - Countdown generator (P2, LIGHT)
+ * @property {ContentGenerator} hotTake - Hot take generator (P2, LIGHT)
+ * @property {ContentGenerator} compliment - Compliment generator (P2, LIGHT)
  *
  * @example
  * ```typescript
@@ -35,6 +40,11 @@ import { ContentRegistry } from './content-registry.js';
  *   haiku: new HaikuGenerator(),
  *   seasonal: new SeasonalGenerator(),
  *   pattern: new PatternGenerator(),
+ *   showerThought: new ShowerThoughtGenerator(),
+ *   fortuneCookie: new FortuneCookieGenerator(),
+ *   countdown: new CountdownGenerator(),
+ *   hotTake: new HotTakeGenerator(),
+ *   compliment: new ComplimentGenerator(),
  *   staticFallback: new StaticFallbackGenerator()
  * };
  * ```
@@ -56,6 +66,16 @@ export interface CoreGenerators {
   seasonal: ContentGenerator;
   /** Mathematical pattern generator (P2, LIGHT, programmatic) */
   pattern: ContentGenerator;
+  /** Shower thought generator (P2, LIGHT, AI-powered) */
+  showerThought: ContentGenerator;
+  /** Fortune cookie generator (P2, LIGHT, AI-powered) */
+  fortuneCookie: ContentGenerator;
+  /** Countdown generator (P2, LIGHT, AI-powered) */
+  countdown: ContentGenerator;
+  /** Hot take generator (P2, LIGHT, AI-powered) */
+  hotTake: ContentGenerator;
+  /** Compliment generator (P2, LIGHT, AI-powered) */
+  compliment: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -73,6 +93,11 @@ export interface CoreGenerators {
  *   - haiku: Haiku poems (LIGHT, AI)
  *   - seasonal: Seasonal content (LIGHT, AI)
  *   - pattern-art: Mathematical patterns (LIGHT, programmatic)
+ *   - shower-thought: Philosophical musings (LIGHT, AI)
+ *   - fortune-cookie: Twisted wisdom (LIGHT, AI)
+ *   - countdown: Days until events (LIGHT, AI)
+ *   - hot-take: Playful opinions (LIGHT, AI)
+ *   - compliment: Uplifting affirmations (LIGHT, AI)
  * - **P3 Generator (FALLBACK priority)**:
  *   - static-fallback: Static message when AI fails (LIGHT)
  *
@@ -185,6 +210,61 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: false,
     },
     generators.pattern
+  );
+
+  registry.register(
+    {
+      id: 'shower-thought',
+      name: 'Shower Thought Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.showerThought
+  );
+
+  registry.register(
+    {
+      id: 'fortune-cookie',
+      name: 'Fortune Cookie Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.fortuneCookie
+  );
+
+  registry.register(
+    {
+      id: 'countdown',
+      name: 'Countdown Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.countdown
+  );
+
+  registry.register(
+    {
+      id: 'hot-take',
+      name: 'Hot Take Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.hotTake
+  );
+
+  registry.register(
+    {
+      id: 'compliment',
+      name: 'Compliment Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.compliment
   );
 
   // Register P3 fallback generator (FALLBACK priority)
