@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import * as path from 'path';
+import { getSecretOrEnv } from './src/utils/secrets.js';
 
 // For CommonJS compatibility - __dirname is available in transpiled CommonJS
 const __dirname = path.resolve();
@@ -51,20 +52,20 @@ const config: { [key: string]: Knex.Config } = {
   },
 
   production: {
-    client: process.env.DB_TYPE === 'mysql' ? 'mysql2' : 'sqlite3',
+    client: process.env.DATABASE_TYPE === 'mysql' ? 'mysql2' : 'sqlite3',
     connection:
-      process.env.DB_TYPE === 'mysql'
+      process.env.DATABASE_TYPE === 'mysql'
         ? {
-            host: process.env.DB_HOST || 'localhost',
-            port: parseInt(process.env.DB_PORT || '3306', 10),
-            user: process.env.DB_USER || 'root',
-            password: process.env.DB_PASSWORD || '',
-            database: process.env.DB_NAME || 'clack_track',
+            host: process.env.DATABASE_HOST || 'localhost',
+            port: parseInt(process.env.DATABASE_PORT || '3306', 10),
+            user: process.env.DATABASE_USER || 'root',
+            password: getSecretOrEnv('database_password_v2', 'DATABASE_PASSWORD', ''),
+            database: process.env.DATABASE_NAME || 'clack_track',
           }
         : {
             filename: path.join(__dirname, 'data', 'clack-track.sqlite'),
           },
-    useNullAsDefault: process.env.DB_TYPE !== 'mysql',
+    useNullAsDefault: process.env.DATABASE_TYPE !== 'mysql',
     migrations: {
       directory: path.join(__dirname, 'migrations'),
       extension: 'cjs',
