@@ -63,41 +63,42 @@ describe('App Component', () => {
 
     mockApiClient.getContentHistory.mockResolvedValue({
       success: true,
-      data: { contents: [], total: 0 },
+      data: [],
+      pagination: { count: 0 },
     });
   });
-  it('renders Welcome page on default route', () => {
+  it('renders Welcome page on default route', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <App />
       </MemoryRouter>
     );
 
-    const heading = screen.getByRole('heading', { name: /latest content/i });
+    const heading = await screen.findByRole('heading', { name: /latest content/i });
     // @ts-expect-error - jest-dom matchers
     expect(heading).toBeInTheDocument();
   });
 
-  it('renders navigation with Clack Track branding', () => {
+  it('renders navigation with Clack Track branding', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <App />
       </MemoryRouter>
     );
 
-    const brand = screen.getByText(/clack track/i);
+    const brand = await screen.findByText(/clack track/i);
     // @ts-expect-error - jest-dom matchers
     expect(brand).toBeInTheDocument();
   });
 
-  it('renders History page on /flipside route', () => {
+  it('renders History page on /flipside route', async () => {
     render(
       <MemoryRouter initialEntries={['/flipside']}>
         <App />
       </MemoryRouter>
     );
 
-    const heading = screen.getByRole('heading', { name: /the flip side/i });
+    const heading = await screen.findByRole('heading', { name: /the flip side/i });
     // @ts-expect-error - jest-dom matchers
     expect(heading).toBeInTheDocument();
   });
