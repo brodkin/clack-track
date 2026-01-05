@@ -120,6 +120,8 @@ export interface ValidationResult {
   originalMaxLength?: number;
   /** The normalized and wrapped text (for use by caller) */
   normalizedText?: string;
+  /** Whether unsupported emojis were stripped from the content */
+  emojisStripped?: boolean;
 }
 
 /**
@@ -191,8 +193,11 @@ export function validateTextContent(text: string): ValidationResult {
   // Normalize typographic characters (curly quotes, em-dashes, etc.) to ASCII equivalents
   const normalizedText = normalizeText(text);
 
+  // Strip unsupported emojis (preserve color emojis that can be converted to Vestaboard color codes)
+  const { text: strippedText, emojisStripped } = stripUnsupportedEmojis(normalizedText);
+
   // Split into lines (trim trailing newline if present)
-  const originalLines = normalizedText.replace(/\n$/, '').split('\n');
+  const originalLines = strippedText.replace(/\n$/, '').split('\n');
   const originalMaxLength = Math.max(...originalLines.map(line => line.length), 0);
 
   // Check if any lines exceed the character limit
@@ -264,6 +269,7 @@ export function validateTextContent(text: string): ValidationResult {
     wrappingApplied,
     originalMaxLength: wrappingApplied ? originalMaxLength : undefined,
     normalizedText: lines.join('\n'),
+    emojisStripped,
   };
 }
 
@@ -326,20 +332,28 @@ export function validateLayoutContent(layout: VestaboardLayout): ValidationResul
   // Normalize typographic characters (curly quotes, em-dashes, etc.) to ASCII equivalents
   const normalizedRows = layout.rows.map(row => normalizeText(row));
 
+  // Strip unsupported emojis from each row (preserve color emojis)
+  let emojisStripped = false;
+  const strippedRows = normalizedRows.map(row => {
+    const result = stripUnsupportedEmojis(row);
+    if (result.emojisStripped) emojisStripped = true;
+    return result.text;
+  });
+
   // Uppercase before validation since text gets uppercased later in the pipeline
-  const allText = normalizedRows.join('').toUpperCase();
+  const allText = strippedRows.join('').toUpperCase();
   const invalidChars = findInvalidCharacters(allText);
 
-  const rowCount = layout.rows.length;
-  const maxRowLength = Math.max(...layout.rows.map(row => row.length), 0);
+  const rowCount = strippedRows.length;
+  const maxRowLength = Math.max(...strippedRows.map(row => row.length), 0);
 
   // Validate row count (must be exactly 6)
   if (rowCount !== VESTABOARD.MAX_ROWS) {
     errors.push(`layout must have exactly ${VESTABOARD.MAX_ROWS} rows (found: ${rowCount})`);
   }
 
-  // Validate row lengths (max 22 chars per row)
-  const tooLongRows = layout.rows
+  // Validate row lengths (max 22 chars per row) - check stripped rows
+  const tooLongRows = strippedRows
     .map((row, idx) => ({ idx, length: row.length }))
     .filter(info => info.length > VESTABOARD.MAX_COLS);
 
@@ -361,7 +375,90 @@ export function validateLayoutContent(layout: VestaboardLayout): ValidationResul
     maxLineLength: maxRowLength,
     invalidChars,
     errors,
+    emojisStripped,
   };
+}
+
+/**
+ * Legacy symbols that match Extended_Pictographic but should NOT be stripped.
+ * These are handled by normal character validation (findInvalidCharacters).
+ * Extended_Pictographic is overly broad and includes these legacy symbols.
+ */
+const LEGACY_SYMBOLS_NOT_EMOJIS = new Set([
+  '™', // U+2122 - Trade Mark Sign
+  '®', // U+00AE - Registered Sign
+  '©', // U+00A9 - Copyright Sign
+  '℗', // U+2117 - Sound Recording Copyright
+  '℠', // U+2120 - Service Mark
+]);
+
+/**
+ * Strip unsupported emojis from text while preserving color emojis.
+ *
+ * AI providers sometimes generate emojis (e.g., 🎯) that cannot be displayed
+ * on Vestaboard. This function removes unsupported emojis while preserving:
+ * - Color emojis (🔴, 🟢, etc.) that can be converted to Vestaboard color codes
+ * - Legacy symbols (™, ®, ©) that should be handled by character validation
+ * - All other non-emoji characters (even if invalid - other validation handles those)
+ *
+ * Uses Array.from() for proper grapheme cluster iteration, then handles
+ * variant selectors (U+FE0F) by peeking ahead and combining when needed.
+ *
+ * @param text - Text to strip unsupported emojis from
+ * @returns Object with sanitized text and whether any emojis were stripped
+ */
+export function stripUnsupportedEmojis(text: string): { text: string; emojisStripped: boolean } {
+  const chars = Array.from(text);
+  const result: string[] = [];
+  let emojisStripped = false;
+
+  // Regex to detect emoji characters using Unicode Extended_Pictographic property
+  const emojiRegex = /\p{Extended_Pictographic}/u;
+
+  for (let i = 0; i < chars.length; i++) {
+    const char = chars[i];
+
+    // Preserve legacy symbols that match Extended_Pictographic but aren't emojis
+    if (LEGACY_SYMBOLS_NOT_EMOJIS.has(char)) {
+      result.push(char);
+      continue;
+    }
+
+    // Check if next character is a variant selector (U+FE0F)
+    // If so, combine them for emoji lookup
+    if (i + 1 < chars.length && chars[i + 1] === '\uFE0F') {
+      const withVariant = char + '\uFE0F';
+      // Check if the combined emoji is a supported color emoji
+      if (SUPPORTED_COLOR_EMOJIS.has(withVariant)) {
+        result.push(withVariant);
+        i++; // Skip the variant selector on next iteration
+        continue;
+      }
+      // If it's an unsupported emoji with variant selector, skip both
+      if (emojiRegex.test(char)) {
+        emojisStripped = true;
+        i++; // Skip the variant selector
+        continue;
+      }
+    }
+
+    // Check if it's a supported color emoji (without variant selector)
+    if (SUPPORTED_COLOR_EMOJIS.has(char)) {
+      result.push(char);
+      continue;
+    }
+
+    // Check if character is an emoji (unsupported)
+    if (emojiRegex.test(char)) {
+      emojisStripped = true;
+      continue; // Skip unsupported emoji
+    }
+
+    // Keep all non-emoji characters (even if invalid - other validation handles those)
+    result.push(char);
+  }
+
+  return { text: result.join(''), emojisStripped };
 }
 
 /**
