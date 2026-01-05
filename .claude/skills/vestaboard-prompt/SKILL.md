@@ -1,6 +1,6 @@
 ---
 name: vestaboard-prompt
-description: Expert guidance for creating Vestaboard content prompts and generators. Covers display constraints, prompt architecture, generator patterns, and quality checklists for Clack Track.
+description: Expert guidance for creating Vestaboard content prompts and generators. Covers display constraints, tone & voice, prompt architecture, generator patterns, and quality checklists for Clack Track. (project)
 ---
 
 # Vestaboard Prompt Expert
@@ -32,6 +32,65 @@ Punctuation: ! @ # $ ( ) - + & = ; : ' " % , . / ? °
 - Curly quotes (" ") - use straight quotes (" ')
 - Em/en dashes (— –) - use hyphen (-)
 - Ellipsis (…) - use three periods (...)
+
+## Tone & Voice
+
+### Persona
+
+**Houseboy**: Engaging, cheeky, occasionally slightly gay, never mean-spirited. The voice of someone who's looking hot, keeping things tidy, and entertaining the boys.
+
+### Primary Goal: Be Funny
+
+**Humor is the top priority** for most content. The display should make people smile, laugh, or at least raise an eyebrow.
+
+| Content Type  | Humor Priority | Notes                                             |
+| ------------- | -------------- | ------------------------------------------------- |
+| Motivational  | High           | Subvert expectations, avoid platitudes            |
+| Weather       | High           | Witty commentary, never boring reports            |
+| News          | High           | Humorous presentation is a time-honored tradition |
+| Notifications | Low            | Clarity first (HA events, alerts)                 |
+| Ambiguous     | **Ask user**   | When intent is unclear, clarify before writing    |
+
+### Humor Styles (All Welcome)
+
+- **Dry/deadpan** - Understated, ironic, straight-faced delivery
+- **Playful/punny** - Wordplay, dad jokes, light cleverness
+- **Absurdist/surreal** - Unexpected twists, non-sequiturs, weird observations
+- **Observational** - Relatable everyday humor, "isn't it funny how..."
+
+### Emotional Register
+
+Content should hit a mix of:
+
+- **Playful & irreverent** - Witty, sarcastic, doesn't take itself seriously
+- **Warm & encouraging** - Uplifting, supportive, makes you smile
+- **Clever & unexpected** - Surprising, thought-provoking, subverts expectations
+
+### Edge Level: R-Rated Allowed
+
+Cursing and adult themes are permitted when they fit the tone. Don't force it, but don't sanitize unnecessarily either.
+
+### Anti-Patterns (What to AVOID)
+
+❌ **Generic/corporate** - Bland motivational poster vibes, LinkedIn-speak, could-be-anywhere content
+
+❌ **Safe and predictable** - If you've seen it on a coffee mug, try harder
+
+❌ **Written by committee** - Content should feel like it has a personality, not like it was focus-grouped
+
+**Good test**: Would this make someone stop and actually read it? Or would they walk past without a second glance?
+
+### Prompt Variety (AI Generators Only)
+
+LLMs are predictive—identical inputs yield similar outputs. **Inject randomness** to keep content fresh:
+
+| Instead of...            | Try...                                       |
+| ------------------------ | -------------------------------------------- |
+| "Tell a joke"            | "Tell a {{jokeType}} joke" (from dictionary) |
+| "Write a quote"          | "Write a quote about {{theme}}"              |
+| "Comment on the weather" | "Comment on the weather like a {{persona}}"  |
+
+**Implementation**: Create dictionaries of options and inject a random selection via template variables. Larger dictionaries = more variety.
 
 ## Prompt Architecture
 
@@ -135,6 +194,13 @@ Run through this checklist before submitting a new prompt/generator:
 - [ ] **1-5 lines**: Content is within line limits
 - [ ] **No meta-talk**: Prompt doesn't ask AI to acknowledge the request
 - [ ] **Standalone**: Content makes sense without context
+
+### Tone & Voice
+
+- [ ] **Humor priority**: Is this content type supposed to be funny? (Check decision table)
+- [ ] **Not generic**: Would this make someone stop and read, or walk past?
+- [ ] **Has personality**: Feels like Houseboy wrote it, not a committee
+- [ ] **Appropriate edge**: R-rated language fits the context (if used)
 
 ### Template Variables
 
