@@ -405,4 +405,127 @@ describe('FrameDecorator', () => {
       expect(result.layout.length).toBe(6);
     });
   });
+
+  describe('Format Options Wiring', () => {
+    it('should accept formatOptions as fourth parameter', async () => {
+      const decorator = new FrameDecorator();
+      const formatOptions = {
+        textAlign: 'center' as const,
+        wordWrap: true,
+      };
+
+      // Should not throw with formatOptions parameter
+      const result = await decorator.decorate(
+        'CENTERED TEXT',
+        new Date(),
+        undefined, // contentData
+        formatOptions
+      );
+
+      expect(result).toHaveProperty('layout');
+      expect(result.layout.length).toBe(6);
+    });
+
+    it('should pass formatOptions to generateFrame', async () => {
+      const generateFrameSpy = jest.spyOn(frameGeneratorModule, 'generateFrame');
+      const decorator = new FrameDecorator();
+      const formatOptions = {
+        textAlign: 'right' as const,
+        wordWrap: false,
+        maxLines: 3,
+      };
+
+      await decorator.decorate('RIGHT ALIGNED', new Date(), undefined, formatOptions);
+
+      expect(generateFrameSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: 'RIGHT ALIGNED',
+          formatOptions,
+        })
+      );
+
+      generateFrameSpy.mockRestore();
+    });
+
+    it('should work without formatOptions (backward compatible)', async () => {
+      const decorator = new FrameDecorator();
+
+      // Old signature without formatOptions
+      const result = await decorator.decorate('BACKWARD COMPATIBLE', new Date());
+
+      expect(result).toHaveProperty('layout');
+      expect(result.layout.length).toBe(6);
+    });
+
+    it('should pass undefined formatOptions when not provided', async () => {
+      const generateFrameSpy = jest.spyOn(frameGeneratorModule, 'generateFrame');
+      const decorator = new FrameDecorator();
+
+      await decorator.decorate('NO FORMAT', new Date());
+
+      // formatOptions should be undefined when not passed
+      expect(generateFrameSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: 'NO FORMAT',
+        })
+      );
+
+      // Verify formatOptions is not in the call or is undefined
+      const callArgs = generateFrameSpy.mock.calls[0][0];
+      expect(callArgs.formatOptions).toBeUndefined();
+
+      generateFrameSpy.mockRestore();
+    });
+
+    it('should pass formatOptions with all properties', async () => {
+      const generateFrameSpy = jest.spyOn(frameGeneratorModule, 'generateFrame');
+      const decorator = new FrameDecorator();
+      const formatOptions = {
+        textAlign: 'left' as const,
+        wordWrap: true,
+        maxLines: 4,
+        maxCharsPerLine: 18,
+      };
+
+      await decorator.decorate('FULL OPTIONS', new Date(), undefined, formatOptions);
+
+      expect(generateFrameSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          formatOptions: {
+            textAlign: 'left',
+            wordWrap: true,
+            maxLines: 4,
+            maxCharsPerLine: 18,
+          },
+        })
+      );
+
+      generateFrameSpy.mockRestore();
+    });
+
+    it('should handle formatOptions with contentData', async () => {
+      const generateFrameSpy = jest.spyOn(frameGeneratorModule, 'generateFrame');
+      const decorator = new FrameDecorator();
+      const contentData = {
+        weather: { temperature: 72, condition: 'sunny' as const },
+        colorBar: [1, 2, 3, 4, 5, 6],
+      };
+      const formatOptions = {
+        textAlign: 'center' as const,
+      };
+
+      await decorator.decorate('WITH DATA', new Date(), contentData, formatOptions);
+
+      expect(generateFrameSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: 'WITH DATA',
+          weather: contentData.weather,
+          colorBar: contentData.colorBar,
+          formatOptions,
+        })
+      );
+
+      generateFrameSpy.mockRestore();
+    });
+  });
 });
