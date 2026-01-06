@@ -10,6 +10,7 @@
 
 export { ComplimentGenerator } from './compliment-generator.js';
 export { CountdownGenerator } from './countdown-generator.js';
+export { FormattingDemoGenerator } from './formatting-demo-generator.js';
 export { FortuneCookieGenerator } from './fortune-cookie-generator.js';
 export { GlobalNewsGenerator } from './global-news-generator.js';
 export { HaikuGenerator } from './haiku-generator.js';
