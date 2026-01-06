@@ -164,7 +164,8 @@ describe('ContentOrchestrator', () => {
       expect(mockDecorator.decorate).toHaveBeenCalledWith(
         'TEST CONTENT',
         context.timestamp,
-        undefined
+        undefined,
+        undefined // formatOptions (not specified in registration)
       );
       expect(mockVestaboardClient.sendLayout).toHaveBeenCalledWith(decoratedLayout);
 
@@ -343,7 +344,8 @@ describe('ContentOrchestrator', () => {
       expect(mockDecorator.decorate).toHaveBeenCalledWith(
         'Static fallback content',
         context.timestamp,
-        undefined
+        undefined,
+        undefined // formatOptions (not specified in registration)
       );
       expect(mockVestaboardClient.sendLayout).toHaveBeenCalledWith(decoratedLayout);
 
@@ -1261,6 +1263,294 @@ describe('ContentOrchestrator', () => {
         // Act & Assert - Should not throw
         await expect(orchestratorWithoutRepo.generateAndSend(context)).resolves.toBeUndefined();
       });
+    });
+  });
+
+  describe('Format Options Wiring', () => {
+    it('should pass formatOptions from registration to decorator.decorate()', async () => {
+      // Arrange
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn(),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      const formatOptions = {
+        textAlign: 'center' as const,
+        wordWrap: true,
+        maxLines: 4,
+      };
+
+      const registeredGenerator: RegisteredGenerator = {
+        registration: {
+          id: 'centered-gen',
+          name: 'Centered Generator',
+          priority: 2,
+          modelTier: ModelTier.LIGHT,
+          applyFrame: true,
+          formatOptions, // Generator specifies formatting options
+        },
+        generator: mockGenerator,
+      };
+
+      const generatedContent: GeneratedContent = {
+        text: 'CENTERED CONTENT',
+        outputMode: 'text',
+      };
+
+      const decoratedLayout = [[1, 2, 3]];
+
+      mockSelector.select.mockReturnValue(registeredGenerator);
+      (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+      mockDecorator.decorate.mockResolvedValue({
+        layout: decoratedLayout,
+        warnings: [],
+      });
+
+      // Act
+      await orchestrator.generateAndSend(context);
+
+      // Assert - formatOptions should be passed to decorate()
+      expect(mockDecorator.decorate).toHaveBeenCalledWith(
+        'CENTERED CONTENT',
+        context.timestamp,
+        undefined, // contentData
+        formatOptions // formatOptions from registration
+      );
+    });
+
+    it('should pass undefined formatOptions when registration has no formatOptions', async () => {
+      // Arrange
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn(),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      const registeredGenerator: RegisteredGenerator = {
+        registration: {
+          id: 'no-format-gen',
+          name: 'No Format Generator',
+          priority: 2,
+          modelTier: ModelTier.LIGHT,
+          applyFrame: true,
+          // No formatOptions - should use defaults
+        },
+        generator: mockGenerator,
+      };
+
+      const generatedContent: GeneratedContent = {
+        text: 'DEFAULT CONTENT',
+        outputMode: 'text',
+      };
+
+      const decoratedLayout = [[1, 2, 3]];
+
+      mockSelector.select.mockReturnValue(registeredGenerator);
+      (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+      mockDecorator.decorate.mockResolvedValue({
+        layout: decoratedLayout,
+        warnings: [],
+      });
+
+      // Act
+      await orchestrator.generateAndSend(context);
+
+      // Assert - undefined formatOptions (backward compatible)
+      expect(mockDecorator.decorate).toHaveBeenCalledWith(
+        'DEFAULT CONTENT',
+        context.timestamp,
+        undefined, // contentData
+        undefined // formatOptions (not specified in registration)
+      );
+    });
+
+    it('should pass formatOptions with right alignment', async () => {
+      // Arrange
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn(),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      const formatOptions = {
+        textAlign: 'right' as const,
+        wordWrap: false,
+      };
+
+      const registeredGenerator: RegisteredGenerator = {
+        registration: {
+          id: 'right-aligned-gen',
+          name: 'Right Aligned Generator',
+          priority: 2,
+          modelTier: ModelTier.LIGHT,
+          applyFrame: true,
+          formatOptions,
+        },
+        generator: mockGenerator,
+      };
+
+      const generatedContent: GeneratedContent = {
+        text: 'RIGHT ALIGNED',
+        outputMode: 'text',
+      };
+
+      const decoratedLayout = [[1, 2, 3]];
+
+      mockSelector.select.mockReturnValue(registeredGenerator);
+      (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+      mockDecorator.decorate.mockResolvedValue({
+        layout: decoratedLayout,
+        warnings: [],
+      });
+
+      // Act
+      await orchestrator.generateAndSend(context);
+
+      // Assert
+      expect(mockDecorator.decorate).toHaveBeenCalledWith(
+        'RIGHT ALIGNED',
+        context.timestamp,
+        undefined,
+        formatOptions
+      );
+    });
+
+    it('should pass formatOptions when using generatorId for direct lookup', async () => {
+      // Arrange
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+        generatorId: 'specific-gen', // Direct generator lookup
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn(),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      const formatOptions = {
+        textAlign: 'left' as const,
+        maxCharsPerLine: 18,
+      };
+
+      const registeredGenerator: RegisteredGenerator = {
+        registration: {
+          id: 'specific-gen',
+          name: 'Specific Generator',
+          priority: 2,
+          modelTier: ModelTier.LIGHT,
+          applyFrame: true,
+          formatOptions,
+        },
+        generator: mockGenerator,
+      };
+
+      const generatedContent: GeneratedContent = {
+        text: 'SPECIFIC CONTENT',
+        outputMode: 'text',
+      };
+
+      const decoratedLayout = [[1, 2, 3]];
+
+      // Create orchestrator with registry for direct lookup
+      const mockRegistry = {
+        getById: jest.fn().mockReturnValue(registeredGenerator),
+      };
+
+      const orchestratorWithRegistry = new ContentOrchestrator({
+        selector: mockSelector,
+        registry:
+          mockRegistry as unknown as import('@/content/registry/content-registry').ContentRegistry,
+        decorator: mockDecorator,
+        vestaboardClient: mockVestaboardClient,
+        fallbackGenerator: mockFallbackGenerator,
+        preferredProvider: mockPreferredProvider,
+        alternateProvider: mockAlternateProvider,
+      });
+
+      (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+      mockDecorator.decorate.mockResolvedValue({
+        layout: decoratedLayout,
+        warnings: [],
+      });
+
+      // Act
+      await orchestratorWithRegistry.generateAndSend(context);
+
+      // Assert
+      expect(mockRegistry.getById).toHaveBeenCalledWith('specific-gen');
+      expect(mockDecorator.decorate).toHaveBeenCalledWith(
+        'SPECIFIC CONTENT',
+        context.timestamp,
+        undefined,
+        formatOptions
+      );
+    });
+
+    it('should not pass formatOptions to decorator when outputMode is layout', async () => {
+      // Arrange - layout mode bypasses decorator entirely
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn(),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      const formatOptions = {
+        textAlign: 'center' as const,
+        wordWrap: true,
+      };
+
+      const registeredGenerator: RegisteredGenerator = {
+        registration: {
+          id: 'layout-gen',
+          name: 'Layout Generator',
+          priority: 2,
+          modelTier: ModelTier.LIGHT,
+          applyFrame: true,
+          formatOptions, // Has formatOptions but should be ignored for layout mode
+        },
+        generator: mockGenerator,
+      };
+
+      const preFormattedCharacterCodes = Array(6)
+        .fill(null)
+        .map(() => Array(22).fill(0));
+
+      const generatedContent: GeneratedContent = {
+        text: '',
+        outputMode: 'layout', // Layout mode - decorator should not be called
+        layout: {
+          rows: ['ROW ONE', 'ROW TWO', 'ROW THREE', 'ROW FOUR', 'ROW FIVE', 'ROW SIX'],
+          characterCodes: preFormattedCharacterCodes,
+        },
+      };
+
+      mockSelector.select.mockReturnValue(registeredGenerator);
+      (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+
+      // Act
+      await orchestrator.generateAndSend(context);
+
+      // Assert - decorator should NOT be called for layout mode
+      expect(mockDecorator.decorate).not.toHaveBeenCalled();
+      expect(mockVestaboardClient.sendLayout).toHaveBeenCalledWith(preFormattedCharacterCodes);
     });
   });
 });

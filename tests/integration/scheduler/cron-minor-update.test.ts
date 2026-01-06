@@ -91,8 +91,13 @@ describe('CronScheduler Minor Update Integration', () => {
     mockSelector = {
       select: jest.fn().mockReturnValue({
         generator: mockContentGenerator,
-        priority: 1,
-        name: 'motivational',
+        registration: {
+          id: 'motivational',
+          name: 'Motivational Generator',
+          priority: 2, // ContentPriority.NORMAL
+          modelTier: 'light',
+          formatOptions: undefined,
+        },
       }),
     } as unknown as jest.Mocked<ContentSelector>;
 
@@ -288,8 +293,13 @@ describe('CronScheduler Minor Update Integration', () => {
 
       mockSelector.select.mockReturnValue({
         generator: mockLayoutGenerator,
-        priority: 3,
-        name: 'fallback',
+        registration: {
+          id: 'fallback',
+          name: 'Static Fallback Generator',
+          priority: 3, // ContentPriority.FALLBACK
+          modelTier: 'light',
+          formatOptions: undefined,
+        },
       });
 
       // Step 2: Major update with layout mode
@@ -433,8 +443,13 @@ describe('CronScheduler Minor Update Integration', () => {
 
       mockSelector.select.mockReturnValue({
         generator: mockLayoutGenerator,
-        priority: 3,
-        name: 'fallback',
+        registration: {
+          id: 'fallback',
+          name: 'Static Fallback Generator',
+          priority: 3, // ContentPriority.FALLBACK
+          modelTier: 'light',
+          formatOptions: undefined,
+        },
       });
 
       // Step 2: Major update with layout mode (caches layout content)
@@ -507,8 +522,13 @@ describe('CronScheduler Minor Update Integration', () => {
 
       mockSelector.select.mockReturnValue({
         generator: mockLayoutGenerator,
-        priority: 3,
-        name: 'fallback',
+        registration: {
+          id: 'fallback',
+          name: 'Static Fallback Generator',
+          priority: 3, // ContentPriority.FALLBACK
+          modelTier: 'light',
+          formatOptions: undefined,
+        },
       });
 
       // Step 2: Major update

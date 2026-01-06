@@ -207,10 +207,15 @@ export class ContentOrchestrator {
     let layoutToSend: number[][];
 
     if (content.outputMode === 'text') {
+      // Extract formatOptions from registration (if available)
+      // Defensive check for optional registration property
+      const formatOptions = registeredGenerator?.registration?.formatOptions;
+
       const frameResult = await this.decorator.decorate(
         content.text,
         context.timestamp,
-        context.data
+        context.data,
+        formatOptions
       );
       layoutToSend = frameResult.layout;
     } else {

@@ -336,7 +336,8 @@ describe('ContentOrchestrator - ContentDataProvider Integration', () => {
       expect(mockDecorator.decorate).toHaveBeenCalledWith(
         expect.stringContaining('content'), // Accept either mock or fallback content for now
         context.timestamp,
-        mockContentData
+        mockContentData,
+        undefined // formatOptions (not specified in registration)
       );
     });
 
