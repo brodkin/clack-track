@@ -35,12 +35,14 @@ import {
   type PersonalityDimensions,
   type TemplateVariables,
 } from '../personality/index.js';
+import { DimensionSubstitutor } from '../dimension-substitutor.js';
 import type { AIProvider } from '../../types/ai.js';
 import type {
   ContentGenerator,
   GenerationContext,
   GeneratedContent,
   GeneratorValidationResult,
+  GeneratorFormatOptions,
   ModelTier,
 } from '../../types/content-generator.js';
 
@@ -60,6 +62,8 @@ export abstract class AIPromptGenerator implements ContentGenerator {
   protected readonly modelTierSelector: ModelTierSelector;
   protected readonly modelTier: ModelTier;
   private readonly apiKeys: AIProviderAPIKeys;
+  private readonly formatOptions?: GeneratorFormatOptions;
+  private readonly dimensionSubstitutor: DimensionSubstitutor;
 
   /**
    * Creates a new AIPromptGenerator instance
@@ -68,17 +72,21 @@ export abstract class AIPromptGenerator implements ContentGenerator {
    * @param modelTierSelector - Selector for tier-based model selection with fallback
    * @param modelTier - Model tier to use ('light', 'medium', or 'heavy')
    * @param apiKeys - Record of provider names to API keys (e.g., {'openai': 'sk-...', 'anthropic': 'sk-ant-...'})
+   * @param formatOptions - Optional format options controlling maxChars/maxLines for prompt substitution
    */
   constructor(
     promptLoader: PromptLoader,
     modelTierSelector: ModelTierSelector,
     modelTier: ModelTier,
-    apiKeys: AIProviderAPIKeys = {}
+    apiKeys: AIProviderAPIKeys = {},
+    formatOptions?: GeneratorFormatOptions
   ) {
     this.promptLoader = promptLoader;
     this.modelTierSelector = modelTierSelector;
     this.modelTier = modelTier;
     this.apiKeys = apiKeys;
+    this.formatOptions = formatOptions;
+    this.dimensionSubstitutor = new DimensionSubstitutor();
   }
 
   /**
@@ -155,8 +163,8 @@ export abstract class AIPromptGenerator implements ContentGenerator {
     // Build template variables from personality and context
     const templateVars = this.buildTemplateVariables(personality, context);
 
-    // Load prompts with variable substitution
-    const systemPrompt = await this.promptLoader.loadPromptWithVariables(
+    // Load prompts with variable substitution (personality, date, etc.)
+    const loadedSystemPrompt = await this.promptLoader.loadPromptWithVariables(
       'system',
       this.getSystemPromptFile(),
       templateVars
@@ -167,6 +175,9 @@ export abstract class AIPromptGenerator implements ContentGenerator {
       templateVars
     );
 
+    // Apply dimension substitution (maxChars, maxLines) to system prompt
+    const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
+
     // Format the user prompt with context
     const formattedUserPrompt = this.formatUserPrompt(userPrompt, context, personality);
 
@@ -174,6 +185,15 @@ export abstract class AIPromptGenerator implements ContentGenerator {
     const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
 
     let lastError: Error | null = null;
+
+    // Build base metadata (reused for both primary and failover responses)
+    const baseMetadata = {
+      tier: this.modelTier,
+      personality,
+      systemPrompt,
+      userPrompt: formattedUserPrompt,
+      ...(this.formatOptions && { formatOptions: this.formatOptions }),
+    };
 
     // Try preferred provider
     try {
@@ -187,13 +207,10 @@ export abstract class AIPromptGenerator implements ContentGenerator {
         text: response.text,
         outputMode: 'text',
         metadata: {
+          ...baseMetadata,
           model: response.model,
-          tier: this.modelTier,
           provider: selection.provider,
           tokensUsed: response.tokensUsed,
-          personality,
-          systemPrompt,
-          userPrompt: formattedUserPrompt,
         },
       };
     } catch (error) {
@@ -214,15 +231,12 @@ export abstract class AIPromptGenerator implements ContentGenerator {
           text: response.text,
           outputMode: 'text',
           metadata: {
+            ...baseMetadata,
             model: response.model,
-            tier: this.modelTier,
             provider: alternate.provider,
             tokensUsed: response.tokensUsed,
             failedOver: true,
             primaryError: lastError?.message,
-            personality,
-            systemPrompt,
-            userPrompt: formattedUserPrompt,
           },
         };
       } catch (alternateError) {
@@ -285,6 +299,29 @@ export abstract class AIPromptGenerator implements ContentGenerator {
     }
 
     return createAIProvider(selection.provider as AIProviderType, apiKey, selection.model);
+  }
+
+  /**
+   * Applies dimension substitution to a prompt template
+   *
+   * Replaces {{maxChars}} and {{maxLines}} placeholders with values from
+   * format options (if provided) or defaults. Uses DimensionSubstitutor
+   * for the actual substitution.
+   *
+   * @param prompt - Prompt template with potential dimension placeholders
+   * @returns Prompt with dimension variables substituted
+   */
+  private applyDimensionSubstitution(prompt: string): string {
+    // Map formatOptions to DimensionSubstitutor options
+    // GeneratorFormatOptions uses maxCharsPerLine, DimensionOptions uses maxChars
+    const dimensionOptions = this.formatOptions
+      ? {
+          maxChars: this.formatOptions.maxCharsPerLine,
+          maxLines: this.formatOptions.maxLines,
+        }
+      : undefined;
+
+    return this.dimensionSubstitutor.substitute(prompt, dimensionOptions);
   }
 
   /**

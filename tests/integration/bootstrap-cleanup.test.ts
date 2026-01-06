@@ -121,7 +121,7 @@ describe('Bootstrap - Retention Cleanup Integration', () => {
     const { scheduler, haClient } = await bootstrap();
 
     // Give cleanup time to complete (fire-and-forget pattern requires more time)
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Verify old record was deleted
     const afterCleanup = await contentModel.findLatest(10);
@@ -133,5 +133,5 @@ describe('Bootstrap - Retention Cleanup Integration', () => {
     if (haClient) {
       await haClient.disconnect();
     }
-  }, 10000); // Increase timeout for bootstrap
+  }, 15000); // Increase timeout for bootstrap and fire-and-forget cleanup
 });

@@ -58,6 +58,7 @@ describe('registerCoreContent', () => {
     hotTake: createMockGenerator('hotTake'),
     compliment: createMockGenerator('compliment'),
     novelInsight: createMockGenerator('novelInsight'),
+    formattingDemo: createMockGenerator('formattingDemo'),
     staticFallback: createMockGenerator('fallback'),
   });
 
@@ -97,8 +98,8 @@ describe('registerCoreContent', () => {
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
       // motivational, globalNews, techNews, localNews, weather, haiku, seasonal, pattern,
-      // showerThought, fortuneCookie, countdown, hotTake, compliment, novelInsight = 14
-      expect(normalPriorityGens.length).toBe(14);
+      // showerThought, fortuneCookie, countdown, hotTake, compliment, novelInsight, formattingDemo = 15
+      expect(normalPriorityGens.length).toBe(15);
     });
   });
 
@@ -134,8 +135,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const allGenerators = registry.getAll();
-      // 14 P2 + 1 P3 = 15 total
-      expect(allGenerators.length).toBe(15);
+      // 15 P2 + 1 P3 = 16 total
+      expect(allGenerators.length).toBe(16);
     });
 
     it('should maintain correct priority distribution', () => {
@@ -147,9 +148,9 @@ describe('registerCoreContent', () => {
       const fallbackGens = registry.getByPriority(ContentPriority.FALLBACK);
       const notificationGens = registry.getByPriority(ContentPriority.NOTIFICATION);
 
-      // 14 P2 generators: motivational, globalNews, techNews, localNews, weather, haiku,
-      // seasonal, pattern, showerThought, fortuneCookie, countdown, hotTake, compliment, novelInsight
-      expect(normalGens.length).toBe(14);
+      // 15 P2 generators: motivational, globalNews, techNews, localNews, weather, haiku,
+      // seasonal, pattern, showerThought, fortuneCookie, countdown, hotTake, compliment, novelInsight, formattingDemo
+      expect(normalGens.length).toBe(15);
       expect(fallbackGens.length).toBe(1);
       expect(notificationGens.length).toBe(0);
     });
@@ -213,8 +214,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      // All 14 P2 generators including 3 news generators
-      expect(normalPriorityGens.length).toBe(14);
+      // All 15 P2 generators including 3 news generators and formattingDemo
+      expect(normalPriorityGens.length).toBe(15);
     });
 
     it('should not register old news-summary generator', () => {
@@ -258,6 +259,36 @@ describe('registerCoreContent', () => {
       expect(registered?.registration.modelTier).toBe(ModelTier.MEDIUM);
       expect(registered?.registration.applyFrame).toBe(true);
       expect(registered?.generator).toBe(generators.novelInsight);
+    });
+  });
+
+  describe('Formatting Demo Generator', () => {
+    it('should register formatting-demo generator with correct metadata', () => {
+      const generators = createFullGenerators();
+
+      registerCoreContent(registry, generators);
+
+      const registered = registry.getById('formatting-demo');
+      expect(registered).toBeDefined();
+      expect(registered?.registration.id).toBe('formatting-demo');
+      expect(registered?.registration.name).toBe('Formatting Demo Generator');
+      expect(registered?.registration.priority).toBe(ContentPriority.NORMAL);
+      expect(registered?.registration.modelTier).toBe(ModelTier.LIGHT);
+      expect(registered?.registration.applyFrame).toBe(true);
+      expect(registered?.generator).toBe(generators.formattingDemo);
+    });
+
+    it('should include formatOptions with custom dimensions', () => {
+      const generators = createFullGenerators();
+
+      registerCoreContent(registry, generators);
+
+      const registered = registry.getById('formatting-demo');
+      expect(registered?.registration.formatOptions).toBeDefined();
+      expect(registered?.registration.formatOptions?.maxLines).toBe(3);
+      expect(registered?.registration.formatOptions?.maxCharsPerLine).toBe(18);
+      expect(registered?.registration.formatOptions?.textAlign).toBe('left');
+      expect(registered?.registration.formatOptions?.wordWrap).toBe(false);
     });
   });
 });

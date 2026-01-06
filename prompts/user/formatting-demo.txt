@@ -1,0 +1,18 @@
+Generate a SHORT, PUNCHY message that demonstrates compact formatting.
+
+This is a DEMO generator showcasing custom format options:
+- Reduced line count (3 lines max)
+- Reduced character width (18 chars max)
+- Left-aligned text
+- No word wrapping
+
+Create something FUN and SNAPPY that fits these tight constraints.
+
+Ideas for content:
+- A quick motivational phrase
+- A cheeky observation
+- A mini-haiku (but keep lines SHORT)
+- A witty one-liner broken across lines
+- A playful status update
+
+Remember: You only have 3 lines with 18 characters each. Make every character count!

@@ -34,6 +34,7 @@ import { CountdownGenerator } from './content/generators/ai/countdown-generator.
 import { HotTakeGenerator } from './content/generators/ai/hot-take-generator.js';
 import { ComplimentGenerator } from './content/generators/ai/compliment-generator.js';
 import { NovelInsightGenerator } from './content/generators/ai/novel-insight-generator.js';
+import { FormattingDemoGenerator } from './content/generators/ai/formatting-demo-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
 import { RSSClient } from './api/data-sources/rss-client.js';
@@ -182,6 +183,7 @@ function createCoreGenerators(
     hotTake: new HotTakeGenerator(promptLoader, modelTierSelector, apiKeys),
     compliment: new ComplimentGenerator(promptLoader, modelTierSelector, apiKeys),
     novelInsight: new NovelInsightGenerator(promptLoader, modelTierSelector, apiKeys),
+    formattingDemo: new FormattingDemoGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }

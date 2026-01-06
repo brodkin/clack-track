@@ -372,4 +372,179 @@ describe('ContentOrchestrator - Validation Integration', () => {
       consoleWarnSpy.mockRestore();
     });
   });
+
+  describe('formatOptions wiring through pipeline', () => {
+    it('should pass formatOptions from registration to decorator for text content', async () => {
+      // ARRANGE - Generator with formatOptions in registration
+      const validContent: GeneratedContent = {
+        text: 'CENTERED MESSAGE',
+        outputMode: 'text',
+      };
+
+      const formatOptions = {
+        textAlign: 'center' as const,
+        wordWrap: true,
+        maxLines: 4,
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn().mockResolvedValue(validContent),
+      };
+
+      mockSelector.select.mockReturnValue({
+        registration: {
+          id: 'centered-generator',
+          name: 'Centered Generator',
+          priority: 2,
+          formatOptions, // Format options in registration
+        },
+        generator: mockGenerator,
+      });
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      // ACT
+      await orchestrator.generateAndSend(context);
+
+      // ASSERT - formatOptions should be passed as fourth argument to decorator.decorate()
+      expect(mockDecorator.decorate).toHaveBeenCalledWith(
+        'CENTERED MESSAGE',
+        context.timestamp,
+        undefined, // contentData
+        formatOptions // formatOptions from registration
+      );
+      expect(mockVestaboardClient.sendLayout).toHaveBeenCalled();
+    });
+
+    it('should pass undefined formatOptions when registration has no formatOptions', async () => {
+      // ARRANGE - Generator without formatOptions
+      const validContent: GeneratedContent = {
+        text: 'DEFAULT MESSAGE',
+        outputMode: 'text',
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn().mockResolvedValue(validContent),
+      };
+
+      mockSelector.select.mockReturnValue({
+        registration: {
+          id: 'default-generator',
+          name: 'Default Generator',
+          priority: 2,
+          // No formatOptions
+        },
+        generator: mockGenerator,
+      });
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      // ACT
+      await orchestrator.generateAndSend(context);
+
+      // ASSERT - formatOptions should be undefined
+      expect(mockDecorator.decorate).toHaveBeenCalledWith(
+        'DEFAULT MESSAGE',
+        context.timestamp,
+        undefined, // contentData
+        undefined // formatOptions (not in registration)
+      );
+    });
+
+    it('should not pass formatOptions to decorator when outputMode is layout', async () => {
+      // ARRANGE - Layout mode bypasses decorator entirely
+      const layoutContent: GeneratedContent = {
+        text: '',
+        outputMode: 'layout',
+        layout: {
+          rows: Array(6).fill('ROW CONTENT            '),
+          characterCodes: Array(6).fill(Array(22).fill(0)),
+        },
+      };
+
+      const formatOptions = {
+        textAlign: 'right' as const,
+        wordWrap: false,
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn().mockResolvedValue(layoutContent),
+      };
+
+      mockSelector.select.mockReturnValue({
+        registration: {
+          id: 'layout-generator',
+          name: 'Layout Generator',
+          priority: 2,
+          formatOptions, // Has formatOptions but should be ignored
+        },
+        generator: mockGenerator,
+      });
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      // ACT
+      await orchestrator.generateAndSend(context);
+
+      // ASSERT - decorator should not be called for layout mode
+      expect(mockDecorator.decorate).not.toHaveBeenCalled();
+      expect(mockVestaboardClient.sendLayout).toHaveBeenCalled();
+    });
+
+    it('should preserve formatOptions through P3 fallback path', async () => {
+      // ARRANGE - Invalid content triggers fallback, but formatOptions should still be used
+      const invalidContent: GeneratedContent = {
+        text: 'L1\nL2\nL3\nL4\nL5\nL6\nL7', // Too many lines - triggers fallback
+        outputMode: 'text',
+      };
+
+      const formatOptions = {
+        textAlign: 'left' as const,
+        maxCharsPerLine: 18,
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn().mockResolvedValue(invalidContent),
+      };
+
+      mockSelector.select.mockReturnValue({
+        registration: {
+          id: 'failing-generator',
+          name: 'Failing Generator',
+          priority: 2,
+          formatOptions,
+        },
+        generator: mockGenerator,
+      });
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      // ACT
+      await orchestrator.generateAndSend(context);
+
+      // ASSERT - fallback should be triggered
+      expect(mockFallbackGenerator.generate).toHaveBeenCalledWith(context);
+
+      // formatOptions from original registration should still be passed to decorator
+      // even though we're using fallback content
+      expect(mockDecorator.decorate).toHaveBeenCalledWith(
+        'FALLBACK CONTENT',
+        context.timestamp,
+        undefined,
+        formatOptions // Original registration's formatOptions
+      );
+    });
+  });
 });
