@@ -161,6 +161,35 @@ When commenting on weather, news, or current events:
 | One sharp observation   | Thorough but boring summary  |
 | Observational stance    | Personal emotional reactions |
 
+#### Processing External Data
+
+When a generator receives a data payload (headlines, weather, scores), more data means more choices—and higher chance of picking the boring one.
+
+**The Selection Approach:**
+
+1. **Scan for the outlier** - What's weird, unexpected, or ironic in the data?
+2. **Skip the lead story** - Everyone's already talking about it
+3. **Find the detail, not the summary** - "The CEO wore sneakers" beats "Company announces layoffs"
+
+**For Weather:**
+
+- Don't report conditions—they already know it's 72° and sunny
+- Find the implication: "72 AND SUNNY / YOUR HOODIE COLLECTION WEEPS"
+- Contrast expectation vs reality: "IT'S DECEMBER / WHY IS IT 80 DEGREES"
+
+**For News:**
+
+- Pick ONE headline, ignore the rest
+- Find the absurd detail buried in the story
+- Ask: "What would Houseboy notice that a news anchor wouldn't?"
+
+**For Any Data-Heavy Content:**
+
+```
+Don't: Summarize the data comprehensively
+Do:   React to one specific thing in the data
+```
+
 #### Topics That Work
 
 All welcome with equal enthusiasm:
