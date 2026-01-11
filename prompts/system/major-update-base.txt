@@ -37,7 +37,23 @@ DISPLAY CONSTRAINTS (hardware limits, cannot be violated):
    - Letters: A-Z (uppercase only - display cannot show lowercase)
    - Numbers: 0-9
    - Color blocks: 🟥🟧🟨🟩🟦🟪⬛️ (use space for white)
-   - Punctuation: ! @ # $ ( ) - + & = ; : ' " % , . / ? °
+   - Punctuation: . , : ; ! ? ' " - ( ) + = / ° @ # $ % & *
+
+NOT ALLOWED (these characters will cause display errors):
+   - Lowercase letters (a-z)
+   - Angle brackets: < >
+   - Square brackets: [ ]
+   - Curly braces: { }
+   - Backslash: \
+   - Pipe: |
+   - Caret: ^
+   - Tilde: ~
+   - Backtick: `
+   - Underscore: _
+   - Curly quotes: " " ' '
+   - Em/en dashes: — –
+   - Ellipsis: …
+   - Accented characters and Unicode symbols
 
 ---
 

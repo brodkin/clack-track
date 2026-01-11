@@ -703,5 +703,89 @@ describe('NovelInsightGenerator', () => {
       expect(result.metadata?.personality).toHaveProperty('humorStyle');
       expect(result.metadata?.personality).toHaveProperty('obsession');
     });
+
+    it('should apply dimension substitution to system prompt', async () => {
+      // System prompt contains {{maxChars}} and {{maxLines}} placeholders
+      const systemPromptWithPlaceholders =
+        'Content must fit {{maxChars}} chars per line across {{maxLines}} lines.';
+      const expectedSubstitutedPrompt = 'Content must fit 21 chars per line across 5 lines.';
+
+      mockPromptLoader.loadPromptWithVariables.mockImplementation(
+        async (type: string, _file: string, _vars?: Record<string, unknown>) => {
+          if (type === 'system') {
+            return systemPromptWithPlaceholders;
+          }
+          return 'user prompt content';
+        }
+      );
+
+      mockModelTierSelector.select.mockReturnValue({
+        provider: 'openai',
+        model: 'gpt-4.1-mini',
+      });
+      mockModelTierSelector.getAlternate.mockReturnValue(null);
+
+      mockAIProvider.generate.mockResolvedValue({
+        text: 'GENERATED CONTENT',
+        model: 'gpt-4.1-mini',
+        tokensUsed: 30,
+      });
+      mockCreateAIProvider.mockReturnValue(mockAIProvider);
+
+      const generator = new NovelInsightGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      await generator.generate({
+        timestamp: new Date('2024-01-15T10:00:00Z'),
+        updateType: 'major',
+      });
+
+      // Verify the AI provider was called with the substituted system prompt
+      expect(mockAIProvider.generate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          systemPrompt: expectedSubstitutedPrompt,
+        })
+      );
+    });
+
+    it('should include date template variable in system prompt loading', async () => {
+      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
+      mockModelTierSelector.select.mockReturnValue({
+        provider: 'openai',
+        model: 'gpt-4.1-mini',
+      });
+      mockModelTierSelector.getAlternate.mockReturnValue(null);
+
+      mockAIProvider.generate.mockResolvedValue({
+        text: 'GENERATED CONTENT',
+        model: 'gpt-4.1-mini',
+        tokensUsed: 30,
+      });
+      mockCreateAIProvider.mockReturnValue(mockAIProvider);
+
+      const generator = new NovelInsightGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      const testDate = new Date('2024-01-15T10:00:00Z');
+      await generator.generate({
+        timestamp: testDate,
+        updateType: 'major',
+      });
+
+      // Find the call for the system prompt
+      const systemPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
+        call => call[0] === 'system' && call[1] === 'major-update-base.txt'
+      );
+
+      expect(systemPromptCall).toBeDefined();
+      const templateVars = systemPromptCall![2] as Record<string, unknown>;
+
+      // Verify date template variable is included
+      expect(templateVars).toHaveProperty('date');
+      // The date should be formatted like "Monday, January 15, 2024"
+      expect(templateVars.date).toBe('Monday, January 15, 2024');
+    });
   });
 });
