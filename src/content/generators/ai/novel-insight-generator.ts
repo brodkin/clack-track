@@ -342,9 +342,9 @@ export class NovelInsightGenerator extends AIPromptGenerator {
     const selectedTopic = NovelInsightGenerator.selectTopic();
     const selectedStyle = NovelInsightGenerator.selectOutputStyle();
 
-    // Step 2: Load system prompt with personality
+    // Step 2: Load system prompt with personality and date context
     const personality = context.personality ?? generatePersonalityDimensions();
-    const systemPrompt = await this.promptLoader.loadPromptWithVariables(
+    const loadedSystemPrompt = await this.promptLoader.loadPromptWithVariables(
       'system',
       this.getSystemPromptFile(),
       {
@@ -353,10 +353,20 @@ export class NovelInsightGenerator extends AIPromptGenerator {
         humorStyle: personality.humorStyle,
         obsession: personality.obsession,
         persona: 'Houseboy',
+        // Include date template variable following AIPromptGenerator.buildTemplateVariables() pattern
+        date: context.timestamp.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        }),
       }
     );
 
-    // Step 3: Load user prompt with topic and style injected
+    // Step 3: Apply dimension substitution (maxChars, maxLines) to system prompt
+    const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
+
+    // Step 4: Load user prompt with topic and style injected
     const userPrompt = await this.promptLoader.loadPromptWithVariables(
       'user',
       this.getUserPromptFile(),
@@ -366,7 +376,7 @@ export class NovelInsightGenerator extends AIPromptGenerator {
       }
     );
 
-    // Step 4: Select model and generate
+    // Step 5: Select model and generate
     const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
     let lastError: Error | null = null;
 

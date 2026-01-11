@@ -196,6 +196,39 @@ Generators that need external data must:
 | `{{weather}}`   | WeatherGenerator | WeatherService                  |
 | `{{headlines}}` | NewsGenerator    | RSS feeds via BaseNewsGenerator |
 
+## Constraint Rules (Single Source of Truth)
+
+**CRITICAL**: Display constraints must be defined in ONE place only - the system prompt.
+
+### What Belongs Where
+
+| Constraint Type             | Location           | Reason                         |
+| --------------------------- | ------------------ | ------------------------------ |
+| Character limits (maxChars) | System prompt ONLY | Hardware constraint, universal |
+| Line limits (maxLines)      | System prompt ONLY | Display layout, universal      |
+| Approved character set      | System prompt ONLY | Hardware limitation            |
+| Forbidden characters        | System prompt ONLY | Causes display errors          |
+
+### User Prompts Must NOT Include
+
+- "Maximum X characters per line"
+- "X rows available"
+- "132 characters total"
+- "6 rows x 22 columns"
+- Any character set definitions
+- "VESTABOARD CONSTRAINTS" sections
+- Display hardware limitations
+
+### Why This Matters
+
+When constraints appear in BOTH system and user prompts:
+
+1. Values may conflict (e.g., "6 rows" vs "5 rows with frame")
+2. AI gets confused about which to follow
+3. Production failures increase
+
+The system prompt already defines constraints via `{{maxChars}}` and `{{maxLines}}` template variables which are substituted with correct values (21 chars, 5 lines for framed content).
+
 ## Prompt Type Decision Table
 
 | Content Type        | Generator Base          | Model Tier | Needs Data?           | Example              |
@@ -262,6 +295,7 @@ Run through this checklist before submitting a new prompt/generator:
 - [ ] **1-5 lines**: Content is within line limits
 - [ ] **No meta-talk**: Prompt doesn't ask AI to acknowledge the request
 - [ ] **Standalone**: Content makes sense without context
+- [ ] **No constraint duplication**: User prompt does NOT repeat Vestaboard constraints from system prompt
 
 ### Tone & Voice
 

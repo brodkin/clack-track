@@ -308,10 +308,13 @@ export abstract class AIPromptGenerator implements ContentGenerator {
    * format options (if provided) or defaults. Uses DimensionSubstitutor
    * for the actual substitution.
    *
+   * Protected method to allow subclasses to apply dimension substitution
+   * when overriding generate().
+   *
    * @param prompt - Prompt template with potential dimension placeholders
    * @returns Prompt with dimension variables substituted
    */
-  private applyDimensionSubstitution(prompt: string): string {
+  protected applyDimensionSubstitution(prompt: string): string {
     // Map formatOptions to DimensionSubstitutor options
     // GeneratorFormatOptions uses maxCharsPerLine, DimensionOptions uses maxChars
     const dimensionOptions = this.formatOptions
