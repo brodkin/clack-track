@@ -213,6 +213,8 @@ describe('ContentModel', () => {
     test('should return latest content records in descending order', async () => {
       const now = new Date();
 
+      // Use explicit timestamps with 1 second difference for deterministic ordering
+      // This avoids MySQL DATETIME precision issues without real-time delays
       const content1 = await contentModel.create({
         text: 'Content 1',
         type: 'major',
@@ -221,13 +223,11 @@ describe('ContentModel', () => {
         aiProvider: 'openai',
       });
 
-      // Wait 1 second for MySQL DATETIME precision (second-level, not millisecond)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      // Create second content with generatedAt 1 second later (no real-time wait needed)
       const content2 = await contentModel.create({
         text: 'Content 2',
         type: 'minor',
-        generatedAt: new Date(),
+        generatedAt: new Date(now.getTime() + 1000),
         sentAt: null,
         aiProvider: 'openai',
       });
@@ -235,6 +235,7 @@ describe('ContentModel', () => {
       const results = await contentModel.findLatest(10);
 
       expect(results).toHaveLength(2);
+      // Verify descending order by generatedAt: content2 (later timestamp) should be first
       expect(results[0].id).toBe(content2.id);
       expect(results[1].id).toBe(content1.id);
     });

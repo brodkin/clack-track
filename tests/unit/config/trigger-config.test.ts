@@ -146,6 +146,9 @@ triggers:
 
   describe('Hot-Reload', () => {
     it('should emit configReloaded event on file change', async () => {
+      // Use fake timers for deterministic debounce control
+      jest.useFakeTimers();
+
       const initialYaml = `
 triggers:
   - name: "Initial"
@@ -174,26 +177,34 @@ triggers:
 
       // Get the mock watcher instance and trigger change event
       const mockWatcherInstance = getLastWatcher();
-      await new Promise(resolve => setTimeout(resolve, 100));
       mockWatcherInstance?.emit('change', TEST_CONFIG_PATH);
 
-      // Wait for reload event (with timeout)
-      const config = await Promise.race([
-        reloadPromise,
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout waiting for reload')), 2000)
-        ),
-      ]);
+      // Advance timers past the debounce period (500ms)
+      jest.advanceTimersByTime(500);
+
+      // Allow the async reload to complete
+      await jest.runAllTimersAsync();
+
+      // Wait for reload event
+      const config = await reloadPromise;
 
       expect(config.triggers).toHaveLength(1);
       expect(config.triggers[0].name).toBe('Updated');
-    }, 10000);
+
+      // Restore real timers
+      jest.useRealTimers();
+    });
 
     it('should debounce multiple rapid file changes', async () => {
       const initialYaml = `
 triggers:
   - name: "Initial"
     entity_pattern: "sensor.*"
+`;
+      const finalYaml = `
+triggers:
+  - name: "Change1"
+    entity_pattern: "a"
 `;
       await writeFile(TEST_CONFIG_PATH, initialYaml);
 
@@ -202,28 +213,36 @@ triggers:
       loader.startWatching();
 
       let reloadCount = 0;
-      loader.on('configReloaded', () => {
-        reloadCount++;
+      const reloadPromise = new Promise<void>(resolve => {
+        loader.on('configReloaded', () => {
+          reloadCount++;
+          resolve();
+        });
       });
 
-      // Make multiple rapid changes (mock events)
-      await new Promise(resolve => setTimeout(resolve, 100));
-      await writeFile(TEST_CONFIG_PATH, `triggers:\n  - name: "Change1"\n    entity_pattern: "a"`);
+      // Suppress error events (we're testing debounce, not reload success)
+      loader.on('error', () => {
+        // Ignored - we expect potential errors during rapid file changes
+      });
+
+      // Write final config before emitting events
+      await writeFile(TEST_CONFIG_PATH, finalYaml);
 
       // Get the mock watcher instance
       const mockWatcherInstance = getLastWatcher();
 
       if (mockWatcherInstance) {
+        // Emit multiple rapid change events (should be debounced to single reload)
         mockWatcherInstance.emit('change', TEST_CONFIG_PATH);
         mockWatcherInstance.emit('change', TEST_CONFIG_PATH);
         mockWatcherInstance.emit('change', TEST_CONFIG_PATH);
       }
 
-      // Wait for debounce period + buffer
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Wait for reload to complete (debounce period is 500ms, so should fire once)
+      await reloadPromise;
 
-      // Should have triggered reload only once due to debouncing (500ms debounce)
-      expect(reloadCount).toBeLessThanOrEqual(2); // Allow for potential race conditions
+      // Should have triggered reload exactly once due to debouncing (500ms debounce)
+      expect(reloadCount).toBe(1);
     });
   });
 

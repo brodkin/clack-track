@@ -7,65 +7,8 @@ describe('Vestaboard Client Factory', () => {
   const MOCK_API_KEY = 'test-api-key-12345';
   const MOCK_API_URL = 'http://localhost:8080/local-api';
 
-  describe('createVestaboardClient', () => {
-    it('should create client with valid config containing apiKey and apiUrl', () => {
-      const config: VestaboardClientConfig = {
-        apiKey: MOCK_API_KEY,
-        apiUrl: MOCK_API_URL,
-      };
-
-      const client = createVestaboardClient(config);
-
-      expect(client).toBeInstanceOf(VestaboardClientImpl);
-    });
-
-    it('should create client with only apiKey (apiUrl optional)', () => {
-      const config: VestaboardClientConfig = {
-        apiKey: MOCK_API_KEY,
-      };
-
-      const client = createVestaboardClient(config);
-
-      expect(client).toBeInstanceOf(VestaboardClientImpl);
-    });
-
-    it('should create client with custom timeout', () => {
-      const config: VestaboardClientConfig = {
-        apiKey: MOCK_API_KEY,
-        apiUrl: MOCK_API_URL,
-        timeoutMs: 5000,
-      };
-
-      const client = createVestaboardClient(config);
-
-      expect(client).toBeInstanceOf(VestaboardClientImpl);
-    });
-
-    it('should create client with custom maxRetries', () => {
-      const config: VestaboardClientConfig = {
-        apiKey: MOCK_API_KEY,
-        apiUrl: MOCK_API_URL,
-        maxRetries: 5,
-      };
-
-      const client = createVestaboardClient(config);
-
-      expect(client).toBeInstanceOf(VestaboardClientImpl);
-    });
-
-    it('should create client with full config', () => {
-      const config: VestaboardClientConfig = {
-        apiKey: MOCK_API_KEY,
-        apiUrl: MOCK_API_URL,
-        timeoutMs: 10000,
-        maxRetries: 3,
-      };
-
-      const client = createVestaboardClient(config);
-
-      expect(client).toBeInstanceOf(VestaboardClientImpl);
-    });
-  });
+  // Note: Trivial constructor existence tests removed.
+  // Factory behavior is tested via interface verification and instance independence tests below.
 
   describe('created client interface', () => {
     let client: ReturnType<typeof createVestaboardClient>;

@@ -51,12 +51,28 @@ describe('NewsGenerator', () => {
       expect(generator).toBeInstanceOf(NewsGenerator);
     });
 
-    it('should use MEDIUM model tier for complex summarization', () => {
+    it('should use MEDIUM model tier for complex summarization', async () => {
+      // Set up mocks for generate() call
+      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
+      mockModelTierSelector.select.mockReturnValue({
+        provider: 'openai',
+        model: 'gpt-4.1-mini',
+        tier: ModelTier.MEDIUM,
+      });
+      mockModelTierSelector.getAlternate.mockReturnValue(null);
+
       const generator = new NewsGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      expect(generator['modelTier']).toBe(ModelTier.MEDIUM);
+      // Verify via observable behavior: modelTierSelector.select is called with MEDIUM tier
+      try {
+        await generator.generate({ updateType: 'major', timestamp: new Date() });
+      } catch {
+        // May fail without AI provider - we're testing the tier selection call
+      }
+
+      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
     });
   });
 
