@@ -96,16 +96,17 @@ describe('test-ai command', () => {
   });
 
   describe('Connection Validation', () => {
-    it('should validate connection for successful provider', async () => {
+    it('should validate connection and display success indicator for valid provider', async () => {
       const mockProvider = createMockOpenAIClient({ connectionValid: true });
-      const validateSpy = jest.spyOn(mockProvider, 'validateConnection');
-
       createAIProviderSpy.mockReturnValue(mockProvider);
 
       await testAICommand({ provider: 'openai' });
 
-      expect(validateSpy).toHaveBeenCalled();
+      // Verify the command displays success indicator for valid connection
       expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('✓'));
+      // Also verify provider name appears in output to confirm which provider was tested
+      const consoleOutput = mockConsoleLog.mock.calls.map(call => call.join(' ')).join('\n');
+      expect(consoleOutput).toContain('OpenAI');
     });
 
     it('should handle failed connection validation', async () => {

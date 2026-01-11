@@ -28,95 +28,37 @@ describe('ModelTierSelector', () => {
 
   describe('select()', () => {
     describe('with preferred provider available', () => {
-      it('should return preferred openai provider for light tier', () => {
-        const selector = new ModelTierSelector('openai', ['openai', 'anthropic']);
-        const result = selector.select('light');
+      it.each<[AIProviderType, ModelTier]>([
+        ['openai', 'light'],
+        ['openai', 'medium'],
+        ['openai', 'heavy'],
+        ['anthropic', 'light'],
+        ['anthropic', 'medium'],
+        ['anthropic', 'heavy'],
+      ])('should return preferred %s provider for %s tier', (provider, tier) => {
+        const otherProvider: AIProviderType = provider === 'openai' ? 'anthropic' : 'openai';
+        const selector = new ModelTierSelector(provider, [provider, otherProvider]);
+        const result = selector.select(tier);
 
         expect(result).toEqual({
-          provider: 'openai',
-          model: MODEL_TIERS.openai.light,
-        });
-      });
-
-      it('should return preferred openai provider for medium tier', () => {
-        const selector = new ModelTierSelector('openai', ['openai', 'anthropic']);
-        const result = selector.select('medium');
-
-        expect(result).toEqual({
-          provider: 'openai',
-          model: MODEL_TIERS.openai.medium,
-        });
-      });
-
-      it('should return preferred openai provider for heavy tier', () => {
-        const selector = new ModelTierSelector('openai', ['openai', 'anthropic']);
-        const result = selector.select('heavy');
-
-        expect(result).toEqual({
-          provider: 'openai',
-          model: MODEL_TIERS.openai.heavy,
-        });
-      });
-
-      it('should return preferred anthropic provider for light tier', () => {
-        const selector = new ModelTierSelector('anthropic', ['anthropic', 'openai']);
-        const result = selector.select('light');
-
-        expect(result).toEqual({
-          provider: 'anthropic',
-          model: MODEL_TIERS.anthropic.light,
-        });
-      });
-
-      it('should return preferred anthropic provider for medium tier', () => {
-        const selector = new ModelTierSelector('anthropic', ['anthropic', 'openai']);
-        const result = selector.select('medium');
-
-        expect(result).toEqual({
-          provider: 'anthropic',
-          model: MODEL_TIERS.anthropic.medium,
-        });
-      });
-
-      it('should return preferred anthropic provider for heavy tier', () => {
-        const selector = new ModelTierSelector('anthropic', ['anthropic', 'openai']);
-        const result = selector.select('heavy');
-
-        expect(result).toEqual({
-          provider: 'anthropic',
-          model: MODEL_TIERS.anthropic.heavy,
+          provider,
+          model: MODEL_TIERS[provider][tier],
         });
       });
     });
 
     describe('with preferred provider unavailable (fallback)', () => {
-      it('should fallback to first available provider when preferred is openai but only anthropic available', () => {
-        const selector = new ModelTierSelector('openai', ['anthropic']);
-        const result = selector.select('medium');
+      it.each<[AIProviderType, AIProviderType, ModelTier]>([
+        ['openai', 'anthropic', 'medium'],
+        ['anthropic', 'openai', 'light'],
+        ['openai', 'anthropic', 'heavy'],
+      ])('should fallback from %s to %s for %s tier', (preferred, available, tier) => {
+        const selector = new ModelTierSelector(preferred, [available]);
+        const result = selector.select(tier);
 
         expect(result).toEqual({
-          provider: 'anthropic',
-          model: MODEL_TIERS.anthropic.medium,
-        });
-      });
-
-      it('should fallback to first available provider when preferred is anthropic but only openai available', () => {
-        const selector = new ModelTierSelector('anthropic', ['openai']);
-        const result = selector.select('light');
-
-        expect(result).toEqual({
-          provider: 'openai',
-          model: MODEL_TIERS.openai.light,
-        });
-      });
-
-      it('should fallback to anthropic for heavy tier when openai not available', () => {
-        const selector = new ModelTierSelector('openai', ['anthropic']);
-        const result = selector.select('heavy');
-
-        expect(result).toEqual({
-          provider: 'anthropic',
-          model: MODEL_TIERS.anthropic.heavy,
+          provider: available,
+          model: MODEL_TIERS[available][tier],
         });
       });
     });
@@ -124,66 +66,39 @@ describe('ModelTierSelector', () => {
 
   describe('getAlternate()', () => {
     describe('with alternate available', () => {
-      it('should return anthropic alternate when current is openai', () => {
-        const selector = new ModelTierSelector('openai', ['openai', 'anthropic']);
-        const current = { provider: 'openai' as AIProviderType, model: MODEL_TIERS.openai.medium };
-        const result = selector.getAlternate(current);
+      it.each<[AIProviderType, AIProviderType, ModelTier]>([
+        ['openai', 'anthropic', 'medium'],
+        ['anthropic', 'openai', 'light'],
+        ['openai', 'anthropic', 'light'],
+        ['anthropic', 'openai', 'heavy'],
+      ])(
+        'should return alternate when current is %s, expecting %s (%s tier)',
+        (currentProvider, alternateProvider, tier) => {
+          const selector = new ModelTierSelector(currentProvider, [
+            currentProvider,
+            alternateProvider,
+          ]);
+          const currentSelection = {
+            provider: currentProvider,
+            model: MODEL_TIERS[currentProvider][tier],
+          };
+          const result = selector.getAlternate(currentSelection);
 
-        expect(result).toEqual({
-          provider: 'anthropic',
-          model: MODEL_TIERS.anthropic.medium,
-        });
-      });
-
-      it('should return openai alternate when current is anthropic', () => {
-        const selector = new ModelTierSelector('anthropic', ['anthropic', 'openai']);
-        const current = {
-          provider: 'anthropic' as AIProviderType,
-          model: MODEL_TIERS.anthropic.light,
-        };
-        const result = selector.getAlternate(current);
-
-        expect(result).toEqual({
-          provider: 'openai',
-          model: MODEL_TIERS.openai.light,
-        });
-      });
-
-      it('should match tier when providing alternate (light tier)', () => {
-        const selector = new ModelTierSelector('openai', ['openai', 'anthropic']);
-        const current = { provider: 'openai' as AIProviderType, model: MODEL_TIERS.openai.light };
-        const result = selector.getAlternate(current);
-
-        expect(result?.model).toBe(MODEL_TIERS.anthropic.light);
-      });
-
-      it('should match tier when providing alternate (heavy tier)', () => {
-        const selector = new ModelTierSelector('anthropic', ['anthropic', 'openai']);
-        const current = {
-          provider: 'anthropic' as AIProviderType,
-          model: MODEL_TIERS.anthropic.heavy,
-        };
-        const result = selector.getAlternate(current);
-
-        expect(result?.model).toBe(MODEL_TIERS.openai.heavy);
-      });
+          expect(result).toEqual({
+            provider: alternateProvider,
+            model: MODEL_TIERS[alternateProvider][tier],
+          });
+        }
+      );
     });
 
     describe('with no alternate available', () => {
-      it('should return null when only openai is available', () => {
-        const selector = new ModelTierSelector('openai', ['openai']);
-        const current = { provider: 'openai' as AIProviderType, model: MODEL_TIERS.openai.medium };
-        const result = selector.getAlternate(current);
-
-        expect(result).toBeNull();
-      });
-
-      it('should return null when only anthropic is available', () => {
-        const selector = new ModelTierSelector('anthropic', ['anthropic']);
-        const current = {
-          provider: 'anthropic' as AIProviderType,
-          model: MODEL_TIERS.anthropic.light,
-        };
+      it.each<[AIProviderType, ModelTier]>([
+        ['openai', 'medium'],
+        ['anthropic', 'light'],
+      ])('should return null when only %s is available (%s tier)', (provider, tier) => {
+        const selector = new ModelTierSelector(provider, [provider]);
+        const current = { provider, model: MODEL_TIERS[provider][tier] };
         const result = selector.getAlternate(current);
 
         expect(result).toBeNull();

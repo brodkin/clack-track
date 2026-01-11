@@ -3,6 +3,12 @@
  *
  * Tests the ContentRegistry singleton class for managing content generator
  * registration, lookup, and filtering operations.
+ *
+ * Test Isolation Strategy:
+ * - Each test gets a fresh registry instance via beforeEach reset
+ * - Tests avoid assertions on array ordering (Map iteration order)
+ * - Tests use set-based comparisons for ID collections
+ * - No shared state between tests beyond the singleton reset pattern
  */
 
 import { ContentRegistry } from '@/content/registry/content-registry';
@@ -28,6 +34,21 @@ class MockGenerator implements ContentGenerator {
   validate(): GeneratorValidationResult {
     return { valid: true };
   }
+}
+
+/**
+ * Helper to create a unique generator ID for test isolation
+ */
+function createUniqueId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * Helper to assert array contains expected IDs regardless of order
+ */
+function expectIdsToMatch(actual: { registration: { id: string } }[], expectedIds: string[]): void {
+  const actualIds = actual.map(r => r.registration.id);
+  expect(actualIds.sort()).toEqual(expectedIds.sort());
 }
 
 describe('ContentRegistry', () => {
@@ -169,22 +190,27 @@ describe('ContentRegistry', () => {
     });
 
     it('should return all registered generators', () => {
+      // Use unique IDs to ensure test isolation
+      const id1 = createUniqueId('generator');
+      const id2 = createUniqueId('generator');
+      const id3 = createUniqueId('generator');
+
       const reg1: ContentRegistration = {
-        id: 'generator-1',
+        id: id1,
         name: 'Generator 1',
         priority: ContentPriority.NORMAL,
         modelTier: ModelTier.LIGHT,
       };
 
       const reg2: ContentRegistration = {
-        id: 'generator-2',
+        id: id2,
         name: 'Generator 2',
         priority: ContentPriority.NOTIFICATION,
         modelTier: ModelTier.MEDIUM,
       };
 
       const reg3: ContentRegistration = {
-        id: 'generator-3',
+        id: id3,
         name: 'Generator 3',
         priority: ContentPriority.FALLBACK,
         modelTier: ModelTier.HEAVY,
@@ -196,11 +222,8 @@ describe('ContentRegistry', () => {
 
       const result = registry.getAll();
       expect(result).toHaveLength(3);
-      expect(result.map(r => r.registration.id)).toEqual([
-        'generator-1',
-        'generator-2',
-        'generator-3',
-      ]);
+      // Use order-independent comparison
+      expectIdsToMatch(result, [id1, id2, id3]);
     });
   });
 
@@ -252,69 +275,91 @@ describe('ContentRegistry', () => {
   });
 
   describe('getByPriority()', () => {
-    beforeEach(() => {
-      // Register generators with different priorities
+    // Helper to set up priority test fixtures with unique IDs
+    function setupPriorityGenerators(): {
+      notificationIds: string[];
+      normalId: string;
+      fallbackId: string;
+    } {
+      const notificationId1 = createUniqueId('notification');
+      const notificationId2 = createUniqueId('notification');
+      const normalId = createUniqueId('normal');
+      const fallbackId = createUniqueId('fallback');
+
       const p0reg: ContentRegistration = {
-        id: 'notification-1',
+        id: notificationId1,
         name: 'Notification Generator 1',
         priority: ContentPriority.NOTIFICATION,
         modelTier: ModelTier.LIGHT,
       };
 
       const p0reg2: ContentRegistration = {
-        id: 'notification-2',
+        id: notificationId2,
         name: 'Notification Generator 2',
         priority: ContentPriority.NOTIFICATION,
         modelTier: ModelTier.MEDIUM,
       };
 
       const p2reg: ContentRegistration = {
-        id: 'normal-1',
+        id: normalId,
         name: 'Normal Generator',
         priority: ContentPriority.NORMAL,
         modelTier: ModelTier.LIGHT,
       };
 
       const p3reg: ContentRegistration = {
-        id: 'fallback-1',
+        id: fallbackId,
         name: 'Fallback Generator',
         priority: ContentPriority.FALLBACK,
         modelTier: ModelTier.LIGHT,
       };
 
-      registry.register(p0reg, mockGenerator);
+      registry.register(p0reg, new MockGenerator());
       registry.register(p0reg2, new MockGenerator());
       registry.register(p2reg, new MockGenerator());
       registry.register(p3reg, new MockGenerator());
-    });
+
+      return {
+        notificationIds: [notificationId1, notificationId2],
+        normalId,
+        fallbackId,
+      };
+    }
 
     it('should return empty array when no generators match priority', () => {
-      ContentRegistry.reset();
-      registry = ContentRegistry.getInstance();
-
+      // Fresh registry from beforeEach - no generators registered
       const result = registry.getByPriority(ContentPriority.NOTIFICATION);
       expect(result).toEqual([]);
     });
 
     it('should return all P0 (NOTIFICATION) generators', () => {
+      const { notificationIds } = setupPriorityGenerators();
+
       const result = registry.getByPriority(ContentPriority.NOTIFICATION);
       expect(result).toHaveLength(2);
-      expect(result.map(r => r.registration.id)).toEqual(['notification-1', 'notification-2']);
+      // Order-independent assertion
+      expectIdsToMatch(result, notificationIds);
     });
 
     it('should return all P2 (NORMAL) generators', () => {
+      const { normalId } = setupPriorityGenerators();
+
       const result = registry.getByPriority(ContentPriority.NORMAL);
       expect(result).toHaveLength(1);
-      expect(result[0].registration.id).toBe('normal-1');
+      expect(result[0].registration.id).toBe(normalId);
     });
 
     it('should return all P3 (FALLBACK) generators', () => {
+      const { fallbackId } = setupPriorityGenerators();
+
       const result = registry.getByPriority(ContentPriority.FALLBACK);
       expect(result).toHaveLength(1);
-      expect(result[0].registration.id).toBe('fallback-1');
+      expect(result[0].registration.id).toBe(fallbackId);
     });
 
     it('should only return generators with exact priority match', () => {
+      setupPriorityGenerators();
+
       const allGenerators = registry.getAll();
       const p0Generators = registry.getByPriority(ContentPriority.NOTIFICATION);
       const p2Generators = registry.getByPriority(ContentPriority.NORMAL);
@@ -326,10 +371,20 @@ describe('ContentRegistry', () => {
   });
 
   describe('getByEventPattern()', () => {
-    beforeEach(() => {
-      // Register generators with different event patterns
+    // Helper to set up event pattern test fixtures with unique IDs
+    function setupEventPatternGenerators(): {
+      doorId: string;
+      personId: string;
+      wildcardId: string;
+      noPatternId: string;
+    } {
+      const doorId = createUniqueId('door-events');
+      const personId = createUniqueId('person-events');
+      const wildcardId = createUniqueId('all-events');
+      const noPatternId = createUniqueId('no-pattern');
+
       const doorReg: ContentRegistration = {
-        id: 'door-events',
+        id: doorId,
         name: 'Door Event Handler',
         priority: ContentPriority.NOTIFICATION,
         modelTier: ModelTier.LIGHT,
@@ -337,7 +392,7 @@ describe('ContentRegistry', () => {
       };
 
       const personReg: ContentRegistration = {
-        id: 'person-events',
+        id: personId,
         name: 'Person Event Handler',
         priority: ContentPriority.NOTIFICATION,
         modelTier: ModelTier.LIGHT,
@@ -345,7 +400,7 @@ describe('ContentRegistry', () => {
       };
 
       const wildcardReg: ContentRegistration = {
-        id: 'all-events',
+        id: wildcardId,
         name: 'All Events Handler',
         priority: ContentPriority.NOTIFICATION,
         modelTier: ModelTier.LIGHT,
@@ -353,66 +408,74 @@ describe('ContentRegistry', () => {
       };
 
       const noPatternReg: ContentRegistration = {
-        id: 'no-pattern',
+        id: noPatternId,
         name: 'No Pattern Generator',
         priority: ContentPriority.NORMAL,
         modelTier: ModelTier.LIGHT,
         // No eventTriggerPattern
       };
 
-      registry.register(doorReg, mockGenerator);
+      registry.register(doorReg, new MockGenerator());
       registry.register(personReg, new MockGenerator());
       registry.register(wildcardReg, new MockGenerator());
       registry.register(noPatternReg, new MockGenerator());
+
+      return { doorId, personId, wildcardId, noPatternId };
+    }
+
+    it('should return empty array when registry is empty', () => {
+      // Fresh registry from beforeEach - no generators registered
+      const result = registry.getByEventPattern('any.event');
+      expect(result).toEqual([]);
     });
 
-    it('should return empty array when no patterns match event', () => {
+    it('should return only wildcard when no specific patterns match event', () => {
+      const { wildcardId } = setupEventPatternGenerators();
+
       const result = registry.getByEventPattern('window.opened');
       expect(result).toHaveLength(1); // Only wildcard matches
-      expect(result[0].registration.id).toBe('all-events');
+      expect(result[0].registration.id).toBe(wildcardId);
     });
 
     it('should return generators matching door events', () => {
-      const openedResult = registry.getByEventPattern('door.opened');
-      expect(openedResult.length).toBeGreaterThanOrEqual(2); // door-events + wildcard
+      const { doorId, wildcardId } = setupEventPatternGenerators();
 
-      const doorMatches = openedResult.filter(r => r.registration.id === 'door-events');
-      expect(doorMatches).toHaveLength(1);
+      const openedResult = registry.getByEventPattern('door.opened');
+      expect(openedResult).toHaveLength(2); // door-events + wildcard
+      expectIdsToMatch(openedResult, [doorId, wildcardId]);
     });
 
     it('should return generators matching person events', () => {
-      const arrivedResult = registry.getByEventPattern('person.arrived');
-      expect(arrivedResult.length).toBeGreaterThanOrEqual(2); // person-events + wildcard
+      const { personId, wildcardId } = setupEventPatternGenerators();
 
-      const personMatches = arrivedResult.filter(r => r.registration.id === 'person-events');
-      expect(personMatches).toHaveLength(1);
+      const arrivedResult = registry.getByEventPattern('person.arrived');
+      expect(arrivedResult).toHaveLength(2); // person-events + wildcard
+      expectIdsToMatch(arrivedResult, [personId, wildcardId]);
     });
 
     it('should support wildcard patterns', () => {
+      const { wildcardId } = setupEventPatternGenerators();
+
       const result = registry.getByEventPattern('any.random.event');
       expect(result.length).toBeGreaterThanOrEqual(1);
 
-      const wildcardMatch = result.find(r => r.registration.id === 'all-events');
+      const wildcardMatch = result.find(r => r.registration.id === wildcardId);
       expect(wildcardMatch).toBeDefined();
     });
 
     it('should not match generators without eventTriggerPattern', () => {
+      const { noPatternId } = setupEventPatternGenerators();
+
       const result = registry.getByEventPattern('door.opened');
-      const noPatternMatch = result.find(r => r.registration.id === 'no-pattern');
+      const noPatternMatch = result.find(r => r.registration.id === noPatternId);
       expect(noPatternMatch).toBeUndefined();
     });
 
     it('should support multiple generators matching same event', () => {
+      setupEventPatternGenerators();
+
       const result = registry.getByEventPattern('door.opened');
-      expect(result.length).toBeGreaterThanOrEqual(2); // At least door-events + wildcard
-    });
-
-    it('should return empty array when registry is empty', () => {
-      ContentRegistry.reset();
-      registry = ContentRegistry.getInstance();
-
-      const result = registry.getByEventPattern('any.event');
-      expect(result).toEqual([]);
+      expect(result).toHaveLength(2); // door-events + wildcard
     });
   });
 

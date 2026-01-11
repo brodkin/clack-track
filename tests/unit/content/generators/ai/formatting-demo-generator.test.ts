@@ -91,24 +91,49 @@ describe('FormattingDemoGenerator', () => {
       expect(generator).toBeInstanceOf(FormattingDemoGenerator);
     });
 
-    it('should use LIGHT model tier for efficiency', () => {
+    it('should use LIGHT model tier for efficiency', async () => {
       const generator = new FormattingDemoGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      expect(generator['modelTier']).toBe(ModelTier.LIGHT);
+      // Mock createProviderForSelection for this test
+      jest
+        .spyOn(
+          FormattingDemoGenerator.prototype as { createProviderForSelection: () => unknown },
+          'createProviderForSelection'
+        )
+        .mockReturnValue(mockAIProvider);
+
+      const result = await generator.generate(mockContext);
+
+      // Verify via observable behavior: result.metadata.tier shows the tier used
+      expect(result.metadata?.tier).toBe(ModelTier.LIGHT);
+      // Also verify modelTierSelector.select was called with LIGHT
+      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
+
+      jest.restoreAllMocks();
     });
 
-    it('should configure custom format options with reduced dimensions', () => {
+    it('should configure custom format options with reduced dimensions', async () => {
       const generator = new FormattingDemoGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      // Access the private formatOptions via the base class
-      const formatOptions = generator['formatOptions'];
+      // Mock createProviderForSelection for this test
+      jest
+        .spyOn(
+          FormattingDemoGenerator.prototype as { createProviderForSelection: () => unknown },
+          'createProviderForSelection'
+        )
+        .mockReturnValue(mockAIProvider);
 
-      expect(formatOptions).toBeDefined();
-      expect(formatOptions).toEqual(expectedFormatOptions);
+      const result = await generator.generate(mockContext);
+
+      // Verify via observable behavior: result.metadata.formatOptions shows the configured options
+      expect(result.metadata?.formatOptions).toBeDefined();
+      expect(result.metadata?.formatOptions).toEqual(expectedFormatOptions);
+
+      jest.restoreAllMocks();
     });
   });
 
@@ -322,37 +347,52 @@ describe('FormattingDemoGenerator', () => {
   });
 
   describe('formatting options integration', () => {
+    beforeEach(() => {
+      // Mock createProviderForSelection for all tests in this block
+      jest
+        .spyOn(
+          FormattingDemoGenerator.prototype as { createProviderForSelection: () => unknown },
+          'createProviderForSelection'
+        )
+        .mockReturnValue(mockAIProvider);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('should pass custom dimensions to DimensionSubstitutor via base class', async () => {
       const generator = new FormattingDemoGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      // The formatOptions should be configured on the base class
-      // and used by DimensionSubstitutor during prompt processing
-      const formatOptions = generator['formatOptions'];
+      const result = await generator.generate(mockContext);
 
-      expect(formatOptions?.maxLines).toBe(3);
-      expect(formatOptions?.maxCharsPerLine).toBe(18);
+      // Verify via observable behavior: result.metadata.formatOptions shows the configured dimensions
+      expect(result.metadata?.formatOptions?.maxLines).toBe(3);
+      expect(result.metadata?.formatOptions?.maxCharsPerLine).toBe(18);
     });
 
-    it('should configure left text alignment', () => {
+    it('should configure left text alignment', async () => {
       const generator = new FormattingDemoGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      const formatOptions = generator['formatOptions'];
+      const result = await generator.generate(mockContext);
 
-      expect(formatOptions?.textAlign).toBe('left');
+      // Verify via observable behavior: result.metadata.formatOptions.textAlign
+      expect(result.metadata?.formatOptions?.textAlign).toBe('left');
     });
 
-    it('should configure word wrap disabled', () => {
+    it('should configure word wrap disabled', async () => {
       const generator = new FormattingDemoGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      const formatOptions = generator['formatOptions'];
+      const result = await generator.generate(mockContext);
 
-      expect(formatOptions?.wordWrap).toBe(false);
+      // Verify via observable behavior: result.metadata.formatOptions.wordWrap
+      expect(result.metadata?.formatOptions?.wordWrap).toBe(false);
     });
   });
 

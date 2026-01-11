@@ -51,12 +51,28 @@ describe('CountdownGenerator', () => {
       expect(generator).toBeInstanceOf(CountdownGenerator);
     });
 
-    it('should use LIGHT model tier for efficiency', () => {
+    it('should use LIGHT model tier for efficiency', async () => {
+      // Set up mocks for generate() call
+      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
+      mockModelTierSelector.select.mockReturnValue({
+        provider: 'openai',
+        model: 'gpt-4.1-nano',
+        tier: ModelTier.LIGHT,
+      });
+      mockModelTierSelector.getAlternate.mockReturnValue(null);
+
       const generator = new CountdownGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      expect(generator['modelTier']).toBe(ModelTier.LIGHT);
+      // Verify via observable behavior: modelTierSelector.select is called with LIGHT tier
+      try {
+        await generator.generate({ updateType: 'major', timestamp: new Date() });
+      } catch {
+        // May fail without AI provider - we're testing the tier selection call
+      }
+
+      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
     });
 
     it('should accept empty API keys', () => {

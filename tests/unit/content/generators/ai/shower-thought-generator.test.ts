@@ -51,12 +51,28 @@ describe('ShowerThoughtGenerator', () => {
       expect(generator).toBeInstanceOf(ShowerThoughtGenerator);
     });
 
-    it('should use LIGHT model tier for efficiency', () => {
+    it('should use LIGHT model tier for efficiency', async () => {
+      // Set up mocks for generate() call
+      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
+      mockModelTierSelector.select.mockReturnValue({
+        provider: 'openai',
+        model: 'gpt-4.1-nano',
+        tier: ModelTier.LIGHT,
+      });
+      mockModelTierSelector.getAlternate.mockReturnValue(null);
+
       const generator = new ShowerThoughtGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      expect(generator['modelTier']).toBe(ModelTier.LIGHT);
+      // Verify via observable behavior: modelTierSelector.select is called with LIGHT tier
+      try {
+        await generator.generate({ updateType: 'major', timestamp: new Date() });
+      } catch {
+        // May fail without AI provider - we're testing the tier selection call
+      }
+
+      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
     });
   });
 
@@ -102,16 +118,31 @@ describe('ShowerThoughtGenerator', () => {
 
   describe('generate()', () => {
     it('should load correct prompts and use LIGHT tier', async () => {
-      // This test verifies the generator calls the right methods
-      // The actual generation logic is tested in the base class tests
+      // Set up mocks for generate() call
+      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
+      mockModelTierSelector.select.mockReturnValue({
+        provider: 'openai',
+        model: 'gpt-4.1-nano',
+        tier: ModelTier.LIGHT,
+      });
+      mockModelTierSelector.getAlternate.mockReturnValue(null);
+
       const generator = new ShowerThoughtGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedShowerThoughtGenerator;
 
-      // Verify the generator uses the correct prompt files
+      // Verify the generator uses the correct prompt files via protected methods
       expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
       expect(generator.getUserPromptFile()).toBe('shower-thought.txt');
-      expect(generator.modelTier).toBe(ModelTier.LIGHT);
+
+      // Verify tier via observable behavior
+      try {
+        await generator.generate({ updateType: 'major', timestamp: new Date() });
+      } catch {
+        // May fail without AI provider - we're testing the tier selection call
+      }
+
+      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
     });
   });
 });
