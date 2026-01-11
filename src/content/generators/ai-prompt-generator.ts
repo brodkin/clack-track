@@ -179,7 +179,7 @@ export abstract class AIPromptGenerator implements ContentGenerator {
     const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
 
     // Format the user prompt with context
-    const formattedUserPrompt = this.formatUserPrompt(userPrompt, context, personality);
+    const formattedUserPrompt = this.formatUserPrompt(userPrompt, context);
 
     // Select model for this tier
     const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
@@ -327,42 +327,17 @@ export abstract class AIPromptGenerator implements ContentGenerator {
   /**
    * Formats the user prompt with context information
    *
-   * Appends personality and context as structured plain text rather than JSON
-   * for better readability and model comprehension.
+   * Appends context as structured plain text for better readability
+   * and model comprehension.
    *
    * @param userPrompt - Base user prompt text
    * @param context - Generation context
-   * @param personality - Personality dimensions for this generation
    * @returns Formatted prompt with context
    */
-  private formatUserPrompt(
-    userPrompt: string,
-    context: GenerationContext,
-    personality: PersonalityDimensions
-  ): string {
-    const timestamp = context.timestamp;
-    const dateStr = timestamp.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
-    const timeStr = timestamp.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-
+  private formatUserPrompt(userPrompt: string, context: GenerationContext): string {
     return `${userPrompt}
 
 CURRENT CONTEXT:
-- Date: ${dateStr}
-- Time: ${timeStr}
-- Update Type: ${context.updateType}
-
-PERSONALITY FOR THIS RESPONSE:
-- Mood: ${personality.mood}
-- Energy: ${personality.energyLevel}
-- Humor Style: ${personality.humorStyle}
-- Current Obsession: ${personality.obsession}`;
+- Update Type: ${context.updateType}`;
   }
 }

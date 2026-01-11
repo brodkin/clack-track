@@ -383,16 +383,14 @@ describe('AIPromptGenerator', () => {
 
         const result = await generator.generate(mockContext);
 
+        // User prompt contains only update type context
+        // Date, time, and personality are in the system prompt via template variables
         const formattedPrompt = result.metadata?.userPrompt || '';
         expect(formattedPrompt).toContain('CURRENT CONTEXT:');
-        expect(formattedPrompt).toContain('Date:');
-        expect(formattedPrompt).toContain('Time:');
         expect(formattedPrompt).toContain('Update Type: major');
-        expect(formattedPrompt).toContain('PERSONALITY FOR THIS RESPONSE:');
-        expect(formattedPrompt).toContain('Mood: cheerful');
-        expect(formattedPrompt).toContain('Energy: high');
-        expect(formattedPrompt).toContain('Humor Style: witty');
-        expect(formattedPrompt).toContain('Current Obsession: coffee');
+        expect(formattedPrompt).not.toContain('Date:');
+        expect(formattedPrompt).not.toContain('Time:');
+        expect(formattedPrompt).not.toContain('PERSONALITY FOR THIS RESPONSE:');
       });
 
       it('should include base prompt before context', async () => {
