@@ -25,7 +25,7 @@ const provider = createAIProvider();
 
 // Generate content
 const response = await provider.generate({
-  prompt: 'Write a motivational quote for a Vestaboard display',
+  prompt: 'Write a haiku for a Vestaboard display',
   maxTokens: 100,
 });
 

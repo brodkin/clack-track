@@ -17,7 +17,6 @@ import { ContentRegistry } from './content-registry.js';
  * Includes all required P2 generators and the required P3 fallback.
  *
  * @interface CoreGenerators
- * @property {ContentGenerator} motivational - Motivational quote generator (P2, LIGHT)
  * @property {ContentGenerator} globalNews - Global news generator (P2, MEDIUM)
  * @property {ContentGenerator} techNews - Tech news generator (P2, MEDIUM)
  * @property {ContentGenerator} localNews - Local news generator (P2, MEDIUM)
@@ -25,7 +24,6 @@ import { ContentRegistry } from './content-registry.js';
  * @property {ContentGenerator} staticFallback - Static fallback generator (P3, LIGHT)
  * @property {ContentGenerator} showerThought - Shower thought generator (P2, LIGHT)
  * @property {ContentGenerator} fortuneCookie - Fortune cookie generator (P2, LIGHT)
- * @property {ContentGenerator} countdown - Countdown generator (P2, LIGHT)
  * @property {ContentGenerator} dailyRoast - Daily roast generator (P2, MEDIUM)
  * @property {ContentGenerator} hotTake - Hot take generator (P2, LIGHT)
  * @property {ContentGenerator} compliment - Compliment generator (P2, LIGHT)
@@ -34,7 +32,6 @@ import { ContentRegistry } from './content-registry.js';
  * @example
  * ```typescript
  * const coreGenerators: CoreGenerators = {
- *   motivational: new MotivationalQuoteGenerator(),
  *   globalNews: new GlobalNewsGenerator(),
  *   techNews: new TechNewsGenerator(),
  *   localNews: new LocalNewsGenerator(),
@@ -44,7 +41,6 @@ import { ContentRegistry } from './content-registry.js';
  *   pattern: new PatternGenerator(),
  *   showerThought: new ShowerThoughtGenerator(),
  *   fortuneCookie: new FortuneCookieGenerator(),
- *   countdown: new CountdownGenerator(),
  *   dailyRoast: new DailyRoastGenerator(),
  *   hotTake: new HotTakeGenerator(),
  *   compliment: new ComplimentGenerator(),
@@ -54,8 +50,6 @@ import { ContentRegistry } from './content-registry.js';
  * ```
  */
 export interface CoreGenerators {
-  /** Motivational quote generator (P2, LIGHT, AI-powered) */
-  motivational: ContentGenerator;
   /** Global news generator (P2, MEDIUM, AI-powered) */
   globalNews: ContentGenerator;
   /** Tech news generator (P2, MEDIUM, AI-powered) */
@@ -74,8 +68,6 @@ export interface CoreGenerators {
   showerThought: ContentGenerator;
   /** Fortune cookie generator (P2, LIGHT, AI-powered) */
   fortuneCookie: ContentGenerator;
-  /** Countdown generator (P2, LIGHT, AI-powered) */
-  countdown: ContentGenerator;
   /** Daily roast generator (P2, MEDIUM, AI-powered) */
   dailyRoast: ContentGenerator;
   /** Story fragment generator (P2, MEDIUM, AI-powered) */
@@ -97,7 +89,6 @@ export interface CoreGenerators {
  *
  * Registers the following generators:
  * - **P2 Generators (NORMAL priority)**:
- *   - motivational-quote: Motivational quotes (LIGHT, AI)
  *   - global-news: Global news summaries (MEDIUM, AI)
  *   - tech-news: Tech news summaries (MEDIUM, AI)
  *   - local-news: Local news summaries (MEDIUM, AI)
@@ -107,7 +98,6 @@ export interface CoreGenerators {
  *   - pattern-art: Mathematical patterns (LIGHT, programmatic)
  *   - shower-thought: Philosophical musings (LIGHT, AI)
  *   - fortune-cookie: Twisted wisdom (LIGHT, AI)
- *   - countdown: Days until events (LIGHT, AI)
  *   - hot-take: Playful opinions (LIGHT, AI)
  *   - compliment: Uplifting affirmations (LIGHT, AI)
  *   - novel-insight: Fresh perspectives (MEDIUM, AI)
@@ -136,17 +126,6 @@ export interface CoreGenerators {
  */
 export function registerCoreContent(registry: ContentRegistry, generators: CoreGenerators): void {
   // Register P2 generators (NORMAL priority)
-  registry.register(
-    {
-      id: 'motivational-quote',
-      name: 'Motivational Quote Generator',
-      priority: ContentPriority.NORMAL,
-      modelTier: ModelTier.LIGHT,
-      applyFrame: true,
-    },
-    generators.motivational
-  );
-
   // Register three news generators (all at P2 for equal selection)
   registry.register(
     {
@@ -249,17 +228,6 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       },
     },
     generators.fortuneCookie
-  );
-
-  registry.register(
-    {
-      id: 'countdown',
-      name: 'Countdown Generator',
-      priority: ContentPriority.NORMAL,
-      modelTier: ModelTier.LIGHT,
-      applyFrame: true,
-    },
-    generators.countdown
   );
 
   registry.register(

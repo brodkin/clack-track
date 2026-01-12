@@ -137,7 +137,7 @@ src/web/frontend/
 ### Prompts System
 
 - `prompts/system/` - Role and constraint definitions (major/minor update base prompts)
-- `prompts/user/` - Content type specifications (motivational, news-summary, weather-focus)
+- `prompts/user/` - Content type specifications (haiku, news-summary, weather-focus)
 - Loaded by `PromptLoader`, combined into templates for AI providers
 
 ### AI Provider Abstraction
@@ -182,7 +182,7 @@ New generators must extend one of three abstract bases:
 
 1. **Self-Sufficient** - Each generator fetches only the data it needs. The base class does NOT inject data that may be unused.
 2. **Template Variables** - Data flows into prompts via `{{placeholder}}` syntax, resolved by `PromptLoader.loadPromptWithVariables()`.
-3. **No Wasteful Injection** - A motivational generator should NOT receive weather data. A weather generator fetches its own weather.
+3. **No Wasteful Injection** - A haiku generator should NOT receive weather data. A weather generator fetches its own weather.
 
 **Example - Weather Generator needs weather:**
 
@@ -190,10 +190,10 @@ New generators must extend one of three abstract bases:
 WeatherGenerator → fetches weather → passes to template vars → {{temperature}} in prompt
 ```
 
-**Example - Motivational Generator does NOT need weather:**
+**Example - Haiku Generator does NOT need weather:**
 
 ```
-MotivationalGenerator → no weather fetch → clean prompt with just universal context
+HaikuGenerator → no weather fetch → clean prompt with just universal context
 ```
 
 **Universal context** (date, time, personality) is already in the system prompt via template variables. Content-specific data (weather, news, etc.) must be fetched by generators that need it.

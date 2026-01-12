@@ -63,24 +63,6 @@
     }
   },
   "contentExamples": {
-    "motivational": {
-      "id": "msg_01QrS2tU3vW4xY5zA6bC7dE8f",
-      "type": "message",
-      "role": "assistant",
-      "content": [
-        {
-          "type": "text",
-          "text": "DREAM BIG\nWORK HARD\nSTAY FOCUSED"
-        }
-      ],
-      "model": "claude-sonnet-4-20250514",
-      "stop_reason": "end_turn",
-      "stop_sequence": null,
-      "usage": {
-        "input_tokens": 102,
-        "output_tokens": 14
-      }
-    },
     "weather": {
       "id": "msg_01GhI2jK3lM4nO5pQ6rS7tU8v",
       "type": "message",

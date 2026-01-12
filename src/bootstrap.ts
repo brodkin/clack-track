@@ -21,7 +21,6 @@ import { CronScheduler } from './scheduler/cron.js';
 import { HomeAssistantClient } from './api/data-sources/home-assistant.js';
 import { createVestaboardClient } from './api/vestaboard/index.js';
 import { StaticFallbackGenerator } from './content/generators/static-fallback-generator.js';
-import { MotivationalGenerator } from './content/generators/ai/motivational-generator.js';
 import { GlobalNewsGenerator } from './content/generators/ai/global-news-generator.js';
 import { TechNewsGenerator } from './content/generators/ai/tech-news-generator.js';
 import { LocalNewsGenerator } from './content/generators/ai/local-news-generator.js';
@@ -30,7 +29,6 @@ import { HaikuGenerator } from './content/generators/ai/haiku-generator.js';
 import { SeasonalGenerator } from './content/generators/ai/seasonal-generator.js';
 import { ShowerThoughtGenerator } from './content/generators/ai/shower-thought-generator.js';
 import { FortuneCookieGenerator } from './content/generators/ai/fortune-cookie-generator.js';
-import { CountdownGenerator } from './content/generators/ai/countdown-generator.js';
 import { DailyRoastGenerator } from './content/generators/ai/daily-roast-generator.js';
 import { HotTakeGenerator } from './content/generators/ai/hot-take-generator.js';
 import { ComplimentGenerator } from './content/generators/ai/compliment-generator.js';
@@ -171,7 +169,6 @@ function createCoreGenerators(
   const rssClient = new RSSClient();
 
   return {
-    motivational: new MotivationalGenerator(promptLoader, modelTierSelector, apiKeys),
     globalNews: new GlobalNewsGenerator(promptLoader, modelTierSelector, apiKeys, rssClient),
     techNews: new TechNewsGenerator(promptLoader, modelTierSelector, apiKeys, rssClient),
     localNews: new LocalNewsGenerator(promptLoader, modelTierSelector, apiKeys, rssClient),
@@ -181,7 +178,6 @@ function createCoreGenerators(
     pattern: new PatternGenerator(),
     showerThought: new ShowerThoughtGenerator(promptLoader, modelTierSelector, apiKeys),
     fortuneCookie: new FortuneCookieGenerator(promptLoader, modelTierSelector, apiKeys),
-    countdown: new CountdownGenerator(promptLoader, modelTierSelector, apiKeys),
     dailyRoast: new DailyRoastGenerator(promptLoader, modelTierSelector, apiKeys),
     storyFragment: new StoryFragmentGenerator(promptLoader, modelTierSelector, apiKeys),
     timePerspective: new TimePerspectiveGenerator(promptLoader, modelTierSelector, apiKeys),
