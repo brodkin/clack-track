@@ -92,3 +92,32 @@ export interface CircuitStateUpdate {
   /** Timestamp of state change */
   stateChangedAt?: string;
 }
+
+/**
+ * Provider circuit status with state machine metadata
+ *
+ * Extends basic CircuitBreakerState with computed fields for
+ * provider circuit state machine operations.
+ */
+export interface ProviderCircuitStatus {
+  /** Unique circuit identifier */
+  circuitId: string;
+  /** Current circuit state */
+  state: CircuitState;
+  /** Count of consecutive failures */
+  failureCount: number;
+  /** Count of consecutive successes (for half_open recovery) */
+  successCount: number;
+  /** Number of failures before circuit trips */
+  failureThreshold: number;
+  /** Timestamp of last recorded failure */
+  lastFailureAt: string | null;
+  /** Timestamp of last recorded success */
+  lastSuccessAt: string | null;
+  /** Timestamp of last state change */
+  stateChangedAt: string | null;
+  /** Whether attempts are currently allowed (computed from state) */
+  canAttempt: boolean;
+  /** Reset timeout in milliseconds for OPEN -> HALF_OPEN transition */
+  resetTimeoutMs: number;
+}
