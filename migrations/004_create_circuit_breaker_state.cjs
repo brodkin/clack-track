@@ -18,8 +18,9 @@ exports.up = async function up(knex) {
     table.increments('id').primary();
 
     // Circuit identification
-    table.text('circuit_id').unique().notNullable();
-    table.text('circuit_type').notNullable();
+    // Use string (VARCHAR) instead of text for columns with unique constraints (MySQL compatibility)
+    table.string('circuit_id', 50).unique().notNullable();
+    table.string('circuit_type', 20).notNullable();
 
     // State management
     table.text('state').notNullable();
