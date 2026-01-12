@@ -6,6 +6,11 @@ import {
   contentListCommand,
   contentTestCommand,
   dbResetCommand,
+  circuitStatusCommand,
+  circuitOnCommand,
+  circuitOffCommand,
+  circuitResetCommand,
+  circuitWatchCommand,
 } from './commands/index.js';
 import { frameCommand } from './commands/frame.js';
 
@@ -21,6 +26,7 @@ const BOOLEAN_FLAGS = new Set([
   'truncate',
   'seed',
   'force',
+  'json',
 ]);
 
 export async function runCLI(args: string[]): Promise<void> {
@@ -120,6 +126,47 @@ export async function runCLI(args: string[]): Promise<void> {
       });
       break;
     }
+    case 'circuit:status':
+      await circuitStatusCommand();
+      break;
+    case 'circuit:on': {
+      const circuitId = args[3] && !args[3].startsWith('--') ? args[3] : undefined;
+      if (!circuitId) {
+        console.error('Error: circuit:on requires a circuit_id argument');
+        console.error('Usage: npm run circuit:on -- <circuit_id>');
+        break;
+      }
+      await circuitOnCommand({ circuitId });
+      break;
+    }
+    case 'circuit:off': {
+      const circuitId = args[3] && !args[3].startsWith('--') ? args[3] : undefined;
+      if (!circuitId) {
+        console.error('Error: circuit:off requires a circuit_id argument');
+        console.error('Usage: npm run circuit:off -- <circuit_id>');
+        break;
+      }
+      await circuitOffCommand({ circuitId });
+      break;
+    }
+    case 'circuit:reset': {
+      const circuitId = args[3] && !args[3].startsWith('--') ? args[3] : undefined;
+      if (!circuitId) {
+        console.error('Error: circuit:reset requires a circuit_id argument');
+        console.error('Usage: npm run circuit:reset -- <circuit_id>');
+        break;
+      }
+      await circuitResetCommand({ circuitId });
+      break;
+    }
+    case 'circuit:watch': {
+      const options = parseOptions(args);
+      await circuitWatchCommand({
+        interval: typeof options.interval === 'string' ? parseInt(options.interval, 10) : undefined,
+        json: options.json === true,
+      });
+      break;
+    }
     default:
       console.log(`
 Clack Track CLI
@@ -133,6 +180,11 @@ Usage:
   npm run content:list                  List all registered content generators
   npm run content:test <id> [options]   Test a specific generator without sending
   npm run db:reset [options]            Reset database (development/test only)
+  npm run circuit:status                Show status of all circuit breakers
+  npm run circuit:on <id>               Turn a circuit ON (enable)
+  npm run circuit:off <id>              Turn a circuit OFF (disable)
+  npm run circuit:reset <id>            Reset a provider circuit (clears counters)
+  npm run circuit:watch [options]       Watch circuit status in real-time
 
 Available commands:
   generate        Generate new content and send to Vestaboard
@@ -143,6 +195,11 @@ Available commands:
   content:list    List all registered content generators
   content:test    Test a specific generator (dry run)
   db:reset        Reset database with safety guards (dev/test only)
+  circuit:status  Show status of all circuit breakers
+  circuit:on      Turn a circuit ON (enable traffic flow)
+  circuit:off     Turn a circuit OFF (block traffic)
+  circuit:reset   Reset a provider circuit to ON state
+  circuit:watch   Watch circuit status in real-time (Ctrl+C to exit)
 
 Generate Options:
   --generator <id>     Force specific generator (use content:list to see IDs)
@@ -169,6 +226,17 @@ DB Reset Options:
   --truncate           Truncate tables instead of dropping (keeps schema)
   --seed               Run seeds after reset
   --force              Skip confirmation prompts (for CI/CD)
+
+Circuit Commands:
+  circuit:status       Display all circuit breakers with current states
+  circuit:on <id>      Enable a circuit (allow traffic)
+  circuit:off <id>     Disable a circuit (block traffic)
+  circuit:reset <id>   Reset provider circuit (state=ON, counters=0)
+  circuit:watch        Real-time monitoring of circuit states
+
+Circuit Watch Options:
+  --interval <ms>      Refresh interval in milliseconds (default: 2000)
+  --json               Output in JSON format (newline-delimited)
       `);
   }
 }

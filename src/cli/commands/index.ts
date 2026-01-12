@@ -5,3 +5,11 @@ export { testHACommand } from './test-ha.js';
 export { contentListCommand } from './content-list.js';
 export { contentTestCommand } from './content-test.js';
 export { dbResetCommand } from './db-reset.js';
+export {
+  circuitStatusCommand,
+  circuitOnCommand,
+  circuitOffCommand,
+  circuitResetCommand,
+  circuitWatchCommand,
+} from './circuit.js';
+export type { CircuitWatchOptions } from './circuit.js';
