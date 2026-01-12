@@ -423,4 +423,478 @@ describe('EventHandler', () => {
       });
     });
   });
+
+  describe('Circuit Control Event Handling', () => {
+    let mockCircuitBreaker: jest.Mocked<{
+      setCircuitState: (circuitId: string, state: 'on' | 'off' | 'half_open') => Promise<void>;
+      resetProviderCircuit: (circuitId: string) => Promise<void>;
+    }>;
+
+    beforeEach(() => {
+      mockCircuitBreaker = {
+        setCircuitState: jest.fn().mockResolvedValue(undefined),
+        resetProviderCircuit: jest.fn().mockResolvedValue(undefined),
+      };
+    });
+
+    describe('subscription behavior', () => {
+      it('should subscribe to vestaboard_circuit_control when circuitBreaker is provided', async () => {
+        const handler = new EventHandler(
+          mockHomeAssistant,
+          mockOrchestrator,
+          undefined,
+          mockCircuitBreaker
+        );
+        await handler.initialize();
+
+        expect(mockHomeAssistant.subscribeToEvents).toHaveBeenCalledWith(
+          'vestaboard_circuit_control',
+          expect.any(Function)
+        );
+      });
+
+      it('should NOT subscribe to vestaboard_circuit_control when circuitBreaker is not provided', async () => {
+        const handler = new EventHandler(mockHomeAssistant, mockOrchestrator);
+        await handler.initialize();
+
+        const calls = (mockHomeAssistant.subscribeToEvents as jest.Mock).mock.calls;
+        const circuitControlCall = calls.find(call => call[0] === 'vestaboard_circuit_control');
+        expect(circuitControlCall).toBeUndefined();
+      });
+    });
+
+    describe('handleCircuitControlEvent', () => {
+      let circuitControlCallback: (event: HomeAssistantEvent) => void;
+
+      beforeEach(async () => {
+        const handler = new EventHandler(
+          mockHomeAssistant,
+          mockOrchestrator,
+          undefined,
+          mockCircuitBreaker
+        );
+        await handler.initialize();
+
+        // Extract the vestaboard_circuit_control callback
+        const circuitControlCall = (
+          mockHomeAssistant.subscribeToEvents as jest.Mock
+        ).mock.calls.find(call => call[0] === 'vestaboard_circuit_control');
+        circuitControlCallback = circuitControlCall[1];
+      });
+
+      it('should call setCircuitState with "on" for action "on"', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_circuit_control',
+          data: {
+            circuit_id: 'MASTER',
+            action: 'on',
+          },
+        };
+
+        await circuitControlCallback(event);
+
+        expect(mockCircuitBreaker.setCircuitState).toHaveBeenCalledWith('MASTER', 'on');
+      });
+
+      it('should call setCircuitState with "off" for action "off"', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_circuit_control',
+          data: {
+            circuit_id: 'SLEEP_MODE',
+            action: 'off',
+          },
+        };
+
+        await circuitControlCallback(event);
+
+        expect(mockCircuitBreaker.setCircuitState).toHaveBeenCalledWith('SLEEP_MODE', 'off');
+      });
+
+      it('should call resetProviderCircuit for action "reset"', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_circuit_control',
+          data: {
+            circuit_id: 'PROVIDER_OPENAI',
+            action: 'reset',
+          },
+        };
+
+        await circuitControlCallback(event);
+
+        expect(mockCircuitBreaker.resetProviderCircuit).toHaveBeenCalledWith('PROVIDER_OPENAI');
+      });
+
+      it('should handle provider circuit reset for PROVIDER_ANTHROPIC', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_circuit_control',
+          data: {
+            circuit_id: 'PROVIDER_ANTHROPIC',
+            action: 'reset',
+          },
+        };
+
+        await circuitControlCallback(event);
+
+        expect(mockCircuitBreaker.resetProviderCircuit).toHaveBeenCalledWith('PROVIDER_ANTHROPIC');
+      });
+
+      it('should handle missing circuit_id gracefully', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_circuit_control',
+          data: {
+            action: 'on',
+          },
+        };
+
+        // Should not throw
+        await circuitControlCallback(event);
+
+        expect(mockCircuitBreaker.setCircuitState).not.toHaveBeenCalled();
+        expect(mockCircuitBreaker.resetProviderCircuit).not.toHaveBeenCalled();
+      });
+
+      it('should handle missing action gracefully', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_circuit_control',
+          data: {
+            circuit_id: 'MASTER',
+          },
+        };
+
+        // Should not throw
+        await circuitControlCallback(event);
+
+        expect(mockCircuitBreaker.setCircuitState).not.toHaveBeenCalled();
+        expect(mockCircuitBreaker.resetProviderCircuit).not.toHaveBeenCalled();
+      });
+
+      it('should handle invalid action gracefully', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_circuit_control',
+          data: {
+            circuit_id: 'MASTER',
+            action: 'invalid_action',
+          },
+        };
+
+        // Should not throw
+        await circuitControlCallback(event);
+
+        expect(mockCircuitBreaker.setCircuitState).not.toHaveBeenCalled();
+        expect(mockCircuitBreaker.resetProviderCircuit).not.toHaveBeenCalled();
+      });
+
+      it('should handle empty event data gracefully', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_circuit_control',
+          data: {},
+        };
+
+        // Should not throw
+        await circuitControlCallback(event);
+
+        expect(mockCircuitBreaker.setCircuitState).not.toHaveBeenCalled();
+        expect(mockCircuitBreaker.resetProviderCircuit).not.toHaveBeenCalled();
+      });
+
+      it('should handle circuitBreaker errors gracefully', async () => {
+        mockCircuitBreaker.setCircuitState.mockRejectedValueOnce(new Error('Database error'));
+
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_circuit_control',
+          data: {
+            circuit_id: 'MASTER',
+            action: 'on',
+          },
+        };
+
+        // Should not throw
+        await circuitControlCallback(event);
+
+        expect(mockCircuitBreaker.setCircuitState).toHaveBeenCalled();
+      });
+
+      it('should log warning for invalid action', async () => {
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_circuit_control',
+          data: {
+            circuit_id: 'MASTER',
+            action: 'invalid',
+          },
+        };
+
+        await circuitControlCallback(event);
+
+        // Verify warning was logged for invalid action
+        expect(warnSpy).toHaveBeenCalled();
+        warnSpy.mockRestore();
+      });
+    });
+
+    describe('combined with triggerMatcher', () => {
+      it('should subscribe to all three event types when both triggerMatcher and circuitBreaker are provided', async () => {
+        const triggerMatcher = new TriggerMatcher([
+          { name: 'Test', entity_pattern: 'test.*', state_filter: 'on' },
+        ]);
+
+        const handler = new EventHandler(
+          mockHomeAssistant,
+          mockOrchestrator,
+          triggerMatcher,
+          mockCircuitBreaker
+        );
+        await handler.initialize();
+
+        // Should have 3 subscriptions: vestaboard_refresh, state_changed, vestaboard_circuit_control
+        expect(mockHomeAssistant.subscribeToEvents).toHaveBeenCalledTimes(3);
+        expect(mockHomeAssistant.subscribeToEvents).toHaveBeenCalledWith(
+          'vestaboard_refresh',
+          expect.any(Function)
+        );
+        expect(mockHomeAssistant.subscribeToEvents).toHaveBeenCalledWith(
+          'state_changed',
+          expect.any(Function)
+        );
+        expect(mockHomeAssistant.subscribeToEvents).toHaveBeenCalledWith(
+          'vestaboard_circuit_control',
+          expect.any(Function)
+        );
+      });
+    });
+  });
+
+  describe('MASTER Circuit Checks', () => {
+    let mockCircuitBreaker: jest.Mocked<{
+      setCircuitState: (circuitId: string, state: 'on' | 'off' | 'half_open') => Promise<void>;
+      resetProviderCircuit: (circuitId: string) => Promise<void>;
+      isCircuitOpen: (circuitId: string) => Promise<boolean>;
+    }>;
+
+    beforeEach(() => {
+      mockCircuitBreaker = {
+        setCircuitState: jest.fn().mockResolvedValue(undefined),
+        resetProviderCircuit: jest.fn().mockResolvedValue(undefined),
+        isCircuitOpen: jest.fn().mockResolvedValue(false),
+      };
+    });
+
+    describe('handleRefreshTrigger MASTER circuit blocking', () => {
+      let refreshCallback: (event: HomeAssistantEvent) => void;
+
+      beforeEach(async () => {
+        const handler = new EventHandler(
+          mockHomeAssistant,
+          mockOrchestrator,
+          undefined,
+          mockCircuitBreaker
+        );
+        await handler.initialize();
+
+        // Extract the vestaboard_refresh callback
+        const refreshCall = (mockHomeAssistant.subscribeToEvents as jest.Mock).mock.calls.find(
+          call => call[0] === 'vestaboard_refresh'
+        );
+        refreshCallback = refreshCall[1];
+      });
+
+      it('should block generation when MASTER circuit is OFF', async () => {
+        mockCircuitBreaker.isCircuitOpen.mockResolvedValue(true);
+
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_refresh',
+          data: { trigger: 'manual' },
+        };
+
+        await refreshCallback(event);
+
+        expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
+        expect(mockOrchestrator.generateAndSend).not.toHaveBeenCalled();
+      });
+
+      it('should proceed with generation when MASTER circuit is ON', async () => {
+        mockCircuitBreaker.isCircuitOpen.mockResolvedValue(false);
+
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_refresh',
+          data: { trigger: 'manual' },
+        };
+
+        await refreshCallback(event);
+
+        expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
+        expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
+      });
+
+      it('should proceed with generation when circuitBreaker is not provided', async () => {
+        // Create handler without circuitBreaker
+        const handler = new EventHandler(mockHomeAssistant, mockOrchestrator);
+        await handler.initialize();
+
+        // Get fresh callback from the new handler
+        const refreshCall = (mockHomeAssistant.subscribeToEvents as jest.Mock).mock.calls.find(
+          call => call[0] === 'vestaboard_refresh'
+        );
+        const callback = refreshCall[1];
+
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_refresh',
+          data: { trigger: 'manual' },
+        };
+
+        await callback(event);
+
+        expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
+      });
+
+      it('should proceed with generation (fail-open) when circuit check throws', async () => {
+        mockCircuitBreaker.isCircuitOpen.mockRejectedValue(new Error('Database error'));
+
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_refresh',
+          data: { trigger: 'manual' },
+        };
+
+        await refreshCallback(event);
+
+        expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
+        expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalled();
+
+        warnSpy.mockRestore();
+      });
+    });
+
+    describe('handleStateChange MASTER circuit blocking', () => {
+      let stateChangedCallback: (event: HomeAssistantEvent) => void;
+      let triggerMatcher: TriggerMatcher;
+
+      beforeEach(async () => {
+        triggerMatcher = new TriggerMatcher([
+          { name: 'Person Arrival', entity_pattern: 'person.*', state_filter: 'home' },
+        ]);
+
+        const handler = new EventHandler(
+          mockHomeAssistant,
+          mockOrchestrator,
+          triggerMatcher,
+          mockCircuitBreaker
+        );
+        await handler.initialize();
+
+        // Extract the state_changed callback
+        const stateChangedCall = (mockHomeAssistant.subscribeToEvents as jest.Mock).mock.calls.find(
+          call => call[0] === 'state_changed'
+        );
+        stateChangedCallback = stateChangedCall[1];
+      });
+
+      it('should block generation when MASTER circuit is OFF', async () => {
+        mockCircuitBreaker.isCircuitOpen.mockResolvedValue(true);
+
+        const event: HomeAssistantEvent = {
+          event_type: 'state_changed',
+          data: {
+            entity_id: 'person.john',
+            new_state: { state: 'home' },
+            old_state: { state: 'away' },
+          },
+        };
+
+        await stateChangedCallback(event);
+
+        expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
+        expect(mockOrchestrator.generateAndSend).not.toHaveBeenCalled();
+      });
+
+      it('should proceed with generation when MASTER circuit is ON', async () => {
+        mockCircuitBreaker.isCircuitOpen.mockResolvedValue(false);
+
+        const event: HomeAssistantEvent = {
+          event_type: 'state_changed',
+          data: {
+            entity_id: 'person.john',
+            new_state: { state: 'home' },
+            old_state: { state: 'away' },
+          },
+        };
+
+        await stateChangedCallback(event);
+
+        expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
+        expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
+      });
+
+      it('should proceed with generation when circuitBreaker is not provided', async () => {
+        // Create handler with triggerMatcher but without circuitBreaker
+        const newMatcher = new TriggerMatcher([
+          { name: 'Person Arrival', entity_pattern: 'person.*', state_filter: 'home' },
+        ]);
+        const handler = new EventHandler(mockHomeAssistant, mockOrchestrator, newMatcher);
+        await handler.initialize();
+
+        // Get fresh callback from the new handler
+        const stateChangedCall = (mockHomeAssistant.subscribeToEvents as jest.Mock).mock.calls.find(
+          call => call[0] === 'state_changed'
+        );
+        const callback = stateChangedCall[1];
+
+        const event: HomeAssistantEvent = {
+          event_type: 'state_changed',
+          data: {
+            entity_id: 'person.john',
+            new_state: { state: 'home' },
+            old_state: { state: 'away' },
+          },
+        };
+
+        await callback(event);
+
+        expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
+      });
+
+      it('should proceed with generation (fail-open) when circuit check throws', async () => {
+        mockCircuitBreaker.isCircuitOpen.mockRejectedValue(new Error('Database error'));
+
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+        const event: HomeAssistantEvent = {
+          event_type: 'state_changed',
+          data: {
+            entity_id: 'person.john',
+            new_state: { state: 'home' },
+            old_state: { state: 'away' },
+          },
+        };
+
+        await stateChangedCallback(event);
+
+        expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
+        expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalled();
+
+        warnSpy.mockRestore();
+      });
+
+      it('should NOT check circuit for non-matching events', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'state_changed',
+          data: {
+            entity_id: 'sensor.temperature',
+            new_state: { state: '72' },
+            old_state: { state: '71' },
+          },
+        };
+
+        await stateChangedCallback(event);
+
+        // Circuit should not be checked for non-matching entities
+        // (since the event doesn't match triggers)
+        expect(mockOrchestrator.generateAndSend).not.toHaveBeenCalled();
+      });
+    });
+  });
 });
