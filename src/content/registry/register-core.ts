@@ -30,8 +30,6 @@ import { ContentRegistry } from './content-registry.js';
  * @property {ContentGenerator} hotTake - Hot take generator (P2, LIGHT)
  * @property {ContentGenerator} compliment - Compliment generator (P2, LIGHT)
  * @property {ContentGenerator} novelInsight - Novel insight generator (P2, MEDIUM)
- * @property {ContentGenerator} wordOfTheDay - Word of the day generator (P2, LIGHT)
- * @property {ContentGenerator} formattingDemo - Formatting demo generator (P2, LIGHT, with formatOptions)
  *
  * @example
  * ```typescript
@@ -51,8 +49,6 @@ import { ContentRegistry } from './content-registry.js';
  *   hotTake: new HotTakeGenerator(),
  *   compliment: new ComplimentGenerator(),
  *   novelInsight: new NovelInsightGenerator(),
- *   wordOfTheDay: new WordOfTheDayGenerator(),
- *   formattingDemo: new FormattingDemoGenerator(),
  *   staticFallback: new StaticFallbackGenerator()
  * };
  * ```
@@ -92,14 +88,6 @@ export interface CoreGenerators {
   compliment: ContentGenerator;
   /** Novel insight generator (P2, MEDIUM, AI-powered) */
   novelInsight: ContentGenerator;
-  /** Word of the day generator (P2, LIGHT, AI-powered) */
-  wordOfTheDay: ContentGenerator;
-  /** Language lesson generator (P2, LIGHT, AI-powered) */
-  languageLesson: ContentGenerator;
-  /** Paradox engine generator (P2, LIGHT, AI-powered) */
-  paradoxEngine: ContentGenerator;
-  /** Formatting demo generator (P2, LIGHT, AI-powered, with formatOptions) */
-  formattingDemo: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -123,8 +111,6 @@ export interface CoreGenerators {
  *   - hot-take: Playful opinions (LIGHT, AI)
  *   - compliment: Uplifting affirmations (LIGHT, AI)
  *   - novel-insight: Fresh perspectives (MEDIUM, AI)
- *   - word-of-the-day: Vocabulary builder (LIGHT, AI)
- *   - formatting-demo: Formatting options demo (LIGHT, AI, with formatOptions)
  * - **P3 Generator (FALLBACK priority)**:
  *   - static-fallback: Static message when AI fails (LIGHT)
  *
@@ -257,6 +243,10 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       priority: ContentPriority.NORMAL,
       modelTier: ModelTier.LIGHT,
       applyFrame: true,
+      formatOptions: {
+        textAlign: 'center',
+        maxLines: 4,
+      },
     },
     generators.fortuneCookie
   );
@@ -336,58 +326,6 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.novelInsight
-  );
-
-  registry.register(
-    {
-      id: 'word-of-the-day',
-      name: 'Word of the Day Generator',
-      priority: ContentPriority.NORMAL,
-      modelTier: ModelTier.LIGHT,
-      applyFrame: true,
-    },
-    generators.wordOfTheDay
-  );
-
-  registry.register(
-    {
-      id: 'language-lesson',
-      name: 'Language Lesson Generator',
-      priority: ContentPriority.NORMAL,
-      modelTier: ModelTier.LIGHT,
-      applyFrame: true,
-    },
-    generators.languageLesson
-  );
-
-  registry.register(
-    {
-      id: 'logical-paradox',
-      name: 'Paradox Engine Generator',
-      priority: ContentPriority.NORMAL,
-      modelTier: ModelTier.LIGHT,
-      applyFrame: true,
-    },
-    generators.paradoxEngine
-  );
-
-  // Register formatting demo generator with custom formatOptions
-  // This demonstrates reduced dimensions (3 lines x 18 chars) with left alignment
-  registry.register(
-    {
-      id: 'formatting-demo',
-      name: 'Formatting Demo Generator',
-      priority: ContentPriority.NORMAL,
-      modelTier: ModelTier.LIGHT,
-      applyFrame: true,
-      formatOptions: {
-        maxLines: 3,
-        maxCharsPerLine: 18,
-        textAlign: 'left',
-        wordWrap: false,
-      },
-    },
-    generators.formattingDemo
   );
 
   // Register P3 fallback generator (FALLBACK priority)

@@ -37,10 +37,6 @@ import { ComplimentGenerator } from './content/generators/ai/compliment-generato
 import { NovelInsightGenerator } from './content/generators/ai/novel-insight-generator.js';
 import { StoryFragmentGenerator } from './content/generators/ai/story-fragment-generator.js';
 import { TimePerspectiveGenerator } from './content/generators/ai/time-perspective-generator.js';
-import { FormattingDemoGenerator } from './content/generators/ai/formatting-demo-generator.js';
-import { WordOfTheDayGenerator } from './content/generators/ai/word-of-the-day-generator.js';
-import { LanguageLessonGenerator } from './content/generators/ai/language-lesson-generator.js';
-import { ParadoxEngineGenerator } from './content/generators/ai/paradox-engine-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
 import { RSSClient } from './api/data-sources/rss-client.js';
@@ -192,10 +188,6 @@ function createCoreGenerators(
     hotTake: new HotTakeGenerator(promptLoader, modelTierSelector, apiKeys),
     compliment: new ComplimentGenerator(promptLoader, modelTierSelector, apiKeys),
     novelInsight: new NovelInsightGenerator(promptLoader, modelTierSelector, apiKeys),
-    wordOfTheDay: new WordOfTheDayGenerator(promptLoader, modelTierSelector, apiKeys),
-    languageLesson: new LanguageLessonGenerator(promptLoader, modelTierSelector, apiKeys),
-    paradoxEngine: new ParadoxEngineGenerator(promptLoader, modelTierSelector, apiKeys),
-    formattingDemo: new FormattingDemoGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }
