@@ -39,10 +39,15 @@ function loadKnexConfig(environment: string): Knex.Config {
     };
   }
 
-  if (environment === 'production' && process.env.DATABASE_TYPE === 'mysql') {
+  // Use MySQL if DATABASE_TYPE=mysql OR if DATABASE_URL starts with mysql://
+  // This allows MySQL in both development and production environments
+  const databaseUrl = process.env.DATABASE_URL || '';
+  const useMySQL = process.env.DATABASE_TYPE === 'mysql' || databaseUrl.startsWith('mysql://');
+
+  if (useMySQL && environment !== 'test') {
     return {
       client: 'mysql2',
-      connection: {
+      connection: databaseUrl || {
         host: process.env.DATABASE_HOST || 'localhost',
         port: parseInt(process.env.DATABASE_PORT || '3306', 10),
         user: process.env.DATABASE_USER || 'root',
