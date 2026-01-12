@@ -176,9 +176,9 @@ describe('WordOfTheDayGenerator', () => {
       const variables = userPromptCall![2];
 
       // Verify the variables exist (values will be random)
+      // Note: style variable was removed - only wordDomain and wordVibe are used
       expect(variables).toHaveProperty('wordDomain');
       expect(variables).toHaveProperty('wordVibe');
-      expect(variables).toHaveProperty('style');
 
       // Verify wordDomain is from the expected set
       const validDomains = [
@@ -199,16 +199,6 @@ describe('WordOfTheDayGenerator', () => {
         'COMEBACK_WORTHY',
       ];
       expect(validVibes).toContain(variables.wordVibe);
-
-      // Verify style is from the expected set
-      const validStyles = [
-        'DEADPAN_DEFINITION',
-        'BACKHANDED_COMPLIMENT',
-        'WORKPLACE_APPLICATION',
-        'RELATIONSHIP_CONTEXT',
-        'EXISTENTIAL_SPIN',
-      ];
-      expect(validStyles).toContain(variables.style);
     });
 
     it('should include dictionary selections in metadata', async () => {

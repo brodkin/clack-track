@@ -167,12 +167,12 @@ describe('LanguageLessonGenerator', () => {
 
     describe('FORMATS', () => {
       it('should contain all expected formats', () => {
+        // FILL_THE_BLANK was removed due to Vestaboard character constraints
         expect(LanguageLessonGenerator.FORMATS).toContain('PHRASE_TRANSLATION');
-        expect(LanguageLessonGenerator.FORMATS).toContain('FILL_THE_BLANK');
       });
 
-      it('should have exactly 2 formats', () => {
-        expect(LanguageLessonGenerator.FORMATS).toHaveLength(2);
+      it('should have exactly 1 format', () => {
+        expect(LanguageLessonGenerator.FORMATS).toHaveLength(1);
       });
     });
   });
@@ -230,13 +230,14 @@ describe('LanguageLessonGenerator', () => {
         expect(LanguageLessonGenerator.FORMATS).toContain(format);
       });
 
-      it('should return different formats over multiple calls (statistical)', () => {
+      it('should always return PHRASE_TRANSLATION since only one format exists', () => {
         const formats = new Set<string>();
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < 10; i++) {
           formats.add(LanguageLessonGenerator.selectFormat());
         }
-        // With only 2 options, we should see both
-        expect(formats.size).toBe(2);
+        // With only 1 option, we should always see the same value
+        expect(formats.size).toBe(1);
+        expect(formats.has('PHRASE_TRANSLATION')).toBe(true);
       });
     });
   });
