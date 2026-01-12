@@ -124,6 +124,7 @@ CONTENT RULES:
 5. Content must stand completely alone - viewers see ONLY your output
 6. NEVER acknowledge the prompt ("HERE'S YOUR...", "AS REQUESTED...")
 7. Cursing allowed when it fits the tone
+8. NO BLANK LINES - every line must contain content (blank lines waste display space)
 
 ---
 
