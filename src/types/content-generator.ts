@@ -10,6 +10,7 @@
 import type { VestaboardLayout } from './content.js';
 import type { PersonalityDimensions } from '../content/personality/dimensions.js';
 import type { ContentData } from './content-data.js';
+import type { CircuitState } from './circuit-breaker.js';
 
 /**
  * Text formatting options for content generators.
@@ -229,6 +230,17 @@ export interface FailoverMetadata {
   errors: Array<{ provider: string; attempt: number; error: string }>;
   /** Total time spent on all retry attempts in milliseconds */
   totalDurationMs: number;
+  /**
+   * Whether a circuit breaker was tripped (provider skipped due to OPEN circuit).
+   * Only present when circuit breaker is provided.
+   */
+  circuitTripped?: boolean;
+  /**
+   * State of provider circuits at the end of retry attempts.
+   * Maps circuit ID (e.g., 'PROVIDER_OPENAI') to state ('on', 'off', 'half_open').
+   * Only present when circuit breaker is provided.
+   */
+  circuitStates?: { [circuitId: string]: CircuitState };
 }
 
 /**
