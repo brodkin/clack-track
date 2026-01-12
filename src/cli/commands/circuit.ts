@@ -4,11 +4,13 @@
  * Commands for querying and controlling circuit breaker states.
  * Provides status display, on/off toggling, and reset functionality.
  *
+ * These commands use lightweight initialization (database only) instead of
+ * full bootstrap to avoid starting the web server, scheduler, and HA client.
+ *
  * @module cli/commands/circuit
  */
 
-import { bootstrap, type BootstrapResult } from '../../bootstrap.js';
-import { closeKnexInstance } from '../../storage/knex.js';
+import { getKnexInstance, closeKnexInstance } from '../../storage/knex.js';
 import { CircuitBreakerService } from '../../services/circuit-breaker-service.js';
 import { CircuitBreakerRepository } from '../../storage/repositories/circuit-breaker-repo.js';
 import type { CircuitBreakerState } from '../../types/circuit-breaker.js';
@@ -86,40 +88,13 @@ function displayCircuitRow(circuit: CircuitBreakerState): void {
 }
 
 /**
- * Helper to clean up resources after command execution
- */
-async function cleanupResources(
-  scheduler: BootstrapResult['scheduler'] | null,
-  haClient: BootstrapResult['haClient']
-): Promise<void> {
-  if (scheduler) {
-    try {
-      scheduler.stop();
-    } catch {
-      // Ignore scheduler stop errors
-    }
-  }
-
-  if (haClient) {
-    try {
-      await haClient.disconnect();
-    } catch {
-      // Ignore disconnect errors
-    }
-  }
-
-  try {
-    await closeKnexInstance();
-  } catch {
-    // Ignore database close errors
-  }
-}
-
-/**
  * Circuit status command - displays all circuit breaker states
  *
  * Lists all circuits with their current state, type, default state,
  * and for provider circuits, additional failure/success information.
+ *
+ * Uses lightweight initialization (database only) - does not start
+ * web server, scheduler, or Home Assistant client.
  *
  * @example
  * ```bash
@@ -127,23 +102,11 @@ async function cleanupResources(
  * ```
  */
 export async function circuitStatusCommand(): Promise<void> {
-  let scheduler: BootstrapResult['scheduler'] | null = null;
-  let haClient: BootstrapResult['haClient'] = null;
-  let circuitBreaker: CircuitBreakerService | null = null;
+  const knex = getKnexInstance();
 
   try {
-    const bootstrapResult = await bootstrap();
-    scheduler = bootstrapResult.scheduler;
-    haClient = bootstrapResult.haClient;
-
-    // Create circuit breaker service if knex is available
-    if (!bootstrapResult.knex) {
-      console.error('Error: Database connection required for circuit breaker commands');
-      return;
-    }
-
-    const repository = new CircuitBreakerRepository(bootstrapResult.knex);
-    circuitBreaker = new CircuitBreakerService(repository);
+    const repository = new CircuitBreakerRepository(knex);
+    const circuitBreaker = new CircuitBreakerService(repository);
     await circuitBreaker.initialize();
 
     const circuits = await circuitBreaker.getAllCircuits();
@@ -186,7 +149,7 @@ export async function circuitStatusCommand(): Promise<void> {
     console.log('='.repeat(70));
     console.log('');
   } finally {
-    await cleanupResources(scheduler, haClient);
+    await closeKnexInstance();
   }
 }
 
@@ -194,6 +157,9 @@ export async function circuitStatusCommand(): Promise<void> {
  * Circuit on command - enables a circuit (turns it ON)
  *
  * Sets the specified circuit state to 'on', allowing traffic to flow.
+ *
+ * Uses lightweight initialization (database only) - does not start
+ * web server, scheduler, or Home Assistant client.
  *
  * @param options - Command options containing circuitId
  *
@@ -203,20 +169,10 @@ export async function circuitStatusCommand(): Promise<void> {
  * ```
  */
 export async function circuitOnCommand(options: CircuitToggleOptions): Promise<void> {
-  let scheduler: BootstrapResult['scheduler'] | null = null;
-  let haClient: BootstrapResult['haClient'] = null;
+  const knex = getKnexInstance();
 
   try {
-    const bootstrapResult = await bootstrap();
-    scheduler = bootstrapResult.scheduler;
-    haClient = bootstrapResult.haClient;
-
-    if (!bootstrapResult.knex) {
-      console.error('Error: Database connection required for circuit breaker commands');
-      return;
-    }
-
-    const repository = new CircuitBreakerRepository(bootstrapResult.knex);
+    const repository = new CircuitBreakerRepository(knex);
     const circuitBreaker = new CircuitBreakerService(repository);
     await circuitBreaker.initialize();
 
@@ -230,7 +186,7 @@ export async function circuitOnCommand(options: CircuitToggleOptions): Promise<v
     await circuitBreaker.setCircuitState(options.circuitId, 'on');
     console.log(`Circuit '${options.circuitId}' has been turned ON (enabled)`);
   } finally {
-    await cleanupResources(scheduler, haClient);
+    await closeKnexInstance();
   }
 }
 
@@ -238,6 +194,9 @@ export async function circuitOnCommand(options: CircuitToggleOptions): Promise<v
  * Circuit off command - disables a circuit (turns it OFF)
  *
  * Sets the specified circuit state to 'off', blocking traffic.
+ *
+ * Uses lightweight initialization (database only) - does not start
+ * web server, scheduler, or Home Assistant client.
  *
  * @param options - Command options containing circuitId
  *
@@ -247,20 +206,10 @@ export async function circuitOnCommand(options: CircuitToggleOptions): Promise<v
  * ```
  */
 export async function circuitOffCommand(options: CircuitToggleOptions): Promise<void> {
-  let scheduler: BootstrapResult['scheduler'] | null = null;
-  let haClient: BootstrapResult['haClient'] = null;
+  const knex = getKnexInstance();
 
   try {
-    const bootstrapResult = await bootstrap();
-    scheduler = bootstrapResult.scheduler;
-    haClient = bootstrapResult.haClient;
-
-    if (!bootstrapResult.knex) {
-      console.error('Error: Database connection required for circuit breaker commands');
-      return;
-    }
-
-    const repository = new CircuitBreakerRepository(bootstrapResult.knex);
+    const repository = new CircuitBreakerRepository(knex);
     const circuitBreaker = new CircuitBreakerService(repository);
     await circuitBreaker.initialize();
 
@@ -274,7 +223,7 @@ export async function circuitOffCommand(options: CircuitToggleOptions): Promise<
     await circuitBreaker.setCircuitState(options.circuitId, 'off');
     console.log(`Circuit '${options.circuitId}' has been turned OFF (disabled)`);
   } finally {
-    await cleanupResources(scheduler, haClient);
+    await closeKnexInstance();
   }
 }
 
@@ -284,6 +233,9 @@ export async function circuitOffCommand(options: CircuitToggleOptions): Promise<
  * Resets the specified provider circuit to ON state and clears all counters.
  * Only works on provider circuits (not manual circuits).
  *
+ * Uses lightweight initialization (database only) - does not start
+ * web server, scheduler, or Home Assistant client.
+ *
  * @param options - Command options containing circuitId
  *
  * @example
@@ -292,20 +244,10 @@ export async function circuitOffCommand(options: CircuitToggleOptions): Promise<
  * ```
  */
 export async function circuitResetCommand(options: CircuitResetOptions): Promise<void> {
-  let scheduler: BootstrapResult['scheduler'] | null = null;
-  let haClient: BootstrapResult['haClient'] = null;
+  const knex = getKnexInstance();
 
   try {
-    const bootstrapResult = await bootstrap();
-    scheduler = bootstrapResult.scheduler;
-    haClient = bootstrapResult.haClient;
-
-    if (!bootstrapResult.knex) {
-      console.error('Error: Database connection required for circuit breaker commands');
-      return;
-    }
-
-    const repository = new CircuitBreakerRepository(bootstrapResult.knex);
+    const repository = new CircuitBreakerRepository(knex);
     const circuitBreaker = new CircuitBreakerService(repository);
     await circuitBreaker.initialize();
 
@@ -327,7 +269,7 @@ export async function circuitResetCommand(options: CircuitResetOptions): Promise
     await circuitBreaker.resetProviderCircuit(options.circuitId);
     console.log(`Circuit '${options.circuitId}' has been reset (state: ON, counters cleared)`);
   } finally {
-    await cleanupResources(scheduler, haClient);
+    await closeKnexInstance();
   }
 }
 
@@ -421,6 +363,9 @@ function displayHumanOutput(
  * Provides continuous monitoring of circuit breaker states with
  * configurable refresh interval and change detection.
  *
+ * Uses lightweight initialization (database only) - does not start
+ * web server, scheduler, or Home Assistant client.
+ *
  * @param options - Command options
  *
  * @example
@@ -435,15 +380,13 @@ export async function circuitWatchCommand(options: CircuitWatchOptions = {}): Pr
   const isJson = options.json ?? false;
   const maxIterations = options.maxIterations;
 
-  let scheduler: BootstrapResult['scheduler'] | null = null;
-  let haClient: BootstrapResult['haClient'] = null;
   let running = true;
   let iteration = 0;
   const previousStates: Map<string, string> = new Map();
 
   const cleanup = async (): Promise<void> => {
     running = false;
-    await cleanupResources(scheduler, haClient);
+    await closeKnexInstance();
   };
 
   // Register SIGINT handler for graceful shutdown
@@ -452,17 +395,10 @@ export async function circuitWatchCommand(options: CircuitWatchOptions = {}): Pr
     process.exit(0);
   });
 
+  const knex = getKnexInstance();
+
   try {
-    const bootstrapResult = await bootstrap();
-    scheduler = bootstrapResult.scheduler;
-    haClient = bootstrapResult.haClient;
-
-    if (!bootstrapResult.knex) {
-      console.error('Error: Database connection required for circuit breaker commands');
-      return;
-    }
-
-    const repository = new CircuitBreakerRepository(bootstrapResult.knex);
+    const repository = new CircuitBreakerRepository(knex);
     const circuitBreaker = new CircuitBreakerService(repository);
     await circuitBreaker.initialize();
 

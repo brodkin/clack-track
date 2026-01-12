@@ -4,6 +4,9 @@
  * Tests the CLI commands for querying and controlling circuit breaker states.
  * All dependencies are mocked to isolate command logic.
  *
+ * These tests verify the lightweight initialization pattern (database only)
+ * used by circuit commands - no bootstrap, scheduler, or HA client.
+ *
  * @module tests/unit/cli/commands/circuit
  */
 
@@ -15,9 +18,10 @@ let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
 let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
 let consoleWarnSpy: jest.SpiedFunction<typeof console.warn>;
 
-// Mock scheduler and cleanup
-const mockSchedulerStop = jest.fn();
-const mockHaClientDisconnect = jest.fn().mockResolvedValue(undefined);
+// Mock Knex instance
+const mockKnex = {};
+
+// Note: closeKnexInstance mock is defined inline in jest.mock below
 
 // Mock CircuitBreakerService
 const mockCircuitBreakerService = {
@@ -33,22 +37,9 @@ const mockCircuitBreakerService = {
 // Mock CircuitBreakerRepository
 const mockCircuitBreakerRepository = {};
 
-// Mock bootstrap result
-const mockBootstrapResult = {
-  orchestrator: {},
-  scheduler: { stop: mockSchedulerStop },
-  registry: {},
-  eventHandler: null,
-  haClient: { disconnect: mockHaClientDisconnect },
-  knex: {}, // Mock knex object to satisfy null check
-};
-
 // Set up module mocks BEFORE imports
-jest.mock('@/bootstrap', () => ({
-  bootstrap: jest.fn().mockImplementation(() => Promise.resolve(mockBootstrapResult)),
-}));
-
 jest.mock('@/storage/knex', () => ({
+  getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
   closeKnexInstance: jest.fn().mockImplementation(() => Promise.resolve()),
 }));
 
@@ -89,9 +80,6 @@ describe('Circuit CLI Commands', () => {
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-    // Reset mock bootstrap to include haClient
-    mockBootstrapResult.haClient = { disconnect: mockHaClientDisconnect };
   });
 
   afterEach(() => {
@@ -138,8 +126,9 @@ describe('Circuit CLI Commands', () => {
       expect(output).toContain('SLEEP_MODE');
       expect(output).toContain('PROVIDER_OPENAI');
 
-      // Should call cleanup
-      expect(mockSchedulerStop).toHaveBeenCalled();
+      // Should call closeKnexInstance for cleanup
+      const { closeKnexInstance } = await import('@/storage/knex');
+      expect(closeKnexInstance).toHaveBeenCalled();
     });
 
     test('displays empty message when no circuits exist', async () => {
@@ -185,8 +174,8 @@ describe('Circuit CLI Commands', () => {
       const { circuitStatusCommand } = await import('@/cli/commands/circuit');
       await circuitStatusCommand();
 
-      expect(mockSchedulerStop).toHaveBeenCalled();
-      expect(mockHaClientDisconnect).toHaveBeenCalled();
+      const { closeKnexInstance } = await import('@/storage/knex');
+      expect(closeKnexInstance).toHaveBeenCalled();
     });
 
     test('cleans up resources even when service returns empty (graceful degradation)', async () => {
@@ -196,7 +185,8 @@ describe('Circuit CLI Commands', () => {
       const { circuitStatusCommand } = await import('@/cli/commands/circuit');
       await circuitStatusCommand();
 
-      expect(mockSchedulerStop).toHaveBeenCalled();
+      const { closeKnexInstance } = await import('@/storage/knex');
+      expect(closeKnexInstance).toHaveBeenCalled();
     });
   });
 
@@ -215,7 +205,8 @@ describe('Circuit CLI Commands', () => {
       const output = allCalls.join('\n');
       expect(output).toMatch(/MASTER.*ON|turned on|enabled/i);
 
-      expect(mockSchedulerStop).toHaveBeenCalled();
+      const { closeKnexInstance } = await import('@/storage/knex');
+      expect(closeKnexInstance).toHaveBeenCalled();
     });
 
     test('validates circuit_id exists', async () => {
@@ -239,8 +230,8 @@ describe('Circuit CLI Commands', () => {
       const { circuitOnCommand } = await import('@/cli/commands/circuit');
       await circuitOnCommand({ circuitId: 'MASTER' });
 
-      expect(mockSchedulerStop).toHaveBeenCalled();
-      expect(mockHaClientDisconnect).toHaveBeenCalled();
+      const { closeKnexInstance } = await import('@/storage/knex');
+      expect(closeKnexInstance).toHaveBeenCalled();
     });
   });
 
@@ -259,7 +250,8 @@ describe('Circuit CLI Commands', () => {
       const output = allCalls.join('\n');
       expect(output).toMatch(/MASTER.*OFF|turned off|disabled/i);
 
-      expect(mockSchedulerStop).toHaveBeenCalled();
+      const { closeKnexInstance } = await import('@/storage/knex');
+      expect(closeKnexInstance).toHaveBeenCalled();
     });
 
     test('validates circuit_id exists', async () => {
@@ -283,8 +275,8 @@ describe('Circuit CLI Commands', () => {
       const { circuitOffCommand } = await import('@/cli/commands/circuit');
       await circuitOffCommand({ circuitId: 'MASTER' });
 
-      expect(mockSchedulerStop).toHaveBeenCalled();
-      expect(mockHaClientDisconnect).toHaveBeenCalled();
+      const { closeKnexInstance } = await import('@/storage/knex');
+      expect(closeKnexInstance).toHaveBeenCalled();
     });
   });
 
@@ -310,7 +302,8 @@ describe('Circuit CLI Commands', () => {
       const output = allCalls.join('\n');
       expect(output).toMatch(/PROVIDER_OPENAI.*reset/i);
 
-      expect(mockSchedulerStop).toHaveBeenCalled();
+      const { closeKnexInstance } = await import('@/storage/knex');
+      expect(closeKnexInstance).toHaveBeenCalled();
     });
 
     test('validates circuit_id exists', async () => {
@@ -349,19 +342,20 @@ describe('Circuit CLI Commands', () => {
       const { circuitResetCommand } = await import('@/cli/commands/circuit');
       await circuitResetCommand({ circuitId: 'PROVIDER_OPENAI' });
 
-      expect(mockSchedulerStop).toHaveBeenCalled();
-      expect(mockHaClientDisconnect).toHaveBeenCalled();
+      const { closeKnexInstance } = await import('@/storage/knex');
+      expect(closeKnexInstance).toHaveBeenCalled();
     });
   });
 
   describe('cleanup behavior', () => {
-    test('all commands call scheduler.stop() in finally block', async () => {
+    test('all commands call closeKnexInstance in finally block', async () => {
       const { circuitStatusCommand, circuitOnCommand, circuitOffCommand, circuitResetCommand } =
         await import('@/cli/commands/circuit');
+      const { closeKnexInstance } = await import('@/storage/knex');
 
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue([]);
       await circuitStatusCommand();
-      expect(mockSchedulerStop).toHaveBeenCalledTimes(1);
+      expect(closeKnexInstance).toHaveBeenCalledTimes(1);
 
       jest.clearAllMocks();
 
@@ -369,12 +363,12 @@ describe('Circuit CLI Commands', () => {
         createMockCircuit({ circuitId: 'MASTER' })
       );
       await circuitOnCommand({ circuitId: 'MASTER' });
-      expect(mockSchedulerStop).toHaveBeenCalledTimes(1);
+      expect(closeKnexInstance).toHaveBeenCalledTimes(1);
 
       jest.clearAllMocks();
 
       await circuitOffCommand({ circuitId: 'MASTER' });
-      expect(mockSchedulerStop).toHaveBeenCalledTimes(1);
+      expect(closeKnexInstance).toHaveBeenCalledTimes(1);
 
       jest.clearAllMocks();
 
@@ -382,64 +376,19 @@ describe('Circuit CLI Commands', () => {
         createMockCircuit({ circuitId: 'PROVIDER_OPENAI', circuitType: 'provider' })
       );
       await circuitResetCommand({ circuitId: 'PROVIDER_OPENAI' });
-      expect(mockSchedulerStop).toHaveBeenCalledTimes(1);
+      expect(closeKnexInstance).toHaveBeenCalledTimes(1);
     });
 
-    test('handles HA client not being configured (null)', async () => {
-      // Temporarily set haClient to null
-      mockBootstrapResult.haClient = null;
-
+    test('uses lightweight initialization (no bootstrap)', async () => {
+      // Verify that bootstrap is NOT called - the commands use getKnexInstance directly
       const { circuitStatusCommand } = await import('@/cli/commands/circuit');
+      const { getKnexInstance } = await import('@/storage/knex');
+
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue([]);
-
-      // Should not throw when haClient is null
-      await expect(circuitStatusCommand()).resolves.not.toThrow();
-
-      // Restore
-      mockBootstrapResult.haClient = { disconnect: mockHaClientDisconnect };
-    });
-  });
-
-  describe('database not configured', () => {
-    test('shows error when knex is null', async () => {
-      // Set knex to null to simulate database not configured
-      const originalKnex = mockBootstrapResult.knex;
-      mockBootstrapResult.knex = null;
-
-      // Clear the module cache to get fresh import with null knex
-      jest.resetModules();
-
-      // Re-mock the modules
-      jest.mock('@/bootstrap', () => ({
-        bootstrap: jest.fn().mockImplementation(() =>
-          Promise.resolve({
-            ...mockBootstrapResult,
-            knex: null,
-          })
-        ),
-      }));
-
-      jest.mock('@/storage/knex', () => ({
-        closeKnexInstance: jest.fn().mockResolvedValue(undefined),
-      }));
-
-      jest.mock('@/services/circuit-breaker-service', () => ({
-        CircuitBreakerService: jest.fn().mockImplementation(() => mockCircuitBreakerService),
-      }));
-
-      jest.mock('@/storage/repositories/circuit-breaker-repo', () => ({
-        CircuitBreakerRepository: jest.fn().mockImplementation(() => mockCircuitBreakerRepository),
-      }));
-
-      const { circuitStatusCommand } = await import('@/cli/commands/circuit');
       await circuitStatusCommand();
 
-      const allErrorCalls = consoleErrorSpy.mock.calls.map(call => String(call[0]));
-      const errorOutput = allErrorCalls.join('\n');
-      expect(errorOutput).toMatch(/database.*required|connection/i);
-
-      // Restore
-      mockBootstrapResult.knex = originalKnex;
+      // getKnexInstance should be called directly
+      expect(getKnexInstance).toHaveBeenCalled();
     });
   });
 
@@ -464,7 +413,7 @@ describe('Circuit CLI Commands', () => {
       (process.on as jest.Mock).mockRestore();
     });
 
-    test('calls bootstrap and displays circuit status', async () => {
+    test('uses getKnexInstance and displays circuit status', async () => {
       const circuits = [
         createMockCircuit({ circuitId: 'MASTER', circuitType: 'manual', state: 'on' }),
         createMockCircuit({
@@ -480,10 +429,8 @@ describe('Circuit CLI Commands', () => {
 
       // Reset modules to get fresh import
       jest.resetModules();
-      jest.mock('@/bootstrap', () => ({
-        bootstrap: jest.fn().mockImplementation(() => Promise.resolve(mockBootstrapResult)),
-      }));
       jest.mock('@/storage/knex', () => ({
+        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
         closeKnexInstance: jest.fn().mockResolvedValue(undefined),
       }));
       jest.mock('@/services/circuit-breaker-service', () => ({
@@ -494,9 +441,13 @@ describe('Circuit CLI Commands', () => {
       }));
 
       const { circuitWatchCommand } = await import('@/cli/commands/circuit');
+      const { getKnexInstance, closeKnexInstance } = await import('@/storage/knex');
 
       // Run with maxIterations=1 to exit after first refresh
       await circuitWatchCommand({ maxIterations: 1 });
+
+      // Should use getKnexInstance (lightweight init)
+      expect(getKnexInstance).toHaveBeenCalled();
 
       // Should clear console and display circuit info
       expect(consoleClearSpy).toHaveBeenCalled();
@@ -506,7 +457,7 @@ describe('Circuit CLI Commands', () => {
       expect(output).toContain('PROVIDER_OPENAI');
 
       // Should call cleanup
-      expect(mockSchedulerStop).toHaveBeenCalled();
+      expect(closeKnexInstance).toHaveBeenCalled();
     });
 
     test('respects interval option', async () => {
@@ -516,10 +467,8 @@ describe('Circuit CLI Commands', () => {
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue(circuits);
 
       jest.resetModules();
-      jest.mock('@/bootstrap', () => ({
-        bootstrap: jest.fn().mockImplementation(() => Promise.resolve(mockBootstrapResult)),
-      }));
       jest.mock('@/storage/knex', () => ({
+        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
         closeKnexInstance: jest.fn().mockResolvedValue(undefined),
       }));
       jest.mock('@/services/circuit-breaker-service', () => ({
@@ -556,10 +505,8 @@ describe('Circuit CLI Commands', () => {
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue(circuits);
 
       jest.resetModules();
-      jest.mock('@/bootstrap', () => ({
-        bootstrap: jest.fn().mockImplementation(() => Promise.resolve(mockBootstrapResult)),
-      }));
       jest.mock('@/storage/knex', () => ({
+        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
         closeKnexInstance: jest.fn().mockResolvedValue(undefined),
       }));
       jest.mock('@/services/circuit-breaker-service', () => ({
@@ -588,10 +535,8 @@ describe('Circuit CLI Commands', () => {
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue(circuits);
 
       jest.resetModules();
-      jest.mock('@/bootstrap', () => ({
-        bootstrap: jest.fn().mockImplementation(() => Promise.resolve(mockBootstrapResult)),
-      }));
       jest.mock('@/storage/knex', () => ({
+        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
         closeKnexInstance: jest.fn().mockResolvedValue(undefined),
       }));
       jest.mock('@/services/circuit-breaker-service', () => ({
@@ -616,10 +561,8 @@ describe('Circuit CLI Commands', () => {
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue(circuits);
 
       jest.resetModules();
-      jest.mock('@/bootstrap', () => ({
-        bootstrap: jest.fn().mockImplementation(() => Promise.resolve(mockBootstrapResult)),
-      }));
       jest.mock('@/storage/knex', () => ({
+        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
         closeKnexInstance: jest.fn().mockResolvedValue(undefined),
       }));
       jest.mock('@/services/circuit-breaker-service', () => ({
@@ -652,10 +595,8 @@ describe('Circuit CLI Commands', () => {
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue(circuits);
 
       jest.resetModules();
-      jest.mock('@/bootstrap', () => ({
-        bootstrap: jest.fn().mockImplementation(() => Promise.resolve(mockBootstrapResult)),
-      }));
       jest.mock('@/storage/knex', () => ({
+        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
         closeKnexInstance: jest.fn().mockResolvedValue(undefined),
       }));
       jest.mock('@/services/circuit-breaker-service', () => ({
@@ -666,44 +607,11 @@ describe('Circuit CLI Commands', () => {
       }));
 
       const { circuitWatchCommand } = await import('@/cli/commands/circuit');
+      const { closeKnexInstance } = await import('@/storage/knex');
 
       await circuitWatchCommand({ maxIterations: 1 });
 
-      expect(mockSchedulerStop).toHaveBeenCalled();
-      expect(mockHaClientDisconnect).toHaveBeenCalled();
-    });
-
-    test('shows error when database is not configured', async () => {
-      const originalKnex = mockBootstrapResult.knex;
-      mockBootstrapResult.knex = null;
-
-      jest.resetModules();
-      jest.mock('@/bootstrap', () => ({
-        bootstrap: jest.fn().mockImplementation(() =>
-          Promise.resolve({
-            ...mockBootstrapResult,
-            knex: null,
-          })
-        ),
-      }));
-      jest.mock('@/storage/knex', () => ({
-        closeKnexInstance: jest.fn().mockResolvedValue(undefined),
-      }));
-      jest.mock('@/services/circuit-breaker-service', () => ({
-        CircuitBreakerService: jest.fn().mockImplementation(() => mockCircuitBreakerService),
-      }));
-      jest.mock('@/storage/repositories/circuit-breaker-repo', () => ({
-        CircuitBreakerRepository: jest.fn().mockImplementation(() => mockCircuitBreakerRepository),
-      }));
-
-      const { circuitWatchCommand } = await import('@/cli/commands/circuit');
-      await circuitWatchCommand({ maxIterations: 1 });
-
-      const allErrorCalls = consoleErrorSpy.mock.calls.map(call => String(call[0]));
-      const errorOutput = allErrorCalls.join('\n');
-      expect(errorOutput).toMatch(/database.*required|connection/i);
-
-      mockBootstrapResult.knex = originalKnex;
+      expect(closeKnexInstance).toHaveBeenCalled();
     });
 
     test('detects and highlights state changes', async () => {
@@ -719,10 +627,8 @@ describe('Circuit CLI Commands', () => {
         .mockResolvedValueOnce([circuitOff]);
 
       jest.resetModules();
-      jest.mock('@/bootstrap', () => ({
-        bootstrap: jest.fn().mockImplementation(() => Promise.resolve(mockBootstrapResult)),
-      }));
       jest.mock('@/storage/knex', () => ({
+        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
         closeKnexInstance: jest.fn().mockResolvedValue(undefined),
       }));
       jest.mock('@/services/circuit-breaker-service', () => ({
@@ -756,10 +662,8 @@ describe('Circuit CLI Commands', () => {
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue(circuits);
 
       jest.resetModules();
-      jest.mock('@/bootstrap', () => ({
-        bootstrap: jest.fn().mockImplementation(() => Promise.resolve(mockBootstrapResult)),
-      }));
       jest.mock('@/storage/knex', () => ({
+        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
         closeKnexInstance: jest.fn().mockResolvedValue(undefined),
       }));
       jest.mock('@/services/circuit-breaker-service', () => ({
