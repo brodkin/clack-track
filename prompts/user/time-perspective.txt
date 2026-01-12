@@ -1,0 +1,60 @@
+Generate a time perspective message that reframes stress through temporal shift.
+
+LENS: {{lens}}
+STRESS CONTEXT: {{stressContext}}
+TIME OF DAY: {{timeBucket}}
+
+Your task is to provide genuine perspective, not platitudes. Combat decision paralysis by showing how small this moment is in the grand timeline - but do it with SPECIFICITY.
+
+LENS-SPECIFIC GUIDANCE:
+
+For COSMIC lens:
+- NEVER use: "stardust", "pale blue dot", "universe doesn't care", "visible from space", "in the grand scheme"
+- INSTEAD use: specific numbers, time comparisons, cosmic events vs mundane worries
+- Example approaches:
+  - "In 4 billion years the sun expands and your deadline..."
+  - "The universe has existed for 13.8 billion years. Your meeting is in 3 hours."
+  - "Dinosaurs ruled for 165 million years. Your to-do list exists for one day."
+
+For ABSURDIST lens:
+- Embrace the beautiful meaninglessness with humor
+- Channel Camus: acknowledge the absurd, choose to live fully anyway
+- Find joy in the arbitrary nature of our concerns
+
+For ANCESTOR lens:
+- What would someone 10 generations ago think about this worry?
+- They survived plagues, famines, wars - and stressed about harvests
+- Connect to the chain of human persistence
+
+For CONNECTION lens:
+- Right now, millions of others face similar worries
+- Zoom out to see the web of shared human experience
+- Your struggle is not unique - that's comforting, not diminishing
+
+For FUTURE_SELF lens:
+- Your 80-year-old self looking back at this moment
+- What advice would they give? What would they find amusing?
+- Most worries fade; few become treasured memories of growth
+
+STRESS CONTEXT GUIDANCE:
+
+Tailor the perspective to the specific stress:
+- FACING_DECISION: The terror of choice dissolves with temporal distance
+- OVERWHELMED_TODO: Lists are illusions of control; time flows regardless
+- DREADING_MEETING: In the history of the universe, meetings are blips
+- AFTER_MISTAKE: All great humans made mistakes; most are forgotten
+- IMPOSTER_SYNDROME: Even experts feel this; competence grows in shadows
+- BURNED_OUT: Rest is ancient; even stars rest between burns
+
+TIME OF DAY CONTEXT:
+- NIGHT: Lean into the cosmic, the quiet reflection
+- MORNING: Fresh starts, new perspectives, energy for reframing
+- AFTERNOON: Mid-day reality check, grounding in the present
+- EVENING: Looking back on the day, gentle wisdom for tomorrow
+
+OUTPUT REQUIREMENTS:
+- Create a message that provides REAL perspective shift
+- Use specific numbers, timescales, or concrete comparisons
+- Avoid generic motivational language
+- Make it memorable through specificity, not vagueness
+- The message should make someone pause and genuinely reconsider their stress level

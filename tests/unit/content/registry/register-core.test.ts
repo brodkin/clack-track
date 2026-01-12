@@ -98,8 +98,9 @@ describe('registerCoreContent', () => {
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
       // motivational, globalNews, techNews, localNews, weather, haiku, seasonal, pattern,
-      // showerThought, fortuneCookie, countdown, hotTake, compliment, novelInsight, formattingDemo = 15
-      expect(normalPriorityGens.length).toBe(15);
+      // showerThought, fortuneCookie, countdown, hotTake, compliment, novelInsight, formattingDemo,
+      // wordOfTheDay, languageLesson, dailyRoast, storyFragment, timePerspective, paradoxEngine = 21
+      expect(normalPriorityGens.length).toBe(21);
     });
   });
 
@@ -135,8 +136,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const allGenerators = registry.getAll();
-      // 15 P2 + 1 P3 = 16 total
-      expect(allGenerators.length).toBe(16);
+      // 21 P2 + 1 P3 = 22 total
+      expect(allGenerators.length).toBe(22);
     });
 
     it('should maintain correct priority distribution', () => {
@@ -148,9 +149,10 @@ describe('registerCoreContent', () => {
       const fallbackGens = registry.getByPriority(ContentPriority.FALLBACK);
       const notificationGens = registry.getByPriority(ContentPriority.NOTIFICATION);
 
-      // 15 P2 generators: motivational, globalNews, techNews, localNews, weather, haiku,
-      // seasonal, pattern, showerThought, fortuneCookie, countdown, hotTake, compliment, novelInsight, formattingDemo
-      expect(normalGens.length).toBe(15);
+      // 21 P2 generators: motivational, globalNews, techNews, localNews, weather, haiku,
+      // seasonal, pattern, showerThought, fortuneCookie, countdown, hotTake, compliment, novelInsight, formattingDemo,
+      // wordOfTheDay, languageLesson, dailyRoast, storyFragment, timePerspective, paradoxEngine
+      expect(normalGens.length).toBe(21);
       expect(fallbackGens.length).toBe(1);
       expect(notificationGens.length).toBe(0);
     });
@@ -214,8 +216,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      // All 15 P2 generators including 3 news generators and formattingDemo
-      expect(normalPriorityGens.length).toBe(15);
+      // All 21 P2 generators including 3 news generators, formattingDemo, and 6 new generators
+      expect(normalPriorityGens.length).toBe(21);
     });
 
     it('should not register old news-summary generator', () => {

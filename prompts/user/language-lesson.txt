@@ -1,0 +1,38 @@
+Generate a Duolingo-style micro-lesson in {{language}}.
+
+DUOLINGO CHARACTER VOICE:
+{{duolingoVoice}}
+
+PHRASE STYLE:
+{{phraseType}}
+
+DUOLINGO HUMOR RULES:
+- Grammatically correct, contextually unhinged
+- Memorable BECAUSE it is weird
+- Educational content wrapped in absurdity
+- Screenshot-worthy out of context
+- Examples: "THE CAT IS A LAWYER", "I AM ALLERGIC TO WORK", "MY UNCLE IS A VERY FAMOUS GHOST"
+
+CRITICAL ROMANIZATION REQUIREMENT:
+For non-Latin scripts, you MUST use romanization:
+- Chinese: Use Pinyin (e.g., NI HAO, not Chinese characters)
+- Japanese: Use Romaji (e.g., KONNICHIWA, not Japanese characters)
+- Russian: Use transliteration (e.g., PRIVET, not Cyrillic)
+- Czech: Omit diacritics (e.g., DEKUJI, not DEKUJI with accents)
+The Vestaboard display ONLY supports A-Z, 0-9, and basic punctuation.
+
+OUTPUT FORMAT (exactly 4-5 lines, no blank lines):
+Line 1: Language name header (e.g., "SPANISH LESSON")
+Lines 2-3: Phrase in target language (romanized if needed)
+Lines 4-5: English translation/meaning
+
+EXAMPLE OUTPUT:
+JAPANESE LESSON
+NEKO WA BENGOSHI DESU
+THE CAT IS A LAWYER
+
+IMPORTANT:
+- Keep phrases short enough to fit 22 characters per line
+- Match the absurdist energy of the selected character voice
+- The phrase should be grammatically correct in the target language
+- NO blank lines between sections

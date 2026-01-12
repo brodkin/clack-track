@@ -31,10 +31,16 @@ import { SeasonalGenerator } from './content/generators/ai/seasonal-generator.js
 import { ShowerThoughtGenerator } from './content/generators/ai/shower-thought-generator.js';
 import { FortuneCookieGenerator } from './content/generators/ai/fortune-cookie-generator.js';
 import { CountdownGenerator } from './content/generators/ai/countdown-generator.js';
+import { DailyRoastGenerator } from './content/generators/ai/daily-roast-generator.js';
 import { HotTakeGenerator } from './content/generators/ai/hot-take-generator.js';
 import { ComplimentGenerator } from './content/generators/ai/compliment-generator.js';
 import { NovelInsightGenerator } from './content/generators/ai/novel-insight-generator.js';
+import { StoryFragmentGenerator } from './content/generators/ai/story-fragment-generator.js';
+import { TimePerspectiveGenerator } from './content/generators/ai/time-perspective-generator.js';
 import { FormattingDemoGenerator } from './content/generators/ai/formatting-demo-generator.js';
+import { WordOfTheDayGenerator } from './content/generators/ai/word-of-the-day-generator.js';
+import { LanguageLessonGenerator } from './content/generators/ai/language-lesson-generator.js';
+import { ParadoxEngineGenerator } from './content/generators/ai/paradox-engine-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
 import { RSSClient } from './api/data-sources/rss-client.js';
@@ -180,9 +186,15 @@ function createCoreGenerators(
     showerThought: new ShowerThoughtGenerator(promptLoader, modelTierSelector, apiKeys),
     fortuneCookie: new FortuneCookieGenerator(promptLoader, modelTierSelector, apiKeys),
     countdown: new CountdownGenerator(promptLoader, modelTierSelector, apiKeys),
+    dailyRoast: new DailyRoastGenerator(promptLoader, modelTierSelector, apiKeys),
+    storyFragment: new StoryFragmentGenerator(promptLoader, modelTierSelector, apiKeys),
+    timePerspective: new TimePerspectiveGenerator(promptLoader, modelTierSelector, apiKeys),
     hotTake: new HotTakeGenerator(promptLoader, modelTierSelector, apiKeys),
     compliment: new ComplimentGenerator(promptLoader, modelTierSelector, apiKeys),
     novelInsight: new NovelInsightGenerator(promptLoader, modelTierSelector, apiKeys),
+    wordOfTheDay: new WordOfTheDayGenerator(promptLoader, modelTierSelector, apiKeys),
+    languageLesson: new LanguageLessonGenerator(promptLoader, modelTierSelector, apiKeys),
+    paradoxEngine: new ParadoxEngineGenerator(promptLoader, modelTierSelector, apiKeys),
     formattingDemo: new FormattingDemoGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };

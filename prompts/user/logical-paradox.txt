@@ -1,0 +1,30 @@
+Apply the {{paradox}} paradox to {{application}}.
+
+Start the first line with the paradox name (e.g., "SHIP OF THESEUS:") to give context, then apply its core philosophical question to the everyday situation.
+
+STRUCTURE:
+- Line 1: Paradox name with colon
+- Lines 2-4: The paradox applied to the everyday context
+- Make it thought-provoking yet relatable
+- Humor comes from the unexpected application, not the paradox itself
+
+EXAMPLE OUTPUT:
+SHIP OF THESEUS:
+IS YOUR COUCH STILL
+THE SAME COUCH AFTER
+ALL THOSE STAINS
+
+PARADOX APPLICATIONS:
+- Ship of Theseus: If parts are replaced over time, is it still the same thing?
+- Liar's Paradox: Self-referential contradictions
+- Grandfather Paradox: Time travel causality loops
+- Bootstrap Paradox: Information with no origin
+- Zeno's Arrow: Motion and infinite divisibility
+- Sorites/Heap: When does small change become significant?
+- Fermi Paradox: Why haven't we seen evidence of something expected?
+- Braess Paradox: Adding options makes things worse
+- Simpson's Paradox: Trends reverse when data is combined
+- Monty Hall: Counterintuitive probability
+- Barber Paradox: Self-referential sets
+
+Keep the philosophical core intact while making the application amusing and relatable to daily life.

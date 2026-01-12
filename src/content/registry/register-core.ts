@@ -26,9 +26,11 @@ import { ContentRegistry } from './content-registry.js';
  * @property {ContentGenerator} showerThought - Shower thought generator (P2, LIGHT)
  * @property {ContentGenerator} fortuneCookie - Fortune cookie generator (P2, LIGHT)
  * @property {ContentGenerator} countdown - Countdown generator (P2, LIGHT)
+ * @property {ContentGenerator} dailyRoast - Daily roast generator (P2, MEDIUM)
  * @property {ContentGenerator} hotTake - Hot take generator (P2, LIGHT)
  * @property {ContentGenerator} compliment - Compliment generator (P2, LIGHT)
  * @property {ContentGenerator} novelInsight - Novel insight generator (P2, MEDIUM)
+ * @property {ContentGenerator} wordOfTheDay - Word of the day generator (P2, LIGHT)
  * @property {ContentGenerator} formattingDemo - Formatting demo generator (P2, LIGHT, with formatOptions)
  *
  * @example
@@ -45,9 +47,11 @@ import { ContentRegistry } from './content-registry.js';
  *   showerThought: new ShowerThoughtGenerator(),
  *   fortuneCookie: new FortuneCookieGenerator(),
  *   countdown: new CountdownGenerator(),
+ *   dailyRoast: new DailyRoastGenerator(),
  *   hotTake: new HotTakeGenerator(),
  *   compliment: new ComplimentGenerator(),
  *   novelInsight: new NovelInsightGenerator(),
+ *   wordOfTheDay: new WordOfTheDayGenerator(),
  *   formattingDemo: new FormattingDemoGenerator(),
  *   staticFallback: new StaticFallbackGenerator()
  * };
@@ -76,12 +80,24 @@ export interface CoreGenerators {
   fortuneCookie: ContentGenerator;
   /** Countdown generator (P2, LIGHT, AI-powered) */
   countdown: ContentGenerator;
+  /** Daily roast generator (P2, MEDIUM, AI-powered) */
+  dailyRoast: ContentGenerator;
+  /** Story fragment generator (P2, MEDIUM, AI-powered) */
+  storyFragment: ContentGenerator;
+  /** Time perspective generator (P2, MEDIUM, AI-powered) */
+  timePerspective: ContentGenerator;
   /** Hot take generator (P2, LIGHT, AI-powered) */
   hotTake: ContentGenerator;
   /** Compliment generator (P2, LIGHT, AI-powered) */
   compliment: ContentGenerator;
   /** Novel insight generator (P2, MEDIUM, AI-powered) */
   novelInsight: ContentGenerator;
+  /** Word of the day generator (P2, LIGHT, AI-powered) */
+  wordOfTheDay: ContentGenerator;
+  /** Language lesson generator (P2, LIGHT, AI-powered) */
+  languageLesson: ContentGenerator;
+  /** Paradox engine generator (P2, LIGHT, AI-powered) */
+  paradoxEngine: ContentGenerator;
   /** Formatting demo generator (P2, LIGHT, AI-powered, with formatOptions) */
   formattingDemo: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
@@ -107,6 +123,7 @@ export interface CoreGenerators {
  *   - hot-take: Playful opinions (LIGHT, AI)
  *   - compliment: Uplifting affirmations (LIGHT, AI)
  *   - novel-insight: Fresh perspectives (MEDIUM, AI)
+ *   - word-of-the-day: Vocabulary builder (LIGHT, AI)
  *   - formatting-demo: Formatting options demo (LIGHT, AI, with formatOptions)
  * - **P3 Generator (FALLBACK priority)**:
  *   - static-fallback: Static message when AI fails (LIGHT)
@@ -257,6 +274,39 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
 
   registry.register(
     {
+      id: 'daily-roast',
+      name: 'Daily Roast Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.dailyRoast
+  );
+
+  registry.register(
+    {
+      id: 'story-fragment',
+      name: 'Story Fragment Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.storyFragment
+  );
+
+  registry.register(
+    {
+      id: 'time-perspective',
+      name: 'Time Perspective Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.timePerspective
+  );
+
+  registry.register(
+    {
       id: 'hot-take',
       name: 'Hot Take Generator',
       priority: ContentPriority.NORMAL,
@@ -286,6 +336,39 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.novelInsight
+  );
+
+  registry.register(
+    {
+      id: 'word-of-the-day',
+      name: 'Word of the Day Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.wordOfTheDay
+  );
+
+  registry.register(
+    {
+      id: 'language-lesson',
+      name: 'Language Lesson Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.languageLesson
+  );
+
+  registry.register(
+    {
+      id: 'logical-paradox',
+      name: 'Paradox Engine Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.paradoxEngine
   );
 
   // Register formatting demo generator with custom formatOptions

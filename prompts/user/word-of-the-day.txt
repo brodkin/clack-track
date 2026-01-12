@@ -1,0 +1,38 @@
+Generate a "Word of the Day" vocabulary display.
+
+WORD SELECTION PARAMETERS:
+- Domain: {{wordDomain}}
+- Vibe: {{wordVibe}}
+
+OUTPUT FORMAT (exactly 4-5 lines, no blank lines):
+Line 1: 🟩 [WORD] (green tile followed by the word)
+Lines 2-5: Definition in 2-4 short lines
+
+EXAMPLE OUTPUT:
+🟩 SONDER
+REALIZING EVERYONE
+HAS A LIFE AS VIVID
+AS YOUR OWN
+
+CONSTRAINTS:
+- Word must be 10 characters or fewer
+- Definition should be witty, not dictionary-dry
+- The green bars visually signal "word of the day" mode to the viewer
+- Center the word between green tiles on line 2
+- NO usage examples (keep it simple)
+
+DOMAIN GUIDANCE:
+- EMOTION_WORDS: Words for feelings people pretend not to have
+- SITUATION_WORDS: Words for predicaments we all recognize
+- RELATIONSHIP_WORDS: Words for the complicated dance of human connection
+- WORK_WORDS: Words for the 9-to-5 experience and office dynamics
+- NATURE_WORDS: Words borrowed from nature that apply to humans
+- FOREIGN_LOANWORDS: Borrowed words that English desperately needed
+
+VIBE GUIDANCE:
+- SATISFYING_TO_SAY: Words that feel good in your mouth
+- SURPRISINGLY_USEFUL: Words you didn't know you needed until now
+- OBSCURE_BUT_RELATABLE: Rare words for common experiences
+- COMEBACK_WORTHY: Words perfect for winning arguments politely
+
+Make the definition clever and memorable. Dry humor preferred.
