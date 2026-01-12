@@ -15,7 +15,7 @@ export async function seed(knex: Knex): Promise<void> {
   await knex('content').insert([
     {
       id: 1,
-      text: 'THE ONLY WAY TO DO\nGREAT WORK IS TO\nLOVE WHAT YOU DO.\n- STEVE JOBS',
+      text: 'AUTUMN LEAVES DRIFT\nWHISPERING WINDS CARRY\nHOPE FOR TOMORROW',
       type: 'major',
       generatedAt: new Date('2025-11-28T10:30:00Z'),
       sentAt: new Date('2025-11-28T10:30:05Z'),
@@ -28,8 +28,8 @@ export async function seed(knex: Knex): Promise<void> {
         generationTime: 1250,
       }),
       status: 'success',
-      generatorId: 'motivational-quote',
-      generatorName: 'Motivational Quote Generator',
+      generatorId: 'haiku',
+      generatorName: 'Haiku Generator',
       priority: 2,
       failedOver: false,
       primaryProvider: null,

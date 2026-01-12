@@ -145,7 +145,7 @@ prompts/
 │   ├── major-update-base.txt
 │   └── minor-update-base.txt
 └── user/                # Content type prompts
-    ├── motivational.txt
+    ├── haiku.txt
     ├── news-summary.txt
     ├── weather-focus.txt
     └── custom.txt
@@ -344,7 +344,7 @@ The web server exposes the following REST API endpoints:
     "id": 1,
     "text": "HELLO WORLD",
     "characterCodes": [[8,5,12,12,15], ...],
-    "generatorId": "motivational",
+    "generatorId": "haiku",
     "modelTier": "LIGHT",
     "metadata": { "provider": "openai", "tokens": 150 },
     "createdAt": "2024-01-15T10:30:00Z"

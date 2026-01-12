@@ -71,27 +71,6 @@
     }
   },
   "contentExamples": {
-    "motivational": {
-      "id": "chatcmpl-8vK3xG0y2Z4Ar9x8WcO5nK3lM6qS",
-      "object": "chat.completion",
-      "created": 1701234600,
-      "model": "gpt-4-0613",
-      "choices": [
-        {
-          "index": 0,
-          "message": {
-            "role": "assistant",
-            "content": "BELIEVE IN YOURSELF\nEVERY STEP FORWARD\nIS PROGRESS"
-          },
-          "finish_reason": "stop"
-        }
-      ],
-      "usage": {
-        "prompt_tokens": 92,
-        "completion_tokens": 15,
-        "total_tokens": 107
-      }
-    },
     "weather": {
       "id": "chatcmpl-8vK4yH1z3A5Bs0y9XdP6oL4mN7rT",
       "object": "chat.completion",

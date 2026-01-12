@@ -30,7 +30,7 @@ User prompts specify the type of content to generate:
 
 ### Available User Prompts
 
-- `motivational.txt` - Inspiring quotes and messages
+- `haiku.txt` - Traditional Japanese poetry
 - `news-summary.txt` - News headlines from RSS feeds
 - `weather-focus.txt` - Weather-centric display
 
@@ -40,7 +40,7 @@ Prompts are loaded by the `PromptLoader` class in `src/content/prompt-loader.ts`
 
 ```typescript
 const loader = new PromptLoader('./prompts');
-const template = await loader.loadPromptTemplate('major-update-base.txt', 'motivational.txt');
+const template = await loader.loadPromptTemplate('major-update-base.txt', 'haiku.txt');
 ```
 
 ## Creating New Prompts

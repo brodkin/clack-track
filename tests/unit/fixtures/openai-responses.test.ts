@@ -104,14 +104,6 @@ describe('OpenAI Fixtures', () => {
   });
 
   describe('content examples', () => {
-    test('should have motivational quote example', () => {
-      const example = openaiResponses.contentExamples.motivational;
-
-      expect(example).toHaveProperty('choices');
-      expect(example.choices[0].message.content).toBeTruthy();
-      expect(example.choices[0].message.content.length).toBeGreaterThan(0);
-    });
-
     test('should have weather summary example', () => {
       const example = openaiResponses.contentExamples.weather;
 
@@ -128,7 +120,6 @@ describe('OpenAI Fixtures', () => {
 
     test('all content examples should fit Vestaboard constraints (132 chars)', () => {
       const examples = [
-        openaiResponses.contentExamples.motivational,
         openaiResponses.contentExamples.weather,
         openaiResponses.contentExamples.news,
       ];

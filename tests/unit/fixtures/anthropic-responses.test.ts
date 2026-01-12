@@ -86,15 +86,6 @@ describe('Anthropic Fixtures', () => {
   });
 
   describe('content examples', () => {
-    test('should have motivational quote example', () => {
-      const example = anthropicResponses.contentExamples.motivational;
-
-      expect(example).toHaveProperty('content');
-      expect(Array.isArray(example.content)).toBe(true);
-      expect(example.content[0].text).toBeTruthy();
-      expect(example.content[0].text.length).toBeGreaterThan(0);
-    });
-
     test('should have weather summary example', () => {
       const example = anthropicResponses.contentExamples.weather;
 
@@ -111,7 +102,6 @@ describe('Anthropic Fixtures', () => {
 
     test('all content examples should fit Vestaboard constraints (132 chars)', () => {
       const examples = [
-        anthropicResponses.contentExamples.motivational,
         anthropicResponses.contentExamples.weather,
         anthropicResponses.contentExamples.news,
       ];
@@ -124,7 +114,6 @@ describe('Anthropic Fixtures', () => {
 
     test('all content examples should have consistent response structure', () => {
       const examples = [
-        anthropicResponses.contentExamples.motivational,
         anthropicResponses.contentExamples.weather,
         anthropicResponses.contentExamples.news,
       ];
