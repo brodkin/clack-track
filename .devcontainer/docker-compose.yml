@@ -1,3 +1,7 @@
+networks:
+  clack-network:
+    driver: bridge
+
 services:
   node-dev:
     build:
@@ -26,6 +30,8 @@ services:
     working_dir: /workspace
     depends_on:
       - mysql
+    networks:
+      - clack-network
 
   mysql:
     image: mysql:8.0
@@ -37,6 +43,8 @@ services:
       - '3306:3306'
     volumes:
       - mysql-data:/var/lib/mysql
+    networks:
+      - clack-network
 
 volumes:
   # Persistent Claude Code home directory

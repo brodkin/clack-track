@@ -328,6 +328,70 @@ describe('BaseNewsGenerator', () => {
     });
   });
 
+  describe('Dimension Substitution', () => {
+    it('should apply dimension substitution to system prompt', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
+
+      // Return system prompt with dimension placeholders
+      mockPromptLoader.loadPromptWithVariables.mockImplementation((type, _filename, _variables) => {
+        if (type === 'system') {
+          return Promise.resolve(
+            'Generate content with {{maxChars}} chars per line and {{maxLines}} lines maximum.'
+          );
+        }
+        return Promise.resolve('News prompt with headlines.');
+      });
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date('2025-11-27T10:00:00Z'),
+      };
+
+      await generator.generate(context);
+
+      // Verify AI provider was called
+      expect(mockAIProvider.generate).toHaveBeenCalledTimes(1);
+
+      // Extract the systemPrompt argument
+      const generateCall = mockAIProvider.generate.mock.calls[0][0];
+      const systemPrompt = generateCall.systemPrompt;
+
+      // Verify dimension placeholders are substituted with actual values
+      expect(systemPrompt).toContain('21 chars per line');
+      expect(systemPrompt).toContain('5 lines maximum');
+      expect(systemPrompt).not.toContain('{{maxChars}}');
+      expect(systemPrompt).not.toContain('{{maxLines}}');
+    });
+  });
+
+  describe('Template Variables', () => {
+    it('should include date template variable in system prompt loading', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date('2025-11-27T10:00:00Z'),
+      };
+
+      await generator.generate(context);
+
+      // Verify loadPromptWithVariables was called with date variable
+      const systemPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
+        call => call[0] === 'system'
+      );
+
+      expect(systemPromptCall).toBeDefined();
+      const templateVars = systemPromptCall![2] as Record<string, string>;
+
+      // Should have date variable
+      expect(templateVars).toHaveProperty('date');
+      // Date should be formatted like "Wednesday, November 27, 2025"
+      expect(templateVars.date).toContain('November');
+      expect(templateVars.date).toContain('27');
+      expect(templateVars.date).toContain('2025');
+    });
+  });
+
   describe('Provider Failover', () => {
     it('should try alternate provider when primary fails', async () => {
       mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);

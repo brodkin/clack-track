@@ -16,6 +16,8 @@ export interface AIGenerationResponse {
 export interface AIProvider {
   generate(request: AIGenerationRequest): Promise<AIGenerationResponse>;
   validateConnection(): Promise<boolean>;
+  /** Get the provider name (e.g., 'openai', 'anthropic') for circuit breaker tracking */
+  getName?(): string;
 }
 
 export interface AIConfig {

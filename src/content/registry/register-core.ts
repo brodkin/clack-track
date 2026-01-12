@@ -14,8 +14,7 @@ import { ContentRegistry } from './content-registry.js';
 /**
  * Interface defining the core generator instances to be registered.
  *
- * Includes all required P2 generators and the required P3 fallback,
- * plus an optional asciiArt generator.
+ * Includes all required P2 generators and the required P3 fallback.
  *
  * @interface CoreGenerators
  * @property {ContentGenerator} motivational - Motivational quote generator (P2, LIGHT)
@@ -23,9 +22,14 @@ import { ContentRegistry } from './content-registry.js';
  * @property {ContentGenerator} techNews - Tech news generator (P2, MEDIUM)
  * @property {ContentGenerator} localNews - Local news generator (P2, MEDIUM)
  * @property {ContentGenerator} weather - Weather focus generator (P2, LIGHT)
- * @property {ContentGenerator} greeting - Greeting generator (P2, LIGHT, programmatic)
- * @property {ContentGenerator} [asciiArt] - Optional ASCII art generator (P2, LIGHT)
  * @property {ContentGenerator} staticFallback - Static fallback generator (P3, LIGHT)
+ * @property {ContentGenerator} showerThought - Shower thought generator (P2, LIGHT)
+ * @property {ContentGenerator} fortuneCookie - Fortune cookie generator (P2, LIGHT)
+ * @property {ContentGenerator} countdown - Countdown generator (P2, LIGHT)
+ * @property {ContentGenerator} dailyRoast - Daily roast generator (P2, MEDIUM)
+ * @property {ContentGenerator} hotTake - Hot take generator (P2, LIGHT)
+ * @property {ContentGenerator} compliment - Compliment generator (P2, LIGHT)
+ * @property {ContentGenerator} novelInsight - Novel insight generator (P2, MEDIUM)
  *
  * @example
  * ```typescript
@@ -35,8 +39,16 @@ import { ContentRegistry } from './content-registry.js';
  *   techNews: new TechNewsGenerator(),
  *   localNews: new LocalNewsGenerator(),
  *   weather: new WeatherFocusGenerator(),
- *   greeting: new GreetingGenerator(),
- *   asciiArt: new AsciiArtGenerator(), // Optional
+ *   haiku: new HaikuGenerator(),
+ *   seasonal: new SeasonalGenerator(),
+ *   pattern: new PatternGenerator(),
+ *   showerThought: new ShowerThoughtGenerator(),
+ *   fortuneCookie: new FortuneCookieGenerator(),
+ *   countdown: new CountdownGenerator(),
+ *   dailyRoast: new DailyRoastGenerator(),
+ *   hotTake: new HotTakeGenerator(),
+ *   compliment: new ComplimentGenerator(),
+ *   novelInsight: new NovelInsightGenerator(),
  *   staticFallback: new StaticFallbackGenerator()
  * };
  * ```
@@ -52,16 +64,30 @@ export interface CoreGenerators {
   localNews: ContentGenerator;
   /** Weather focus generator (P2, LIGHT, AI-powered) */
   weather: ContentGenerator;
-  /** Greeting generator (P2, LIGHT, programmatic) */
-  greeting: ContentGenerator;
   /** Haiku generator (P2, LIGHT, AI-powered) */
   haiku: ContentGenerator;
   /** Seasonal generator (P2, LIGHT, AI-powered) */
   seasonal: ContentGenerator;
   /** Mathematical pattern generator (P2, LIGHT, programmatic) */
   pattern: ContentGenerator;
-  /** Optional ASCII art generator (P2, LIGHT, programmatic) */
-  asciiArt?: ContentGenerator;
+  /** Shower thought generator (P2, LIGHT, AI-powered) */
+  showerThought: ContentGenerator;
+  /** Fortune cookie generator (P2, LIGHT, AI-powered) */
+  fortuneCookie: ContentGenerator;
+  /** Countdown generator (P2, LIGHT, AI-powered) */
+  countdown: ContentGenerator;
+  /** Daily roast generator (P2, MEDIUM, AI-powered) */
+  dailyRoast: ContentGenerator;
+  /** Story fragment generator (P2, MEDIUM, AI-powered) */
+  storyFragment: ContentGenerator;
+  /** Time perspective generator (P2, MEDIUM, AI-powered) */
+  timePerspective: ContentGenerator;
+  /** Hot take generator (P2, LIGHT, AI-powered) */
+  hotTake: ContentGenerator;
+  /** Compliment generator (P2, LIGHT, AI-powered) */
+  compliment: ContentGenerator;
+  /** Novel insight generator (P2, MEDIUM, AI-powered) */
+  novelInsight: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -76,12 +102,19 @@ export interface CoreGenerators {
  *   - tech-news: Tech news summaries (MEDIUM, AI)
  *   - local-news: Local news summaries (MEDIUM, AI)
  *   - weather-focus: Weather updates (LIGHT, AI)
- *   - greeting: Personalized greetings (LIGHT, programmatic)
- *   - ascii-art: ASCII art (LIGHT, programmatic, optional)
+ *   - haiku: Haiku poems (LIGHT, AI)
+ *   - seasonal: Seasonal content (LIGHT, AI)
+ *   - pattern-art: Mathematical patterns (LIGHT, programmatic)
+ *   - shower-thought: Philosophical musings (LIGHT, AI)
+ *   - fortune-cookie: Twisted wisdom (LIGHT, AI)
+ *   - countdown: Days until events (LIGHT, AI)
+ *   - hot-take: Playful opinions (LIGHT, AI)
+ *   - compliment: Uplifting affirmations (LIGHT, AI)
+ *   - novel-insight: Fresh perspectives (MEDIUM, AI)
  * - **P3 Generator (FALLBACK priority)**:
  *   - static-fallback: Static message when AI fails (LIGHT)
  *
- * All generators have `applyFrame: true` to include time/weather frame.
+ * Most generators have `applyFrame: true` to include time/weather frame.
  *
  * @param {ContentRegistry} registry - The registry to register generators with
  * @param {CoreGenerators} generators - The core generator instances
@@ -161,17 +194,6 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
 
   registry.register(
     {
-      id: 'greeting',
-      name: 'Greeting Generator',
-      priority: ContentPriority.NORMAL,
-      modelTier: ModelTier.LIGHT,
-      applyFrame: true,
-    },
-    generators.greeting
-  );
-
-  registry.register(
-    {
       id: 'haiku',
       name: 'Haiku Generator',
       priority: ContentPriority.NORMAL,
@@ -203,19 +225,108 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
     generators.pattern
   );
 
-  // Register optional asciiArt generator if provided
-  if (generators.asciiArt) {
-    registry.register(
-      {
-        id: 'ascii-art',
-        name: 'ASCII Art Generator',
-        priority: ContentPriority.NORMAL,
-        modelTier: ModelTier.LIGHT,
-        applyFrame: true,
+  registry.register(
+    {
+      id: 'shower-thought',
+      name: 'Shower Thought Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.showerThought
+  );
+
+  registry.register(
+    {
+      id: 'fortune-cookie',
+      name: 'Fortune Cookie Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+      formatOptions: {
+        textAlign: 'center',
+        maxLines: 4,
       },
-      generators.asciiArt
-    );
-  }
+    },
+    generators.fortuneCookie
+  );
+
+  registry.register(
+    {
+      id: 'countdown',
+      name: 'Countdown Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.countdown
+  );
+
+  registry.register(
+    {
+      id: 'daily-roast',
+      name: 'Daily Roast Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.dailyRoast
+  );
+
+  registry.register(
+    {
+      id: 'story-fragment',
+      name: 'Story Fragment Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.storyFragment
+  );
+
+  registry.register(
+    {
+      id: 'time-perspective',
+      name: 'Time Perspective Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.timePerspective
+  );
+
+  registry.register(
+    {
+      id: 'hot-take',
+      name: 'Hot Take Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.hotTake
+  );
+
+  registry.register(
+    {
+      id: 'compliment',
+      name: 'Compliment Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.compliment
+  );
+
+  registry.register(
+    {
+      id: 'novel-insight',
+      name: 'Novel Insight Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.novelInsight
+  );
 
   // Register P3 fallback generator (FALLBACK priority)
   registry.register(

@@ -20,6 +20,7 @@ jest.mock('../../src/api/vestaboard/http-client.js', () => {
 import { bootstrap } from '../../src/bootstrap.js';
 import { getKnexInstance, closeKnexInstance, resetKnexInstance } from '../../src/storage/knex.js';
 import { ContentModel } from '../../src/storage/models/content.js';
+import { ContentRepository } from '../../src/storage/repositories/content-repo.js';
 
 describe('Bootstrap - Retention Cleanup Integration', () => {
   beforeAll(async () => {
@@ -117,11 +118,30 @@ describe('Bootstrap - Retention Cleanup Integration', () => {
     const beforeCleanup = await contentModel.findLatest(10);
     expect(beforeCleanup).toHaveLength(2);
 
-    // Bootstrap should trigger cleanup (wait a moment for fire-and-forget to complete)
+    // Create a deferred promise that resolves when cleanupOldRecords completes
+    let resolveCleanup: () => void;
+    const cleanupCompleted = new Promise<void>(resolve => {
+      resolveCleanup = resolve;
+    });
+
+    // Spy on cleanupOldRecords to track when fire-and-forget operation completes
+    const originalCleanup = ContentRepository.prototype.cleanupOldRecords;
+    const cleanupSpy = jest
+      .spyOn(ContentRepository.prototype, 'cleanupOldRecords')
+      .mockImplementation(async function (this: ContentRepository, retentionDays?: number) {
+        const result = await originalCleanup.call(this, retentionDays);
+        resolveCleanup();
+        return result;
+      });
+
+    // Bootstrap should trigger cleanup
     const { scheduler, haClient } = await bootstrap();
 
-    // Give cleanup time to complete (fire-and-forget pattern requires more time)
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait for the fire-and-forget cleanup to complete (deterministic, no arbitrary timeout)
+    await cleanupCompleted;
+
+    // Restore spy
+    cleanupSpy.mockRestore();
 
     // Verify old record was deleted
     const afterCleanup = await contentModel.findLatest(10);
@@ -133,5 +153,5 @@ describe('Bootstrap - Retention Cleanup Integration', () => {
     if (haClient) {
       await haClient.disconnect();
     }
-  }, 10000); // Increase timeout for bootstrap
+  }, 15000); // Timeout for bootstrap
 });

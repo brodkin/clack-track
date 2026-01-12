@@ -29,6 +29,7 @@ import type {
   GenerationContext,
   GeneratedContent,
 } from '@/types/content-generator';
+import type { CircuitBreakerService } from '@/services/circuit-breaker-service';
 
 // Mock sleep function to control timing in tests
 jest.mock('@/utils/sleep', () => ({
@@ -944,6 +945,791 @@ describe('generateWithRetry', () => {
         expect(retryError.attempts[2].error.message).toBe('Error 3');
         expect(retryError.attempts[3].error.message).toBe('Error 4');
       }
+    });
+  });
+
+  describe('Circuit Breaker Integration', () => {
+    let mockCircuitBreaker: jest.Mocked<CircuitBreakerService>;
+
+    beforeEach(() => {
+      mockCircuitBreaker = {
+        recordProviderFailure: jest.fn().mockResolvedValue(undefined),
+        recordProviderSuccess: jest.fn().mockResolvedValue(undefined),
+        isProviderAvailable: jest.fn().mockResolvedValue(true),
+        getProviderStatus: jest.fn().mockResolvedValue({
+          circuitId: 'PROVIDER_OPENAI',
+          state: 'on',
+          failureCount: 0,
+          successCount: 0,
+          failureThreshold: 5,
+          lastFailureAt: null,
+          lastSuccessAt: null,
+          stateChangedAt: null,
+          canAttempt: true,
+          resetTimeoutMs: 300000,
+        }),
+        initialize: jest.fn().mockResolvedValue(undefined),
+        isCircuitOpen: jest.fn().mockResolvedValue(false),
+        setCircuitState: jest.fn().mockResolvedValue(undefined),
+        getCircuitStatus: jest.fn().mockResolvedValue(null),
+        getAllCircuits: jest.fn().mockResolvedValue([]),
+        getCircuitsByType: jest.fn().mockResolvedValue([]),
+        resetProviderCircuit: jest.fn().mockResolvedValue(undefined),
+      } as unknown as jest.Mocked<CircuitBreakerService>;
+    });
+
+    describe('backward compatibility', () => {
+      it('should work without circuitBreaker parameter (backward compatible)', async () => {
+        const expectedContent: GeneratedContent = {
+          text: 'Success without circuit breaker',
+          outputMode: 'text',
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValue(mockGenerator);
+
+        // No circuitBreaker passed - should work fine
+        const result = await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider
+        );
+
+        expect(result.text).toBe(expectedContent.text);
+        expect(generatorFactory).toHaveBeenCalledTimes(1);
+      });
+
+      it('should not call circuit breaker methods when not provided', async () => {
+        const error = new RateLimitError('Rate limited', 'openai');
+        const expectedContent: GeneratedContent = {
+          text: 'Success on retry',
+          outputMode: 'text',
+        };
+
+        const gen1: ContentGenerator = {
+          generate: jest.fn().mockRejectedValue(error),
+          validate: jest.fn(),
+        };
+
+        const gen2: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValueOnce(gen1).mockReturnValueOnce(gen2);
+
+        await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider
+          // No circuitBreaker
+        );
+
+        // Circuit breaker methods should not be called
+        expect(mockCircuitBreaker.recordProviderFailure).not.toHaveBeenCalled();
+        expect(mockCircuitBreaker.recordProviderSuccess).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('recordProviderFailure on retryable errors', () => {
+      it('should call recordProviderFailure on RateLimitError', async () => {
+        const error = new RateLimitError('Rate limited', 'openai');
+        const expectedContent: GeneratedContent = {
+          text: 'Success on retry',
+          outputMode: 'text',
+        };
+
+        const gen1: ContentGenerator = {
+          generate: jest.fn().mockRejectedValue(error),
+          validate: jest.fn(),
+        };
+
+        const gen2: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValueOnce(gen1).mockReturnValueOnce(gen2);
+
+        await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(mockCircuitBreaker.recordProviderFailure).toHaveBeenCalledTimes(1);
+        expect(mockCircuitBreaker.recordProviderFailure).toHaveBeenCalledWith(
+          'PROVIDER_OPENAI',
+          error
+        );
+      });
+
+      it('should call recordProviderFailure on OverloadedError', async () => {
+        const error = new OverloadedError('Service overloaded', 'anthropic');
+        const expectedContent: GeneratedContent = {
+          text: 'Success',
+          outputMode: 'text',
+        };
+
+        const gen1: ContentGenerator = {
+          generate: jest.fn().mockRejectedValue(error),
+          validate: jest.fn(),
+        };
+
+        const gen2: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        // Set up provider with getName to return 'anthropic'
+        const anthropicProvider: AIProvider = {
+          ...mockAlternateProvider,
+          getName: () => 'anthropic',
+        };
+
+        const generatorFactory = jest.fn().mockReturnValueOnce(gen1).mockReturnValueOnce(gen2);
+
+        await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          anthropicProvider, // preferred = anthropic
+          mockPreferredProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(mockCircuitBreaker.recordProviderFailure).toHaveBeenCalledTimes(1);
+        expect(mockCircuitBreaker.recordProviderFailure).toHaveBeenCalledWith(
+          'PROVIDER_ANTHROPIC',
+          error
+        );
+      });
+
+      it('should call recordProviderFailure for each failed attempt', async () => {
+        const error1 = new RateLimitError('Error 1', 'openai');
+        const error2 = new OverloadedError('Error 2', 'openai');
+        const error3 = new RateLimitError('Error 3', 'anthropic');
+
+        const gen1: ContentGenerator = {
+          generate: jest.fn().mockRejectedValue(error1),
+          validate: jest.fn(),
+        };
+
+        const gen2: ContentGenerator = {
+          generate: jest.fn().mockRejectedValue(error2),
+          validate: jest.fn(),
+        };
+
+        const gen3: ContentGenerator = {
+          generate: jest.fn().mockRejectedValue(error3),
+          validate: jest.fn(),
+        };
+
+        const gen4: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue({ text: 'Success', outputMode: 'text' }),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest
+          .fn()
+          .mockReturnValueOnce(gen1)
+          .mockReturnValueOnce(gen2)
+          .mockReturnValueOnce(gen3)
+          .mockReturnValueOnce(gen4);
+
+        await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(mockCircuitBreaker.recordProviderFailure).toHaveBeenCalledTimes(3);
+        expect(mockCircuitBreaker.recordProviderFailure).toHaveBeenNthCalledWith(
+          1,
+          'PROVIDER_OPENAI',
+          error1
+        );
+        expect(mockCircuitBreaker.recordProviderFailure).toHaveBeenNthCalledWith(
+          2,
+          'PROVIDER_OPENAI',
+          error2
+        );
+        expect(mockCircuitBreaker.recordProviderFailure).toHaveBeenNthCalledWith(
+          3,
+          'PROVIDER_ANTHROPIC',
+          error3
+        );
+      });
+    });
+
+    describe('recordProviderSuccess on success', () => {
+      it('should call recordProviderSuccess on successful generation', async () => {
+        const expectedContent: GeneratedContent = {
+          text: 'Success',
+          outputMode: 'text',
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValue(mockGenerator);
+
+        await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(mockCircuitBreaker.recordProviderSuccess).toHaveBeenCalledTimes(1);
+        expect(mockCircuitBreaker.recordProviderSuccess).toHaveBeenCalledWith('PROVIDER_OPENAI');
+      });
+
+      it('should call recordProviderSuccess with correct provider after failover', async () => {
+        const error1 = new RateLimitError('Error 1', 'openai');
+        const error2 = new RateLimitError('Error 2', 'openai');
+        const expectedContent: GeneratedContent = {
+          text: 'Success on alternate',
+          outputMode: 'text',
+        };
+
+        const gen1: ContentGenerator = {
+          generate: jest.fn().mockRejectedValue(error1),
+          validate: jest.fn(),
+        };
+
+        const gen2: ContentGenerator = {
+          generate: jest.fn().mockRejectedValue(error2),
+          validate: jest.fn(),
+        };
+
+        const gen3: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest
+          .fn()
+          .mockReturnValueOnce(gen1)
+          .mockReturnValueOnce(gen2)
+          .mockReturnValueOnce(gen3);
+
+        await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(mockCircuitBreaker.recordProviderSuccess).toHaveBeenCalledTimes(1);
+        expect(mockCircuitBreaker.recordProviderSuccess).toHaveBeenCalledWith('PROVIDER_ANTHROPIC');
+      });
+    });
+
+    describe('isProviderAvailable - skip provider when circuit is OPEN', () => {
+      it('should skip preferred provider when its circuit is OPEN', async () => {
+        // OpenAI circuit is OPEN (unavailable)
+        mockCircuitBreaker.isProviderAvailable.mockImplementation(async (circuitId: string) => {
+          if (circuitId === 'PROVIDER_OPENAI') return false;
+          return true;
+        });
+
+        const expectedContent: GeneratedContent = {
+          text: 'Success from alternate',
+          outputMode: 'text',
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValue(mockGenerator);
+
+        const result = await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(result.text).toBe(expectedContent.text);
+        // Should skip preferred provider and go directly to alternate
+        expect(generatorFactory).toHaveBeenCalledWith(mockAlternateProvider);
+        // Should have checked availability
+        expect(mockCircuitBreaker.isProviderAvailable).toHaveBeenCalledWith('PROVIDER_OPENAI');
+      });
+
+      it('should skip alternate provider when its circuit is OPEN', async () => {
+        // First attempt fails with rate limit
+        const error = new RateLimitError('Rate limited', 'openai');
+
+        // Anthropic circuit is OPEN after first failure round
+        let openaiAttempts = 0;
+        mockCircuitBreaker.isProviderAvailable.mockImplementation(async (circuitId: string) => {
+          if (circuitId === 'PROVIDER_OPENAI') {
+            openaiAttempts++;
+            return openaiAttempts <= 2; // Available for first 2 attempts
+          }
+          if (circuitId === 'PROVIDER_ANTHROPIC') return false; // Never available
+          return true;
+        });
+
+        const gen1: ContentGenerator = {
+          generate: jest.fn().mockRejectedValue(error),
+          validate: jest.fn(),
+        };
+
+        const gen2: ContentGenerator = {
+          generate: jest.fn().mockRejectedValue(error),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValueOnce(gen1).mockReturnValueOnce(gen2);
+
+        // Should exhaust attempts and throw because alternate is unavailable
+        await expect(
+          generateWithRetry(
+            generatorFactory,
+            mockContext,
+            mockPreferredProvider,
+            mockAlternateProvider,
+            {},
+            mockCircuitBreaker
+          )
+        ).rejects.toThrow();
+
+        // Should have checked Anthropic availability but not used it
+        expect(mockCircuitBreaker.isProviderAvailable).toHaveBeenCalledWith('PROVIDER_ANTHROPIC');
+      });
+
+      it('should handle both providers being OPEN', async () => {
+        // Both circuits are OPEN (unavailable)
+        mockCircuitBreaker.isProviderAvailable.mockResolvedValue(false);
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue({ text: 'Never called', outputMode: 'text' }),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValue(mockGenerator);
+
+        // Should throw immediately since no providers are available
+        await expect(
+          generateWithRetry(
+            generatorFactory,
+            mockContext,
+            mockPreferredProvider,
+            mockAlternateProvider,
+            {},
+            mockCircuitBreaker
+          )
+        ).rejects.toThrow();
+
+        // Generator should never be called since both providers are unavailable
+        expect(generatorFactory).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('half_open state allows one attempt', () => {
+      it('should allow attempt when circuit is in half_open state', async () => {
+        // Provider is in half_open - isProviderAvailable returns true
+        mockCircuitBreaker.isProviderAvailable.mockResolvedValue(true);
+        mockCircuitBreaker.getProviderStatus.mockResolvedValue({
+          circuitId: 'PROVIDER_OPENAI',
+          state: 'half_open',
+          failureCount: 0,
+          successCount: 0,
+          failureThreshold: 5,
+          lastFailureAt: null,
+          lastSuccessAt: null,
+          stateChangedAt: null,
+          canAttempt: true,
+          resetTimeoutMs: 300000,
+        });
+
+        const expectedContent: GeneratedContent = {
+          text: 'Success in half_open',
+          outputMode: 'text',
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValue(mockGenerator);
+
+        const result = await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(result.text).toBe(expectedContent.text);
+        expect(mockCircuitBreaker.recordProviderSuccess).toHaveBeenCalledWith('PROVIDER_OPENAI');
+      });
+    });
+
+    describe('failoverMetadata includes circuit information', () => {
+      it('should include circuitTripped: false when no circuit was tripped', async () => {
+        const expectedContent: GeneratedContent = {
+          text: 'Success',
+          outputMode: 'text',
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValue(mockGenerator);
+
+        mockCircuitBreaker.getProviderStatus
+          .mockResolvedValueOnce({
+            circuitId: 'PROVIDER_OPENAI',
+            state: 'on',
+            failureCount: 0,
+            successCount: 0,
+            failureThreshold: 5,
+            lastFailureAt: null,
+            lastSuccessAt: null,
+            stateChangedAt: null,
+            canAttempt: true,
+            resetTimeoutMs: 300000,
+          })
+          .mockResolvedValueOnce({
+            circuitId: 'PROVIDER_ANTHROPIC',
+            state: 'on',
+            failureCount: 0,
+            successCount: 0,
+            failureThreshold: 5,
+            lastFailureAt: null,
+            lastSuccessAt: null,
+            stateChangedAt: null,
+            canAttempt: true,
+            resetTimeoutMs: 300000,
+          });
+
+        const result = await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(result.metadata?.failover?.circuitTripped).toBe(false);
+        expect(result.metadata?.failover?.circuitStates).toEqual({
+          PROVIDER_OPENAI: 'on',
+          PROVIDER_ANTHROPIC: 'on',
+        });
+      });
+
+      it('should include circuitTripped: true when a circuit was skipped due to OPEN state', async () => {
+        // OpenAI circuit is OPEN
+        mockCircuitBreaker.isProviderAvailable.mockImplementation(async (circuitId: string) => {
+          if (circuitId === 'PROVIDER_OPENAI') return false;
+          return true;
+        });
+
+        mockCircuitBreaker.getProviderStatus
+          .mockResolvedValueOnce({
+            circuitId: 'PROVIDER_OPENAI',
+            state: 'off',
+            failureCount: 5,
+            successCount: 0,
+            failureThreshold: 5,
+            lastFailureAt: new Date().toISOString(),
+            lastSuccessAt: null,
+            stateChangedAt: new Date().toISOString(),
+            canAttempt: false,
+            resetTimeoutMs: 300000,
+          })
+          .mockResolvedValueOnce({
+            circuitId: 'PROVIDER_ANTHROPIC',
+            state: 'on',
+            failureCount: 0,
+            successCount: 0,
+            failureThreshold: 5,
+            lastFailureAt: null,
+            lastSuccessAt: null,
+            stateChangedAt: null,
+            canAttempt: true,
+            resetTimeoutMs: 300000,
+          });
+
+        const expectedContent: GeneratedContent = {
+          text: 'Success from alternate',
+          outputMode: 'text',
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValue(mockGenerator);
+
+        const result = await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(result.metadata?.failover?.circuitTripped).toBe(true);
+        expect(result.metadata?.failover?.circuitStates).toEqual({
+          PROVIDER_OPENAI: 'off',
+          PROVIDER_ANTHROPIC: 'on',
+        });
+      });
+
+      it('should include half_open state in circuitStates', async () => {
+        mockCircuitBreaker.getProviderStatus
+          .mockResolvedValueOnce({
+            circuitId: 'PROVIDER_OPENAI',
+            state: 'half_open',
+            failureCount: 0,
+            successCount: 1,
+            failureThreshold: 5,
+            lastFailureAt: null,
+            lastSuccessAt: new Date().toISOString(),
+            stateChangedAt: new Date().toISOString(),
+            canAttempt: true,
+            resetTimeoutMs: 300000,
+          })
+          .mockResolvedValueOnce({
+            circuitId: 'PROVIDER_ANTHROPIC',
+            state: 'on',
+            failureCount: 0,
+            successCount: 0,
+            failureThreshold: 5,
+            lastFailureAt: null,
+            lastSuccessAt: null,
+            stateChangedAt: null,
+            canAttempt: true,
+            resetTimeoutMs: 300000,
+          });
+
+        const expectedContent: GeneratedContent = {
+          text: 'Success',
+          outputMode: 'text',
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValue(mockGenerator);
+
+        const result = await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(result.metadata?.failover?.circuitStates).toEqual({
+          PROVIDER_OPENAI: 'half_open',
+          PROVIDER_ANTHROPIC: 'on',
+        });
+      });
+    });
+
+    describe('graceful degradation', () => {
+      it('should proceed normally when circuit breaker check fails (fail-open)', async () => {
+        // Circuit breaker throws error
+        mockCircuitBreaker.isProviderAvailable.mockRejectedValue(new Error('DB connection failed'));
+
+        const expectedContent: GeneratedContent = {
+          text: 'Success despite circuit breaker error',
+          outputMode: 'text',
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValue(mockGenerator);
+
+        // Should still work - fail-open
+        const result = await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(result.text).toBe(expectedContent.text);
+        expect(generatorFactory).toHaveBeenCalledTimes(1);
+      });
+
+      it('should continue when recordProviderFailure throws', async () => {
+        mockCircuitBreaker.recordProviderFailure.mockRejectedValue(new Error('DB write failed'));
+
+        const error = new RateLimitError('Rate limited', 'openai');
+        const expectedContent: GeneratedContent = {
+          text: 'Success on retry',
+          outputMode: 'text',
+        };
+
+        const gen1: ContentGenerator = {
+          generate: jest.fn().mockRejectedValue(error),
+          validate: jest.fn(),
+        };
+
+        const gen2: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValueOnce(gen1).mockReturnValueOnce(gen2);
+
+        // Should still work despite recordProviderFailure throwing
+        const result = await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(result.text).toBe(expectedContent.text);
+      });
+
+      it('should continue when recordProviderSuccess throws', async () => {
+        mockCircuitBreaker.recordProviderSuccess.mockRejectedValue(new Error('DB write failed'));
+
+        const expectedContent: GeneratedContent = {
+          text: 'Success',
+          outputMode: 'text',
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValue(mockGenerator);
+
+        // Should still work despite recordProviderSuccess throwing
+        const result = await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(result.text).toBe(expectedContent.text);
+      });
+    });
+
+    describe('provider name to circuit ID mapping', () => {
+      it('should map provider getName() to circuit ID', async () => {
+        const openaiProvider: AIProvider = {
+          ...mockPreferredProvider,
+          getName: () => 'openai',
+        };
+
+        const anthropicProvider: AIProvider = {
+          ...mockAlternateProvider,
+          getName: () => 'anthropic',
+        };
+
+        const expectedContent: GeneratedContent = {
+          text: 'Success',
+          outputMode: 'text',
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValue(mockGenerator);
+
+        await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          openaiProvider,
+          anthropicProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        expect(mockCircuitBreaker.isProviderAvailable).toHaveBeenCalledWith('PROVIDER_OPENAI');
+        expect(mockCircuitBreaker.recordProviderSuccess).toHaveBeenCalledWith('PROVIDER_OPENAI');
+      });
+
+      it('should use default circuit ID when getName() is not available', async () => {
+        // Provider without getName method
+        const noNameProvider: AIProvider = {
+          generate: jest.fn(),
+          validateConnection: jest.fn(),
+          // No getName method
+        };
+
+        const expectedContent: GeneratedContent = {
+          text: 'Success',
+          outputMode: 'text',
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn().mockResolvedValue(expectedContent),
+          validate: jest.fn(),
+        };
+
+        const generatorFactory = jest.fn().mockReturnValue(mockGenerator);
+
+        await generateWithRetry(
+          generatorFactory,
+          mockContext,
+          noNameProvider,
+          mockAlternateProvider,
+          {},
+          mockCircuitBreaker
+        );
+
+        // Should default to PROVIDER_OPENAI for preferred provider
+        expect(mockCircuitBreaker.isProviderAvailable).toHaveBeenCalledWith('PROVIDER_OPENAI');
+        expect(mockCircuitBreaker.recordProviderSuccess).toHaveBeenCalledWith('PROVIDER_OPENAI');
+      });
     });
   });
 });

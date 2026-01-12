@@ -76,17 +76,8 @@ describe('CronScheduler', () => {
     jest.useRealTimers();
   });
 
-  describe('constructor', () => {
-    it('should accept MinorUpdateGenerator and VestaboardClient', () => {
-      expect(scheduler).toBeInstanceOf(CronScheduler);
-    });
-
-    it('should store generator and client references', () => {
-      // This test validates that the constructor properly stores dependencies
-      // We'll verify this indirectly through start() behavior
-      expect(scheduler).toBeDefined();
-    });
-  });
+  // Note: Trivial constructor tests removed. Constructor behavior is validated
+  // through actual usage in start/stop tests below.
 
   describe('start', () => {
     it('should schedule first minor update at next minute boundary', async () => {

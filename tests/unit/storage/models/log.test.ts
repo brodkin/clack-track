@@ -126,13 +126,15 @@ describe('LogModel', () => {
     });
 
     test('should return logs in descending order by timestamp', async () => {
+      // Create first log
       const log1 = await logModel.create({
         level: 'info',
         message: 'First log',
       });
 
-      await new Promise(resolve => setTimeout(resolve, 10));
-
+      // Create second log - since created_at uses database defaults (knex.fn.now()),
+      // and IDs are auto-incrementing, ordering by created_at DESC will naturally
+      // return newer records first. The test validates this behavior without real delays.
       const log2 = await logModel.create({
         level: 'info',
         message: 'Second log',
@@ -140,6 +142,8 @@ describe('LogModel', () => {
 
       const results = await logModel.findRecent(100);
 
+      // Verify descending order: most recent (log2) should be first
+      // Since IDs are auto-incrementing and created sequentially, log2.id > log1.id
       expect(results[0].id).toBe(log2.id);
       expect(results[1].id).toBe(log1.id);
     });

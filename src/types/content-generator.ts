@@ -10,6 +10,79 @@
 import type { VestaboardLayout } from './content.js';
 import type { PersonalityDimensions } from '../content/personality/dimensions.js';
 import type { ContentData } from './content-data.js';
+import type { CircuitState } from './circuit-breaker.js';
+
+/**
+ * Text formatting options for content generators.
+ *
+ * Controls how generated text is formatted for Vestaboard display.
+ * All properties are optional - when not specified, default formatting
+ * behavior is used.
+ *
+ * @interface GeneratorFormatOptions
+ * @property {'left' | 'center' | 'right'} [textAlign] - Horizontal text alignment
+ * @property {number} [maxLines] - Maximum lines to use (1-5, leaving room for frame)
+ * @property {number} [maxCharsPerLine] - Maximum characters per line (1-21)
+ * @property {boolean} [wordWrap] - Whether to enable automatic word wrapping
+ *
+ * @example
+ * ```typescript
+ * // Center-aligned content with 4 lines max
+ * const centeredOptions: GeneratorFormatOptions = {
+ *   textAlign: 'center',
+ *   maxLines: 4,
+ *   wordWrap: true
+ * };
+ *
+ * // Left-aligned compact content
+ * const compactOptions: GeneratorFormatOptions = {
+ *   textAlign: 'left',
+ *   maxLines: 3,
+ *   maxCharsPerLine: 18,
+ *   wordWrap: true
+ * };
+ *
+ * // Right-aligned single line (for timestamps, etc.)
+ * const singleLineOptions: GeneratorFormatOptions = {
+ *   textAlign: 'right',
+ *   maxLines: 1,
+ *   wordWrap: false
+ * };
+ *
+ * // Empty options uses default formatting
+ * const defaultOptions: GeneratorFormatOptions = {};
+ * ```
+ */
+export interface GeneratorFormatOptions {
+  /**
+   * Horizontal text alignment for content.
+   * - 'left': Align text to the left edge (default behavior)
+   * - 'center': Center text horizontally
+   * - 'right': Align text to the right edge
+   */
+  textAlign?: 'left' | 'center' | 'right';
+
+  /**
+   * Maximum number of lines to use for content.
+   * Valid range: 1-5 (Vestaboard has 6 rows, typically 1 reserved for frame).
+   * When not specified, uses default line calculation.
+   */
+  maxLines?: number;
+
+  /**
+   * Maximum characters per line.
+   * Valid range: 1-21 (Vestaboard has 22 columns, typically 1 reserved for frame margin).
+   * When not specified, uses default character width.
+   */
+  maxCharsPerLine?: number;
+
+  /**
+   * Whether to enable automatic word wrapping.
+   * When true, text wraps at word boundaries to avoid breaking words.
+   * When false, text may be truncated at line boundaries.
+   */
+  wordWrap?: boolean;
+}
 
 /**
  * Result of a content generator validation check.
@@ -157,6 +230,17 @@ export interface FailoverMetadata {
   errors: Array<{ provider: string; attempt: number; error: string }>;
   /** Total time spent on all retry attempts in milliseconds */
   totalDurationMs: number;
+  /**
+   * Whether a circuit breaker was tripped (provider skipped due to OPEN circuit).
+   * Only present when circuit breaker is provided.
+   */
+  circuitTripped?: boolean;
+  /**
+   * State of provider circuits at the end of retry attempts.
+   * Maps circuit ID (e.g., 'PROVIDER_OPENAI') to state ('on', 'off', 'half_open').
+   * Only present when circuit breaker is provided.
+   */
+  circuitStates?: { [circuitId: string]: CircuitState };
 }
 
 /**
@@ -468,4 +552,10 @@ export interface ContentRegistration {
    * Optional categorization tags for filtering and organization.
    */
   tags?: string[];
+  /**
+   * Optional text formatting options for this generator's content.
+   * Controls alignment, line limits, and word wrapping behavior.
+   * When not specified, default formatting is applied.
+   */
+  formatOptions?: GeneratorFormatOptions;
 }

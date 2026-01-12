@@ -167,7 +167,7 @@ Use for P0 priority Home Assistant events. These are NOT prompt files but rather
 protected formatNotification(eventData: Record<string, unknown>): string {
   // Extract relevant fields from eventData
   // Format into display-ready string
-  // Return 1-5 lines, 21 chars max each
+  // Return lines within {{maxChars}} × {{maxLines}} limits
 }
 ```
 
@@ -227,6 +227,181 @@ protected formatNotification(eventData: Record<string, unknown>): string {
 
 ---
 
+## Template D: Variability-Driven Prompts
+
+Use when you need to ensure variety WITHOUT external data feeds. These patterns use **dictionaries** of options injected via template variables to guarantee each generation is meaningfully different.
+
+**Key Insight**: LLMs are predictive. The same input produces similar outputs. Dictionaries break this pattern.
+
+### Pattern
+
+```
+[Directive that incorporates {{randomVariable}}]
+
+[Guidelines for execution]
+```
+
+**Generator requirements:**
+
+1. Define dictionary array in generator class
+2. Select random element before calling AI
+3. Pass selection via `loadPromptWithVariables()`
+
+### Style Dictionaries
+
+Control HOW the AI delivers content.
+
+**File:** `prompts/user/styled-affirmation.txt`
+
+```
+Write an affirmation in the style of: {{style}}
+
+Keep the message genuine and encouraging while matching the style.
+```
+
+**Generator Dictionary:**
+
+```typescript
+private readonly STYLE_DICTIONARY = [
+  'A FORTUNE COOKIE',
+  'A SPORTS COACH PEP TALK',
+  'A MOVIE TRAILER NARRATOR',
+  'A DRAMATIC SOAP OPERA',
+  'A NATURE DOCUMENTARY',
+  'A GRUMPY OLD MAN WHO MEANS WELL',
+  'A VALLEY GIRL',
+  'A NOIR DETECTIVE VOICEOVER',
+  'A COOKING SHOW HOST',
+  'AN OVERLY ENTHUSIASTIC INFOMERCIAL',
+];
+```
+
+**Sample outputs by style:**
+
+Style: "SPORTS COACH PEP TALK"
+→ "GET OUT THERE AND SHOW MONDAY WHO'S BOSS!"
+
+Style: "NOIR DETECTIVE VOICEOVER"
+→ "THE DAY WAS YOUNG, AND SO WERE YOUR DREAMS"
+
+Style: "GRUMPY OLD MAN WHO MEANS WELL"
+→ "YOU'RE GONNA DO FINE. NOW GET MOVING."
+
+### Theme Dictionaries
+
+Control WHAT the AI talks about.
+
+**File:** `prompts/user/themed-observation.txt`
+
+```
+Write a clever observation about: {{theme}}
+
+Be specific. Find the unexpected angle. Avoid the obvious take.
+```
+
+**Generator Dictionary:**
+
+```typescript
+private readonly THEME_DICTIONARY = [
+  'COFFEE',
+  'COMMUTING',
+  'MEETINGS THAT COULD BE EMAILS',
+  'PRINTER PROBLEMS',
+  'REPLY ALL DISASTERS',
+  'LEFTOVER PIZZA FOR BREAKFAST',
+  'FORGETTING WHY YOU WALKED INTO A ROOM',
+  'THE SNOOZE BUTTON',
+  'PARALLEL PARKING',
+  'GYM MEMBERSHIPS',
+  'LOADING SCREENS',
+  'AUTOCORRECT DISASTERS',
+  'FINDING PARKING',
+];
+```
+
+### Combining Style + Theme Dictionaries
+
+Maximum variety comes from combining BOTH dictionaries.
+
+**File:** `prompts/user/styled-observation.txt`
+
+```
+Write a {{style}} observation about {{theme}}.
+
+Commit to the style while making the observation genuinely funny or insightful.
+```
+
+**Generator Implementation:**
+
+```typescript
+protected async generate(context: GenerationContext): Promise<string> {
+  const style = this.selectRandom(this.STYLE_DICTIONARY);
+  const theme = this.selectRandom(this.THEME_DICTIONARY);
+
+  return this.loadPromptWithVariables({
+    style,
+    theme,
+  });
+}
+```
+
+**Variety math:** 10 styles × 13 themes = 130 unique combinations. Each combination produces different content.
+
+### Combining with Personality Dimensions
+
+Dictionaries work alongside the system prompt's personality dimensions.
+
+**File:** `prompts/user/obsession-themed.txt`
+
+```
+Channel your current {{obsession}} into a {{theme}} observation.
+
+Find the connection between your obsession and the theme, even if it's absurd.
+```
+
+**How it works:**
+
+- `{{obsession}}` comes from system prompt (auto-injected, changes weekly)
+- `{{theme}}` comes from your theme dictionary (random each generation)
+
+**Example combinations:**
+
+Obsession: "90S MOVIES", Theme: "COFFEE"
+→ "YOUR LATTE ORDER IS LIKE TITANIC - OVERLY LONG BUT WORTH IT"
+
+Obsession: "TRUE CRIME", Theme: "MEETINGS"
+→ "THIS MEETING HAS LASTED LONGER THAN MOST INVESTIGATIONS"
+
+### Dictionary Guidelines
+
+| Rule               | Why                                     |
+| ------------------ | --------------------------------------- |
+| Minimum 10 items   | Prevents noticeable repetition          |
+| Diverse categories | Ensures genuinely different outputs     |
+| Avoid overlaps     | "COFFEE" and "MORNINGS" are too similar |
+| Test edge cases    | Ensure all items work with your prompt  |
+| All caps           | Match Vestaboard output format          |
+
+### Anti-Pattern: Static Prompts
+
+**❌ WRONG - No variability:**
+
+```
+Write a motivational message for the day.
+```
+
+This will produce similar content every time. The AI has no reason to vary.
+
+**✅ RIGHT - Dictionary-driven:**
+
+```
+Write a {{style}} motivational message about {{theme}}.
+```
+
+Now every generation is forced to be different.
+
+---
+
 ## Static Fallback Messages
 
 Pre-written messages for P3 fallback when AI fails. These are plain text files, not prompt templates.
@@ -267,8 +442,8 @@ SORRY
 
 ### Guidelines
 
-- **21 chars max per line** (count carefully!)
-- **1-5 lines total**
+- **Respect line width limit** (21 chars framed, 22 chars full screen)
+- **Respect row limit** (5 rows framed, 6 rows full screen)
 - **UPPERCASE only**
 - **No template variables** - these are static
 - **Standalone humor** - should work without context

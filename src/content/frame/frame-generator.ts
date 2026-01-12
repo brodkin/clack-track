@@ -4,6 +4,7 @@ import { ColorBarService, FALLBACK_COLORS } from './color-bar.js';
 import { WeatherService, type WeatherData } from '../../services/weather-service.js';
 import type { HomeAssistantClient } from '../../api/data-sources/home-assistant.js';
 import type { AIProvider } from '../../types/ai.js';
+import type { GeneratorFormatOptions } from '../../types/content-generator.js';
 
 export interface FrameOptions {
   text: string;
@@ -13,6 +14,7 @@ export interface FrameOptions {
   debug?: boolean; // Enable timing output
   weather?: WeatherData; // Pre-fetched weather data (skips fetch if provided)
   colorBar?: number[]; // Pre-fetched color bar (skips fetch if provided)
+  formatOptions?: GeneratorFormatOptions; // Optional formatting options from generator registration
 }
 
 export interface TimingEntry {

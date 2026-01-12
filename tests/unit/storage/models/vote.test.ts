@@ -273,14 +273,15 @@ describe('VoteModel', () => {
         aiProvider: 'openai',
       });
 
+      // Create first vote
       const vote1 = await voteModel.create({
         content_id: content.id,
         vote_type: 'good',
       });
 
-      // Wait a tiny bit to ensure different timestamps
-      await new Promise(resolve => setTimeout(resolve, 10));
-
+      // Create second vote - since created_at uses database defaults (knex.fn.now()),
+      // and IDs are auto-incrementing, ordering by created_at DESC will naturally
+      // return newer records first. The test validates this behavior without real delays.
       const vote2 = await voteModel.create({
         content_id: content.id,
         vote_type: 'bad',
@@ -288,6 +289,8 @@ describe('VoteModel', () => {
 
       const votes = await voteModel.findByContentId(content.id);
 
+      // Verify descending order: most recent (vote2) should be first
+      // Since IDs are auto-incrementing and created sequentially, vote2.id > vote1.id
       expect(votes[0].id).toBe(vote2.id);
       expect(votes[1].id).toBe(vote1.id);
     });

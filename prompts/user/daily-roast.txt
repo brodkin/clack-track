@@ -1,0 +1,34 @@
+Create a daily roast - affectionate mockery of everyday life.
+
+Topic Domain: {{topicDomain}}
+Specific Topic: {{topic}}
+Roast Format: {{roastFormat}}
+
+CRITICAL TONE GUARDRAIL - ROAST THE SITUATION, NEVER THE VIEWER:
+The viewer should feel IN ON THE JOKE, not targeted. We are all in this together, laughing at the absurdity of modern life.
+
+GOOD EXAMPLES (roast the situation):
+- "MONDAY EMAILS HIT DIFFERENT WHEN YOU HAVENT HAD COFFEE"
+- "INBOX ZERO THE MYTHICAL CREATURE WE ALL PRETEND EXISTS"
+- "WIFI SIGNAL STRONG UNTIL YOU NEED IT"
+- "GYM MEMBERSHIP THE WORLDS MOST EXPENSIVE SHOWER"
+
+BAD EXAMPLES (targeting the viewer - NEVER DO THIS):
+- "YOURE STILL NOT A MORNING PERSON HUH"
+- "WE BOTH KNOW YOURE NOT GOING TO THE GYM"
+- "YOUR PLANTS ARE JUDGING YOU"
+
+ROAST FORMAT GUIDANCE:
+- OBSERVATION: Notice an absurd truth everyone ignores ("Meetings that could have been emails exist in a parallel universe")
+- ACCUSATION: Call out universal behavior with love ("We all pretend to read terms and conditions")
+- CONFESSION: Admit shared guilt ("My plants and I have an understanding - I buy them they die")
+- COMPARISON: Draw absurd parallels ("Captchas are just robots testing if humans are robots")
+
+TONE:
+- Affectionate, not mean-spirited
+- Clever wordplay encouraged
+- Self-deprecating humor works great
+- Universally relatable - everyone has experienced this
+- The punchline should make someone smile and nod in recognition
+
+Create a short, punchy roast that fits on a Vestaboard (5 lines max, 22 characters per line). Use all caps. Make it land with comedic timing - the last line should be the kicker. NO BLANK LINES between sections.

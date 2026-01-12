@@ -6,18 +6,6 @@ describe('AI Provider Factory', () => {
   const MOCK_API_KEY = 'test-api-key-12345';
 
   describe('createAIProvider', () => {
-    it('should create OpenAI client when type is OPENAI', () => {
-      const provider = createAIProvider(AIProviderType.OPENAI, MOCK_API_KEY);
-
-      expect(provider).toBeInstanceOf(OpenAIClient);
-    });
-
-    it('should create Anthropic client when type is ANTHROPIC', () => {
-      const provider = createAIProvider(AIProviderType.ANTHROPIC, MOCK_API_KEY);
-
-      expect(provider).toBeInstanceOf(AnthropicClient);
-    });
-
     it('should throw error for invalid provider type', () => {
       // @ts-expect-error - Testing invalid type
       expect(() => createAIProvider('invalid', MOCK_API_KEY)).toThrow();

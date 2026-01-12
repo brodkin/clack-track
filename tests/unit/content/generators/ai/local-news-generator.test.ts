@@ -104,15 +104,32 @@ describe('LocalNewsGenerator', () => {
       expect(generator.feedUrls).toEqual(customFeeds);
     });
 
-    it('should use MEDIUM model tier for news summarization', () => {
+    it('should use MEDIUM model tier for news summarization', async () => {
+      // Set up mocks for generate() call
+      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
+      mockModelTierSelector.select.mockReturnValue({
+        provider: 'openai',
+        model: 'gpt-4.1-mini',
+        tier: ModelTier.MEDIUM,
+      });
+      mockModelTierSelector.getAlternate.mockReturnValue(null);
+      mockRSSClient.getLatestItems.mockResolvedValue([]);
+
       const generator = new LocalNewsGenerator(
         mockPromptLoader,
         mockModelTierSelector,
         { openai: 'test-key' },
         mockRSSClient
-      ) as ProtectedLocalNewsGenerator;
+      );
 
-      expect(generator.modelTier).toBe(ModelTier.MEDIUM);
+      // Verify via observable behavior: modelTierSelector.select is called with MEDIUM tier
+      try {
+        await generator.generate({ updateType: 'major', timestamp: new Date() });
+      } catch {
+        // May fail without AI provider - we're testing the tier selection call
+      }
+
+      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
     });
   });
 
@@ -182,7 +199,17 @@ describe('LocalNewsGenerator', () => {
   });
 
   describe('generate()', () => {
-    it('should use correct configuration for local news', () => {
+    it('should use correct configuration for local news', async () => {
+      // Set up mocks for generate() call
+      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
+      mockModelTierSelector.select.mockReturnValue({
+        provider: 'openai',
+        model: 'gpt-4.1-mini',
+        tier: ModelTier.MEDIUM,
+      });
+      mockModelTierSelector.getAlternate.mockReturnValue(null);
+      mockRSSClient.getLatestItems.mockResolvedValue([]);
+
       const generator = new LocalNewsGenerator(
         mockPromptLoader,
         mockModelTierSelector,
@@ -190,25 +217,52 @@ describe('LocalNewsGenerator', () => {
         mockRSSClient
       ) as ProtectedLocalNewsGenerator;
 
-      // Verify the generator uses the correct configuration
+      // Verify the generator uses the correct configuration via protected methods
       expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
       expect(generator.getUserPromptFile()).toBe('news-summary.txt');
-      expect(generator.modelTier).toBe(ModelTier.MEDIUM);
       expect(generator.feedUrls).toEqual(LocalNewsGenerator.DEFAULT_FEEDS);
+
+      // Verify tier via observable behavior
+      try {
+        await generator.generate({ updateType: 'major', timestamp: new Date() });
+      } catch {
+        // May fail without AI provider - we're testing configuration
+      }
+
+      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
     });
   });
 
   describe('integration with base class', () => {
-    it('should pass RSS client to base class', () => {
+    it('should use RSS client for fetching news items during generation', async () => {
+      // Set up mocks
+      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
+      mockModelTierSelector.select.mockReturnValue({
+        provider: 'openai',
+        model: 'gpt-4.1-mini',
+        tier: ModelTier.MEDIUM,
+      });
+      mockModelTierSelector.getAlternate.mockReturnValue(null);
+      mockRSSClient.getLatestItems.mockResolvedValue([
+        { title: 'Test News', link: 'https://example.com', pubDate: new Date() },
+      ]);
+
       const generator = new LocalNewsGenerator(
         mockPromptLoader,
         mockModelTierSelector,
         { openai: 'test-key' },
         mockRSSClient
-      ) as ProtectedLocalNewsGenerator;
+      );
 
-      // Verify RSS client was stored by base class
-      expect(generator['rssClient']).toBe(mockRSSClient);
+      // Trigger generation to verify RSS client is used
+      try {
+        await generator.generate({ updateType: 'major', timestamp: new Date() });
+      } catch {
+        // May fail without AI provider - we're verifying RSS client usage
+      }
+
+      // Verify via observable behavior: RSS client was called during generation
+      expect(mockRSSClient.getLatestItems).toHaveBeenCalled();
     });
   });
 });

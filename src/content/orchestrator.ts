@@ -5,6 +5,7 @@
  * and content caching for Vestaboard updates.
  *
  * Pipeline Flow:
+ * 0. Check circuit breakers (MASTER, provider availability)
  * 1. Use ContentSelector to select appropriate generator
  * 2. Call generateWithRetry with preferred/alternate providers
  * 3. On retry failure → fall back to StaticFallbackGenerator (P3)
@@ -26,6 +27,8 @@ import type { AIProvider } from '../types/ai.js';
 import type { GenerationContext, GeneratedContent } from '../types/content-generator.js';
 import type { ContentDataProvider } from '../services/content-data-provider.js';
 import type { ContentRepository } from '../storage/repositories/content-repo.js';
+import type { CircuitBreakerService } from '../services/circuit-breaker-service.js';
+import type { OrchestratorResult } from '../types/content.js';
 
 /**
  * Configuration options for ContentOrchestrator
@@ -49,6 +52,8 @@ export interface ContentOrchestratorConfig {
   dataProvider?: ContentDataProvider;
   /** Optional content repository for database persistence */
   contentRepository?: ContentRepository;
+  /** Optional circuit breaker service for system control */
+  circuitBreaker?: CircuitBreakerService;
 }
 
 /**
@@ -87,6 +92,7 @@ export class ContentOrchestrator {
   private readonly alternateProvider: AIProvider;
   private readonly dataProvider?: ContentDataProvider;
   private readonly contentRepository?: ContentRepository;
+  private readonly circuitBreaker?: CircuitBreakerService;
   private cachedContent: GeneratedContent | null = null;
 
   /**
@@ -104,12 +110,14 @@ export class ContentOrchestrator {
     this.alternateProvider = config.alternateProvider;
     this.dataProvider = config.dataProvider;
     this.contentRepository = config.contentRepository;
+    this.circuitBreaker = config.circuitBreaker;
   }
 
   /**
    * Generate and send content through the full pipeline
    *
    * Pipeline steps:
+   * 0. Check circuit breakers (MASTER, provider availability)
    * 1. Pre-fetch data (weather, colors) via ContentDataProvider (major updates only)
    * 2. Select generator based on context
    * 3. Generate with retry logic (preferred → alternate provider)
@@ -119,18 +127,34 @@ export class ContentOrchestrator {
    * 7. Send to Vestaboard
    *
    * @param context - Generation context with update type and metadata
+   * @returns Result object with success status and optional content/blocking info
    * @throws Error if no generator available or Vestaboard send fails
    *
    * @example
    * ```typescript
-   * await orchestrator.generateAndSend({
+   * const result = await orchestrator.generateAndSend({
    *   updateType: 'major',
    *   timestamp: new Date(),
    *   eventData: { event_type: 'door.opened' }
    * });
+   *
+   * if (result.blocked) {
+   *   console.log('Blocked:', result.blockReason);
+   * }
    * ```
    */
-  async generateAndSend(context: GenerationContext): Promise<void> {
+  async generateAndSend(context: GenerationContext): Promise<OrchestratorResult> {
+    // Step 0: Check Master circuit first
+    if (this.circuitBreaker && (await this.circuitBreaker.isCircuitOpen('MASTER'))) {
+      console.log('Master circuit is OFF - blocking content generation');
+      return {
+        success: false,
+        blocked: true,
+        blockReason: 'master_circuit_off',
+        circuitState: { master: false },
+      };
+    }
+
     // Step 1: Pre-fetch data if dataProvider is available and this is a major update
     if (this.dataProvider && context.updateType === 'major') {
       try {
@@ -163,43 +187,61 @@ export class ContentOrchestrator {
 
     let content: GeneratedContent | undefined;
     let generationError: Error | null = null;
+    let skipProviderGeneration = false;
 
-    try {
-      // Step 3: Generate with retry logic using factory pattern
-      // Create a factory that returns the selected generator instance
-      // Note: Current generator architecture doesn't use injected provider yet
-      // (provider injection will be added in future refactoring)
-      // For now, factory ignores provider parameter and returns pre-existing generator
-      const generatorFactory: GeneratorFactory = (_provider: AIProvider) => {
-        return registeredGenerator.generator;
-      };
-
-      content = await generateWithRetry(
-        generatorFactory,
-        context,
-        this.preferredProvider,
-        this.alternateProvider
-      );
-
-      // Step 2.5: Validate generator output
-      validateGeneratorOutput(content);
-    } catch (error) {
-      // Capture the original error for persistence
-      generationError = error instanceof Error ? error : new Error('Unknown error');
-
-      // Step 3: P3 fallback on retry failure or validation error
-      console.warn(
-        `Generator "${registeredGenerator.registration.name}" (${registeredGenerator.registration.id}) failed, using P3 fallback:`,
-        error instanceof Error ? error.message : 'Unknown error'
-      );
-
-      // Save failed generation to database (fire-and-forget)
-      if (this.contentRepository && context.updateType === 'major') {
-        this.saveFailedContent(context, registeredGenerator, generationError, content).catch(() => {
-          // Silently catch database errors - don't block content delivery
-        });
+    // Step 2.5: Check provider circuit availability before AI generation
+    if (this.circuitBreaker) {
+      const providerName = this.preferredProvider.getName?.() || 'unknown';
+      const providerCircuitId = `PROVIDER_${providerName.toUpperCase()}`;
+      if (!(await this.circuitBreaker.isProviderAvailable(providerCircuitId))) {
+        console.log(`Provider circuit ${providerCircuitId} is OPEN - using fallback`);
+        skipProviderGeneration = true;
       }
+    }
 
+    if (!skipProviderGeneration) {
+      try {
+        // Step 3: Generate with retry logic using factory pattern
+        // Create a factory that returns the selected generator instance
+        // Note: Current generator architecture doesn't use injected provider yet
+        // (provider injection will be added in future refactoring)
+        // For now, factory ignores provider parameter and returns pre-existing generator
+        const generatorFactory: GeneratorFactory = (_provider: AIProvider) => {
+          return registeredGenerator.generator;
+        };
+
+        content = await generateWithRetry(
+          generatorFactory,
+          context,
+          this.preferredProvider,
+          this.alternateProvider
+        );
+
+        // Step 3.5: Validate generator output
+        validateGeneratorOutput(content);
+      } catch (error) {
+        // Capture the original error for persistence
+        generationError = error instanceof Error ? error : new Error('Unknown error');
+
+        // Step 4: P3 fallback on retry failure or validation error
+        console.warn(
+          `Generator "${registeredGenerator.registration.name}" (${registeredGenerator.registration.id}) failed, using P3 fallback:`,
+          error instanceof Error ? error.message : 'Unknown error'
+        );
+
+        // Save failed generation to database (fire-and-forget)
+        if (this.contentRepository && context.updateType === 'major') {
+          this.saveFailedContent(context, registeredGenerator, generationError, content).catch(
+            () => {
+              // Silently catch database errors - don't block content delivery
+            }
+          );
+        }
+
+        content = await this.fallbackGenerator.generate(context);
+      }
+    } else {
+      // Provider circuit is open, use fallback directly
       content = await this.fallbackGenerator.generate(context);
     }
 
@@ -207,10 +249,15 @@ export class ContentOrchestrator {
     let layoutToSend: number[][];
 
     if (content.outputMode === 'text') {
+      // Extract formatOptions from registration (if available)
+      // Defensive check for optional registration property
+      const formatOptions = registeredGenerator?.registration?.formatOptions;
+
       const frameResult = await this.decorator.decorate(
         content.text,
         context.timestamp,
-        context.data
+        context.data,
+        formatOptions
       );
       layoutToSend = frameResult.layout;
     } else {
@@ -235,6 +282,11 @@ export class ContentOrchestrator {
         // Silently catch database errors - don't block content delivery
       });
     }
+
+    return {
+      success: true,
+      content,
+    };
   }
 
   /**

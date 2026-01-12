@@ -108,6 +108,26 @@ export default defineConfig({
     outDir: '../../../dist/public',
     emptyOutDir: true,
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Vendor chunk: React core libraries
+          if (
+            id.includes('node_modules/react/') ||
+            id.includes('node_modules/react-dom/') ||
+            id.includes('node_modules/react-router-dom/') ||
+            id.includes('node_modules/react-router/')
+          ) {
+            return 'vendor';
+          }
+          // UI chunk: Radix UI primitives and icon library
+          if (id.includes('node_modules/@radix-ui/') || id.includes('node_modules/lucide-react/')) {
+            return 'ui';
+          }
+          // App code remains in dynamic per-route chunks (default behavior)
+        },
+      },
+    },
   },
   server: {
     host: '0.0.0.0',

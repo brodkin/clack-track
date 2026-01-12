@@ -30,7 +30,12 @@ describe('CLI parseOptions', () => {
       // args[0] = node, args[1] = script, args[2] = 'frame', args[3] = '--skip-weather'
       await runCLI(['node', 'script.js', 'frame', '--skip-weather']);
 
-      expect(jest.mocked(frameCommand)).toHaveBeenCalled();
+      // Verify skipWeather is parsed as boolean true, not a string
+      expect(jest.mocked(frameCommand)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skipWeather: true,
+        })
+      );
     });
 
     it('should parse --skip-colors as boolean true', async () => {
@@ -39,7 +44,12 @@ describe('CLI parseOptions', () => {
 
       await runCLI(['node', 'script.js', 'frame', '--skip-colors']);
 
-      expect(jest.mocked(frameCommand)).toHaveBeenCalled();
+      // Verify skipColors is parsed as boolean true, not a string
+      expect(jest.mocked(frameCommand)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skipColors: true,
+        })
+      );
     });
 
     it('should parse --verbose as boolean true', async () => {
@@ -48,7 +58,12 @@ describe('CLI parseOptions', () => {
 
       await runCLI(['node', 'script.js', 'frame', '--verbose']);
 
-      expect(jest.mocked(frameCommand)).toHaveBeenCalled();
+      // Verify verbose is parsed as boolean true, not a string
+      expect(jest.mocked(frameCommand)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verbose: true,
+        })
+      );
     });
 
     it('should not capture following positional argument as boolean value', async () => {
@@ -248,16 +263,24 @@ describe('CLI parseOptions', () => {
       );
     });
 
-    it('should handle value flag with empty string value', async () => {
+    it('should handle value flag followed by another flag (no explicit value)', async () => {
       const { testAICommand } = await import('../../../src/cli/commands/index.js');
       jest.mocked(testAICommand).mockClear();
 
-      // This is tricky: --prompt "" should pass empty string as value
-      // But parseOptions might treat empty string as falsy
-      // For now, just ensure it doesn't crash
+      // When --prompt is immediately followed by --provider, the parser
+      // recognizes --provider as a flag (starts with --), so --prompt gets
+      // value=true instead of consuming the next argument
       await runCLI(['node', 'script.js', 'test-ai', '--prompt', '--provider', 'openai']);
 
-      expect(jest.mocked(testAICommand)).toHaveBeenCalled();
+      // Verify both flags are parsed correctly:
+      // - --prompt becomes true (no explicit string value, next arg is a flag)
+      // - --provider gets 'openai' as its value
+      expect(jest.mocked(testAICommand)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customPrompt: undefined, // --prompt set to true, not a string, so defaults to undefined
+          provider: 'openai', // --provider correctly parsed with its value
+        })
+      );
     });
   });
 });

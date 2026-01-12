@@ -1,5 +1,6 @@
 import knex, { Knex } from 'knex';
 import { log } from '../utils/logger.js';
+import { getSecretOrEnv } from '../utils/secrets.js';
 import * as path from 'path';
 
 /**
@@ -38,15 +39,20 @@ function loadKnexConfig(environment: string): Knex.Config {
     };
   }
 
-  if (environment === 'production' && process.env.DB_TYPE === 'mysql') {
+  // Use MySQL if DATABASE_TYPE=mysql OR if DATABASE_URL starts with mysql://
+  // This allows MySQL in both development and production environments
+  const databaseUrl = process.env.DATABASE_URL || '';
+  const useMySQL = process.env.DATABASE_TYPE === 'mysql' || databaseUrl.startsWith('mysql://');
+
+  if (useMySQL && environment !== 'test') {
     return {
       client: 'mysql2',
-      connection: {
-        host: process.env.DB_HOST || 'localhost',
-        port: parseInt(process.env.DB_PORT || '3306', 10),
-        user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'clack_track',
+      connection: databaseUrl || {
+        host: process.env.DATABASE_HOST || 'localhost',
+        port: parseInt(process.env.DATABASE_PORT || '3306', 10),
+        user: process.env.DATABASE_USER || 'root',
+        password: getSecretOrEnv('database_password_v2', 'DATABASE_PASSWORD', ''),
+        database: process.env.DATABASE_NAME || 'clack_track',
       },
       migrations: {
         directory: migrationsDir,

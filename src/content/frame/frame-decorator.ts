@@ -28,6 +28,7 @@ import { generateFrame, type FrameResult, type FrameOptions } from './frame-gene
 import type { HomeAssistantClient } from '../../api/data-sources/home-assistant.js';
 import type { AIProvider } from '../../types/ai.js';
 import type { ContentData } from '../../types/content-data.js';
+import type { GeneratorFormatOptions } from '../../types/content-generator.js';
 
 /**
  * Configuration options for FrameDecorator
@@ -66,6 +67,7 @@ export class FrameDecorator {
    * @param text - Content text to display (will be word-wrapped and formatted)
    * @param dateTime - Optional date/time for info bar (defaults to current time)
    * @param contentData - Optional pre-fetched content data (weather, colors) to avoid duplicate fetches
+   * @param formatOptions - Optional formatting options (alignment, wordWrap) from generator registration
    * @returns FrameResult with 6×22 layout and any warnings
    *
    * @example
@@ -76,7 +78,12 @@ export class FrameDecorator {
    * console.log(result.warnings); // Any warnings from processing
    * ```
    */
-  async decorate(text: string, dateTime?: Date, contentData?: ContentData): Promise<FrameResult> {
+  async decorate(
+    text: string,
+    dateTime?: Date,
+    contentData?: ContentData,
+    formatOptions?: GeneratorFormatOptions
+  ): Promise<FrameResult> {
     try {
       // Prepare options for generateFrame
       const options: FrameOptions = {
@@ -86,6 +93,7 @@ export class FrameDecorator {
         dateTime: dateTime,
         weather: contentData?.weather,
         colorBar: contentData?.colorBar,
+        formatOptions,
       };
 
       // Call existing generateFrame function with optional dependencies

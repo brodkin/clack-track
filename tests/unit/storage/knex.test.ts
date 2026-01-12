@@ -171,20 +171,20 @@ describe('Knex Factory and Singleton', () => {
 
     it('should support production MySQL config from environment variables', () => {
       const originalEnv = process.env.NODE_ENV;
-      const originalDbType = process.env.DB_TYPE;
-      const originalDbHost = process.env.DB_HOST;
-      const originalDbUser = process.env.DB_USER;
-      const originalDbPassword = process.env.DB_PASSWORD;
-      const originalDbName = process.env.DB_NAME;
-      const originalDbPort = process.env.DB_PORT;
+      const originalDatabaseType = process.env.DATABASE_TYPE;
+      const originalDatabaseHost = process.env.DATABASE_HOST;
+      const originalDatabaseUser = process.env.DATABASE_USER;
+      const originalDatabasePassword = process.env.DATABASE_PASSWORD;
+      const originalDatabaseName = process.env.DATABASE_NAME;
+      const originalDatabasePort = process.env.DATABASE_PORT;
 
       process.env.NODE_ENV = 'production';
-      process.env.DB_TYPE = 'mysql';
-      process.env.DB_HOST = 'mysql-server';
-      process.env.DB_USER = 'clacktrack';
-      process.env.DB_PASSWORD = 'secure-password';
-      process.env.DB_NAME = 'clack_track';
-      process.env.DB_PORT = '3306';
+      process.env.DATABASE_TYPE = 'mysql';
+      process.env.DATABASE_HOST = 'mysql-server';
+      process.env.DATABASE_USER = 'clacktrack';
+      process.env.DATABASE_PASSWORD = 'secure-password';
+      process.env.DATABASE_NAME = 'clack_track';
+      process.env.DATABASE_PORT = '3306';
 
       const instance = getKnexInstance();
 
@@ -193,12 +193,12 @@ describe('Knex Factory and Singleton', () => {
       expect(callConfig.client).toBe('mysql2');
 
       process.env.NODE_ENV = originalEnv;
-      process.env.DB_TYPE = originalDbType;
-      process.env.DB_HOST = originalDbHost;
-      process.env.DB_USER = originalDbUser;
-      process.env.DB_PASSWORD = originalDbPassword;
-      process.env.DB_NAME = originalDbName;
-      process.env.DB_PORT = originalDbPort;
+      process.env.DATABASE_TYPE = originalDatabaseType;
+      process.env.DATABASE_HOST = originalDatabaseHost;
+      process.env.DATABASE_USER = originalDatabaseUser;
+      process.env.DATABASE_PASSWORD = originalDatabasePassword;
+      process.env.DATABASE_NAME = originalDatabaseName;
+      process.env.DATABASE_PORT = originalDatabasePort;
     });
   });
 

@@ -397,3 +397,5 @@ export function Account() {
     </PageLayout>
   );
 }
+
+export default Account;

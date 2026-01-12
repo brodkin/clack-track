@@ -115,7 +115,7 @@ export abstract class BaseNewsGenerator extends AIPromptGenerator {
 
     // Step 2: Load system prompt (personality handled at system level)
     const personality = context.personality ?? generatePersonalityDimensions();
-    const systemPrompt = await this.promptLoader.loadPromptWithVariables(
+    const loadedSystemPrompt = await this.promptLoader.loadPromptWithVariables(
       'system',
       this.getSystemPromptFile(),
       {
@@ -124,8 +124,17 @@ export abstract class BaseNewsGenerator extends AIPromptGenerator {
         humorStyle: personality.humorStyle,
         obsession: personality.obsession,
         persona: 'Houseboy',
+        date: context.timestamp.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        }),
       }
     );
+
+    // Apply dimension substitution (maxChars, maxLines) to system prompt
+    const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
 
     // Step 3: Load user prompt with pre-formatted headlines string
     const headlinesFormatted = headlines.map(h => `  - ${h}`).join('\n');

@@ -20,6 +20,7 @@ import {
 } from '@/types/content-generator';
 import type { RegisteredGenerator } from '@/content/registry/content-registry';
 import type { ContentRepository } from '@/storage/repositories/content-repo';
+import type { CircuitBreakerService } from '@/services/circuit-breaker-service';
 
 // Mock dependencies
 jest.mock('@/content/orchestrator-retry', () => ({
@@ -164,7 +165,8 @@ describe('ContentOrchestrator', () => {
       expect(mockDecorator.decorate).toHaveBeenCalledWith(
         'TEST CONTENT',
         context.timestamp,
-        undefined
+        undefined,
+        undefined // formatOptions (not specified in registration)
       );
       expect(mockVestaboardClient.sendLayout).toHaveBeenCalledWith(decoratedLayout);
 
@@ -343,7 +345,8 @@ describe('ContentOrchestrator', () => {
       expect(mockDecorator.decorate).toHaveBeenCalledWith(
         'Static fallback content',
         context.timestamp,
-        undefined
+        undefined,
+        undefined // formatOptions (not specified in registration)
       );
       expect(mockVestaboardClient.sendLayout).toHaveBeenCalledWith(decoratedLayout);
 
@@ -1164,8 +1167,9 @@ describe('ContentOrchestrator', () => {
         // Database save fails
         mockContentRepository.saveContent.mockRejectedValue(new Error('Database error'));
 
-        // Act & Assert - Should not throw
-        await expect(orchestrator.generateAndSend(context)).resolves.toBeUndefined();
+        // Act & Assert - Should not throw, and should return success result
+        const result = await orchestrator.generateAndSend(context);
+        expect(result.success).toBe(true);
       });
 
       it('should not throw error if database save fails on failure path', async () => {
@@ -1207,8 +1211,9 @@ describe('ContentOrchestrator', () => {
         // Database save fails
         mockContentRepository.saveContent.mockRejectedValue(new Error('Database error'));
 
-        // Act & Assert - Should not throw
-        await expect(orchestrator.generateAndSend(context)).resolves.toBeUndefined();
+        // Act & Assert - Should not throw, and should return success result
+        const result = await orchestrator.generateAndSend(context);
+        expect(result.success).toBe(true);
       });
     });
 
@@ -1258,8 +1263,650 @@ describe('ContentOrchestrator', () => {
           warnings: [],
         });
 
-        // Act & Assert - Should not throw
-        await expect(orchestratorWithoutRepo.generateAndSend(context)).resolves.toBeUndefined();
+        // Act & Assert - Should not throw, and should return success result
+        const result = await orchestratorWithoutRepo.generateAndSend(context);
+        expect(result.success).toBe(true);
+      });
+    });
+  });
+
+  describe('Format Options Wiring', () => {
+    it('should pass formatOptions from registration to decorator.decorate()', async () => {
+      // Arrange
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn(),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      const formatOptions = {
+        textAlign: 'center' as const,
+        wordWrap: true,
+        maxLines: 4,
+      };
+
+      const registeredGenerator: RegisteredGenerator = {
+        registration: {
+          id: 'centered-gen',
+          name: 'Centered Generator',
+          priority: 2,
+          modelTier: ModelTier.LIGHT,
+          applyFrame: true,
+          formatOptions, // Generator specifies formatting options
+        },
+        generator: mockGenerator,
+      };
+
+      const generatedContent: GeneratedContent = {
+        text: 'CENTERED CONTENT',
+        outputMode: 'text',
+      };
+
+      const decoratedLayout = [[1, 2, 3]];
+
+      mockSelector.select.mockReturnValue(registeredGenerator);
+      (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+      mockDecorator.decorate.mockResolvedValue({
+        layout: decoratedLayout,
+        warnings: [],
+      });
+
+      // Act
+      await orchestrator.generateAndSend(context);
+
+      // Assert - formatOptions should be passed to decorate()
+      expect(mockDecorator.decorate).toHaveBeenCalledWith(
+        'CENTERED CONTENT',
+        context.timestamp,
+        undefined, // contentData
+        formatOptions // formatOptions from registration
+      );
+    });
+
+    it('should pass undefined formatOptions when registration has no formatOptions', async () => {
+      // Arrange
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn(),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      const registeredGenerator: RegisteredGenerator = {
+        registration: {
+          id: 'no-format-gen',
+          name: 'No Format Generator',
+          priority: 2,
+          modelTier: ModelTier.LIGHT,
+          applyFrame: true,
+          // No formatOptions - should use defaults
+        },
+        generator: mockGenerator,
+      };
+
+      const generatedContent: GeneratedContent = {
+        text: 'DEFAULT CONTENT',
+        outputMode: 'text',
+      };
+
+      const decoratedLayout = [[1, 2, 3]];
+
+      mockSelector.select.mockReturnValue(registeredGenerator);
+      (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+      mockDecorator.decorate.mockResolvedValue({
+        layout: decoratedLayout,
+        warnings: [],
+      });
+
+      // Act
+      await orchestrator.generateAndSend(context);
+
+      // Assert - undefined formatOptions (backward compatible)
+      expect(mockDecorator.decorate).toHaveBeenCalledWith(
+        'DEFAULT CONTENT',
+        context.timestamp,
+        undefined, // contentData
+        undefined // formatOptions (not specified in registration)
+      );
+    });
+
+    it('should pass formatOptions with right alignment', async () => {
+      // Arrange
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn(),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      const formatOptions = {
+        textAlign: 'right' as const,
+        wordWrap: false,
+      };
+
+      const registeredGenerator: RegisteredGenerator = {
+        registration: {
+          id: 'right-aligned-gen',
+          name: 'Right Aligned Generator',
+          priority: 2,
+          modelTier: ModelTier.LIGHT,
+          applyFrame: true,
+          formatOptions,
+        },
+        generator: mockGenerator,
+      };
+
+      const generatedContent: GeneratedContent = {
+        text: 'RIGHT ALIGNED',
+        outputMode: 'text',
+      };
+
+      const decoratedLayout = [[1, 2, 3]];
+
+      mockSelector.select.mockReturnValue(registeredGenerator);
+      (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+      mockDecorator.decorate.mockResolvedValue({
+        layout: decoratedLayout,
+        warnings: [],
+      });
+
+      // Act
+      await orchestrator.generateAndSend(context);
+
+      // Assert
+      expect(mockDecorator.decorate).toHaveBeenCalledWith(
+        'RIGHT ALIGNED',
+        context.timestamp,
+        undefined,
+        formatOptions
+      );
+    });
+
+    it('should pass formatOptions when using generatorId for direct lookup', async () => {
+      // Arrange
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+        generatorId: 'specific-gen', // Direct generator lookup
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn(),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      const formatOptions = {
+        textAlign: 'left' as const,
+        maxCharsPerLine: 18,
+      };
+
+      const registeredGenerator: RegisteredGenerator = {
+        registration: {
+          id: 'specific-gen',
+          name: 'Specific Generator',
+          priority: 2,
+          modelTier: ModelTier.LIGHT,
+          applyFrame: true,
+          formatOptions,
+        },
+        generator: mockGenerator,
+      };
+
+      const generatedContent: GeneratedContent = {
+        text: 'SPECIFIC CONTENT',
+        outputMode: 'text',
+      };
+
+      const decoratedLayout = [[1, 2, 3]];
+
+      // Create orchestrator with registry for direct lookup
+      const mockRegistry = {
+        getById: jest.fn().mockReturnValue(registeredGenerator),
+      };
+
+      const orchestratorWithRegistry = new ContentOrchestrator({
+        selector: mockSelector,
+        registry:
+          mockRegistry as unknown as import('@/content/registry/content-registry').ContentRegistry,
+        decorator: mockDecorator,
+        vestaboardClient: mockVestaboardClient,
+        fallbackGenerator: mockFallbackGenerator,
+        preferredProvider: mockPreferredProvider,
+        alternateProvider: mockAlternateProvider,
+      });
+
+      (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+      mockDecorator.decorate.mockResolvedValue({
+        layout: decoratedLayout,
+        warnings: [],
+      });
+
+      // Act
+      await orchestratorWithRegistry.generateAndSend(context);
+
+      // Assert
+      expect(mockRegistry.getById).toHaveBeenCalledWith('specific-gen');
+      expect(mockDecorator.decorate).toHaveBeenCalledWith(
+        'SPECIFIC CONTENT',
+        context.timestamp,
+        undefined,
+        formatOptions
+      );
+    });
+
+    it('should not pass formatOptions to decorator when outputMode is layout', async () => {
+      // Arrange - layout mode bypasses decorator entirely
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date(),
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn(),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      const formatOptions = {
+        textAlign: 'center' as const,
+        wordWrap: true,
+      };
+
+      const registeredGenerator: RegisteredGenerator = {
+        registration: {
+          id: 'layout-gen',
+          name: 'Layout Generator',
+          priority: 2,
+          modelTier: ModelTier.LIGHT,
+          applyFrame: true,
+          formatOptions, // Has formatOptions but should be ignored for layout mode
+        },
+        generator: mockGenerator,
+      };
+
+      const preFormattedCharacterCodes = Array(6)
+        .fill(null)
+        .map(() => Array(22).fill(0));
+
+      const generatedContent: GeneratedContent = {
+        text: '',
+        outputMode: 'layout', // Layout mode - decorator should not be called
+        layout: {
+          rows: ['ROW ONE', 'ROW TWO', 'ROW THREE', 'ROW FOUR', 'ROW FIVE', 'ROW SIX'],
+          characterCodes: preFormattedCharacterCodes,
+        },
+      };
+
+      mockSelector.select.mockReturnValue(registeredGenerator);
+      (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+
+      // Act
+      await orchestrator.generateAndSend(context);
+
+      // Assert - decorator should NOT be called for layout mode
+      expect(mockDecorator.decorate).not.toHaveBeenCalled();
+      expect(mockVestaboardClient.sendLayout).toHaveBeenCalledWith(preFormattedCharacterCodes);
+    });
+  });
+
+  describe('Circuit Breaker Integration', () => {
+    let mockCircuitBreaker: jest.Mocked<CircuitBreakerService>;
+
+    beforeEach(() => {
+      mockCircuitBreaker = {
+        isCircuitOpen: jest.fn(),
+        isProviderAvailable: jest.fn(),
+        initialize: jest.fn(),
+        setCircuitState: jest.fn(),
+        getCircuitStatus: jest.fn(),
+        getAllCircuits: jest.fn(),
+        getCircuitsByType: jest.fn(),
+        recordProviderFailure: jest.fn(),
+        recordProviderSuccess: jest.fn(),
+        getProviderStatus: jest.fn(),
+        resetProviderCircuit: jest.fn(),
+      } as unknown as jest.Mocked<CircuitBreakerService>;
+    });
+
+    describe('Master Circuit Check', () => {
+      it('should block generation when MASTER circuit is OFF', async () => {
+        // Arrange
+        const orchestratorWithCircuitBreaker = new ContentOrchestrator({
+          selector: mockSelector,
+          decorator: mockDecorator,
+          vestaboardClient: mockVestaboardClient,
+          fallbackGenerator: mockFallbackGenerator,
+          preferredProvider: mockPreferredProvider,
+          alternateProvider: mockAlternateProvider,
+          circuitBreaker: mockCircuitBreaker,
+        });
+
+        const context: GenerationContext = {
+          updateType: 'major',
+          timestamp: new Date(),
+        };
+
+        // MASTER circuit is OFF (isCircuitOpen returns true when OFF)
+        mockCircuitBreaker.isCircuitOpen.mockResolvedValue(true);
+
+        // Act
+        const result = await orchestratorWithCircuitBreaker.generateAndSend(context);
+
+        // Assert
+        expect(result.success).toBe(false);
+        expect(result.blocked).toBe(true);
+        expect(result.blockReason).toBe('master_circuit_off');
+        expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
+        expect(mockSelector.select).not.toHaveBeenCalled();
+        expect(mockVestaboardClient.sendLayout).not.toHaveBeenCalled();
+      });
+
+      it('should allow generation when MASTER circuit is ON', async () => {
+        // Arrange
+        const orchestratorWithCircuitBreaker = new ContentOrchestrator({
+          selector: mockSelector,
+          decorator: mockDecorator,
+          vestaboardClient: mockVestaboardClient,
+          fallbackGenerator: mockFallbackGenerator,
+          preferredProvider: mockPreferredProvider,
+          alternateProvider: mockAlternateProvider,
+          circuitBreaker: mockCircuitBreaker,
+        });
+
+        const context: GenerationContext = {
+          updateType: 'major',
+          timestamp: new Date(),
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn(),
+          validate: jest.fn().mockReturnValue({ valid: true }),
+        };
+
+        const registeredGenerator: RegisteredGenerator = {
+          registration: {
+            id: 'test-gen',
+            name: 'Test Generator',
+            priority: 2,
+            modelTier: ModelTier.LIGHT,
+            applyFrame: true,
+          },
+          generator: mockGenerator,
+        };
+
+        const generatedContent: GeneratedContent = {
+          text: 'TEST CONTENT',
+          outputMode: 'text',
+        };
+
+        // MASTER circuit is ON (isCircuitOpen returns false when ON)
+        mockCircuitBreaker.isCircuitOpen.mockResolvedValue(false);
+        mockCircuitBreaker.isProviderAvailable.mockResolvedValue(true);
+        mockSelector.select.mockReturnValue(registeredGenerator);
+        (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+        mockDecorator.decorate.mockResolvedValue({
+          layout: [[1, 2, 3]],
+          warnings: [],
+        });
+
+        // Act
+        const result = await orchestratorWithCircuitBreaker.generateAndSend(context);
+
+        // Assert
+        expect(result.success).toBe(true);
+        expect(result.blocked).toBeUndefined();
+        expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
+        expect(mockSelector.select).toHaveBeenCalled();
+        expect(mockVestaboardClient.sendLayout).toHaveBeenCalled();
+      });
+
+      it('should include circuit state in result when blocked', async () => {
+        // Arrange
+        const orchestratorWithCircuitBreaker = new ContentOrchestrator({
+          selector: mockSelector,
+          decorator: mockDecorator,
+          vestaboardClient: mockVestaboardClient,
+          fallbackGenerator: mockFallbackGenerator,
+          preferredProvider: mockPreferredProvider,
+          alternateProvider: mockAlternateProvider,
+          circuitBreaker: mockCircuitBreaker,
+        });
+
+        const context: GenerationContext = {
+          updateType: 'major',
+          timestamp: new Date(),
+        };
+
+        mockCircuitBreaker.isCircuitOpen.mockResolvedValue(true);
+
+        // Act
+        const result = await orchestratorWithCircuitBreaker.generateAndSend(context);
+
+        // Assert
+        expect(result.circuitState).toBeDefined();
+        expect(result.circuitState?.master).toBe(false); // master is OFF
+      });
+    });
+
+    describe('Provider Circuit Check', () => {
+      it('should skip to fallback when provider circuit is OPEN', async () => {
+        // Arrange
+        const orchestratorWithCircuitBreaker = new ContentOrchestrator({
+          selector: mockSelector,
+          decorator: mockDecorator,
+          vestaboardClient: mockVestaboardClient,
+          fallbackGenerator: mockFallbackGenerator,
+          preferredProvider: mockPreferredProvider,
+          alternateProvider: mockAlternateProvider,
+          circuitBreaker: mockCircuitBreaker,
+        });
+
+        const context: GenerationContext = {
+          updateType: 'major',
+          timestamp: new Date(),
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn(),
+          validate: jest.fn().mockReturnValue({ valid: true }),
+        };
+
+        const registeredGenerator: RegisteredGenerator = {
+          registration: {
+            id: 'test-gen',
+            name: 'Test Generator',
+            priority: 2,
+            modelTier: ModelTier.LIGHT,
+            applyFrame: true,
+          },
+          generator: mockGenerator,
+        };
+
+        const fallbackContent: GeneratedContent = {
+          text: 'Fallback content',
+          outputMode: 'text',
+        };
+
+        // MASTER is ON, but provider circuit is OPEN (unavailable)
+        mockCircuitBreaker.isCircuitOpen.mockResolvedValue(false);
+        mockCircuitBreaker.isProviderAvailable.mockResolvedValue(false);
+        mockSelector.select.mockReturnValue(registeredGenerator);
+        mockFallbackGenerator.generate.mockResolvedValue(fallbackContent);
+        mockDecorator.decorate.mockResolvedValue({
+          layout: [[1, 2, 3]],
+          warnings: [],
+        });
+
+        // Spy on console.log
+        const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+        // Act
+        const result = await orchestratorWithCircuitBreaker.generateAndSend(context);
+
+        // Assert
+        expect(result.success).toBe(true);
+        expect(mockCircuitBreaker.isProviderAvailable).toHaveBeenCalled();
+        expect(mockFallbackGenerator.generate).toHaveBeenCalledWith(context);
+        expect(generateWithRetry).not.toHaveBeenCalled();
+        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Provider circuit'));
+
+        logSpy.mockRestore();
+      });
+
+      it('should proceed with generation when provider circuit is available', async () => {
+        // Arrange
+        const orchestratorWithCircuitBreaker = new ContentOrchestrator({
+          selector: mockSelector,
+          decorator: mockDecorator,
+          vestaboardClient: mockVestaboardClient,
+          fallbackGenerator: mockFallbackGenerator,
+          preferredProvider: mockPreferredProvider,
+          alternateProvider: mockAlternateProvider,
+          circuitBreaker: mockCircuitBreaker,
+        });
+
+        const context: GenerationContext = {
+          updateType: 'major',
+          timestamp: new Date(),
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn(),
+          validate: jest.fn().mockReturnValue({ valid: true }),
+        };
+
+        const registeredGenerator: RegisteredGenerator = {
+          registration: {
+            id: 'test-gen',
+            name: 'Test Generator',
+            priority: 2,
+            modelTier: ModelTier.LIGHT,
+            applyFrame: true,
+          },
+          generator: mockGenerator,
+        };
+
+        const generatedContent: GeneratedContent = {
+          text: 'Generated content',
+          outputMode: 'text',
+        };
+
+        // Both circuits available
+        mockCircuitBreaker.isCircuitOpen.mockResolvedValue(false);
+        mockCircuitBreaker.isProviderAvailable.mockResolvedValue(true);
+        mockSelector.select.mockReturnValue(registeredGenerator);
+        (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+        mockDecorator.decorate.mockResolvedValue({
+          layout: [[1, 2, 3]],
+          warnings: [],
+        });
+
+        // Act
+        const result = await orchestratorWithCircuitBreaker.generateAndSend(context);
+
+        // Assert
+        expect(result.success).toBe(true);
+        expect(generateWithRetry).toHaveBeenCalled();
+        expect(mockFallbackGenerator.generate).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Backward Compatibility', () => {
+      it('should work without circuitBreaker (backward compatible)', async () => {
+        // Arrange - orchestrator created without circuitBreaker
+        const context: GenerationContext = {
+          updateType: 'major',
+          timestamp: new Date(),
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn(),
+          validate: jest.fn().mockReturnValue({ valid: true }),
+        };
+
+        const registeredGenerator: RegisteredGenerator = {
+          registration: {
+            id: 'test-gen',
+            name: 'Test Generator',
+            priority: 2,
+            modelTier: ModelTier.LIGHT,
+            applyFrame: true,
+          },
+          generator: mockGenerator,
+        };
+
+        const generatedContent: GeneratedContent = {
+          text: 'TEST CONTENT',
+          outputMode: 'text',
+        };
+
+        mockSelector.select.mockReturnValue(registeredGenerator);
+        (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+        mockDecorator.decorate.mockResolvedValue({
+          layout: [[1, 2, 3]],
+          warnings: [],
+        });
+
+        // Act - using original orchestrator without circuitBreaker
+        const result = await orchestrator.generateAndSend(context);
+
+        // Assert - should work normally without circuit breaker checks
+        expect(result.success).toBe(true);
+        expect(mockSelector.select).toHaveBeenCalled();
+        expect(mockVestaboardClient.sendLayout).toHaveBeenCalled();
+      });
+
+      it('should return OrchestratorResult with success: true on successful generation', async () => {
+        // Arrange
+        const context: GenerationContext = {
+          updateType: 'major',
+          timestamp: new Date(),
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn(),
+          validate: jest.fn().mockReturnValue({ valid: true }),
+        };
+
+        const registeredGenerator: RegisteredGenerator = {
+          registration: {
+            id: 'test-gen',
+            name: 'Test Generator',
+            priority: 2,
+            modelTier: ModelTier.LIGHT,
+            applyFrame: true,
+          },
+          generator: mockGenerator,
+        };
+
+        const generatedContent: GeneratedContent = {
+          text: 'SUCCESS',
+          outputMode: 'text',
+        };
+
+        mockSelector.select.mockReturnValue(registeredGenerator);
+        (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+        mockDecorator.decorate.mockResolvedValue({
+          layout: [[1, 2, 3]],
+          warnings: [],
+        });
+
+        // Act
+        const result = await orchestrator.generateAndSend(context);
+
+        // Assert
+        expect(result).toBeDefined();
+        expect(result.success).toBe(true);
+        expect(result.content).toEqual(generatedContent);
       });
     });
   });

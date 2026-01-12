@@ -28,8 +28,15 @@ import { LocalNewsGenerator } from './content/generators/ai/local-news-generator
 import { WeatherGenerator } from './content/generators/ai/weather-generator.js';
 import { HaikuGenerator } from './content/generators/ai/haiku-generator.js';
 import { SeasonalGenerator } from './content/generators/ai/seasonal-generator.js';
-import { GreetingGenerator } from './content/generators/programmatic/greeting-generator.js';
-import { ASCIIArtGenerator } from './content/generators/programmatic/ascii-art-generator.js';
+import { ShowerThoughtGenerator } from './content/generators/ai/shower-thought-generator.js';
+import { FortuneCookieGenerator } from './content/generators/ai/fortune-cookie-generator.js';
+import { CountdownGenerator } from './content/generators/ai/countdown-generator.js';
+import { DailyRoastGenerator } from './content/generators/ai/daily-roast-generator.js';
+import { HotTakeGenerator } from './content/generators/ai/hot-take-generator.js';
+import { ComplimentGenerator } from './content/generators/ai/compliment-generator.js';
+import { NovelInsightGenerator } from './content/generators/ai/novel-insight-generator.js';
+import { StoryFragmentGenerator } from './content/generators/ai/story-fragment-generator.js';
+import { TimePerspectiveGenerator } from './content/generators/ai/time-perspective-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
 import { RSSClient } from './api/data-sources/rss-client.js';
@@ -40,7 +47,12 @@ import { WeatherService } from './services/weather-service.js';
 import { ColorBarService } from './content/frame/color-bar.js';
 import { getKnexInstance, type Knex } from './storage/knex.js';
 import { ContentModel, VoteModel, LogModel } from './storage/models/index.js';
-import { ContentRepository, VoteRepository } from './storage/repositories/index.js';
+import {
+  ContentRepository,
+  VoteRepository,
+  CircuitBreakerRepository,
+} from './storage/repositories/index.js';
+import { CircuitBreakerService } from './services/circuit-breaker-service.js';
 import type { AIProvider } from './types/ai.js';
 import { TriggerConfigLoader } from './config/trigger-config.js';
 import { TriggerMatcher } from './scheduler/trigger-matcher.js';
@@ -70,6 +82,8 @@ export interface BootstrapResult {
   logModel: LogModel | undefined;
   /** Trigger config loader (null if not configured) - call stopWatching() to clean up */
   triggerConfigLoader: TriggerConfigLoader | null;
+  /** Circuit breaker service for system control (undefined if database not configured) */
+  circuitBreaker: CircuitBreakerService | undefined;
 }
 
 /**
@@ -169,11 +183,18 @@ function createCoreGenerators(
     techNews: new TechNewsGenerator(promptLoader, modelTierSelector, apiKeys, rssClient),
     localNews: new LocalNewsGenerator(promptLoader, modelTierSelector, apiKeys, rssClient),
     weather: new WeatherGenerator(promptLoader, modelTierSelector, apiKeys, weatherService),
-    greeting: new GreetingGenerator(),
     haiku: new HaikuGenerator(promptLoader, modelTierSelector, apiKeys),
     seasonal: new SeasonalGenerator(promptLoader, modelTierSelector, apiKeys),
     pattern: new PatternGenerator(),
-    asciiArt: new ASCIIArtGenerator(['HELLO', 'WORLD', 'WELCOME']),
+    showerThought: new ShowerThoughtGenerator(promptLoader, modelTierSelector, apiKeys),
+    fortuneCookie: new FortuneCookieGenerator(promptLoader, modelTierSelector, apiKeys),
+    countdown: new CountdownGenerator(promptLoader, modelTierSelector, apiKeys),
+    dailyRoast: new DailyRoastGenerator(promptLoader, modelTierSelector, apiKeys),
+    storyFragment: new StoryFragmentGenerator(promptLoader, modelTierSelector, apiKeys),
+    timePerspective: new TimePerspectiveGenerator(promptLoader, modelTierSelector, apiKeys),
+    hotTake: new HotTakeGenerator(promptLoader, modelTierSelector, apiKeys),
+    compliment: new ComplimentGenerator(promptLoader, modelTierSelector, apiKeys),
+    novelInsight: new NovelInsightGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }
@@ -277,6 +298,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
   let contentRepository: ContentRepository | undefined;
   let voteRepository: VoteRepository | undefined;
   let logModel: LogModel | undefined;
+  let circuitBreakerService: CircuitBreakerService | undefined;
 
   // In test environment, always use in-memory SQLite
   // In production, require DATABASE_URL to be configured
@@ -298,6 +320,13 @@ export async function bootstrap(): Promise<BootstrapResult> {
       // Create log model (no repository wrapper needed - direct model access)
       logModel = new LogModel(knex);
 
+      // Create circuit breaker repository and service
+      const circuitBreakerRepo = new CircuitBreakerRepository(knex);
+      circuitBreakerService = new CircuitBreakerService(circuitBreakerRepo);
+
+      // Initialize circuit breaker default circuits (idempotent)
+      await circuitBreakerService.initialize();
+
       // Run 90-day retention cleanup on startup (fire-and-forget)
       contentRepository.cleanupOldRecords(90).catch(cleanupError => {
         console.warn(
@@ -315,6 +344,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
       contentRepository = undefined;
       voteRepository = undefined;
       logModel = undefined;
+      circuitBreakerService = undefined;
     }
   }
 
@@ -364,6 +394,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
     alternateProvider,
     dataProvider,
     contentRepository,
+    circuitBreaker: circuitBreakerService,
   });
 
   // Step 10: Load trigger configuration (if configured)
@@ -397,7 +428,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
 
   // Step 11: Create EventHandler (only if Home Assistant configured)
   const eventHandler = haClient
-    ? new EventHandler(haClient, orchestrator, triggerMatcher ?? undefined)
+    ? new EventHandler(haClient, orchestrator, triggerMatcher ?? undefined, circuitBreakerService)
     : null;
 
   // Step 12: Create CronScheduler for periodic updates
@@ -416,5 +447,6 @@ export async function bootstrap(): Promise<BootstrapResult> {
     voteRepository,
     logModel,
     triggerConfigLoader,
+    circuitBreaker: circuitBreakerService,
   };
 }
