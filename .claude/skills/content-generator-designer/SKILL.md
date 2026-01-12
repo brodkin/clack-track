@@ -1,6 +1,6 @@
 ---
-name: vestaboard-prompt
-description: Expert guidance for creating Vestaboard content prompts and generators. Covers display constraints, tone & voice, prompt architecture, generator patterns, and quality checklists for Clack Track. (project)
+name: content-generator-designer
+description: End-to-end content generator design for Vestaboard displays. Covers generator architecture (AI, programmatic, notification types), prompt design, TypeScript implementation patterns, registry integration, and quality validation. Use for creating, modifying, or debugging any content generator. (project)
 ---
 
 # Vestaboard Prompt Expert
