@@ -339,6 +339,7 @@ if (eventHandler) {
 | ----------------- | --------------------------------------------------------------------------------- |
 | npm scripts       | `npm run` or `package.json`                                                       |
 | Environment vars  | `.env.example`                                                                    |
+| Production access | `.env.production` (contains `DOCKER_HOST` for inspecting prod containers)         |
 | TypeScript config | `tsconfig.json`                                                                   |
 | Test config       | `jest.config.cjs`                                                                 |
 | Commit rules      | `commitlint.config.cjs`                                                           |

@@ -1,3 +1,15 @@
+# Flush beads changes before commit
+if command -v bd >/dev/null 2>&1 && [ -d .beads ]; then
+    if ! bd sync --flush-only >/dev/null 2>&1; then
+        echo "Error: Failed to flush bd changes to JSONL" >&2
+        echo "Run 'bd sync --flush-only' manually to diagnose" >&2
+        exit 1
+    fi
+    if [ -f .beads/issues.jsonl ]; then
+        git add .beads/issues.jsonl 2>/dev/null || true
+    fi
+fi
+
 # Run type checking
 npm run typecheck || exit 1
 
