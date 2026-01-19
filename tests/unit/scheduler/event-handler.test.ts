@@ -496,7 +496,21 @@ describe('EventHandler', () => {
         expect(mockCircuitBreaker.setCircuitState).toHaveBeenCalledWith('MASTER', 'on');
       });
 
-      it('should call setCircuitState with "off" for action "off"', async () => {
+      it('should call setCircuitState with "off" for action "off" on non-SLEEP_MODE circuit', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_circuit_control',
+          data: {
+            circuit_id: 'MASTER',
+            action: 'off',
+          },
+        };
+
+        await circuitControlCallback(event);
+
+        expect(mockCircuitBreaker.setCircuitState).toHaveBeenCalledWith('MASTER', 'off');
+      });
+
+      it('should use inverted semantics for SLEEP_MODE: action "off" sets circuit state "on"', async () => {
         const event: HomeAssistantEvent = {
           event_type: 'vestaboard_circuit_control',
           data: {
@@ -507,6 +521,22 @@ describe('EventHandler', () => {
 
         await circuitControlCallback(event);
 
+        // SLEEP_MODE uses inverted semantics: action='off' (wake up) = circuit state 'on' (allow)
+        expect(mockCircuitBreaker.setCircuitState).toHaveBeenCalledWith('SLEEP_MODE', 'on');
+      });
+
+      it('should use inverted semantics for SLEEP_MODE: action "on" sets circuit state "off"', async () => {
+        const event: HomeAssistantEvent = {
+          event_type: 'vestaboard_circuit_control',
+          data: {
+            circuit_id: 'SLEEP_MODE',
+            action: 'on',
+          },
+        };
+
+        await circuitControlCallback(event);
+
+        // SLEEP_MODE uses inverted semantics: action='on' (sleep) = circuit state 'off' (block)
         expect(mockCircuitBreaker.setCircuitState).toHaveBeenCalledWith('SLEEP_MODE', 'off');
       });
 
@@ -721,7 +751,9 @@ describe('EventHandler', () => {
           data: { trigger: 'manual' },
         };
 
-        await refreshCallback(event);
+        refreshCallback(event);
+        // Wait for async operation to complete
+        await new Promise(resolve => setTimeout(resolve, 10));
 
         expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
         expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
@@ -743,7 +775,9 @@ describe('EventHandler', () => {
           data: { trigger: 'manual' },
         };
 
-        await callback(event);
+        callback(event);
+        // Wait for async operation to complete
+        await new Promise(resolve => setTimeout(resolve, 10));
 
         expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
       });
@@ -758,7 +792,9 @@ describe('EventHandler', () => {
           data: { trigger: 'manual' },
         };
 
-        await refreshCallback(event);
+        refreshCallback(event);
+        // Wait for async operation to complete
+        await new Promise(resolve => setTimeout(resolve, 10));
 
         expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
         expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
@@ -822,7 +858,9 @@ describe('EventHandler', () => {
           },
         };
 
-        await stateChangedCallback(event);
+        stateChangedCallback(event);
+        // Wait for async operation to complete
+        await new Promise(resolve => setTimeout(resolve, 10));
 
         expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
         expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
@@ -851,7 +889,9 @@ describe('EventHandler', () => {
           },
         };
 
-        await callback(event);
+        callback(event);
+        // Wait for async operation to complete
+        await new Promise(resolve => setTimeout(resolve, 10));
 
         expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
       });
@@ -870,7 +910,9 @@ describe('EventHandler', () => {
           },
         };
 
-        await stateChangedCallback(event);
+        stateChangedCallback(event);
+        // Wait for async operation to complete
+        await new Promise(resolve => setTimeout(resolve, 10));
 
         expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
         expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();

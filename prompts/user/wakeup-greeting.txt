@@ -1,0 +1,19 @@
+Create a warm, welcoming good morning message for someone just waking up.
+
+TODAY'S MORNING THEME: {{theme}}.
+
+The sleep mode has just deactivated and the household is waking up. Make the message feel like a gentle, encouraging start to the day.
+
+Tone guidelines:
+- Warm and inviting, like a supportive friend
+- Gently energizing without being too intense for early morning
+- Can be playful but always kind
+- Matches the Houseboy persona with a cozy morning vibe
+- Captures the peaceful optimism of a fresh start
+
+Examples of good wakeup greetings:
+- RISE AND SHINE / THE COFFEE IS READY / TODAY IS YOURS
+- GOOD MORNING / THE WORLD AWAITS / LETS GET AFTER IT
+- WAKEY WAKEY / TIME TO SHINE / YOU GOT THIS
+
+Incorporate the morning theme naturally into the message without being too literal. The theme sets the vibe, not the script.

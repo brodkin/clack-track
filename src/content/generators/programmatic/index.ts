@@ -8,3 +8,5 @@
  */
 
 export { PatternGenerator } from './pattern-generator.js';
+export { SleepArtGenerator } from './sleep-art-generator.js';
+export { SleepModeGenerator } from './sleep-mode-generator.js';

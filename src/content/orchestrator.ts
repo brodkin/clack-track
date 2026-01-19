@@ -155,6 +155,17 @@ export class ContentOrchestrator {
       };
     }
 
+    // Step 0.5: Check SLEEP_MODE circuit (after MASTER)
+    if (this.circuitBreaker && (await this.circuitBreaker.isCircuitOpen('SLEEP_MODE'))) {
+      console.log('SLEEP_MODE circuit is active - blocking content generation');
+      return {
+        success: false,
+        blocked: true,
+        blockReason: 'sleep_mode_active',
+        circuitState: { master: true, sleepMode: false },
+      };
+    }
+
     // Step 1: Pre-fetch data if dataProvider is available and this is a major update
     if (this.dataProvider && context.updateType === 'major') {
       try {
