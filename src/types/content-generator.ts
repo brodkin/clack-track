@@ -178,6 +178,11 @@ export interface GenerationContext {
    * When provided, bypasses ContentSelector and uses the specified generator directly.
    */
   generatorId?: string;
+  /**
+   * Optional flag to force tool-based generation for testing.
+   * When true, overrides the generator's registration setting.
+   */
+  useToolBasedGeneration?: boolean;
 }
 
 /**

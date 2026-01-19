@@ -11,10 +11,12 @@ import { closeKnexInstance } from '../../storage/knex.js';
  * @param options - Command options
  * @param options.type - Update type ('major' or 'minor', defaults to 'major')
  * @param options.generator - Optional generator ID to force a specific generator
+ * @param options.useTools - Enable tool-based generation for testing
  */
 export async function generateCommand(options: {
   type?: 'major' | 'minor';
   generator?: string;
+  useTools?: boolean;
 }): Promise<void> {
   let scheduler: BootstrapResult['scheduler'] | null = null;
   let haClient: BootstrapResult['haClient'] = null;
@@ -23,11 +25,13 @@ export async function generateCommand(options: {
   try {
     const updateType = options.type || 'major';
     const generatorId = options.generator;
+    const useTools = options.useTools || false;
 
+    const toolsInfo = useTools ? ' [tool-based]' : '';
     if (generatorId) {
-      log(`Generating ${updateType} content update using generator: ${generatorId}`);
+      log(`Generating ${updateType} content update using generator: ${generatorId}${toolsInfo}`);
     } else {
-      log(`Generating ${updateType} content update...`);
+      log(`Generating ${updateType} content update${toolsInfo}...`);
     }
 
     // Step 1: Bootstrap the application to initialize all dependencies
@@ -46,6 +50,7 @@ export async function generateCommand(options: {
       updateType,
       timestamp: new Date(),
       generatorId,
+      useToolBasedGeneration: useTools,
     });
 
     // Step 3: Log success

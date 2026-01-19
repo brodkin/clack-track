@@ -209,7 +209,10 @@ export class ContentOrchestrator {
         // Step 3: Generate with retry logic using factory pattern
         // Create a factory that returns the selected generator instance
         // If useToolBasedGeneration is enabled, wrap with ToolBasedGenerator
-        const { useToolBasedGeneration, toolBasedOptions } = registeredGenerator.registration;
+        const { useToolBasedGeneration: registrationToolBased, toolBasedOptions } =
+          registeredGenerator.registration;
+        // Context flag overrides registration setting (for CLI --use-tools testing)
+        const useToolBasedGeneration = context.useToolBasedGeneration ?? registrationToolBased;
 
         const generatorFactory: GeneratorFactory = (provider: AIProvider): ContentGenerator => {
           const baseGenerator = registeredGenerator.generator;

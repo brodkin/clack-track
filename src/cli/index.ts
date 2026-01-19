@@ -27,6 +27,7 @@ const BOOLEAN_FLAGS = new Set([
   'seed',
   'force',
   'json',
+  'use-tools',
 ]);
 
 export async function runCLI(args: string[]): Promise<void> {
@@ -56,6 +57,7 @@ export async function runCLI(args: string[]): Promise<void> {
       await generateCommand({
         type: 'major',
         generator: typeof options.generator === 'string' ? options.generator : undefined,
+        useTools: options['use-tools'] === true,
       });
       break;
     }
