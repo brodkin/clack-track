@@ -74,12 +74,12 @@ describe('SleepArtGenerator', () => {
     });
 
     describe('color distribution', () => {
-      const BLACK = 0;
+      const BLACK = 70; // Explicit black tile for white Vestaboards
       const BLUE = 67;
       const VIOLET = 68;
       const VALID_COLORS = [BLACK, BLUE, VIOLET];
 
-      it('should use only black (0), blue (67), and violet (68) color codes', async () => {
+      it('should use only black (70), blue (67), and violet (68) color codes', async () => {
         const result = await generator.generate(mockContext);
 
         result.layout?.characterCodes?.forEach(row => {

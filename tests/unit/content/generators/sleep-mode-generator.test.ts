@@ -24,7 +24,7 @@ import { ModelTierSelector } from '@/api/ai/model-tier-selector.js';
 import type { GenerationContext } from '@/types/content-generator.js';
 
 // Color constants
-const BLACK = 0;
+const BLACK = 70; // Explicit black tile for white Vestaboards
 const BLUE = 67;
 const VIOLET = 68;
 

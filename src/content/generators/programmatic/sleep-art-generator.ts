@@ -5,7 +5,7 @@
  * blue and violet accents, resembling a starfield or night sky.
  *
  * Color distribution:
- * - ~85% black (0) - Night sky background
+ * - ~85% black (70) - Night sky background (explicit black for white boards)
  * - ~10% blue (67) - Star accents
  * - ~5% violet (68) - Rare cosmic highlights
  *
@@ -20,7 +20,7 @@ const ROWS = 6;
 const COLS = 22;
 
 /** Color codes for sleep art */
-const BLACK = 0;
+const BLACK = 70; // Explicit black tile (code 70) for white Vestaboards
 const BLUE = 67;
 const VIOLET = 68;
 

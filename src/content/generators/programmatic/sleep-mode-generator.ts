@@ -31,15 +31,15 @@ import type {
 const ROWS = 6;
 const COLS = 22;
 
-/** Black/blank character code for transparent spaces */
-const BLACK = 0;
+/** Black color code for solid black tiles on white Vestaboards */
+const BLACK = 70;
 
 /**
  * Character code mapping for uppercase letters A-Z and common characters.
  * Only includes characters supported by Vestaboard.
  */
 const CHAR_TO_CODE: Record<string, number> = {
-  ' ': 0,
+  ' ': 70, // Black tile for spaces (not used in overlay - spaces preserve art)
   A: 1,
   B: 2,
   C: 3,
