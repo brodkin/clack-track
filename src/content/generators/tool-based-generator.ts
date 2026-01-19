@@ -97,8 +97,6 @@ interface ToolBasedMetadata extends GenerationMetadata {
   toolExhausted?: boolean;
   /** Whether content was force-accepted due to exhaustion */
   toolForceAccepted?: boolean;
-  /** Whether AI returned direct text without using tool */
-  directResponse?: boolean;
 }
 
 /**
@@ -200,20 +198,22 @@ export class ToolBasedGenerator implements ContentGenerator {
       // Call AI provider
       const response = await this.options.aiProvider.generate(request);
 
-      // Handle direct text response (no tool call)
+      // Handle direct text response (no tool call) - enforce tool use
       if (!response.toolCalls || response.toolCalls.length === 0) {
-        return {
-          text: response.text,
-          outputMode: 'text',
-          metadata: {
-            ...baseResult.metadata,
-            model: response.model,
-            tokensUsed: response.tokensUsed,
-            toolAttempts: 0,
-            toolAccepted: true,
-            directResponse: true,
-          } as ToolBasedMetadata,
-        };
+        // Instead of accepting direct text, ask AI to use the tool
+        // We use a synthetic tool result to continue the conversation
+        conversationHistory = [
+          {
+            toolCallId: 'enforce_tool_use',
+            content: JSON.stringify({
+              error:
+                'You must use the submit_content tool to submit your content. Do not respond with plain text.',
+              hint: 'Call submit_content with your generated content.',
+            }),
+            isError: true,
+          },
+        ];
+        continue;
       }
 
       // Process tool calls

@@ -493,11 +493,23 @@ describe('ToolBasedGenerator', () => {
     });
 
     describe('edge cases', () => {
-      it('should handle AI returning text without tool call on first attempt', async () => {
+      it('should enforce tool use when AI returns text without tool call', async () => {
         const mockProvider = createMockAIProvider({
           responses: [
-            // AI returns text directly instead of using tool
+            // First: AI returns text directly instead of using tool
             { text: 'DIRECT TEXT RESPONSE', finishReason: 'stop' },
+            // Second: Still no tool use
+            { text: 'ANOTHER DIRECT RESPONSE', finishReason: 'stop' },
+            // Third: AI finally uses the tool after enforcement
+            {
+              toolCalls: [
+                {
+                  id: 'call_1',
+                  name: 'submit_content',
+                  arguments: { content: 'VALID TEXT' },
+                },
+              ],
+            },
           ],
         });
         const baseGenerator = new MockAIPromptGenerator();
@@ -505,10 +517,27 @@ describe('ToolBasedGenerator', () => {
 
         const result = await wrapped.generate(context);
 
-        // Should use the direct text response
-        expect(result.text).toBe('DIRECT TEXT RESPONSE');
-        expect(result.metadata?.toolAttempts).toBe(0);
-        expect(result.metadata?.directResponse).toBe(true);
+        // Should eventually get the tool-based response
+        expect(result.text).toBe('VALID TEXT');
+        expect(result.metadata?.toolAttempts).toBe(3);
+        expect(result.metadata?.toolAccepted).toBe(true);
+      });
+
+      it('should throw after max attempts when AI never uses tool', async () => {
+        const mockProvider = createMockAIProvider({
+          responses: [
+            // All attempts return direct text without using tool
+            { text: 'DIRECT 1', finishReason: 'stop' },
+            { text: 'DIRECT 2', finishReason: 'stop' },
+            { text: 'DIRECT 3', finishReason: 'stop' },
+          ],
+        });
+        const baseGenerator = new MockAIPromptGenerator();
+        const wrapped = ToolBasedGenerator.wrap(baseGenerator, { aiProvider: mockProvider });
+
+        await expect(wrapped.generate(context)).rejects.toThrow(
+          /Max submission attempts exhausted/
+        );
       });
 
       it('should handle AI calling unknown tool', async () => {
