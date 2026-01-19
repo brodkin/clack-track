@@ -306,13 +306,14 @@ export function validateLayoutContent(layout: VestaboardLayout): ValidationResul
       );
     }
 
-    // Validate character codes (must be 0-69)
-    // Vestaboard codes: 0=blank, 1-26=A-Z, 27-36=0-9, 37-62=symbols, 63-69=colors
+    // Validate character codes (must be 0-71)
+    // Vestaboard codes: 0=blank, 1-26=A-Z, 27-36=0-9, 37-62=symbols, 63-69=colors,
+    // 70=black (explicit black tile for white boards), 71=filled (adaptive)
     for (let row = 0; row < layout.characterCodes.length; row++) {
       for (let col = 0; col < layout.characterCodes[row].length; col++) {
         const code = layout.characterCodes[row][col];
-        if (code < 0 || code > 69) {
-          errors.push(`Invalid character code ${code} at row ${row}, col ${col} (must be 0-69)`);
+        if (code < 0 || code > 71) {
+          errors.push(`Invalid character code ${code} at row ${row}, col ${col} (must be 0-71)`);
           break; // Only report first invalid code
         }
       }
