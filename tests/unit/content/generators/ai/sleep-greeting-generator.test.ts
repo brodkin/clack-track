@@ -9,7 +9,7 @@
  * - Handles AI provider failures gracefully
  * - BEDTIME_THEMES dictionary (15+ diverse themes)
  * - Random selection and injection via template variables
- * - Output fits 2-3 rows maximum (center of 6-row display)
+ * - Output fits exactly 2 rows (with blank spacing between lines)
  */
 
 import {

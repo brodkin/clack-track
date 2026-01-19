@@ -1,6 +1,6 @@
 Create a soothing bedtime greeting for someone about to sleep.
 
-CRITICAL: Keep it SHORT - exactly 2-3 lines maximum (center of display).
+CRITICAL: Keep it SHORT - exactly 2 lines maximum. Lines will display with blank space between them on a dark starfield background, creating visual breathing room.
 
 TODAY'S THEME: {{theme}}.
 
@@ -15,10 +15,11 @@ Content approach:
 - Gentle encouragement for rest
 - Incorporate the theme naturally
 - Each line should be brief (max 22 characters)
+- Two lines creates negative space for the starfield art to show through
 
 Examples of good sleep greetings:
-- SWEET DREAMS / REST WELL TONIGHT
-- GOODNIGHT / THE STARS ARE OUT / SLEEP TIGHT
-- TIME FOR REST / COZY DREAMS AWAIT
+- SWEET DREAMS / REST WELL
+- GOODNIGHT / SLEEP TIGHT
+- TIME FOR REST / DREAM WELL
 
 Make the reader feel peaceful and ready for a good night's sleep.

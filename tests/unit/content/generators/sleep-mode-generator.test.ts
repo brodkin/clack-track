@@ -7,9 +7,10 @@
  *
  * Key behaviors:
  * - Combines SleepArtGenerator + SleepGreetingGenerator
- * - Generates art first, then overlays text in center rows (rows 2-4)
+ * - Generates art first, then overlays text with blank rows between lines
+ * - For 2 lines: rows 1 and 3 (with gap at row 2 preserving art)
  * - Text uses actual character codes (1-26 for A-Z) displayed in amber
- * - Preserves art pattern in non-text areas
+ * - Preserves art pattern in non-text areas (including gap rows)
  * - Full screen mode (no frame decoration)
  * - outputMode=layout with final combined characterCodes
  *
@@ -227,7 +228,19 @@ describe('SleepModeGenerator', () => {
     });
 
     describe('text overlay behavior', () => {
-      it('should overlay greeting text on center rows (rows 2-4 for 2-line text)', async () => {
+      it('should overlay greeting text with blank row spacing (2-line text on rows 1 and 3)', async () => {
+        // Create art with distinctive color pattern we can verify
+        const artPattern: number[][] = Array(ROWS)
+          .fill(null)
+          .map((_, rowIndex) => Array(COLS).fill(BLUE + rowIndex)); // Each row has different color
+
+        mockArtGenerator.mockResolvedValue({
+          text: '',
+          outputMode: 'layout',
+          layout: { rows: [], characterCodes: artPattern },
+          metadata: {},
+        });
+
         mockGreetingGenerator.mockResolvedValue({
           text: 'LINE ONE\nLINE TWO',
           outputMode: 'text',
@@ -237,13 +250,29 @@ describe('SleepModeGenerator', () => {
         const result = await generator.generate(mockContext);
         const codes = result.layout?.characterCodes;
 
-        // For 2 lines centered vertically in 6 rows:
-        // verticalPadding = floor((6 - 2) / 2) = 2
-        // Lines should be on rows 2 and 3
+        // For 2 lines with gap, effective height = 2*2-1 = 3 rows
+        // verticalPadding = floor((6 - 3) / 2) = 1
+        // Line 1 at row 1 (1 + 0*2 = 1)
+        // Line 2 at row 3 (1 + 1*2 = 3)
+        // Gap preserved at row 2 (should retain art pattern)
 
-        // Rows 0, 1 should be pure art (not modified by text)
-        // Rows 4, 5 should also be pure art
         expect(codes).toBeDefined();
+
+        // Row 0 should be pure art
+        expect(codes?.[0].every(c => c === BLUE)).toBe(true);
+
+        // Row 1 should have text (letter codes present)
+        expect(codes?.[1].some(c => isLetterCode(c))).toBe(true);
+
+        // Row 2 (gap) should preserve art pattern - should have the original color (BLUE + 2)
+        expect(codes?.[2].every(c => c === BLUE + 2)).toBe(true);
+
+        // Row 3 should have text (letter codes present)
+        expect(codes?.[3].some(c => isLetterCode(c))).toBe(true);
+
+        // Rows 4, 5 should be pure art
+        expect(codes?.[4].every(c => c === BLUE + 4)).toBe(true);
+        expect(codes?.[5].every(c => c === BLUE + 5)).toBe(true);
       });
 
       it('should use actual character codes (1-26) for text letters', async () => {
@@ -329,7 +358,10 @@ describe('SleepModeGenerator', () => {
         expect(textRowIndex).toBeGreaterThanOrEqual(0);
       });
 
-      it('should handle multi-line greeting text', async () => {
+      it('should handle multi-line greeting text with gaps between lines', async () => {
+        // Note: With new spacing, 3 lines would need 5 rows (3 lines + 2 gaps)
+        // verticalPadding = floor((6 - 5) / 2) = 0
+        // Lines at rows 0, 2, 4 with gaps at rows 1, 3
         mockGreetingGenerator.mockResolvedValue({
           text: 'LINE ONE\nLINE TWO\nLINE THREE',
           outputMode: 'text',
@@ -343,13 +375,19 @@ describe('SleepModeGenerator', () => {
 
         // Count rows with text (letter codes 1-26)
         let textRowCount = 0;
-        codes?.forEach(row => {
+        const textRowIndices: number[] = [];
+        codes?.forEach((row, idx) => {
           if (row.some(c => isLetterCode(c))) {
             textRowCount++;
+            textRowIndices.push(idx);
           }
         });
 
+        // Should have exactly 3 text rows
         expect(textRowCount).toBe(3);
+
+        // Text rows should be at even indices (0, 2, 4) with gaps at odd indices (1, 3)
+        expect(textRowIndices).toEqual([0, 2, 4]);
       });
 
       it('should handle empty greeting gracefully', async () => {
