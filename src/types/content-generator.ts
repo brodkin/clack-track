@@ -558,4 +558,20 @@ export interface ContentRegistration {
    * When not specified, default formatting is applied.
    */
   formatOptions?: GeneratorFormatOptions;
+  /**
+   * Whether to enable tool-based generation for this generator.
+   * When true, the orchestrator wraps the generator with ToolBasedGenerator,
+   * enabling the submit_content tool for iterative content refinement.
+   * @default false (for backward compatibility)
+   */
+  useToolBasedGeneration?: boolean;
+  /**
+   * Tool-based generation options (only used when useToolBasedGeneration is true).
+   */
+  toolBasedOptions?: {
+    /** Maximum submission attempts before giving up (default: 3) */
+    maxAttempts?: number;
+    /** Strategy when max attempts exhausted: 'throw' or 'use-last' (default: 'throw') */
+    exhaustionStrategy?: 'throw' | 'use-last';
+  };
 }
