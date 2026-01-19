@@ -87,6 +87,7 @@ describe('ContentOrchestrator - Validation Integration', () => {
       const context: GenerationContext = {
         updateType: 'major',
         timestamp: new Date(),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       };
 
       // ACT
@@ -133,6 +134,7 @@ describe('ContentOrchestrator - Validation Integration', () => {
       const context: GenerationContext = {
         updateType: 'major',
         timestamp: new Date(),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       };
 
       // ACT
@@ -170,6 +172,7 @@ describe('ContentOrchestrator - Validation Integration', () => {
       const context: GenerationContext = {
         updateType: 'major',
         timestamp: new Date(),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       };
 
       // ACT
@@ -205,6 +208,7 @@ describe('ContentOrchestrator - Validation Integration', () => {
       const context: GenerationContext = {
         updateType: 'major',
         timestamp: new Date(),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       };
 
       // ACT
@@ -240,6 +244,7 @@ describe('ContentOrchestrator - Validation Integration', () => {
       const context: GenerationContext = {
         updateType: 'major',
         timestamp: new Date(),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       };
 
       // ACT
@@ -284,6 +289,7 @@ describe('ContentOrchestrator - Validation Integration', () => {
       const context: GenerationContext = {
         updateType: 'major',
         timestamp: new Date(),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       };
 
       // ACT
@@ -318,6 +324,7 @@ describe('ContentOrchestrator - Validation Integration', () => {
       const context: GenerationContext = {
         updateType: 'major',
         timestamp: new Date(),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       };
 
       // ACT
@@ -354,6 +361,7 @@ describe('ContentOrchestrator - Validation Integration', () => {
       const context: GenerationContext = {
         updateType: 'major',
         timestamp: new Date(),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       };
 
       // SPY on console.warn to verify error logging
@@ -404,6 +412,7 @@ describe('ContentOrchestrator - Validation Integration', () => {
       const context: GenerationContext = {
         updateType: 'major',
         timestamp: new Date(),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       };
 
       // ACT
@@ -443,6 +452,7 @@ describe('ContentOrchestrator - Validation Integration', () => {
       const context: GenerationContext = {
         updateType: 'major',
         timestamp: new Date(),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       };
 
       // ACT
@@ -490,6 +500,7 @@ describe('ContentOrchestrator - Validation Integration', () => {
       const context: GenerationContext = {
         updateType: 'major',
         timestamp: new Date(),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       };
 
       // ACT
@@ -529,6 +540,7 @@ describe('ContentOrchestrator - Validation Integration', () => {
       const context: GenerationContext = {
         updateType: 'major',
         timestamp: new Date(),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       };
 
       // ACT

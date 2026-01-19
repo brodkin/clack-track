@@ -158,10 +158,11 @@ describe('ContentOrchestrator', () => {
       expect(factoryCall[2]).toBe(mockPreferredProvider);
       expect(factoryCall[3]).toBe(mockAlternateProvider);
 
-      // Verify factory creates generator with provider
+      // Verify factory creates ToolBasedGenerator wrapper (default behavior)
       const factory = factoryCall[0];
       const createdGenerator = factory(mockPreferredProvider);
-      expect(createdGenerator).toBe(mockGenerator);
+      // Tool-based generation is now the default, so generator is wrapped
+      expect(createdGenerator).toHaveProperty('baseGenerator', mockGenerator);
       expect(mockDecorator.decorate).toHaveBeenCalledWith(
         'TEST CONTENT',
         context.timestamp,

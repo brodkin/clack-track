@@ -185,6 +185,7 @@ describe('CronScheduler Minor Update Integration', () => {
       await orchestrator.generateAndSend({
         updateType: 'major',
         timestamp: new Date('2025-01-15T10:00:00Z'),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       });
 
       // Verify major update was sent
@@ -219,6 +220,7 @@ describe('CronScheduler Minor Update Integration', () => {
       await orchestrator.generateAndSend({
         updateType: 'major',
         timestamp: new Date('2025-01-15T10:00:00Z'),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       });
 
       const initialCallCount = mockVestaboardClient.sendLayout.mock.calls.length;
@@ -247,6 +249,7 @@ describe('CronScheduler Minor Update Integration', () => {
       await orchestrator.generateAndSend({
         updateType: 'major',
         timestamp: new Date('2025-01-15T10:00:00Z'),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       });
 
       const cachedContent = orchestrator.getCachedContent();
@@ -306,6 +309,7 @@ describe('CronScheduler Minor Update Integration', () => {
       await orchestrator.generateAndSend({
         updateType: 'major',
         timestamp: new Date('2025-01-15T10:00:00Z'),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       });
 
       // Step 3: Minor update
@@ -342,6 +346,7 @@ describe('CronScheduler Minor Update Integration', () => {
       await orchestrator.generateAndSend({
         updateType: 'major',
         timestamp: new Date('2025-01-15T10:00:00Z'),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       });
 
       // Step 2: Make Vestaboard fail on next call
@@ -402,6 +407,7 @@ describe('CronScheduler Minor Update Integration', () => {
       await orchestrator.generateAndSend({
         updateType: 'major',
         timestamp: new Date('2025-01-15T10:00:00Z'),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       });
 
       // Start scheduler
@@ -456,6 +462,7 @@ describe('CronScheduler Minor Update Integration', () => {
       await orchestrator.generateAndSend({
         updateType: 'major',
         timestamp: new Date('2025-01-15T10:00:00Z'),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       });
 
       const initialCallCount = mockVestaboardClient.sendLayout.mock.calls.length;
@@ -480,6 +487,7 @@ describe('CronScheduler Minor Update Integration', () => {
       await orchestrator.generateAndSend({
         updateType: 'major',
         timestamp: new Date('2025-01-15T10:00:00Z'),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       });
 
       const initialCallCount = mockVestaboardClient.sendLayout.mock.calls.length;
@@ -535,6 +543,7 @@ describe('CronScheduler Minor Update Integration', () => {
       await orchestrator.generateAndSend({
         updateType: 'major',
         timestamp: new Date('2025-01-15T10:00:00Z'),
+        useToolBasedGeneration: false, // These tests don't test tool-based generation
       });
 
       // Step 3: Verify shouldSkip returns true

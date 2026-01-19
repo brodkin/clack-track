@@ -332,7 +332,7 @@ describe('Tool-Based Generation Integration', () => {
         validate: jest.fn().mockResolvedValue({ valid: true }),
       };
 
-      // LLM returns text directly without using tool
+      // LLM returns text directly without using tool - should be enforced to use tool
       mockPreferredProvider.generate.mockResolvedValue({
         text: 'DIRECT TEXT RESPONSE',
         model: 'gpt-4.1-nano',
@@ -344,20 +344,19 @@ describe('Tool-Based Generation Integration', () => {
         return ToolBasedGenerator.wrap(baseGenerator, {
           aiProvider: provider,
           maxAttempts: 3,
+          exhaustionStrategy: 'throw',
         });
       });
 
-      const result = await generateWithRetry(
-        generatorFactory,
-        mockContext,
-        mockPreferredProvider,
-        mockAlternateProvider
-      );
-
-      // Should use direct text with directResponse flag
-      expect(result.text).toBe('DIRECT TEXT RESPONSE');
-      expect(result.metadata?.directResponse).toBe(true);
-      expect(result.metadata?.toolAttempts).toBe(0);
+      // Now that tool use is enforced, direct text responses exhaust attempts and throw
+      await expect(
+        generateWithRetry(
+          generatorFactory,
+          mockContext,
+          mockPreferredProvider,
+          mockAlternateProvider
+        )
+      ).rejects.toThrow(/Max submission attempts exhausted/);
     });
   });
 
