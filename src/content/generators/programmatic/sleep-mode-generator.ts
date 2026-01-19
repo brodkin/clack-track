@@ -6,9 +6,10 @@
  *
  * Features:
  * - Generates dark art pattern first as background
- * - Overlays AI-generated greeting text in center rows (rows 2-4)
+ * - Overlays AI-generated greeting text with blank rows between lines for spacing
+ * - For 2 lines: effective vertical span is 3 rows (line + gap + line)
  * - Text displays in Vestaboard's amber color, visible on dark background
- * - Preserves art pattern in non-text areas
+ * - Preserves art pattern in non-text areas (including gap rows)
  * - Full screen mode (no frame decoration)
  * - outputMode=layout with final combined characterCodes
  *
@@ -253,9 +254,12 @@ export class SleepModeGenerator extends ProgrammaticGenerator {
    * Text is:
    * - Converted to uppercase
    * - Split by newlines into rows
-   * - Centered vertically (starting at appropriate row)
+   * - Centered vertically with blank rows between lines for spacing
    * - Centered horizontally on each row
    * - Converted to white character codes for visibility
+   *
+   * For 2 lines of text, the effective vertical span is 3 rows (line + gap + line),
+   * which creates visual breathing room and allows the starfield art to show through.
    *
    * Spaces in text preserve the underlying art pattern (transparent).
    *
@@ -271,12 +275,18 @@ export class SleepModeGenerator extends ProgrammaticGenerator {
       return;
     }
 
-    // Calculate vertical centering
-    const verticalPadding = Math.floor((ROWS - lines.length) / 2);
+    // Calculate effective height with gaps between lines
+    // For N lines, we need N + (N-1) = 2N-1 rows (lines + gaps between them)
+    const effectiveHeight = lines.length > 1 ? lines.length * 2 - 1 : lines.length;
 
-    // Overlay each line
+    // Calculate vertical centering based on effective height
+    const verticalPadding = Math.floor((ROWS - effectiveHeight) / 2);
+
+    // Overlay each line with gaps between them
     lines.forEach((line, lineIndex) => {
-      const rowIndex = verticalPadding + lineIndex;
+      // Each line is placed at position: verticalPadding + (lineIndex * 2)
+      // This creates a blank row between consecutive lines
+      const rowIndex = verticalPadding + lineIndex * 2;
       if (rowIndex >= ROWS) {
         return; // Skip lines that would overflow
       }
