@@ -1,9 +1,25 @@
 {
   "permissions": {
-    "allow": ["Bash(mount:*)", "Bash(python3:*)", "mcp__plugin_beads_beads__*"],
+    "allow": [
+      "Bash(mount:*)",
+      "Bash(python3:*)",
+      "mcp__plugin_beads_beads__*",
+      "Bash(set -a)",
+      "Bash(source .env.production)",
+      "Bash(set +a)",
+      "Bash(docker exec:*)",
+      "Bash(bd create:*)",
+      "Bash(bd dep add:*)",
+      "Bash(bd dep tree:*)",
+      "Bash(bd show:*)",
+      "Bash(bd update:*)"
+    ],
     "deny": [],
     "ask": []
   },
   "enableAllProjectMcpServers": false,
-  "enabledMcpjsonServers": ["context7", "playwright"]
+  "enabledMcpjsonServers": [
+    "context7",
+    "playwright"
+  ]
 }

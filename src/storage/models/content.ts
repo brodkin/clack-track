@@ -1,5 +1,15 @@
 import { Knex } from 'knex';
 
+/**
+ * Represents a rejection reason for a validation attempt
+ * Used to track why content failed validation during tool-based generation
+ */
+export interface RejectionReason {
+  attempt: number;
+  reason: string;
+  timestamp?: string;
+}
+
 export interface ContentRecord {
   id: number;
   text: string;
@@ -21,6 +31,9 @@ export interface ContentRecord {
   errorType?: string;
   errorMessage?: string;
   tokensUsed?: number;
+  // Validation attempt tracking for tool-based content generation
+  validationAttempts?: number;
+  rejectionReasons?: RejectionReason[];
 }
 
 /**
@@ -52,6 +65,8 @@ export class ContentModel {
     'errorType',
     'errorMessage',
     'tokensUsed',
+    'validationAttempts',
+    'rejectionReasons',
   ];
 
   constructor(private knex: Knex) {}
@@ -79,6 +94,9 @@ export class ContentModel {
    */
   async create(content: Omit<ContentRecord, 'id'>): Promise<ContentRecord> {
     const metadataJson = content.metadata ? JSON.stringify(content.metadata) : null;
+    const rejectionReasonsJson = content.rejectionReasons
+      ? JSON.stringify(content.rejectionReasons)
+      : null;
 
     const [id] = await this.knex('content').insert({
       text: content.text,
@@ -99,6 +117,8 @@ export class ContentModel {
       errorType: content.errorType || null,
       errorMessage: content.errorMessage || null,
       tokensUsed: content.tokensUsed !== undefined ? content.tokensUsed : null,
+      validationAttempts: content.validationAttempts !== undefined ? content.validationAttempts : 0,
+      rejectionReasons: rejectionReasonsJson,
     });
 
     if (!id) {
@@ -125,6 +145,8 @@ export class ContentModel {
       errorType: content.errorType,
       errorMessage: content.errorMessage,
       tokensUsed: content.tokensUsed,
+      validationAttempts: content.validationAttempts ?? 0,
+      rejectionReasons: content.rejectionReasons,
     };
   }
 
@@ -249,6 +271,16 @@ export class ContentModel {
       // If metadata parsing fails, leave it undefined
     }
 
+    let rejectionReasons: RejectionReason[] | undefined;
+    try {
+      const rejectionReasonsStr = row.rejectionReasons as string | null;
+      if (rejectionReasonsStr) {
+        rejectionReasons = JSON.parse(rejectionReasonsStr);
+      }
+    } catch {
+      // If rejectionReasons parsing fails, leave it undefined
+    }
+
     return {
       id: row.id as number,
       text: row.text as string,
@@ -276,6 +308,46 @@ export class ContentModel {
         row.tokensUsed !== null && row.tokensUsed !== undefined
           ? (row.tokensUsed as number)
           : undefined,
+      validationAttempts:
+        row.validationAttempts !== null && row.validationAttempts !== undefined
+          ? (row.validationAttempts as number)
+          : 0,
+      rejectionReasons,
     };
+  }
+
+  /**
+   * Find content records with validation attempts above threshold
+   * Useful for analytics and debugging tool-based generation
+   *
+   * @param threshold - Minimum number of attempts to filter by
+   * @param limit - Maximum number of records to return (default: 100)
+   * @returns Records with validationAttempts greater than threshold
+   */
+  async findWithHighAttempts(threshold: number, limit: number = 100): Promise<ContentRecord[]> {
+    const safeLimit = this.safeLimit(limit);
+    const rows = await this.knex('content')
+      .select(ContentModel.SELECT_FIELDS)
+      .where('validationAttempts', '>', threshold)
+      .orderBy('validationAttempts', 'desc')
+      .limit(safeLimit);
+
+    return rows.map(row => this.mapRowToContentRecord(row));
+  }
+
+  /**
+   * Calculate average validation attempts across all records
+   * Useful for monitoring tool-based content generation efficiency
+   *
+   * @returns Average number of validation attempts (rounded to nearest integer)
+   */
+  async getAverageValidationAttempts(): Promise<number> {
+    const result = await this.knex('content').avg('validationAttempts as avgAttempts').first();
+
+    if (!result || result.avgAttempts === null) {
+      return 0;
+    }
+
+    return Math.round(Number(result.avgAttempts));
   }
 }

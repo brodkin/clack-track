@@ -70,6 +70,130 @@
       ]
     }
   },
+  "toolCalling": {
+    "singleToolCall": {
+      "id": "chatcmpl-9tK2nF9x1Y3Zq8w7VbN4mJ2kL5pR",
+      "object": "chat.completion",
+      "created": 1701234700,
+      "model": "gpt-4-0613",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "call_abc123",
+                "type": "function",
+                "function": {
+                  "name": "get_weather",
+                  "arguments": "{\"location\":\"San Francisco\",\"unit\":\"fahrenheit\"}"
+                }
+              }
+            ]
+          },
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 120,
+        "completion_tokens": 25,
+        "total_tokens": 145
+      }
+    },
+    "multipleToolCalls": {
+      "id": "chatcmpl-9tK3xG0y2Z4Ar9x8WcO5nK3lM6qS",
+      "object": "chat.completion",
+      "created": 1701234750,
+      "model": "gpt-4-0613",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "call_def456",
+                "type": "function",
+                "function": {
+                  "name": "get_weather",
+                  "arguments": "{\"location\":\"San Francisco\"}"
+                }
+              },
+              {
+                "id": "call_ghi789",
+                "type": "function",
+                "function": {
+                  "name": "get_time",
+                  "arguments": "{\"timezone\":\"America/Los_Angeles\"}"
+                }
+              }
+            ]
+          },
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 150,
+        "completion_tokens": 45,
+        "total_tokens": 195
+      }
+    },
+    "toolCallWithText": {
+      "id": "chatcmpl-9tK4yH1z3A5Bs0y9XdP6oL4mN7rT",
+      "object": "chat.completion",
+      "created": 1701234800,
+      "model": "gpt-4-0613",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "I'll check the weather for you.",
+            "tool_calls": [
+              {
+                "id": "call_jkl012",
+                "type": "function",
+                "function": {
+                  "name": "get_weather",
+                  "arguments": "{\"location\":\"New York\"}"
+                }
+              }
+            ]
+          },
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 130,
+        "completion_tokens": 35,
+        "total_tokens": 165
+      }
+    },
+    "afterToolResult": {
+      "id": "chatcmpl-9tK5zI2A4B6Ct1z0YeQ7pM5nO8sU",
+      "object": "chat.completion",
+      "created": 1701234850,
+      "model": "gpt-4-0613",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "The current weather in San Francisco is 72°F and sunny. Perfect day to enjoy the outdoors!"
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 180,
+        "completion_tokens": 25,
+        "total_tokens": 205
+      }
+    }
+  },
   "contentExamples": {
     "weather": {
       "id": "chatcmpl-8vK4yH1z3A5Bs0y9XdP6oL4mN7rT",

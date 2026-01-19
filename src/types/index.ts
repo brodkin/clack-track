@@ -25,3 +25,4 @@ export * from './data-sources.js';
 export * from './errors.js';
 export * from './home-assistant.js';
 export * from './web.js';
+export * from './circuit-breaker.js';

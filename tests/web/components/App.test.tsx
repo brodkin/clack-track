@@ -46,18 +46,17 @@ describe('App Component', () => {
     });
 
     // Mock content endpoints
+    // Backend sends ContentRecord directly in data (not wrapped in { content: ... })
     mockApiClient.getLatestContent.mockResolvedValue({
       success: true,
       data: {
-        content: {
-          id: 1,
-          text: 'TEST CONTENT',
-          type: 'major',
-          generatorId: 'test',
-          generatedAt: new Date(),
-          sentAt: new Date(),
-          aiProvider: 'openai',
-        },
+        id: 1,
+        text: 'TEST CONTENT',
+        type: 'major',
+        generatorId: 'test',
+        generatedAt: new Date(),
+        sentAt: new Date(),
+        aiProvider: 'openai',
       },
     });
 

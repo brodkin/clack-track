@@ -29,6 +29,12 @@ async function main() {
       'frame',
       'content:list',
       'content:test',
+      'db:reset',
+      'circuit:status',
+      'circuit:on',
+      'circuit:off',
+      'circuit:reset',
+      'circuit:watch',
     ].includes(command)
   ) {
     await runCLI(args);

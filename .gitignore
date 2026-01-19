@@ -59,3 +59,5 @@ trees/
 
 # SQLite dev database
 data/clack-track-dev.sqlite
+.claude/settings.local.json
+.claude/plans

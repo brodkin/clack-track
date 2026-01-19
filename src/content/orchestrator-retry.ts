@@ -27,6 +27,36 @@ import type {
   GeneratedContent,
   FailoverMetadata,
 } from '../types/content-generator.js';
+import type { CircuitBreakerService } from '../services/circuit-breaker-service.js';
+import type { CircuitState } from '../types/circuit-breaker.js';
+
+/**
+ * Maps a provider name to its circuit breaker ID
+ *
+ * @param providerName - The provider name (e.g., 'openai', 'anthropic')
+ * @returns The circuit ID (e.g., 'PROVIDER_OPENAI', 'PROVIDER_ANTHROPIC')
+ */
+function providerToCircuitId(providerName: string): string {
+  return `PROVIDER_${providerName.toUpperCase()}`;
+}
+
+/**
+ * Gets the provider name from an AIProvider instance
+ *
+ * Uses the provider's getName() method if available, otherwise falls back to
+ * a default based on the provider position (preferred = 'openai', alternate = 'anthropic')
+ *
+ * @param provider - The AI provider instance
+ * @param isPreferred - Whether this is the preferred provider
+ * @returns The provider name
+ */
+function getProviderNameFromInstance(provider: AIProvider, isPreferred: boolean): string {
+  if (provider.getName) {
+    return provider.getName();
+  }
+  // Default fallback based on position
+  return isPreferred ? 'openai' : 'anthropic';
+}
 
 /**
  * Factory function to create a ContentGenerator with a specific AI provider
@@ -172,6 +202,7 @@ function isRetryableError(error: unknown): boolean {
  * @param preferredProvider - Primary AI provider (e.g., OpenAI)
  * @param alternateProvider - Fallback AI provider (e.g., Anthropic)
  * @param config - Optional retry configuration (defaults to 2 attempts per provider, 1s base backoff)
+ * @param circuitBreaker - Optional circuit breaker service for tracking provider health
  * @returns Generated content from successful attempt
  * @throws RetryExhaustedError if all attempts fail with retryable errors
  * @throws Original error if non-retryable error occurs
@@ -199,7 +230,8 @@ export async function generateWithRetry(
   context: GenerationContext,
   preferredProvider: AIProvider,
   alternateProvider: AIProvider,
-  config: Partial<RetryConfig> = {}
+  config: Partial<RetryConfig> = {},
+  circuitBreaker?: CircuitBreakerService
 ): Promise<GeneratedContent> {
   // Merge provided config with defaults
   const retryConfig: RetryConfig = {
@@ -213,14 +245,82 @@ export async function generateWithRetry(
   // Track start time for total duration
   const startTime = Date.now();
 
-  // Extract provider names for metadata
-  const preferredProviderName = 'openai'; // Default assumption, could be improved with provider.name
-  const alternateProviderName = 'anthropic';
+  // Extract provider names for metadata using getName() if available
+  const preferredProviderName = getProviderNameFromInstance(preferredProvider, true);
+  const alternateProviderName = getProviderNameFromInstance(alternateProvider, false);
+
+  // Get circuit IDs for each provider
+  const preferredCircuitId = providerToCircuitId(preferredProviderName);
+  const alternateCircuitId = providerToCircuitId(alternateProviderName);
+
+  // Track if any circuit was tripped (skipped due to OPEN state)
+  let circuitTripped = false;
+
+  // Helper to check if provider is available (fail-open on errors)
+  const isProviderAvailable = async (circuitId: string): Promise<boolean> => {
+    if (!circuitBreaker) return true;
+    try {
+      return await circuitBreaker.isProviderAvailable(circuitId);
+    } catch {
+      // Fail-open: if circuit breaker check fails, allow the attempt
+      return true;
+    }
+  };
+
+  // Helper to record provider failure (graceful on errors)
+  const recordFailure = async (circuitId: string, error: Error): Promise<void> => {
+    if (!circuitBreaker) return;
+    try {
+      await circuitBreaker.recordProviderFailure(circuitId, error);
+    } catch {
+      // Graceful degradation: log failure but continue
+      console.warn(`Failed to record provider failure for ${circuitId}`);
+    }
+  };
+
+  // Helper to record provider success (graceful on errors)
+  const recordSuccess = async (circuitId: string): Promise<void> => {
+    if (!circuitBreaker) return;
+    try {
+      await circuitBreaker.recordProviderSuccess(circuitId);
+    } catch {
+      // Graceful degradation: log failure but continue
+      console.warn(`Failed to record provider success for ${circuitId}`);
+    }
+  };
+
+  // Helper to get circuit states for metadata
+  const getCircuitStates = async (): Promise<{ [circuitId: string]: CircuitState } | undefined> => {
+    if (!circuitBreaker) return undefined;
+    try {
+      const states: { [circuitId: string]: CircuitState } = {};
+
+      const preferredStatus = await circuitBreaker.getProviderStatus(preferredCircuitId);
+      if (preferredStatus) {
+        states[preferredCircuitId] = preferredStatus.state;
+      }
+
+      const alternateStatus = await circuitBreaker.getProviderStatus(alternateCircuitId);
+      if (alternateStatus) {
+        states[alternateCircuitId] = alternateStatus.state;
+      }
+
+      return Object.keys(states).length > 0 ? states : undefined;
+    } catch {
+      return undefined;
+    }
+  };
 
   // Calculate which provider to use for each attempt
   const getProviderForAttempt = (attemptIndex: number): AIProvider => {
     const providerAttemptNumber = Math.floor(attemptIndex / retryConfig.attemptsPerProvider);
     return providerAttemptNumber === 0 ? preferredProvider : alternateProvider;
+  };
+
+  // Get circuit ID for an attempt
+  const getCircuitIdForAttempt = (attemptIndex: number): string => {
+    const providerAttemptNumber = Math.floor(attemptIndex / retryConfig.attemptsPerProvider);
+    return providerAttemptNumber === 0 ? preferredCircuitId : alternateCircuitId;
   };
 
   // Calculate attempt number within provider (1-based)
@@ -234,15 +334,66 @@ export async function generateWithRetry(
     return providerAttemptNumber === 0 ? preferredProviderName : alternateProviderName;
   };
 
+  // Check provider availability before starting
+  // If circuit breaker is provided, check if both providers are unavailable
+  if (circuitBreaker) {
+    const preferredAvailable = await isProviderAvailable(preferredCircuitId);
+    const alternateAvailable = await isProviderAvailable(alternateCircuitId);
+
+    if (!preferredAvailable && !alternateAvailable) {
+      // Both circuits are OPEN - no providers available
+      circuitTripped = true;
+      throw new RetryExhaustedError([]);
+    }
+
+    // Track if preferred is skipped
+    if (!preferredAvailable) {
+      circuitTripped = true;
+    }
+  }
+
+  // Track attempts made per provider for circuit-aware loop
+  let preferredAttemptsMade = 0;
+  let alternateAttemptsMade = 0;
+  let actualAttemptIndex = 0;
+
   // Attempt generation with retry loop
   for (let attemptIndex = 0; attemptIndex < totalAttempts; attemptIndex++) {
+    const currentCircuitId = getCircuitIdForAttempt(attemptIndex);
     const currentProvider = getProviderForAttempt(attemptIndex);
+    const isPreferredProvider = attemptIndex < retryConfig.attemptsPerProvider;
+
+    // Check circuit availability before attempting
+    const available = await isProviderAvailable(currentCircuitId);
+    if (!available) {
+      // Circuit is OPEN - skip this provider's attempts
+      circuitTripped = true;
+
+      // Skip all remaining attempts for this provider
+      if (isPreferredProvider) {
+        // Skip to alternate provider
+        attemptIndex = retryConfig.attemptsPerProvider - 1; // Will be incremented by loop
+        continue;
+      } else {
+        // Alternate provider also unavailable - we're done
+        break;
+      }
+    }
+
+    // Track actual attempts
+    if (isPreferredProvider) {
+      preferredAttemptsMade++;
+    } else {
+      alternateAttemptsMade++;
+    }
+    actualAttemptIndex++;
+
     const attemptNumber = getAttemptNumber(attemptIndex);
 
-    // Apply exponential backoff before retry (not on first attempt)
-    if (attemptIndex > 0) {
+    // Apply exponential backoff before retry (not on first actual attempt)
+    if (actualAttemptIndex > 1) {
       const backoffMs =
-        retryConfig.backoffBaseMs * Math.pow(retryConfig.backoffMultiplier, attemptIndex - 1);
+        retryConfig.backoffBaseMs * Math.pow(retryConfig.backoffMultiplier, actualAttemptIndex - 2);
       await sleep(backoffMs);
     }
 
@@ -253,17 +404,21 @@ export async function generateWithRetry(
       // Attempt generation
       const content = await generator.generate(context);
 
+      // Record success with circuit breaker
+      await recordSuccess(currentCircuitId);
+
       // Success! Calculate metadata and return
       const totalDurationMs = Date.now() - startTime;
-      const preferredAttempts = Math.min(attemptIndex + 1, retryConfig.attemptsPerProvider);
-      const alternateAttempts = Math.max(0, attemptIndex + 1 - retryConfig.attemptsPerProvider);
-      const failedOver = attemptIndex >= retryConfig.attemptsPerProvider;
+      const failedOver = !isPreferredProvider;
       const finalProviderName = getProviderName(attemptIndex);
 
+      // Get circuit states for metadata
+      const circuitStates = await getCircuitStates();
+
       const failoverMetadata: FailoverMetadata = {
-        totalAttempts: attemptIndex + 1,
-        preferredAttempts,
-        alternateAttempts,
+        totalAttempts: actualAttemptIndex,
+        preferredAttempts: preferredAttemptsMade,
+        alternateAttempts: alternateAttemptsMade,
         failedOver,
         primaryProvider: preferredProviderName,
         finalProvider: finalProviderName,
@@ -273,6 +428,10 @@ export async function generateWithRetry(
           error: fa.error.message,
         })),
         totalDurationMs,
+        ...(circuitBreaker && {
+          circuitTripped,
+          circuitStates,
+        }),
       };
 
       // Inject failover metadata into content metadata
@@ -287,10 +446,9 @@ export async function generateWithRetry(
       // Record failed attempt
       // Extract provider name from error if it's an AIProviderError, otherwise use default
       const aiError = error as { provider?: string };
-      const providerName =
-        currentProvider === preferredProvider
-          ? aiError.provider || preferredProviderName
-          : aiError.provider || alternateProviderName;
+      const providerName = isPreferredProvider
+        ? aiError.provider || preferredProviderName
+        : aiError.provider || alternateProviderName;
 
       failedAttempts.push({
         provider: providerName,
@@ -304,6 +462,9 @@ export async function generateWithRetry(
         // Non-retryable error - throw immediately without further attempts
         throw error;
       }
+
+      // Record failure with circuit breaker (for retryable errors)
+      await recordFailure(currentCircuitId, error as Error);
 
       // If this was the last attempt, throw aggregated error
       if (attemptIndex === totalAttempts - 1) {

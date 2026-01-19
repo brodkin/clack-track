@@ -291,10 +291,12 @@ describe('generate command', () => {
     it('should handle type option with correct context structure', async () => {
       await generateCommand({ type: 'minor' });
 
-      expect(mockOrchestrator.generateAndSend).toHaveBeenCalledWith({
-        updateType: 'minor',
-        timestamp: expect.any(Date),
-      });
+      expect(mockOrchestrator.generateAndSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          updateType: 'minor',
+          timestamp: expect.any(Date),
+        })
+      );
     });
   });
 

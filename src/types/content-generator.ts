@@ -10,6 +10,7 @@
 import type { VestaboardLayout } from './content.js';
 import type { PersonalityDimensions } from '../content/personality/dimensions.js';
 import type { ContentData } from './content-data.js';
+import type { CircuitState } from './circuit-breaker.js';
 
 /**
  * Text formatting options for content generators.
@@ -177,6 +178,18 @@ export interface GenerationContext {
    * When provided, bypasses ContentSelector and uses the specified generator directly.
    */
   generatorId?: string;
+  /**
+   * Optional flag to force tool-based generation for testing.
+   * When true, overrides the generator's registration setting.
+   */
+  useToolBasedGeneration?: boolean;
+  /**
+   * Internal flag used by ToolBasedGenerator to get prompts without making AI call.
+   * When true, AIPromptGenerator returns prompts in metadata without calling the AI provider.
+   * This allows ToolBasedGenerator to manage the AI call with tool support.
+   * @internal
+   */
+  promptsOnly?: boolean;
 }
 
 /**
@@ -229,6 +242,17 @@ export interface FailoverMetadata {
   errors: Array<{ provider: string; attempt: number; error: string }>;
   /** Total time spent on all retry attempts in milliseconds */
   totalDurationMs: number;
+  /**
+   * Whether a circuit breaker was tripped (provider skipped due to OPEN circuit).
+   * Only present when circuit breaker is provided.
+   */
+  circuitTripped?: boolean;
+  /**
+   * State of provider circuits at the end of retry attempts.
+   * Maps circuit ID (e.g., 'PROVIDER_OPENAI') to state ('on', 'off', 'half_open').
+   * Only present when circuit breaker is provided.
+   */
+  circuitStates?: { [circuitId: string]: CircuitState };
 }
 
 /**
@@ -546,4 +570,20 @@ export interface ContentRegistration {
    * When not specified, default formatting is applied.
    */
   formatOptions?: GeneratorFormatOptions;
+  /**
+   * Whether to enable tool-based generation for this generator.
+   * When true, the orchestrator wraps the generator with ToolBasedGenerator,
+   * enabling the submit_content tool for iterative content refinement.
+   * @default false (for backward compatibility)
+   */
+  useToolBasedGeneration?: boolean;
+  /**
+   * Tool-based generation options (only used when useToolBasedGeneration is true).
+   */
+  toolBasedOptions?: {
+    /** Maximum submission attempts before giving up (default: 3) */
+    maxAttempts?: number;
+    /** Strategy when max attempts exhausted: 'throw' or 'use-last' (default: 'throw') */
+    exhaustionStrategy?: 'throw' | 'use-last';
+  };
 }
