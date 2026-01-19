@@ -183,6 +183,13 @@ export interface GenerationContext {
    * When true, overrides the generator's registration setting.
    */
   useToolBasedGeneration?: boolean;
+  /**
+   * Internal flag used by ToolBasedGenerator to get prompts without making AI call.
+   * When true, AIPromptGenerator returns prompts in metadata without calling the AI provider.
+   * This allows ToolBasedGenerator to manage the AI call with tool support.
+   * @internal
+   */
+  promptsOnly?: boolean;
 }
 
 /**

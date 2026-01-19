@@ -220,10 +220,22 @@ CURRENT CONTEXT:
     const baseMetadata = {
       tier: this.modelTier,
       personality,
+      systemPrompt,
+      userPrompt,
       topicDomain,
       topic,
       roastFormat,
     };
+
+    // If promptsOnly mode, return just the prompts without AI call
+    // This is used by ToolBasedGenerator to get prompts for its own AI call with tools
+    if (context.promptsOnly) {
+      return {
+        text: '',
+        outputMode: 'text',
+        metadata: baseMetadata,
+      };
+    }
 
     // Try preferred provider
     try {

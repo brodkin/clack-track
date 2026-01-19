@@ -164,6 +164,22 @@ export class WeatherGenerator extends AIPromptGenerator {
       { weather: weatherFormatted }
     );
 
+    // If promptsOnly mode, return just the prompts without AI call
+    // This is used by ToolBasedGenerator to get prompts for its own AI call with tools
+    if (context.promptsOnly) {
+      return {
+        text: '',
+        outputMode: 'text',
+        metadata: {
+          tier: this.modelTier,
+          personality,
+          systemPrompt,
+          userPrompt,
+          weatherInjected: weatherFormatted !== 'Weather data unavailable',
+        },
+      };
+    }
+
     // Step 4: Select model and generate
     const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
     let lastError: Error | null = null;

@@ -121,7 +121,13 @@ export class FortuneCookieGenerator extends AIPromptGenerator {
    */
   async generate(context: GenerationContext): Promise<GeneratedContent> {
     // Get AI-generated content (3 lines fortune + 1 line lucky numbers)
+    // If promptsOnly mode, parent class returns prompts without AI call
     const aiContent = await super.generate(context);
+
+    // If promptsOnly mode, return the prompts from parent without modification
+    if (context.promptsOnly) {
+      return aiContent;
+    }
 
     // Prepend programmatic title to AI content
     const combinedText = `${FORTUNE_COOKIE_TITLE}\n${aiContent.text}`;

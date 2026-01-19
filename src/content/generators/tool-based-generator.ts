@@ -170,9 +170,12 @@ export class ToolBasedGenerator implements ContentGenerator {
    * @throws Error if max attempts exhausted and strategy is 'throw'
    */
   async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Get the initial generation from base generator
-    // This gives us the prompts and initial setup
-    const baseResult = await this.baseGenerator.generate(context);
+    // Get prompts from base generator without making the AI call
+    // ToolBasedGenerator manages the AI call with tool support
+    const baseResult = await this.baseGenerator.generate({
+      ...context,
+      promptsOnly: true,
+    });
 
     // Use the system and user prompts from base generator metadata if available
     const systemPrompt = (baseResult.metadata?.systemPrompt as string) || '';
