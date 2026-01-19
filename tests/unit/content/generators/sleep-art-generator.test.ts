@@ -8,6 +8,8 @@
  */
 
 import { SleepArtGenerator } from '@/content/generators/programmatic/sleep-art-generator.js';
+import { getBlackCode, VESTABOARD_COLORS } from '@/config/constants.js';
+import { config } from '@/config/env.js';
 import { GenerationContext } from '@/types/content-generator.js';
 
 describe('SleepArtGenerator', () => {
@@ -74,12 +76,13 @@ describe('SleepArtGenerator', () => {
     });
 
     describe('color distribution', () => {
-      const BLACK = 70; // Explicit black tile for white Vestaboards
-      const BLUE = 67;
-      const VIOLET = 68;
+      // Use config-driven black code for test consistency
+      const BLACK = getBlackCode(config.vestaboard?.model);
+      const BLUE = VESTABOARD_COLORS.BLUE;
+      const VIOLET = VESTABOARD_COLORS.VIOLET;
       const VALID_COLORS = [BLACK, BLUE, VIOLET];
 
-      it('should use only black (70), blue (67), and violet (68) color codes', async () => {
+      it('should use only valid color codes (black, blue, violet)', async () => {
         const result = await generator.generate(mockContext);
 
         result.layout?.characterCodes?.forEach(row => {

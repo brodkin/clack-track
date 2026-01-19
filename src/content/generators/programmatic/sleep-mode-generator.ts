@@ -20,26 +20,25 @@ import { SleepArtGenerator } from './sleep-art-generator.js';
 import { SleepGreetingGenerator } from '../ai/sleep-greeting-generator.js';
 import { PromptLoader } from '../../prompt-loader.js';
 import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
+import { getBlackCode } from '../../../config/constants.js';
+import { config } from '../../../config/env.js';
 import type { AIProviderAPIKeys } from '../ai-prompt-generator.js';
 import type {
   GeneratedContent,
   GenerationContext,
   GeneratorValidationResult,
-} from '@/types/content-generator.js';
+} from '../../../types/content-generator.js';
 
 /** Vestaboard display constants */
 const ROWS = 6;
 const COLS = 22;
 
-/** Black color code for solid black tiles on white Vestaboards */
-const BLACK = 70;
-
 /**
  * Character code mapping for uppercase letters A-Z and common characters.
  * Only includes characters supported by Vestaboard.
+ * Note: Spaces are handled specially in overlayLine (preserve art pattern).
  */
 const CHAR_TO_CODE: Record<string, number> = {
-  ' ': 70, // Black tile for spaces (not used in overlay - spaces preserve art)
   A: 1,
   B: 2,
   C: 3,
@@ -236,14 +235,16 @@ export class SleepModeGenerator extends ProgrammaticGenerator {
   }
 
   /**
-   * Creates an empty 6x22 layout filled with black (0).
+   * Creates an empty 6x22 layout filled with black.
+   * Uses config-driven black code for Vestaboard model compatibility.
    *
    * @returns Empty character codes layout
    */
   private createEmptyLayout(): number[][] {
+    const blackCode = getBlackCode(config.vestaboard?.model);
     return Array(ROWS)
       .fill(null)
-      .map(() => Array(COLS).fill(BLACK));
+      .map(() => Array(COLS).fill(blackCode));
   }
 
   /**
@@ -323,13 +324,14 @@ export class SleepModeGenerator extends ProgrammaticGenerator {
    * color tiles, not colored letters. Letters always display in amber.
    *
    * @param char - Single character to convert
-   * @returns Character code for valid characters, BLACK (0) for unsupported
+   * @returns Character code for valid characters, black code for unsupported
    */
   private charToWhiteCode(char: string): number {
     // Check if character is supported
     const code = CHAR_TO_CODE[char];
     if (code === undefined) {
-      return BLACK; // Unsupported characters become blank
+      // Unsupported characters become black (blend with art background)
+      return getBlackCode(config.vestaboard?.model);
     }
 
     // Return actual character code (letters display in amber)

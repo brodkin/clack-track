@@ -5,24 +5,27 @@
  * blue and violet accents, resembling a starfield or night sky.
  *
  * Color distribution:
- * - ~85% black (70) - Night sky background (explicit black for white boards)
+ * - ~85% black - Night sky background
  * - ~10% blue (67) - Star accents
  * - ~5% violet (68) - Rare cosmic highlights
+ *
+ * Supports both black and white Vestaboard models via VESTABOARD_MODEL config.
  *
  * @module content/generators/programmatic/sleep-art-generator
  */
 
 import { ProgrammaticGenerator } from '../programmatic-generator.js';
-import type { GeneratedContent, GenerationContext } from '@/types/content-generator.js';
+import { getBlackCode, VESTABOARD_COLORS } from '../../../config/constants.js';
+import { config } from '../../../config/env.js';
+import type { GeneratedContent, GenerationContext } from '../../../types/content-generator.js';
 
 /** Vestaboard display constants */
 const ROWS = 6;
 const COLS = 22;
 
 /** Color codes for sleep art */
-const BLACK = 70; // Explicit black tile (code 70) for white Vestaboards
-const BLUE = 67;
-const VIOLET = 68;
+const BLUE = VESTABOARD_COLORS.BLUE;
+const VIOLET = VESTABOARD_COLORS.VIOLET;
 
 /** Target color distribution percentages */
 const BLACK_PERCENTAGE = 0.85;
@@ -118,13 +121,17 @@ export class SleepArtGenerator extends ProgrammaticGenerator {
   /**
    * Select a color based on weighted random distribution.
    *
-   * @returns {number} Color code (BLACK=0, BLUE=67, or VIOLET=68)
+   * Uses getBlackCode() to return the appropriate black code for the
+   * configured Vestaboard model (black or white).
+   *
+   * @returns {number} Color code for black, blue (67), or violet (68)
    */
   private selectColor(): number {
     const random = Math.random();
+    const blackCode = getBlackCode(config.vestaboard?.model);
 
     if (random < BLACK_PERCENTAGE) {
-      return BLACK;
+      return blackCode;
     } else if (random < BLACK_PERCENTAGE + BLUE_PERCENTAGE) {
       return BLUE;
     } else {

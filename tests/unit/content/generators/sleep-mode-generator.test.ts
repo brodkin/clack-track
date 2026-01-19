@@ -21,12 +21,14 @@ import { SleepArtGenerator } from '@/content/generators/programmatic/sleep-art-g
 import { SleepGreetingGenerator } from '@/content/generators/ai/sleep-greeting-generator.js';
 import { PromptLoader } from '@/content/prompt-loader.js';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector.js';
+import { getBlackCode, VESTABOARD_COLORS } from '@/config/constants.js';
+import { config } from '@/config/env.js';
 import type { GenerationContext } from '@/types/content-generator.js';
 
-// Color constants
-const BLACK = 70; // Explicit black tile for white Vestaboards
-const BLUE = 67;
-const VIOLET = 68;
+// Color constants - config-driven for Vestaboard model compatibility
+const BLACK = getBlackCode(config.vestaboard?.model);
+const BLUE = VESTABOARD_COLORS.BLUE;
+const VIOLET = VESTABOARD_COLORS.VIOLET;
 
 // Letter code range (A=1 to Z=26)
 const LETTER_CODE_MIN = 1;

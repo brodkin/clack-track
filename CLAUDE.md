@@ -134,6 +134,48 @@ src/web/frontend/
 - Limited character set (uppercase letters, numbers, symbols)
 - All content formatted via `text-layout.ts` before sending
 
+### Vestaboard Hardware Models
+
+**CRITICAL**: Vestaboard sells two physical models with different color behavior:
+
+| Model               | Code 0 (blank) | Code 69    | Configuration            |
+| ------------------- | -------------- | ---------- | ------------------------ |
+| **Black** (default) | Shows BLACK    | WHITE tile | `VESTABOARD_MODEL=black` |
+| **White**           | Shows WHITE    | BLACK tile | `VESTABOARD_MODEL=white` |
+
+**Why this matters:**
+
+- Code 0 (blank) shows the board's natural flap color - black on black boards, white on white boards
+- Code 69 is a color tile that's swapped between models - WHITE on black boards, BLACK on white boards
+- Sleep mode and other generators that need solid black backgrounds must use the correct code
+
+**For white Vestaboard owners:**
+
+```bash
+# Add to .env
+VESTABOARD_MODEL=white
+```
+
+**Implementation pattern:**
+
+```typescript
+import { getBlackCode } from '@/config/constants.js';
+import { config } from '@/config/env.js';
+
+// Returns code 0 for black boards, code 69 for white boards
+const blackCode = getBlackCode(config.vestaboard?.model);
+```
+
+**Character codes reference:**
+
+- 0 = blank (shows board's natural color)
+- 1-26 = A-Z (amber letters)
+- 27-36 = 0-9
+- 37-62 = symbols
+- 63-69 = color tiles (red, orange, yellow, green, blue, violet, white/black)
+- 70 = explicit black tile (may not work on all firmware)
+- 71 = filled (adaptive)
+
 ### Prompts System
 
 - `prompts/system/` - Role and constraint definitions (major/minor update base prompts)
