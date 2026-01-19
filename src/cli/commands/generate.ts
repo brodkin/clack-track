@@ -8,15 +8,16 @@ import { closeKnexInstance } from '../../storage/knex.js';
  * Generates content and sends it to Vestaboard using the ContentOrchestrator.
  * Supports both major (full content refresh) and minor (time/weather only) updates.
  *
+ * All generators use tool-based generation by default, where the AI must call
+ * the submit_content tool for server-side validation before content is accepted.
+ *
  * @param options - Command options
  * @param options.type - Update type ('major' or 'minor', defaults to 'major')
  * @param options.generator - Optional generator ID to force a specific generator
- * @param options.useTools - Enable tool-based generation for testing
  */
 export async function generateCommand(options: {
   type?: 'major' | 'minor';
   generator?: string;
-  useTools?: boolean;
 }): Promise<void> {
   let scheduler: BootstrapResult['scheduler'] | null = null;
   let haClient: BootstrapResult['haClient'] = null;
@@ -25,13 +26,11 @@ export async function generateCommand(options: {
   try {
     const updateType = options.type || 'major';
     const generatorId = options.generator;
-    const useTools = options.useTools || false;
 
-    const toolsInfo = useTools ? ' [tool-based]' : '';
     if (generatorId) {
-      log(`Generating ${updateType} content update using generator: ${generatorId}${toolsInfo}`);
+      log(`Generating ${updateType} content update using generator: ${generatorId}`);
     } else {
-      log(`Generating ${updateType} content update${toolsInfo}...`);
+      log(`Generating ${updateType} content update...`);
     }
 
     // Step 1: Bootstrap the application to initialize all dependencies
@@ -46,11 +45,11 @@ export async function generateCommand(options: {
     knex = bootstrapKnex;
 
     // Step 2: Generate and send content via orchestrator
+    // Tool-based generation is enabled by default (AI uses submit_content tool)
     await orchestrator.generateAndSend({
       updateType,
       timestamp: new Date(),
       generatorId,
-      useToolBasedGeneration: useTools,
     });
 
     // Step 3: Log success
