@@ -248,6 +248,58 @@ All generators registered via `ContentRegistry.register(metadata, generator)`. S
 - **P2 (NORMAL)** - Random selection from available generators
 - **P3 (FALLBACK)** - Static fallback when all else fails
 
+### Sleep Mode System
+
+Sleep mode is a special display mode that shows a dark starfield art pattern with an AI-generated bedtime greeting. It breaks several standard conventions:
+
+**Architecture (Composite Generator):**
+
+```
+SleepModeGenerator
+├── SleepArtGenerator (programmatic) → generates 6x22 starfield pattern
+└── SleepGreetingGenerator (AI) → generates bedtime text
+    ↓
+Overlay text on art → combined characterCodes layout
+```
+
+**Convention Breaks:**
+
+| Standard Convention                       | Sleep Mode Behavior                                |
+| ----------------------------------------- | -------------------------------------------------- |
+| Frame decoration (time/weather)           | **No frame** - full 6x22 art display               |
+| `outputMode: 'text'` with text processing | **`outputMode: 'layout'`** with raw characterCodes |
+| P2 random selection                       | **P0 priority** - bypasses normal selection        |
+| Circuit state semantics (on=enabled)      | **Inverted** - state='off' means sleep is ACTIVE   |
+| Single generator                          | **Composite** - combines art + text generators     |
+
+**Circuit Breaker Semantics:**
+
+```
+CLI commands (user-facing):
+- circuit:on SLEEP_MODE  → ENTERS sleep mode (displays goodnight, blocks updates)
+- circuit:off SLEEP_MODE → EXITS sleep mode (displays good morning, resumes normal)
+
+Internal circuit state (inverted from CLI):
+- state='off' → Sleep mode is ON (blocking)
+- state='on'  → Sleep mode is OFF (normal operation)
+```
+
+**Why the internal inversion?** The circuit breaker pattern treats state='off' as "circuit open = blocking traffic". Since sleep mode blocks normal updates, the internal state is 'off' when sleep is active. The CLI commands use intuitive naming (on = enter sleep, off = exit sleep) while the internal state follows circuit breaker conventions.
+
+**Text Overlay Behavior:**
+
+- Text centered vertically and horizontally
+- Spaces are **transparent** (preserve underlying art pattern)
+- Letters use actual character codes (1-26) displayed in amber
+- Unsupported characters become black (blend with background)
+
+**Key Files:**
+
+- `src/content/generators/programmatic/sleep-mode-generator.ts` - Composite generator
+- `src/content/generators/programmatic/sleep-art-generator.ts` - Starfield pattern
+- `src/content/generators/ai/sleep-greeting-generator.ts` - AI bedtime text
+- `src/cli/commands/circuit.ts` - `enterSleepMode()` and `exitSleepMode()` functions
+
 ### Home Assistant Integration
 
 WebSocket client for event-driven content updates. Supports:
