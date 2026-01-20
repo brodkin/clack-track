@@ -6,7 +6,9 @@
  * - Uses LIGHT model tier for efficiency (weather info is straightforward)
  * - Validates prompt files exist
  * - Generates weather content via AI provider
- * - Injects weather data from WeatherService into prompt
+ * - Uses Template Method hooks correctly:
+ *   - getTemplateVariables() for weather data injection
+ *   - getCustomMetadata() for weatherInjected tracking
  * - Graceful fallback when weather unavailable
  * - Handles AI provider failures gracefully
  */
@@ -18,7 +20,28 @@ import { WeatherService } from '@/services/weather-service';
 import { ModelTier } from '@/types/content-generator';
 import type { GenerationContext } from '@/types/content-generator';
 import type { WeatherData } from '@/services/weather-service';
-import type { AIProvider } from '@/types/ai';
+import { createMockAIProvider } from '@tests/__helpers__/mockAIProvider';
+
+// Mock createAIProvider function to avoid real API calls
+jest.mock('@/api/ai/index.js', () => ({
+  createAIProvider: jest.fn(),
+  AIProviderType: {
+    OPENAI: 'openai',
+    ANTHROPIC: 'anthropic',
+  },
+}));
+
+// Mock personality generation for consistent tests
+jest.mock('@/content/personality/index.js', () => ({
+  generatePersonalityDimensions: jest.fn(() => ({
+    mood: 'cheerful',
+    energyLevel: 'high',
+    humorStyle: 'witty',
+    obsession: 'coffee',
+  })),
+}));
+
+import { createAIProvider } from '@/api/ai/index.js';
 
 // Helper type for accessing protected members in tests
 type ProtectedWeatherGenerator = WeatherGenerator & {
@@ -31,7 +54,6 @@ describe('WeatherGenerator', () => {
   let mockPromptLoader: jest.Mocked<PromptLoader>;
   let mockModelTierSelector: jest.Mocked<ModelTierSelector>;
   let mockWeatherService: jest.Mocked<WeatherService>;
-  let mockAIProvider: jest.Mocked<AIProvider>;
 
   const mockWeatherData: WeatherData = {
     temperature: 72,
@@ -48,6 +70,8 @@ describe('WeatherGenerator', () => {
   };
 
   beforeEach(() => {
+    jest.clearAllMocks();
+
     // Mock PromptLoader
     mockPromptLoader = {
       loadPrompt: jest.fn(),
@@ -70,15 +94,16 @@ describe('WeatherGenerator', () => {
       getWeather: jest.fn().mockResolvedValue(mockWeatherData),
     } as unknown as jest.Mocked<WeatherService>;
 
-    // Mock AIProvider with successful response
-    mockAIProvider = {
-      generate: jest.fn().mockResolvedValue({
-        text: 'Generated weather content',
-        model: 'gpt-4.1-nano',
-        tokensUsed: 100,
-      }),
-      validateConnection: jest.fn().mockResolvedValue(true),
-    } as unknown as jest.Mocked<AIProvider>;
+    // Mock createAIProvider to return a successful mock provider
+    (createAIProvider as jest.Mock).mockReturnValue(
+      createMockAIProvider({
+        response: {
+          text: 'Generated weather content',
+          model: 'gpt-4.1-nano',
+          tokensUsed: 100,
+        },
+      })
+    );
   });
 
   describe('constructor', () => {
@@ -104,25 +129,11 @@ describe('WeatherGenerator', () => {
     });
 
     it('should use LIGHT model tier for efficiency', async () => {
-      // Set up mocks for generate() call
-      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
-      mockModelTierSelector.select.mockReturnValue({
-        provider: 'openai',
-        model: 'gpt-4.1-nano',
-        tier: ModelTier.LIGHT,
-      });
-      mockModelTierSelector.getAlternate.mockReturnValue(null);
-
       const generator = new WeatherGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      // Verify via observable behavior: modelTierSelector.select is called with LIGHT tier
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider - we're testing the tier selection call
-      }
+      await generator.generate(mockContext);
 
       expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
     });
@@ -175,24 +186,12 @@ describe('WeatherGenerator', () => {
 
       const result = await generator.validate();
 
-      // Assuming prompts exist in the worktree
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
     });
   });
 
   describe('generate()', () => {
-    beforeEach(() => {
-      // Mock createProvider to return our AI provider mock for each test
-      jest
-        .spyOn(WeatherGenerator.prototype as { createProvider: () => unknown }, 'createProvider')
-        .mockReturnValue(mockAIProvider);
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
     it('should fetch weather data from WeatherService when provided', async () => {
       const generator = new WeatherGenerator(
         mockPromptLoader,
@@ -206,7 +205,7 @@ describe('WeatherGenerator', () => {
       expect(mockWeatherService.getWeather).toHaveBeenCalled();
     });
 
-    it('should inject weather data into user prompt via template variable', async () => {
+    it('should inject weather data into user prompt via getTemplateVariables() hook', async () => {
       const generator = new WeatherGenerator(
         mockPromptLoader,
         mockModelTierSelector,
@@ -379,10 +378,10 @@ describe('WeatherGenerator', () => {
         'system',
         'major-update-base.txt',
         expect.objectContaining({
-          mood: expect.any(String),
-          energyLevel: expect.any(String),
-          humorStyle: expect.any(String),
-          obsession: expect.any(String),
+          mood: 'cheerful',
+          energyLevel: 'high',
+          humorStyle: 'witty',
+          obsession: 'coffee',
           persona: 'Houseboy',
         })
       );
@@ -394,15 +393,41 @@ describe('WeatherGenerator', () => {
         mockModelTierSelector,
         { openai: 'test-key' },
         mockWeatherService
-      ) as ProtectedWeatherGenerator;
+      );
 
       await generator.generate(mockContext);
 
       expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
     });
+
+    it('should include weatherInjected in metadata via getCustomMetadata() hook', async () => {
+      const generator = new WeatherGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        { openai: 'test-key' },
+        mockWeatherService
+      );
+
+      const result = await generator.generate(mockContext);
+
+      // weatherInjected should be true when weather was successfully injected
+      expect(result.metadata?.weatherInjected).toBe(true);
+    });
+
+    it('should set weatherInjected to false when weather unavailable', async () => {
+      const generator = new WeatherGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+      // No weatherService
+
+      const result = await generator.generate(mockContext);
+
+      // weatherInjected should be false when no weather service
+      expect(result.metadata?.weatherInjected).toBe(false);
+    });
   });
 
-  describe('integration with base class', () => {
+  describe('integration with base class Template Method pattern', () => {
     it('should inherit retry logic from AIPromptGenerator', () => {
       const generator = new WeatherGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',

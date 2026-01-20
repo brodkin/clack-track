@@ -17,6 +17,14 @@ import type {
   GenerationContext,
 } from '@/types/content-generator';
 
+// Mock ToolBasedGenerator to pass through to base generator
+// This allows testing validation without tool-based generation complexity
+jest.mock('@/content/generators/tool-based-generator', () => ({
+  ToolBasedGenerator: {
+    wrap: jest.fn(baseGenerator => baseGenerator),
+  },
+}));
+
 describe('ContentOrchestrator - Validation Integration', () => {
   let orchestrator: ContentOrchestrator;
   let mockSelector: jest.Mocked<ContentSelector>;

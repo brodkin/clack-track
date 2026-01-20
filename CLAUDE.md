@@ -190,6 +190,73 @@ const blackCode = getBlackCode(config.vestaboard?.model);
 - Config-driven selection via `AI_PROVIDER` environment variable
 - Error types: `RateLimitError`, `AuthenticationError`, `InvalidRequestError`
 
+### Tool-Based Content Generation
+
+All AI-powered generators use **tool-based generation** by default. Instead of accepting raw text responses, the AI must call the `submit_content` tool to submit content for server-side validation.
+
+**How It Works:**
+
+```
+Generator → AI Provider → LLM calls submit_content tool
+                              ↓
+                    Server validates content
+                              ↓
+            ┌─────────────────┴─────────────────┐
+            ↓                                   ↓
+      Accepted → Return content           Rejected → Send feedback
+                                                ↓
+                                    LLM retries with improvements
+                                          (max 3 attempts)
+```
+
+**Key Components:**
+
+| Component             | Location                                         | Purpose                                 |
+| --------------------- | ------------------------------------------------ | --------------------------------------- |
+| `ToolBasedGenerator`  | `src/content/generators/tool-based-generator.ts` | Wrapper that manages tool call loop     |
+| `submit_content` tool | `src/content/tools/submit-content.ts`            | Tool definition and validation executor |
+| `PreviewRenderer`     | `src/content/tools/preview-renderer.ts`          | ASCII preview for validation feedback   |
+
+**Validation Rules (Framed Content):**
+
+- Maximum 5 rows (row 6 reserved for info bar)
+- Maximum 21 characters per row (1 column reserved for frame padding)
+- Only Vestaboard-supported characters (uppercase letters, numbers, symbols)
+- Explicit newlines preserved (content displayed as validated)
+
+**Exhaustion Strategies** (when max attempts reached):
+
+| Strategy          | Behavior                                     |
+| ----------------- | -------------------------------------------- |
+| `throw` (default) | Throw error, trigger P3 fallback             |
+| `use-last`        | Force-accept last submission with truncation |
+
+**Configuring Tool-Based Options** (via ContentRegistration):
+
+```typescript
+// Configure tool-based generation options in generator registration
+ContentRegistry.getInstance().register(
+  {
+    id: 'custom-generator',
+    name: 'Custom Generator',
+    priority: ContentPriority.NORMAL,
+    modelTier: ModelTier.LIGHT,
+    toolBasedOptions: {
+      maxAttempts: 5, // Default: 3
+      exhaustionStrategy: 'use-last', // Default: 'throw'
+    },
+  },
+  customGenerator
+);
+```
+
+**Why Tool-Based Generation:**
+
+1. **Validation before acceptance** - Content validated server-side before being accepted
+2. **Iterative refinement** - LLM can fix errors based on validation feedback
+3. **Consistent formatting** - Ensures content fits display constraints
+4. **Better error messages** - LLM sees exactly what went wrong (too long, invalid chars, etc.)
+
 ### Model Tier System
 
 Three capability tiers for cost/performance optimization:

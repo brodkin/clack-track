@@ -178,6 +178,13 @@ export interface GenerationContext {
    * When provided, bypasses ContentSelector and uses the specified generator directly.
    */
   generatorId?: string;
+  /**
+   * Internal flag used by ToolBasedGenerator to get prompts without making AI call.
+   * When true, AIPromptGenerator returns prompts in metadata without calling the AI provider.
+   * This allows ToolBasedGenerator to manage the AI call with tool support.
+   * @internal
+   */
+  promptsOnly?: boolean;
 }
 
 /**
@@ -558,4 +565,15 @@ export interface ContentRegistration {
    * When not specified, default formatting is applied.
    */
   formatOptions?: GeneratorFormatOptions;
+  /**
+   * Tool-based generation options.
+   * Controls the behavior of the ToolBasedGenerator wrapper which is always
+   * applied to AI generators for iterative content refinement.
+   */
+  toolBasedOptions?: {
+    /** Maximum submission attempts before giving up (default: 3) */
+    maxAttempts?: number;
+    /** Strategy when max attempts exhausted: 'throw' or 'use-last' (default: 'throw') */
+    exhaustionStrategy?: 'throw' | 'use-last';
+  };
 }

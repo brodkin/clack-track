@@ -13,6 +13,10 @@
  * - Time-of-day bucket for contextual relevance
  * - Inherits retry logic and provider failover from base class
  *
+ * Uses Template Method hooks:
+ * - getTemplateVariables(): Injects lens, stressContext, and timeBucket
+ * - getCustomMetadata(): Tracks selection choices in metadata
+ *
  * Time perspective content aims to reframe current stressors through
  * temporal shifts - viewing situations from cosmic, absurdist, ancestral,
  * connected, or future-self perspectives. The goal is providing genuine
@@ -39,12 +43,9 @@
 
 import { AIPromptGenerator, type AIProviderAPIKeys } from '../ai-prompt-generator.js';
 import { PromptLoader } from '../../prompt-loader.js';
-import { ModelTierSelector, type ModelSelection } from '../../../api/ai/model-tier-selector.js';
-import { createAIProvider, AIProviderType } from '../../../api/ai/index.js';
-import { generatePersonalityDimensions } from '../../personality/index.js';
+import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
 import { ModelTier } from '../../../types/content-generator.js';
-import type { GenerationContext, GeneratedContent } from '../../../types/content-generator.js';
-import type { AIProvider } from '../../../types/ai.js';
+import type { GenerationContext } from '../../../types/content-generator.js';
 
 /**
  * Time bucket representing different parts of the day
@@ -104,6 +105,13 @@ export class TimePerspectiveGenerator extends AIPromptGenerator {
     'OVERWHELMED_OPTIONS',
     'FEAR_OF_FAILURE',
   ] as const;
+
+  /**
+   * Selected values for the current generation, used by getCustomMetadata
+   */
+  private selectedLens: string = '';
+  private selectedStressContext: string = '';
+  private selectedTimeBucket: TimeBucket = 'MORNING';
 
   /**
    * Programmatically selects a random lens from the LENSES array.
@@ -182,127 +190,35 @@ export class TimePerspectiveGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Generates time perspective content with programmatic lens and context selection.
+   * Hook: Selects random lens, stress context, and time bucket, returns as template variables.
    *
-   * Overrides the base class generate() to:
-   * 1. Select a random lens from the curated LENSES array
-   * 2. Select a random stress context from STRESS_CONTEXTS
-   * 3. Determine the time bucket from the timestamp
-   * 4. Inject all three as template variables into the user prompt
-   *
-   * This ensures true randomness in selection, unlike asking the LLM
-   * to "randomly select" which exhibits predictable bias.
-   *
-   * @param context - Context information for content generation
-   * @returns Generated content with text and metadata
-   * @throws Error if all AI providers fail
+   * @param context - Generation context with timestamp for time bucket calculation
+   * @returns Template variables with lens, stressContext, and timeBucket
    */
-  async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Step 1: Programmatically select lens and stress context
-    const selectedLens = TimePerspectiveGenerator.selectLens();
-    const selectedStressContext = TimePerspectiveGenerator.selectStressContext();
-    const timeBucket = TimePerspectiveGenerator.getTimeBucket(context.timestamp.getHours());
+  protected async getTemplateVariables(
+    context: GenerationContext
+  ): Promise<Record<string, string>> {
+    this.selectedLens = TimePerspectiveGenerator.selectLens();
+    this.selectedStressContext = TimePerspectiveGenerator.selectStressContext();
+    this.selectedTimeBucket = TimePerspectiveGenerator.getTimeBucket(context.timestamp.getHours());
 
-    // Step 2: Load system prompt with personality and date context
-    const personality = context.personality ?? generatePersonalityDimensions();
-    const loadedSystemPrompt = await this.promptLoader.loadPromptWithVariables(
-      'system',
-      this.getSystemPromptFile(),
-      {
-        mood: personality.mood,
-        energyLevel: personality.energyLevel,
-        humorStyle: personality.humorStyle,
-        obsession: personality.obsession,
-        persona: 'Houseboy',
-        date: context.timestamp.toLocaleDateString('en-US', {
-          weekday: 'long',
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        }),
-      }
-    );
-
-    // Step 3: Apply dimension substitution (maxChars, maxLines) to system prompt
-    const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
-
-    // Step 4: Load user prompt with lens, stressContext, and timeBucket injected
-    const userPrompt = await this.promptLoader.loadPromptWithVariables(
-      'user',
-      this.getUserPromptFile(),
-      {
-        lens: selectedLens,
-        stressContext: selectedStressContext,
-        timeBucket,
-      }
-    );
-
-    // Step 5: Select model and generate
-    const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
-    let lastError: Error | null = null;
-
-    // Try preferred provider
-    try {
-      const provider = this.createProvider(selection);
-      const response = await provider.generate({ systemPrompt, userPrompt });
-
-      return {
-        text: response.text,
-        outputMode: 'text',
-        metadata: {
-          model: response.model,
-          tier: this.modelTier,
-          provider: selection.provider,
-          tokensUsed: response.tokensUsed,
-          personality,
-          selectedLens,
-          selectedStressContext,
-          timeBucket,
-        },
-      };
-    } catch (error) {
-      lastError = error as Error;
-    }
-
-    // Try alternate provider
-    const alternate = this.modelTierSelector.getAlternate(selection);
-    if (alternate) {
-      try {
-        const alternateProvider = this.createProvider(alternate);
-        const response = await alternateProvider.generate({ systemPrompt, userPrompt });
-
-        return {
-          text: response.text,
-          outputMode: 'text',
-          metadata: {
-            model: response.model,
-            tier: this.modelTier,
-            provider: alternate.provider,
-            tokensUsed: response.tokensUsed,
-            failedOver: true,
-            primaryError: lastError?.message,
-            personality,
-            selectedLens,
-            selectedStressContext,
-            timeBucket,
-          },
-        };
-      } catch (alternateError) {
-        lastError = alternateError as Error;
-      }
-    }
-
-    throw new Error(`All AI providers failed for tier ${this.modelTier}: ${lastError?.message}`);
+    return {
+      lens: this.selectedLens,
+      stressContext: this.selectedStressContext,
+      timeBucket: this.selectedTimeBucket,
+    };
   }
 
   /**
-   * Creates an AI provider instance for the given selection
+   * Hook: Returns selection choices in metadata.
+   *
+   * @returns Metadata with selectedLens, selectedStressContext, and timeBucket
    */
-  private createProvider(selection: ModelSelection): AIProvider {
-    const apiKey = this['apiKeys'][selection.provider];
-    if (!apiKey) {
-      throw new Error(`API key not found for provider: ${selection.provider}`);
-    }
-    return createAIProvider(selection.provider as AIProviderType, apiKey, selection.model);
+  protected getCustomMetadata(): Record<string, unknown> {
+    return {
+      selectedLens: this.selectedLens,
+      selectedStressContext: this.selectedStressContext,
+      timeBucket: this.selectedTimeBucket,
+    };
   }
 }

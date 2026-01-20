@@ -12,6 +12,10 @@
  * - Optimized with MEDIUM model tier for scene coherence nuance
  * - Inherits retry logic and provider failover from base class
  *
+ * Uses Template Method hooks:
+ * - getTemplateVariables(): Injects scenario and emotionalBeat into prompt
+ * - getCustomMetadata(): Tracks selection choices in metadata
+ *
  * Design: Scene Snapshot
  * - One character, one moment, one emotional beat
  * - NOT a story arc - just a moment that lands
@@ -40,12 +44,9 @@
 
 import { AIPromptGenerator, type AIProviderAPIKeys } from '../ai-prompt-generator.js';
 import { PromptLoader } from '../../prompt-loader.js';
-import { ModelTierSelector, type ModelSelection } from '../../../api/ai/model-tier-selector.js';
-import { createAIProvider, AIProviderType } from '../../../api/ai/index.js';
-import { generatePersonalityDimensions } from '../../personality/index.js';
-import type { GenerationContext, GeneratedContent } from '../../../types/content-generator.js';
+import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
+import type { GenerationContext } from '../../../types/content-generator.js';
 import { ModelTier as ModelTierEnum } from '../../../types/content-generator.js';
-import type { AIProvider } from '../../../types/ai.js';
 
 /**
  * Scenario dictionary for scene snapshots
@@ -113,7 +114,11 @@ export class StoryFragmentGenerator extends AIPromptGenerator {
    */
   static readonly EMOTIONAL_BEAT = EMOTIONAL_BEAT;
 
-  private readonly apiKeysRef: AIProviderAPIKeys;
+  /**
+   * Selected values for the current generation, used by getCustomMetadata
+   */
+  private selectedScenario: ScenarioType = 'KEEPING_OBJECT';
+  private selectedEmotionalBeat: EmotionalBeatType = 'LOSS';
 
   /**
    * Creates a new StoryFragmentGenerator instance
@@ -129,7 +134,6 @@ export class StoryFragmentGenerator extends AIPromptGenerator {
   ) {
     // Use MEDIUM tier for story fragments (scene coherence requires nuance)
     super(promptLoader, modelTierSelector, ModelTierEnum.MEDIUM, apiKeys);
-    this.apiKeysRef = apiKeys;
   }
 
   /**
@@ -177,148 +181,32 @@ export class StoryFragmentGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Returns additional template variables for story fragments
+   * Hook: Selects random scenario and emotional beat, returns as template variables.
    *
-   * Randomly selects a scenario and emotionalBeat from the dictionaries
-   * to inject into the prompt template for creative variety.
-   *
-   * @returns Object with scenario and emotionalBeat template variables
+   * @param _context - Generation context (unused, but required by hook signature)
+   * @returns Template variables with scenario and emotionalBeat
    */
-  protected getAdditionalTemplateVariables(): {
-    scenario: ScenarioType;
-    emotionalBeat: EmotionalBeatType;
-  } {
+  protected async getTemplateVariables(
+    _context: GenerationContext
+  ): Promise<Record<string, string>> {
+    this.selectedScenario = this.selectRandomScenario();
+    this.selectedEmotionalBeat = this.selectRandomEmotionalBeat();
+
     return {
-      scenario: this.selectRandomScenario(),
-      emotionalBeat: this.selectRandomEmotionalBeat(),
+      scenario: this.selectedScenario,
+      emotionalBeat: this.selectedEmotionalBeat,
     };
   }
 
   /**
-   * Generates story fragment content using AI with automatic provider failover
+   * Hook: Returns selection choices in metadata.
    *
-   * Overrides base class to inject scenario and emotionalBeat template variables.
-   *
-   * Workflow:
-   * 1. Selects random scenario and emotional beat
-   * 2. Generates personality dimensions for content variety
-   * 3. Loads system and user prompts with template variable substitution
-   * 4. Selects preferred model based on MEDIUM tier
-   * 5. Attempts generation with preferred provider
-   * 6. On failure, retries with alternate provider (if available)
-   * 7. Throws if all providers fail
-   *
-   * @param context - Context information for content generation
-   * @returns Generated content with text and metadata
-   * @throws Error if all AI providers fail
+   * @returns Metadata with scenario and emotionalBeat
    */
-  async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Step 1: Select random scenario and emotional beat
-    const { scenario, emotionalBeat } = this.getAdditionalTemplateVariables();
-
-    // Step 2: Load system prompt with personality
-    const personality = context.personality ?? generatePersonalityDimensions();
-    const loadedSystemPrompt = await this.promptLoader.loadPromptWithVariables(
-      'system',
-      this.getSystemPromptFile(),
-      {
-        mood: personality.mood,
-        energyLevel: personality.energyLevel,
-        humorStyle: personality.humorStyle,
-        obsession: personality.obsession,
-        persona: 'Houseboy',
-      }
-    );
-
-    // Apply dimension substitution to system prompt
-    const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
-
-    // Step 3: Load user prompt with story fragment variables injected
-    const userPromptBase = await this.promptLoader.loadPromptWithVariables(
-      'user',
-      this.getUserPromptFile(),
-      {
-        scenario,
-        emotionalBeat,
-      }
-    );
-
-    // Format user prompt with context
-    const userPrompt = `${userPromptBase}
-
-CURRENT CONTEXT:
-- Update Type: ${context.updateType}`;
-
-    // Step 4: Select model and generate
-    const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
-    let lastError: Error | null = null;
-
-    // Build metadata (reused for both primary and failover responses)
-    const baseMetadata = {
-      tier: this.modelTier,
-      personality,
-      scenario,
-      emotionalBeat,
+  protected getCustomMetadata(): Record<string, unknown> {
+    return {
+      scenario: this.selectedScenario,
+      emotionalBeat: this.selectedEmotionalBeat,
     };
-
-    // Try preferred provider
-    try {
-      const provider = this.createProvider(selection);
-      const response = await provider.generate({ systemPrompt, userPrompt });
-
-      return {
-        text: response.text,
-        outputMode: 'text',
-        metadata: {
-          ...baseMetadata,
-          model: response.model,
-          provider: selection.provider,
-          tokensUsed: response.tokensUsed,
-        },
-      };
-    } catch (error) {
-      lastError = error as Error;
-    }
-
-    // Try alternate provider
-    const alternate = this.modelTierSelector.getAlternate(selection);
-    if (alternate) {
-      try {
-        const alternateProvider = this.createProvider(alternate);
-        const response = await alternateProvider.generate({ systemPrompt, userPrompt });
-
-        return {
-          text: response.text,
-          outputMode: 'text',
-          metadata: {
-            ...baseMetadata,
-            model: response.model,
-            provider: alternate.provider,
-            tokensUsed: response.tokensUsed,
-            failedOver: true,
-            primaryError: lastError?.message,
-          },
-        };
-      } catch (alternateError) {
-        lastError = alternateError as Error;
-      }
-    }
-
-    throw new Error(`All AI providers failed for tier ${this.modelTier}: ${lastError?.message}`);
-  }
-
-  /**
-   * Creates an AI provider instance for the given selection
-   *
-   * @param selection - Model selection with provider and model identifier
-   * @returns Configured AI provider instance
-   * @throws Error if API key not found for provider
-   */
-  protected createProvider(selection: ModelSelection): AIProvider {
-    const apiKey = this.apiKeysRef[selection.provider];
-    if (!apiKey) {
-      throw new Error(`API key not found for provider: ${selection.provider}`);
-    }
-    return createAIProvider(selection.provider as AIProviderType, apiKey, selection.model);
   }
 }

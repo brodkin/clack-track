@@ -6,7 +6,9 @@
  * - Uses LIGHT model tier for efficiency (haikus are simple)
  * - Validates prompt files exist
  * - Generates haiku content via AI provider
- * - Injects random topics into prompt
+ * - Uses Template Method hooks correctly:
+ *   - getTemplateVariables() for topic injection
+ *   - getCustomMetadata() for topic tracking
  * - Topic randomization produces valid topics
  * - Handles AI provider failures gracefully
  */
@@ -16,7 +18,28 @@ import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector';
 import { ModelTier } from '@/types/content-generator';
 import type { GenerationContext } from '@/types/content-generator';
-import type { AIProvider } from '@/types/ai';
+import { createMockAIProvider } from '@tests/__helpers__/mockAIProvider';
+
+// Mock createAIProvider function to avoid real API calls
+jest.mock('@/api/ai/index.js', () => ({
+  createAIProvider: jest.fn(),
+  AIProviderType: {
+    OPENAI: 'openai',
+    ANTHROPIC: 'anthropic',
+  },
+}));
+
+// Mock personality generation for consistent tests
+jest.mock('@/content/personality/index.js', () => ({
+  generatePersonalityDimensions: jest.fn(() => ({
+    mood: 'cheerful',
+    energyLevel: 'high',
+    humorStyle: 'witty',
+    obsession: 'coffee',
+  })),
+}));
+
+import { createAIProvider } from '@/api/ai/index.js';
 
 // Helper type for accessing protected members in tests
 type ProtectedHaikuGenerator = HaikuGenerator & {
@@ -28,7 +51,6 @@ type ProtectedHaikuGenerator = HaikuGenerator & {
 describe('HaikuGenerator', () => {
   let mockPromptLoader: jest.Mocked<PromptLoader>;
   let mockModelTierSelector: jest.Mocked<ModelTierSelector>;
-  let mockAIProvider: jest.Mocked<AIProvider>;
 
   const mockContext: GenerationContext = {
     updateType: 'major',
@@ -36,6 +58,8 @@ describe('HaikuGenerator', () => {
   };
 
   beforeEach(() => {
+    jest.clearAllMocks();
+
     // Mock PromptLoader
     mockPromptLoader = {
       loadPrompt: jest.fn(),
@@ -53,15 +77,16 @@ describe('HaikuGenerator', () => {
       getAlternate: jest.fn().mockReturnValue(null),
     } as unknown as jest.Mocked<ModelTierSelector>;
 
-    // Mock AIProvider with successful response
-    mockAIProvider = {
-      generate: jest.fn().mockResolvedValue({
-        text: 'Generated haiku content',
-        model: 'gpt-4.1-nano',
-        tokensUsed: 50,
-      }),
-      validateConnection: jest.fn().mockResolvedValue(true),
-    } as unknown as jest.Mocked<AIProvider>;
+    // Mock createAIProvider to return a successful mock provider
+    (createAIProvider as jest.Mock).mockReturnValue(
+      createMockAIProvider({
+        response: {
+          text: 'Generated haiku content',
+          model: 'gpt-4.1-nano',
+          tokensUsed: 50,
+        },
+      })
+    );
   });
 
   describe('constructor', () => {
@@ -75,25 +100,11 @@ describe('HaikuGenerator', () => {
     });
 
     it('should use LIGHT model tier for efficiency', async () => {
-      // Set up mocks for generate() call
-      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
-      mockModelTierSelector.select.mockReturnValue({
-        provider: 'openai',
-        model: 'gpt-4.1-nano',
-        tier: ModelTier.LIGHT,
-      });
-      mockModelTierSelector.getAlternate.mockReturnValue(null);
-
       const generator = new HaikuGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      // Verify via observable behavior: modelTierSelector.select is called with LIGHT tier
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider - we're testing the tier selection call
-      }
+      await generator.generate(mockContext);
 
       expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
     });
@@ -146,24 +157,12 @@ describe('HaikuGenerator', () => {
 
       const result = await generator.validate();
 
-      // Assuming prompts exist in the worktree
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
     });
   });
 
   describe('generate()', () => {
-    beforeEach(() => {
-      // Mock createProvider to return our AI provider mock for each test
-      jest
-        .spyOn(HaikuGenerator.prototype as { createProvider: () => unknown }, 'createProvider')
-        .mockReturnValue(mockAIProvider);
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
     it('should generate content with expected GeneratedContent structure', async () => {
       const generator = new HaikuGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
@@ -190,7 +189,7 @@ describe('HaikuGenerator', () => {
       expect(result.outputMode).toBe('text');
     });
 
-    it('should include metadata with tier, provider, and personality', async () => {
+    it('should include metadata with tier, provider, personality, and topic', async () => {
       const generator = new HaikuGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
@@ -201,13 +200,15 @@ describe('HaikuGenerator', () => {
       expect(result.metadata?.tier).toBe(ModelTier.LIGHT);
       expect(result.metadata?.provider).toBe('openai');
       expect(result.metadata?.personality).toBeDefined();
-      expect(result.metadata?.personality?.mood).toBeDefined();
-      expect(result.metadata?.personality?.energyLevel).toBeDefined();
-      expect(result.metadata?.personality?.humorStyle).toBeDefined();
-      expect(result.metadata?.personality?.obsession).toBeDefined();
+      expect(result.metadata?.personality?.mood).toBe('cheerful');
+      expect(result.metadata?.personality?.energyLevel).toBe('high');
+      expect(result.metadata?.personality?.humorStyle).toBe('witty');
+      expect(result.metadata?.personality?.obsession).toBe('coffee');
+      // Topic should be tracked via getCustomMetadata() hook
+      expect(result.metadata?.topic).toBeDefined();
     });
 
-    it('should inject random topic into user prompt via template variable', async () => {
+    it('should inject random topic into user prompt via getTemplateVariables() hook', async () => {
       const generator = new HaikuGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
@@ -277,10 +278,10 @@ describe('HaikuGenerator', () => {
         'system',
         'major-update-base.txt',
         expect.objectContaining({
-          mood: expect.any(String),
-          energyLevel: expect.any(String),
-          humorStyle: expect.any(String),
-          obsession: expect.any(String),
+          mood: 'cheerful',
+          energyLevel: 'high',
+          humorStyle: 'witty',
+          obsession: 'coffee',
           persona: 'Houseboy',
         })
       );
@@ -289,7 +290,7 @@ describe('HaikuGenerator', () => {
     it('should use LIGHT tier for model selection', async () => {
       const generator = new HaikuGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
-      }) as ProtectedHaikuGenerator;
+      });
 
       await generator.generate(mockContext);
 
@@ -297,12 +298,16 @@ describe('HaikuGenerator', () => {
     });
 
     it('should handle AI provider failures gracefully', async () => {
+      (createAIProvider as jest.Mock).mockReturnValue(
+        createMockAIProvider({
+          shouldFail: true,
+          failureError: new Error('AI provider error'),
+        })
+      );
+
       const generator = new HaikuGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
-
-      mockAIProvider.generate.mockRejectedValue(new Error('AI provider error'));
-      mockModelTierSelector.getAlternate.mockReturnValue(null);
 
       await expect(generator.generate(mockContext)).rejects.toThrow(
         /All AI providers failed for tier/
@@ -310,26 +315,28 @@ describe('HaikuGenerator', () => {
     });
 
     it('should failover to alternate provider on primary failure', async () => {
-      const alternateProvider: jest.Mocked<AIProvider> = {
-        generate: jest.fn().mockResolvedValue({
+      const primaryProvider = createMockAIProvider({
+        shouldFail: true,
+        failureError: new Error('Primary provider error'),
+      });
+
+      const alternateProvider = createMockAIProvider({
+        response: {
           text: 'Alternate provider haiku',
           model: 'claude-haiku-4.5',
           tokensUsed: 45,
-        }),
-        validateConnection: jest.fn().mockResolvedValue(true),
-      } as unknown as jest.Mocked<AIProvider>;
+        },
+      });
 
-      mockAIProvider.generate.mockRejectedValue(new Error('Primary provider error'));
+      (createAIProvider as jest.Mock)
+        .mockReturnValueOnce(primaryProvider)
+        .mockReturnValueOnce(alternateProvider);
+
       mockModelTierSelector.getAlternate.mockReturnValue({
         provider: 'anthropic',
         model: 'claude-haiku-4.5',
         tier: ModelTier.LIGHT,
       });
-
-      const createProviderSpy = jest
-        .spyOn(HaikuGenerator.prototype as { createProvider: () => unknown }, 'createProvider')
-        .mockReturnValueOnce(mockAIProvider)
-        .mockReturnValueOnce(alternateProvider);
 
       const generator = new HaikuGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
@@ -342,12 +349,34 @@ describe('HaikuGenerator', () => {
       expect(result.metadata?.provider).toBe('anthropic');
       expect(result.metadata?.failedOver).toBe(true);
       expect(result.metadata?.primaryError).toContain('Primary provider error');
-
-      createProviderSpy.mockRestore();
     });
   });
 
-  describe('integration with base class', () => {
+  describe('integration with base class Template Method pattern', () => {
+    it('should use getTemplateVariables() hook to inject topic', async () => {
+      const generator = new HaikuGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      await generator.generate(mockContext);
+
+      // The hook should have been called, injecting payload variable
+      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls[1];
+      expect(userPromptCall[2]).toHaveProperty('payload');
+    });
+
+    it('should use getCustomMetadata() hook to track topic', async () => {
+      const generator = new HaikuGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      const result = await generator.generate(mockContext);
+
+      // Topic should be in metadata from getCustomMetadata() hook
+      expect(result.metadata?.topic).toBeDefined();
+      expect(typeof result.metadata?.topic).toBe('string');
+    });
+
     it('should inherit retry logic from AIPromptGenerator', () => {
       const generator = new HaikuGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',

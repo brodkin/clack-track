@@ -11,6 +11,10 @@
  * - Injects random topic domain, topic, and roast format into prompts
  * - Inherits retry logic and provider failover from base class
  *
+ * Uses Template Method hooks:
+ * - getTemplateVariables(): Injects topicDomain, topic, and roastFormat
+ * - getCustomMetadata(): Tracks selection choices in metadata
+ *
  * CRITICAL TONE GUARDRAIL:
  * Roast the SITUATION, never the viewer. The viewer should feel
  * IN ON THE JOKE, not targeted. Affectionate mockery, not mean-spirited.
@@ -37,12 +41,9 @@
 
 import { AIPromptGenerator, type AIProviderAPIKeys } from '../ai-prompt-generator.js';
 import { PromptLoader } from '../../prompt-loader.js';
-import { ModelTierSelector, type ModelSelection } from '../../../api/ai/model-tier-selector.js';
-import { createAIProvider, AIProviderType } from '../../../api/ai/index.js';
-import { generatePersonalityDimensions } from '../../personality/index.js';
-import type { GenerationContext, GeneratedContent } from '../../../types/content-generator.js';
+import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
+import type { GenerationContext } from '../../../types/content-generator.js';
 import { ModelTier as ModelTierEnum } from '../../../types/content-generator.js';
-import type { AIProvider } from '../../../types/ai.js';
 
 /**
  * Topic domains for daily roasts
@@ -91,7 +92,12 @@ export class DailyRoastGenerator extends AIPromptGenerator {
    */
   static readonly ROAST_FORMATS = ROAST_FORMATS;
 
-  private readonly apiKeysRef: AIProviderAPIKeys;
+  /**
+   * Selected values for the current generation, used by getCustomMetadata
+   */
+  private selectedTopicDomain: string = '';
+  private selectedTopic: string = '';
+  private selectedRoastFormat: string = '';
 
   /**
    * Creates a new DailyRoastGenerator instance
@@ -107,7 +113,6 @@ export class DailyRoastGenerator extends AIPromptGenerator {
   ) {
     // Use MEDIUM tier for daily roasts (tone calibration requires nuance)
     super(promptLoader, modelTierSelector, ModelTierEnum.MEDIUM, apiKeys);
-    this.apiKeysRef = apiKeys;
   }
 
   /**
@@ -161,124 +166,35 @@ export class DailyRoastGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Generates daily roast content with random topic injection
+   * Hook: Selects random topic and format, returns as template variables.
    *
-   * Workflow:
-   * 1. Select random topic domain and topic
-   * 2. Select random roast format
-   * 3. Load system and user prompts with topic variables injected
-   * 4. Generate content using AI provider with failover support
-   *
-   * @param context - Context information for content generation
-   * @returns Generated content with text and metadata
-   * @throws Error if all AI providers fail
+   * @param _context - Generation context (unused, but required by hook signature)
+   * @returns Template variables with topicDomain, topic, and roastFormat
    */
-  async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Step 1: Select random topic and format
+  protected async getTemplateVariables(
+    _context: GenerationContext
+  ): Promise<Record<string, string>> {
     const { topicDomain, topic } = this.selectRandomTopic();
     const roastFormat = this.selectRandomRoastFormat();
 
-    // Step 2: Load system prompt with personality
-    const personality = context.personality ?? generatePersonalityDimensions();
-    const loadedSystemPrompt = await this.promptLoader.loadPromptWithVariables(
-      'system',
-      this.getSystemPromptFile(),
-      {
-        mood: personality.mood,
-        energyLevel: personality.energyLevel,
-        humorStyle: personality.humorStyle,
-        obsession: personality.obsession,
-        persona: 'Houseboy',
-      }
-    );
+    // Cache for metadata
+    this.selectedTopicDomain = topicDomain;
+    this.selectedTopic = topic;
+    this.selectedRoastFormat = roastFormat;
 
-    // Apply dimension substitution to system prompt
-    const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
-
-    // Step 3: Load user prompt with topic variables injected
-    const userPromptBase = await this.promptLoader.loadPromptWithVariables(
-      'user',
-      this.getUserPromptFile(),
-      {
-        topicDomain,
-        topic,
-        roastFormat,
-      }
-    );
-
-    // Format user prompt with context
-    const userPrompt = `${userPromptBase}
-
-CURRENT CONTEXT:
-- Update Type: ${context.updateType}`;
-
-    // Step 4: Select model and generate
-    const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
-    let lastError: Error | null = null;
-
-    // Build metadata (reused for both primary and failover responses)
-    const baseMetadata = {
-      tier: this.modelTier,
-      personality,
-      topicDomain,
-      topic,
-      roastFormat,
-    };
-
-    // Try preferred provider
-    try {
-      const provider = this.createProvider(selection);
-      const response = await provider.generate({ systemPrompt, userPrompt });
-
-      return {
-        text: response.text,
-        outputMode: 'text',
-        metadata: {
-          ...baseMetadata,
-          model: response.model,
-          provider: selection.provider,
-          tokensUsed: response.tokensUsed,
-        },
-      };
-    } catch (error) {
-      lastError = error as Error;
-    }
-
-    // Try alternate provider
-    const alternate = this.modelTierSelector.getAlternate(selection);
-    if (alternate) {
-      try {
-        const alternateProvider = this.createProvider(alternate);
-        const response = await alternateProvider.generate({ systemPrompt, userPrompt });
-
-        return {
-          text: response.text,
-          outputMode: 'text',
-          metadata: {
-            ...baseMetadata,
-            model: response.model,
-            provider: alternate.provider,
-            tokensUsed: response.tokensUsed,
-            failedOver: true,
-            primaryError: lastError?.message,
-          },
-        };
-      } catch (alternateError) {
-        lastError = alternateError as Error;
-      }
-    }
-
-    throw new Error(`All AI providers failed for tier ${this.modelTier}: ${lastError?.message}`);
+    return { topicDomain, topic, roastFormat };
   }
 
   /**
-   * Creates an AI provider instance for the given selection
+   * Hook: Returns selection choices in metadata.
+   *
+   * @returns Metadata with topicDomain, topic, and roastFormat
    */
-  protected createProvider(selection: ModelSelection): AIProvider {
-    const apiKey = this.apiKeysRef[selection.provider];
-    if (!apiKey) {
-      throw new Error(`API key not found for provider: ${selection.provider}`);
-    }
-    return createAIProvider(selection.provider as AIProviderType, apiKey, selection.model);
+  protected getCustomMetadata(): Record<string, unknown> {
+    return {
+      topicDomain: this.selectedTopicDomain,
+      topic: this.selectedTopic,
+      roastFormat: this.selectedRoastFormat,
+    };
   }
 }

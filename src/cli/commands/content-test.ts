@@ -8,7 +8,7 @@
 import { ContentRegistry } from '../../content/registry/content-registry.js';
 import { FrameDecorator } from '../../content/frame/frame-decorator.js';
 import { log, error } from '../../utils/logger.js';
-import type { GenerationContext } from '../../types/content-generator.js';
+import type { GenerationContext, ContentGenerator } from '../../types/content-generator.js';
 import { bootstrap } from '../../bootstrap.js';
 import { validateTextContent, validateLayoutContent } from '../../utils/validators.js';
 import { HomeAssistantClient } from '../../api/data-sources/home-assistant.js';
@@ -16,6 +16,7 @@ import { createAIProvider, AIProviderType } from '../../api/ai/index.js';
 import type { AIProvider } from '../../types/ai.js';
 import { renderAsciiPreview } from '../display.js';
 import { closeKnexInstance } from '../../storage/knex.js';
+import { ToolBasedGenerator } from '../../content/generators/tool-based-generator.js';
 
 /**
  * Options for content:test command
@@ -97,11 +98,45 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
       timestamp: new Date(),
     };
 
+    // Setup AI provider for tool-based generation
+    let aiProvider: AIProvider | undefined;
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    const openaiKey = process.env.OPENAI_API_KEY;
+
+    if (anthropicKey) {
+      try {
+        aiProvider = createAIProvider(AIProviderType.ANTHROPIC, anthropicKey);
+      } catch {
+        // Fallback to OpenAI if Anthropic fails
+      }
+    }
+    if (!aiProvider && openaiKey) {
+      try {
+        aiProvider = createAIProvider(AIProviderType.OPENAI, openaiKey);
+      } catch {
+        // Continue without AI provider
+      }
+    }
+
+    // Wrap generator with ToolBasedGenerator for validation loop
+    // This matches the orchestrator's behavior for consistent testing
+    let generator: ContentGenerator = registered.generator;
+    if (aiProvider) {
+      const { toolBasedOptions } = registered.registration;
+      generator = ToolBasedGenerator.wrap(registered.generator, {
+        aiProvider,
+        maxAttempts: toolBasedOptions?.maxAttempts ?? 3,
+        exhaustionStrategy: toolBasedOptions?.exhaustionStrategy ?? 'throw',
+      });
+    } else {
+      log('Warning: No AI provider configured - tool-based validation will be skipped\n');
+    }
+
     // Measure generation time
     const startTime = Date.now();
 
-    // Generate content
-    const content = await registered.generator.generate(context);
+    // Generate content using wrapped generator
+    const content = await generator.generate(context);
 
     const generationTime = Date.now() - startTime;
 
@@ -174,18 +209,8 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
           }
         }
 
-        // Setup AI provider for color bar (if configured)
-        let aiProvider: AIProvider | undefined;
-        const anthropicKey = process.env.ANTHROPIC_API_KEY;
-        const openaiKey = process.env.OPENAI_API_KEY;
-
-        if (anthropicKey) {
-          try {
-            aiProvider = createAIProvider(AIProviderType.ANTHROPIC, anthropicKey);
-          } catch {
-            // Fallback to OpenAI if Anthropic fails
-          }
-        }
+        // AI provider for color bar was already set up for tool-based generation
+        // Reuse the existing aiProvider variable if available
         if (!aiProvider && openaiKey) {
           try {
             aiProvider = createAIProvider(AIProviderType.OPENAI, openaiKey);

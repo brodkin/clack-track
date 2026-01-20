@@ -19,6 +19,183 @@
       }
     }
   },
+  "toolCalling": {
+    "singleToolUse": {
+      "id": "msg_01ToolUse123456789",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_01A2B3C4D5E6F7G8H9I0J1K2L",
+          "name": "get_weather",
+          "input": {
+            "location": "San Francisco, CA",
+            "unit": "fahrenheit"
+          }
+        }
+      ],
+      "model": "claude-sonnet-4-20250514",
+      "stop_reason": "tool_use",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 150,
+        "output_tokens": 45
+      }
+    },
+    "multipleToolUses": {
+      "id": "msg_01MultiTool123456789",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_01NYC123",
+          "name": "get_weather",
+          "input": {
+            "location": "New York, NY",
+            "unit": "fahrenheit"
+          }
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_01LA456",
+          "name": "get_weather",
+          "input": {
+            "location": "Los Angeles, CA",
+            "unit": "fahrenheit"
+          }
+        }
+      ],
+      "model": "claude-sonnet-4-20250514",
+      "stop_reason": "tool_use",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 180,
+        "output_tokens": 85
+      }
+    },
+    "textAndToolUse": {
+      "id": "msg_01TextAndTool123456789",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "I'll check the weather for you."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_01TextTool789",
+          "name": "get_weather",
+          "input": {
+            "location": "San Francisco, CA"
+          }
+        }
+      ],
+      "model": "claude-sonnet-4-20250514",
+      "stop_reason": "tool_use",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 160,
+        "output_tokens": 55
+      }
+    },
+    "toolUseOnly": {
+      "id": "msg_01ToolOnly123456789",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_01OnlyTool123",
+          "name": "get_weather",
+          "input": {
+            "location": "Seattle, WA"
+          }
+        }
+      ],
+      "model": "claude-sonnet-4-20250514",
+      "stop_reason": "tool_use",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 145,
+        "output_tokens": 40
+      }
+    },
+    "textResponseWithTools": {
+      "id": "msg_01TextResp123456789",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Hello! I can help you with weather information if you'd like."
+        }
+      ],
+      "model": "claude-sonnet-4-20250514",
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 140,
+        "output_tokens": 18
+      }
+    },
+    "afterToolResult": {
+      "id": "msg_01AfterResult123456789",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "The weather in San Francisco is sunny with a temperature of 72°F."
+        }
+      ],
+      "model": "claude-sonnet-4-20250514",
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 200,
+        "output_tokens": 25
+      }
+    },
+    "afterMultipleToolResults": {
+      "id": "msg_01AfterMultiResults123456789",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "The weather comparison shows that Los Angeles is warmer at 78°F and sunny, while New York is cooler at 65°F with cloudy skies."
+        }
+      ],
+      "model": "claude-sonnet-4-20250514",
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 280,
+        "output_tokens": 40
+      }
+    },
+    "afterErrorToolResult": {
+      "id": "msg_01AfterError123456789",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "I apologize, but I wasn't able to find weather information for Atlantis. That location doesn't appear to exist in our weather database."
+        }
+      ],
+      "model": "claude-sonnet-4-20250514",
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 220,
+        "output_tokens": 35
+      }
+    }
+  },
   "errors": {
     "rateLimit": {
       "type": "error",

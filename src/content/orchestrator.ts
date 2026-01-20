@@ -17,6 +17,7 @@
  */
 
 import { generateWithRetry, type GeneratorFactory } from './orchestrator-retry.js';
+import { ToolBasedGenerator } from './generators/tool-based-generator.js';
 import { validateGeneratorOutput } from '../utils/validators.js';
 import type { ContentSelector } from './registry/content-selector.js';
 import type { ContentRegistry } from './registry/content-registry.js';
@@ -24,7 +25,11 @@ import type { FrameDecorator } from './frame/frame-decorator.js';
 import type { StaticFallbackGenerator } from './generators/static-fallback-generator.js';
 import type { VestaboardClient } from '../api/vestaboard/types.js';
 import type { AIProvider } from '../types/ai.js';
-import type { GenerationContext, GeneratedContent } from '../types/content-generator.js';
+import type {
+  GenerationContext,
+  GeneratedContent,
+  ContentGenerator,
+} from '../types/content-generator.js';
 import type { ContentDataProvider } from '../services/content-data-provider.js';
 import type { ContentRepository } from '../storage/repositories/content-repo.js';
 import type { CircuitBreakerService } from '../services/circuit-breaker-service.js';
@@ -214,18 +219,27 @@ export class ContentOrchestrator {
       try {
         // Step 3: Generate with retry logic using factory pattern
         // Create a factory that returns the selected generator instance
-        // Note: Current generator architecture doesn't use injected provider yet
-        // (provider injection will be added in future refactoring)
-        // For now, factory ignores provider parameter and returns pre-existing generator
-        const generatorFactory: GeneratorFactory = (_provider: AIProvider) => {
-          return registeredGenerator.generator;
+        // ToolBasedGenerator is always applied for iterative content refinement
+        const { toolBasedOptions } = registeredGenerator.registration;
+
+        const generatorFactory: GeneratorFactory = (provider: AIProvider): ContentGenerator => {
+          const baseGenerator = registeredGenerator.generator;
+
+          // Always wrap with ToolBasedGenerator for AI-powered validation loop
+          return ToolBasedGenerator.wrap(baseGenerator, {
+            aiProvider: provider,
+            maxAttempts: toolBasedOptions?.maxAttempts ?? 3,
+            exhaustionStrategy: toolBasedOptions?.exhaustionStrategy ?? 'throw',
+          });
         };
 
         content = await generateWithRetry(
           generatorFactory,
           context,
           this.preferredProvider,
-          this.alternateProvider
+          this.alternateProvider,
+          {}, // retryConfig defaults
+          this.circuitBreaker
         );
 
         // Step 3.5: Validate generator output

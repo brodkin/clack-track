@@ -43,6 +43,14 @@ jest.mock('../../../src/content/frame/color-bar', () => {
   };
 });
 
+// Mock ToolBasedGenerator to pass through to base generator
+// This allows testing minor update flow without tool-based generation complexity
+jest.mock('@/content/generators/tool-based-generator', () => ({
+  ToolBasedGenerator: {
+    wrap: jest.fn(baseGenerator => baseGenerator),
+  },
+}));
+
 import { ColorBarService } from '../../../src/content/frame/color-bar';
 
 describe('CronScheduler Minor Update Integration', () => {

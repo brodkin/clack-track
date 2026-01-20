@@ -14,6 +14,10 @@
  * - Standard framed mode (time/weather info bar applies)
  * - Inherits retry logic and provider failover from base class
  *
+ * Uses Template Method hooks:
+ * - getTemplateVariables(): Injects randomly selected theme
+ * - getCustomMetadata(): Tracks theme selection in metadata
+ *
  * Variability System:
  * - MORNING_THEMES (15+ items): Morning vibes to inspire content
  *   (e.g., "coffee ritual", "sunrise beauty", "fresh start energy")
@@ -38,12 +42,9 @@
 
 import { AIPromptGenerator, type AIProviderAPIKeys } from '../ai-prompt-generator.js';
 import { PromptLoader } from '../../prompt-loader.js';
-import { ModelTierSelector, type ModelSelection } from '../../../api/ai/model-tier-selector.js';
-import { createAIProvider, AIProviderType } from '../../../api/ai/index.js';
-import { generatePersonalityDimensions } from '../../personality/index.js';
-import type { GenerationContext, GeneratedContent } from '../../../types/content-generator.js';
+import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
+import type { GenerationContext } from '../../../types/content-generator.js';
 import { ModelTier } from '../../../types/content-generator.js';
-import type { AIProvider } from '../../../types/ai.js';
 
 /**
  * Morning themes to inspire wakeup greeting content
@@ -89,6 +90,11 @@ export const MORNING_THEMES: readonly string[] = [
  * each generation produces meaningfully different content.
  */
 export class WakeupGreetingGenerator extends AIPromptGenerator {
+  /**
+   * Selected theme for the current generation, used by getCustomMetadata
+   */
+  private selectedTheme: string = '';
+
   /**
    * Creates a new WakeupGreetingGenerator instance
    *
@@ -140,114 +146,29 @@ export class WakeupGreetingGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Generates wakeup greeting content with theme variability injection
+   * Hook: Selects random theme and returns as template variables.
    *
-   * Workflow:
-   * 1. Select random theme from dictionary
-   * 2. Load prompts with theme injected via template variables
-   * 3. Generate content using AI provider with failover support
-   *
-   * @param context - Context information for content generation
-   * @returns Generated content with text and metadata
-   * @throws Error if all AI providers fail
+   * @param _context - Generation context (unused, but required by hook signature)
+   * @returns Template variables with theme
    */
-  async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Step 1: Select random theme for variability
-    const selectedTheme = this.selectRandomTheme();
+  protected async getTemplateVariables(
+    _context: GenerationContext
+  ): Promise<Record<string, string>> {
+    this.selectedTheme = this.selectRandomTheme();
 
-    // Step 2: Load system prompt with personality
-    const personality = context.personality ?? generatePersonalityDimensions();
-    const loadedSystemPrompt = await this.promptLoader.loadPromptWithVariables(
-      'system',
-      this.getSystemPromptFile(),
-      {
-        mood: personality.mood,
-        energyLevel: personality.energyLevel,
-        humorStyle: personality.humorStyle,
-        obsession: personality.obsession,
-        persona: 'Houseboy',
-      }
-    );
-
-    // Apply dimension substitution (maxChars, maxLines) to system prompt
-    const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
-
-    // Step 3: Load user prompt with theme injected
-    const userPrompt = await this.promptLoader.loadPromptWithVariables(
-      'user',
-      this.getUserPromptFile(),
-      {
-        theme: selectedTheme,
-      }
-    );
-
-    // Step 4: Select model and generate
-    const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
-    let lastError: Error | null = null;
-
-    // Build base metadata
-    const baseMetadata = {
-      tier: this.modelTier,
-      personality,
-      systemPrompt,
-      userPrompt,
-      selectedTheme,
+    return {
+      theme: this.selectedTheme,
     };
-
-    // Try preferred provider
-    try {
-      const provider = this.createProvider(selection);
-      const response = await provider.generate({ systemPrompt, userPrompt });
-
-      return {
-        text: response.text,
-        outputMode: 'text',
-        metadata: {
-          ...baseMetadata,
-          model: response.model,
-          provider: selection.provider,
-          tokensUsed: response.tokensUsed,
-        },
-      };
-    } catch (error) {
-      lastError = error as Error;
-    }
-
-    // Try alternate provider
-    const alternate = this.modelTierSelector.getAlternate(selection);
-    if (alternate) {
-      try {
-        const alternateProvider = this.createProvider(alternate);
-        const response = await alternateProvider.generate({ systemPrompt, userPrompt });
-
-        return {
-          text: response.text,
-          outputMode: 'text',
-          metadata: {
-            ...baseMetadata,
-            model: response.model,
-            provider: alternate.provider,
-            tokensUsed: response.tokensUsed,
-            failedOver: true,
-            primaryError: lastError?.message,
-          },
-        };
-      } catch (alternateError) {
-        lastError = alternateError as Error;
-      }
-    }
-
-    throw new Error(`All AI providers failed for tier ${this.modelTier}: ${lastError?.message}`);
   }
 
   /**
-   * Creates an AI provider instance for the given selection
+   * Hook: Returns theme selection in metadata.
+   *
+   * @returns Metadata with selectedTheme
    */
-  private createProvider(selection: ModelSelection): AIProvider {
-    const apiKey = this['apiKeys'][selection.provider];
-    if (!apiKey) {
-      throw new Error(`API key not found for provider: ${selection.provider}`);
-    }
-    return createAIProvider(selection.provider as AIProviderType, apiKey, selection.model);
+  protected getCustomMetadata(): Record<string, unknown> {
+    return {
+      selectedTheme: this.selectedTheme,
+    };
   }
 }

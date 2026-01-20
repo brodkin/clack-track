@@ -59,6 +59,10 @@ describe('ContentModel', () => {
         // Token usage
         table.integer('tokensUsed').nullable();
 
+        // Validation attempts tracking
+        table.integer('validationAttempts').nullable().defaultTo(0);
+        table.json('rejectionReasons').nullable();
+
         // Indexes for common queries
         table.index('generatedAt', 'idx_generated_at');
         table.index('status', 'idx_status');

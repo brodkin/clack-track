@@ -1,26 +1,70 @@
 /**
  * AI Prompt Generator Base Class
  *
- * Abstract base class for all AI-powered content generators.
- * Implements the ContentGenerator interface with built-in:
+ * Abstract base class for all AI-powered content generators using the
+ * **Template Method Pattern**. The base `generate()` method defines the
+ * algorithm skeleton, while subclasses customize specific steps via hooks.
+ *
+ * Built-in functionality:
  * - Prompt file loading and validation
  * - Model tier selection with cross-provider fallback
  * - Retry logic for AI provider failures
  * - Dynamic personality dimensions for content variety
+ * - Centralized promptsOnly handling
  *
- * Subclasses must implement:
- * - getSystemPromptFile(): string - Return filename for system prompt
- * - getUserPromptFile(): string - Return filename for user prompt
+ * ## Required Methods (must implement)
+ * - `getSystemPromptFile()`: Return filename for system prompt
+ * - `getUserPromptFile()`: Return filename for user prompt
+ *
+ * ## Optional Hooks (override to customize)
+ * - `getTemplateVariables(context)`: Add custom template variables (e.g., weather data)
+ * - `getCustomMetadata()`: Add generator-specific metadata fields
+ * - `postProcessContent(content)`: Modify content after AI generation
+ *
+ * **IMPORTANT**: Subclasses should NOT override the `generate()` method.
+ * Use the provided hooks instead to customize behavior.
  *
  * @example
  * ```typescript
- * class MotivationalQuoteGenerator extends AIPromptGenerator {
+ * // Simple generator - just implement required methods
+ * class MotivationalGenerator extends AIPromptGenerator {
  *   protected getSystemPromptFile(): string {
  *     return 'major-update-base.txt';
  *   }
- *
  *   protected getUserPromptFile(): string {
- *     return 'motivational-quote.txt';
+ *     return 'motivational.txt';
+ *   }
+ * }
+ *
+ * // Advanced generator - use hooks for customization
+ * class WeatherGenerator extends AIPromptGenerator {
+ *   protected getSystemPromptFile() { return 'major-update-base.txt'; }
+ *   protected getUserPromptFile() { return 'weather-focus.txt'; }
+ *
+ *   // Hook: Inject weather data into prompts
+ *   protected async getTemplateVariables(context: GenerationContext) {
+ *     const weather = await this.weatherService.getWeather();
+ *     return { weather: formatWeather(weather) };
+ *   }
+ *
+ *   // Hook: Track weather injection in metadata
+ *   protected getCustomMetadata() {
+ *     return { weatherInjected: true };
+ *   }
+ * }
+ *
+ * // Post-processing generator - modify content after AI generation
+ * class FortuneCookieGenerator extends AIPromptGenerator {
+ *   protected getSystemPromptFile() { return 'major-update-base.txt'; }
+ *   protected getUserPromptFile() { return 'fortune-cookie.txt'; }
+ *
+ *   // Hook: Prepend title to AI-generated content
+ *   protected postProcessContent(content: GeneratedContent): GeneratedContent {
+ *     return {
+ *       ...content,
+ *       text: `FORTUNE COOKIE\n${content.text}`,
+ *       metadata: { ...content.metadata, titleInjected: true }
+ *     };
  *   }
  * }
  * ```
@@ -109,6 +153,98 @@ export abstract class AIPromptGenerator implements ContentGenerator {
    */
   protected abstract getUserPromptFile(): string;
 
+  // ============================================================================
+  // TEMPLATE METHOD HOOKS - Override these to customize generator behavior
+  // ============================================================================
+
+  /**
+   * Hook: Returns custom template variables to merge with base variables.
+   *
+   * Override this method to inject generator-specific data into prompts.
+   * The returned variables are merged with base variables (personality, date, time)
+   * and used for prompt template substitution.
+   *
+   * **Use cases:**
+   * - WeatherGenerator: Inject weather data via `{ weather: '72F Sunny' }`
+   * - NewsGenerator: Inject headlines via `{ headlines: '...' }`
+   *
+   * @param context - Generation context with timestamp and other data
+   * @returns Custom template variables (default: empty object)
+   *
+   * @example
+   * ```typescript
+   * protected async getTemplateVariables(context: GenerationContext) {
+   *   const weather = await this.weatherService.getWeather();
+   *   return { weather: `${weather.temp}F ${weather.condition}` };
+   * }
+   * ```
+   */
+  protected async getTemplateVariables(
+    _context: GenerationContext
+  ): Promise<Record<string, string>> {
+    return {};
+  }
+
+  /**
+   * Hook: Returns custom metadata to include in generation result.
+   *
+   * Override this method to add generator-specific metadata fields.
+   * Custom metadata is merged with base metadata (model, tier, provider, etc.)
+   * but does NOT overwrite base fields if there are conflicts.
+   *
+   * **Use cases:**
+   * - WeatherGenerator: `{ weatherInjected: true }`
+   * - NewsGenerator: `{ feedUrls: ['...'], articlesUsed: 5 }`
+   *
+   * @returns Custom metadata fields (default: empty object)
+   *
+   * @example
+   * ```typescript
+   * protected getCustomMetadata() {
+   *   return {
+   *     weatherInjected: this.weatherData !== null,
+   *     dataSource: 'openweathermap'
+   *   };
+   * }
+   * ```
+   */
+  protected getCustomMetadata(): Record<string, unknown> {
+    return {};
+  }
+
+  /**
+   * Hook: Post-processes content after AI generation.
+   *
+   * Override this method to modify the generated content before returning.
+   * This hook is called AFTER the AI provider returns content but BEFORE
+   * the final result is returned. It is NOT called when `promptsOnly` is true.
+   *
+   * **Use cases:**
+   * - FortuneCookieGenerator: Prepend title line
+   * - FormattingGenerator: Apply text transformations
+   *
+   * @param content - AI-generated content to process
+   * @returns Processed content (default: unchanged content)
+   *
+   * @example
+   * ```typescript
+   * protected postProcessContent(content: GeneratedContent): GeneratedContent {
+   *   return {
+   *     ...content,
+   *     text: `FORTUNE COOKIE\n${content.text}`,
+   *     metadata: { ...content.metadata, titleInjected: true }
+   *   };
+   * }
+   * ```
+   */
+  protected postProcessContent(content: GeneratedContent): GeneratedContent {
+    return content;
+  }
+
+  // ============================================================================
+  // END OF TEMPLATE METHOD HOOKS
+  // ============================================================================
+
   /**
    * Validates the generator configuration
    *
@@ -142,28 +278,39 @@ export abstract class AIPromptGenerator implements ContentGenerator {
   }
 
   /**
-   * Generates content using AI with automatic provider failover
+   * Generates content using AI with automatic provider failover.
+   *
+   * **Template Method Pattern**: This method defines the algorithm skeleton.
+   * Subclasses should NOT override this method - use the provided hooks instead:
+   * - `getTemplateVariables()` - Add custom template variables
+   * - `getCustomMetadata()` - Add generator-specific metadata
+   * - `postProcessContent()` - Modify content after AI generation
    *
    * Workflow:
-   * 1. Generates personality dimensions for content variety
-   * 2. Loads system and user prompts with template variable substitution
-   * 3. Selects preferred model based on tier
-   * 4. Attempts generation with preferred provider
-   * 5. On failure, retries with alternate provider (if available)
-   * 6. Throws if all providers fail
+   * 1. Generate personality dimensions (use provided or create new)
+   * 2. Build template variables (base + custom via hook)
+   * 3. Load prompts with variable substitution
+   * 4. Apply dimension substitution to system prompt
+   * 5. Build base metadata + custom metadata (via hook)
+   * 6. If promptsOnly mode, return prompts without AI call
+   * 7. Try preferred provider, failover to alternate if needed
+   * 8. Apply postProcessContent hook to result
+   * 9. Return final content
    *
    * @param context - Context information for content generation
    * @returns Generated content with text and metadata
    * @throws Error if all AI providers fail
    */
   async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Generate personality dimensions (use provided or create new)
+    // Step 1: Generate personality dimensions (use provided or create new)
     const personality = context.personality ?? generatePersonalityDimensions();
 
-    // Build template variables from personality and context
-    const templateVars = this.buildTemplateVariables(personality, context);
+    // Step 2: Build template variables (base + custom from hook)
+    const baseTemplateVars = this.buildTemplateVariables(personality, context);
+    const customTemplateVars = await this.getTemplateVariables(context);
+    const templateVars = { ...baseTemplateVars, ...customTemplateVars };
 
-    // Load prompts with variable substitution (personality, date, etc.)
+    // Step 3: Load prompts with variable substitution (personality, date, etc.)
     const loadedSystemPrompt = await this.promptLoader.loadPromptWithVariables(
       'system',
       this.getSystemPromptFile(),
@@ -175,7 +322,7 @@ export abstract class AIPromptGenerator implements ContentGenerator {
       templateVars
     );
 
-    // Apply dimension substitution (maxChars, maxLines) to system prompt
+    // Step 4: Apply dimension substitution (maxChars, maxLines) to system prompt
     const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
 
     // Format the user prompt with context
@@ -184,10 +331,11 @@ export abstract class AIPromptGenerator implements ContentGenerator {
     // Select model for this tier
     const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
 
-    let lastError: Error | null = null;
-
-    // Build base metadata (reused for both primary and failover responses)
+    // Step 5: Build base metadata + custom metadata from hook
+    // Custom metadata is added first, base metadata overwrites conflicts
+    const customMetadata = this.getCustomMetadata();
     const baseMetadata = {
+      ...customMetadata, // Custom metadata first (can be overwritten by base)
       tier: this.modelTier,
       personality,
       systemPrompt,
@@ -195,7 +343,20 @@ export abstract class AIPromptGenerator implements ContentGenerator {
       ...(this.formatOptions && { formatOptions: this.formatOptions }),
     };
 
-    // Try preferred provider
+    // Step 6: If promptsOnly mode, return just the prompts without AI call
+    // This is used by ToolBasedGenerator to get prompts for its own AI call with tools
+    // Note: postProcessContent is NOT called in promptsOnly mode
+    if (context.promptsOnly) {
+      return {
+        text: '',
+        outputMode: 'text',
+        metadata: baseMetadata,
+      };
+    }
+
+    let lastError: Error | null = null;
+
+    // Step 7: Try preferred provider
     try {
       const provider = this.createProviderForSelection(selection);
       const response = await provider.generate({
@@ -203,7 +364,7 @@ export abstract class AIPromptGenerator implements ContentGenerator {
         userPrompt: formattedUserPrompt,
       });
 
-      return {
+      const content: GeneratedContent = {
         text: response.text,
         outputMode: 'text',
         metadata: {
@@ -213,6 +374,9 @@ export abstract class AIPromptGenerator implements ContentGenerator {
           tokensUsed: response.tokensUsed,
         },
       };
+
+      // Step 8: Apply postProcessContent hook
+      return this.postProcessContent(content);
     } catch (error) {
       lastError = error as Error;
     }
@@ -227,7 +391,7 @@ export abstract class AIPromptGenerator implements ContentGenerator {
           userPrompt: formattedUserPrompt,
         });
 
-        return {
+        const content: GeneratedContent = {
           text: response.text,
           outputMode: 'text',
           metadata: {
@@ -239,6 +403,9 @@ export abstract class AIPromptGenerator implements ContentGenerator {
             primaryError: lastError?.message,
           },
         };
+
+        // Step 8: Apply postProcessContent hook
+        return this.postProcessContent(content);
       } catch (alternateError) {
         lastError = alternateError as Error;
       }

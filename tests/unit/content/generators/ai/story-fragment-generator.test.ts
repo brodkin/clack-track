@@ -18,12 +18,13 @@ import {
 import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector';
 import { ModelTier } from '@/types/content-generator';
+import type { GenerationContext } from '@/types/content-generator';
 
 // Helper type for accessing protected members in tests
 type ProtectedStoryFragmentGenerator = StoryFragmentGenerator & {
   getSystemPromptFile(): string;
   getUserPromptFile(): string;
-  getAdditionalTemplateVariables(): { scenario: string; emotionalBeat: string };
+  getTemplateVariables(context: GenerationContext): Promise<Record<string, string>>;
   modelTier: ModelTier;
 };
 
@@ -106,39 +107,44 @@ describe('StoryFragmentGenerator', () => {
     });
   });
 
-  describe('getAdditionalTemplateVariables()', () => {
-    it('should return scenario and emotionalBeat variables', () => {
+  describe('getTemplateVariables()', () => {
+    const mockContext: GenerationContext = {
+      updateType: 'major',
+      timestamp: new Date(),
+    };
+
+    it('should return scenario and emotionalBeat variables', async () => {
       const generator = new StoryFragmentGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedStoryFragmentGenerator;
 
-      const variables = generator.getAdditionalTemplateVariables();
+      const variables = await generator.getTemplateVariables(mockContext);
 
       expect(variables).toHaveProperty('scenario');
       expect(variables).toHaveProperty('emotionalBeat');
     });
 
-    it('should return valid scenario from SCENARIO dictionary', () => {
+    it('should return valid scenario from SCENARIO dictionary', async () => {
       const generator = new StoryFragmentGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedStoryFragmentGenerator;
 
-      const variables = generator.getAdditionalTemplateVariables();
+      const variables = await generator.getTemplateVariables(mockContext);
 
       expect(SCENARIO).toContain(variables.scenario);
     });
 
-    it('should return valid emotionalBeat from EMOTIONAL_BEAT dictionary', () => {
+    it('should return valid emotionalBeat from EMOTIONAL_BEAT dictionary', async () => {
       const generator = new StoryFragmentGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedStoryFragmentGenerator;
 
-      const variables = generator.getAdditionalTemplateVariables();
+      const variables = await generator.getTemplateVariables(mockContext);
 
       expect(EMOTIONAL_BEAT).toContain(variables.emotionalBeat);
     });
 
-    it('should return different values on multiple calls (randomness)', () => {
+    it('should return different values on multiple calls (randomness)', async () => {
       const generator = new StoryFragmentGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedStoryFragmentGenerator;
@@ -146,7 +152,7 @@ describe('StoryFragmentGenerator', () => {
       // Call multiple times and collect unique combinations
       const combinations = new Set<string>();
       for (let i = 0; i < 50; i++) {
-        const variables = generator.getAdditionalTemplateVariables();
+        const variables = await generator.getTemplateVariables(mockContext);
         combinations.add(`${variables.scenario}-${variables.emotionalBeat}`);
       }
 

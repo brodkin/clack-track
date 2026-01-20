@@ -16,6 +16,18 @@ import type { CronScheduler } from '../../../../src/scheduler/cron.js';
 // Mock bootstrap module BEFORE importing the command
 jest.mock('../../../../src/bootstrap.js');
 
+// Mock AI module to prevent tool-based generation in tests
+// This ensures tests use legacy generation mode (direct generator.generate() call)
+jest.mock('../../../../src/api/ai/index.js', () => ({
+  createAIProvider: jest.fn().mockImplementation(() => {
+    throw new Error('Mock: AI provider not available in tests');
+  }),
+  AIProviderType: {
+    OPENAI: 'openai',
+    ANTHROPIC: 'anthropic',
+  },
+}));
+
 import { contentTestCommand } from '../../../../src/cli/commands/content-test.js';
 import * as bootstrapModule from '../../../../src/bootstrap.js';
 import { ContentRegistry } from '../../../../src/content/registry/content-registry.js';

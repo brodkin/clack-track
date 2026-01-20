@@ -32,26 +32,28 @@
 
 import { AIPromptGenerator, type AIProviderAPIKeys } from '../ai-prompt-generator.js';
 import { PromptLoader } from '../../prompt-loader.js';
-import { ModelTierSelector, type ModelSelection } from '../../../api/ai/model-tier-selector.js';
+import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
 import { RSSClient } from '../../../api/data-sources/rss-client.js';
-import { createAIProvider, AIProviderType } from '../../../api/ai/index.js';
-import { generatePersonalityDimensions } from '../../personality/index.js';
-import type {
-  GenerationContext,
-  GeneratedContent,
-  ModelTier,
-} from '../../../types/content-generator.js';
-import type { AIProvider } from '../../../types/ai.js';
+import type { GenerationContext, ModelTier } from '../../../types/content-generator.js';
 
 /**
  * Abstract base class for news generators with RSS feed integration
  *
  * Fetches RSS headlines and passes them as `payload` array to the
  * news-summary.txt prompt for mustache rendering.
+ *
+ * Uses Template Method hooks:
+ * - getTemplateVariables(): Injects headlines into prompt
+ * - getCustomMetadata(): Adds feedUrls to metadata
  */
 export abstract class BaseNewsGenerator extends AIPromptGenerator {
   protected readonly rssClient: RSSClient;
   protected readonly feedUrls: string[];
+
+  /**
+   * Cached headlines from the last fetch, used by getCustomMetadata
+   */
+  private lastFetchedHeadlines: string[] = [];
 
   /**
    * Creates a new BaseNewsGenerator instance
@@ -91,19 +93,18 @@ export abstract class BaseNewsGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Generates content with RSS headline fetching
+   * Hook: Fetches RSS headlines and returns as template variable.
    *
-   * Workflow:
-   * 1. Fetch latest headlines from configured RSS feeds
-   * 2. Pass headlines as `payload` array for mustache template
-   * 3. Generate content using AI provider
+   * Fetches latest headlines from configured RSS feeds and formats
+   * them as a bullet list for prompt injection via {{headlines}}.
    *
-   * @param context - Context information for content generation
-   * @returns Generated content with text and metadata
-   * @throws Error if all AI providers fail
+   * @param _context - Generation context (unused, but required by hook signature)
+   * @returns Template variables with headlines string
    */
-  async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Step 1: Fetch headlines from RSS feeds
+  protected async getTemplateVariables(
+    _context: GenerationContext
+  ): Promise<Record<string, string>> {
+    // Fetch headlines from RSS feeds
     let headlines: string[] = [];
     try {
       const items = await this.rssClient.getLatestItems(this.feedUrls, 5);
@@ -113,99 +114,24 @@ export abstract class BaseNewsGenerator extends AIPromptGenerator {
       headlines = ['No news available at this time.'];
     }
 
-    // Step 2: Load system prompt (personality handled at system level)
-    const personality = context.personality ?? generatePersonalityDimensions();
-    const loadedSystemPrompt = await this.promptLoader.loadPromptWithVariables(
-      'system',
-      this.getSystemPromptFile(),
-      {
-        mood: personality.mood,
-        energyLevel: personality.energyLevel,
-        humorStyle: personality.humorStyle,
-        obsession: personality.obsession,
-        persona: 'Houseboy',
-        date: context.timestamp.toLocaleDateString('en-US', {
-          weekday: 'long',
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        }),
-      }
-    );
+    // Cache headlines for metadata
+    this.lastFetchedHeadlines = headlines;
 
-    // Apply dimension substitution (maxChars, maxLines) to system prompt
-    const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
-
-    // Step 3: Load user prompt with pre-formatted headlines string
+    // Format headlines as bullet list for prompt
     const headlinesFormatted = headlines.map(h => `  - ${h}`).join('\n');
-    const userPrompt = await this.promptLoader.loadPromptWithVariables(
-      'user',
-      this.getUserPromptFile(),
-      { headlines: headlinesFormatted }
-    );
 
-    // Step 4: Select model and generate
-    const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
-    let lastError: Error | null = null;
-
-    // Try preferred provider
-    try {
-      const provider = this.createProvider(selection);
-      const response = await provider.generate({ systemPrompt, userPrompt });
-
-      return {
-        text: response.text,
-        outputMode: 'text',
-        metadata: {
-          model: response.model,
-          tier: this.modelTier,
-          provider: selection.provider,
-          tokensUsed: response.tokensUsed,
-          personality,
-          feedUrls: this.feedUrls,
-        },
-      };
-    } catch (error) {
-      lastError = error as Error;
-    }
-
-    // Try alternate provider
-    const alternate = this.modelTierSelector.getAlternate(selection);
-    if (alternate) {
-      try {
-        const alternateProvider = this.createProvider(alternate);
-        const response = await alternateProvider.generate({ systemPrompt, userPrompt });
-
-        return {
-          text: response.text,
-          outputMode: 'text',
-          metadata: {
-            model: response.model,
-            tier: this.modelTier,
-            provider: alternate.provider,
-            tokensUsed: response.tokensUsed,
-            failedOver: true,
-            primaryError: lastError?.message,
-            personality,
-            feedUrls: this.feedUrls,
-          },
-        };
-      } catch (alternateError) {
-        lastError = alternateError as Error;
-      }
-    }
-
-    throw new Error(`All AI providers failed for tier ${this.modelTier}: ${lastError?.message}`);
+    return { headlines: headlinesFormatted };
   }
 
   /**
-   * Creates an AI provider instance for the given selection
+   * Hook: Returns feed URLs and headline count in metadata.
+   *
+   * @returns Metadata with feedUrls array
    */
-  protected createProvider(selection: ModelSelection): AIProvider {
-    const apiKey = this['apiKeys'][selection.provider];
-    if (!apiKey) {
-      throw new Error(`API key not found for provider: ${selection.provider}`);
-    }
-    return createAIProvider(selection.provider as AIProviderType, apiKey, selection.model);
+  protected getCustomMetadata(): Record<string, unknown> {
+    return {
+      feedUrls: this.feedUrls,
+      headlineCount: this.lastFetchedHeadlines.length,
+    };
   }
 }

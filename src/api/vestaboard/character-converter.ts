@@ -209,34 +209,46 @@ export function wrapText(text: string, maxWidth: number): string[] {
     return [''];
   }
 
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
+  const allLines: string[] = [];
 
-  for (const word of words) {
-    if (!word) continue; // Skip empty strings from multiple spaces
+  // First, split by explicit newlines to respect line breaks
+  const paragraphs = text.split('\n');
 
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    // Use Array.from to count grapheme clusters (handles emojis correctly)
-    const testLineLength = Array.from(testLine).length;
+  for (const paragraph of paragraphs) {
+    if (!paragraph.trim()) {
+      // Empty line - preserve it as empty
+      allLines.push('');
+      continue;
+    }
 
-    if (testLineLength <= maxWidth) {
-      currentLine = testLine;
-    } else {
-      if (currentLine) {
-        lines.push(currentLine);
+    const words = paragraph.split(' ');
+    let currentLine = '';
+
+    for (const word of words) {
+      if (!word) continue; // Skip empty strings from multiple spaces
+
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      // Use Array.from to count grapheme clusters (handles emojis correctly)
+      const testLineLength = Array.from(testLine).length;
+
+      if (testLineLength <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) {
+          allLines.push(currentLine);
+        }
+        // If single word is longer than maxWidth, truncate it
+        const wordLength = Array.from(word).length;
+        currentLine = wordLength > maxWidth ? Array.from(word).slice(0, maxWidth).join('') : word;
       }
-      // If single word is longer than maxWidth, truncate it
-      const wordLength = Array.from(word).length;
-      currentLine = wordLength > maxWidth ? Array.from(word).slice(0, maxWidth).join('') : word;
+    }
+
+    if (currentLine) {
+      allLines.push(currentLine);
     }
   }
 
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-
-  return lines.length > 0 ? lines : [''];
+  return allLines.length > 0 ? allLines : [''];
 }
 
 /**
