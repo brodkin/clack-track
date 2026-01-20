@@ -8,7 +8,6 @@
  * @module content/generators/ai
  */
 
-export { ComplimentGenerator } from './compliment-generator.js';
 export { CountdownGenerator } from './countdown-generator.js';
 export { DailyRoastGenerator } from './daily-roast-generator.js';
 export { FortuneCookieGenerator } from './fortune-cookie-generator.js';
