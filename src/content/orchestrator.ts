@@ -208,26 +208,18 @@ export class ContentOrchestrator {
       try {
         // Step 3: Generate with retry logic using factory pattern
         // Create a factory that returns the selected generator instance
-        // If useToolBasedGeneration is enabled, wrap with ToolBasedGenerator
+        // ToolBasedGenerator is always applied for iterative content refinement
         const { toolBasedOptions } = registeredGenerator.registration;
-        // Tool-based generation is now the default for all AI-powered generators
-        // Context flag can disable it (e.g., for debugging legacy behavior)
-        const useToolBasedGeneration = context.useToolBasedGeneration ?? true;
 
         const generatorFactory: GeneratorFactory = (provider: AIProvider): ContentGenerator => {
           const baseGenerator = registeredGenerator.generator;
 
-          // Wrap with ToolBasedGenerator if enabled for this generator
-          if (useToolBasedGeneration) {
-            return ToolBasedGenerator.wrap(baseGenerator, {
-              aiProvider: provider,
-              maxAttempts: toolBasedOptions?.maxAttempts ?? 3,
-              exhaustionStrategy: toolBasedOptions?.exhaustionStrategy ?? 'throw',
-            });
-          }
-
-          // Return base generator without tool wrapping (backward compatible)
-          return baseGenerator;
+          // Always wrap with ToolBasedGenerator for AI-powered validation loop
+          return ToolBasedGenerator.wrap(baseGenerator, {
+            aiProvider: provider,
+            maxAttempts: toolBasedOptions?.maxAttempts ?? 3,
+            exhaustionStrategy: toolBasedOptions?.exhaustionStrategy ?? 'throw',
+          });
         };
 
         content = await generateWithRetry(

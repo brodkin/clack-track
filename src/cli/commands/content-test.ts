@@ -128,9 +128,8 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
         maxAttempts: toolBasedOptions?.maxAttempts ?? 3,
         exhaustionStrategy: toolBasedOptions?.exhaustionStrategy ?? 'throw',
       });
-      log('Using tool-based generation (AI validation loop enabled)\n');
     } else {
-      log('⚠ No AI provider configured - using legacy generation mode\n');
+      log('Warning: No AI provider configured - tool-based validation will be skipped\n');
     }
 
     // Measure generation time

@@ -189,15 +189,23 @@ Generator → AI Provider → LLM calls submit_content tool
 | `throw` (default) | Throw error, trigger P3 fallback             |
 | `use-last`        | Force-accept last submission with truncation |
 
-**Opting Out** (for testing/debugging):
+**Configuring Tool-Based Options** (via ContentRegistration):
 
 ```typescript
-// Disable tool-based generation for a specific request
-await orchestrator.generateAndSend({
-  updateType: 'major',
-  timestamp: new Date(),
-  useToolBasedGeneration: false, // Use legacy direct-response mode
-});
+// Configure tool-based generation options in generator registration
+ContentRegistry.getInstance().register(
+  {
+    id: 'custom-generator',
+    name: 'Custom Generator',
+    priority: ContentPriority.NORMAL,
+    modelTier: ModelTier.LIGHT,
+    toolBasedOptions: {
+      maxAttempts: 5, // Default: 3
+      exhaustionStrategy: 'use-last', // Default: 'throw'
+    },
+  },
+  customGenerator
+);
 ```
 
 **Why Tool-Based Generation:**
