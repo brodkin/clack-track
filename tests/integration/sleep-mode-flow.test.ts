@@ -84,7 +84,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
       await eventHandler.shutdown();
     });
 
-    describe('Deactivating sleep mode (action="off")', () => {
+    describe('Entering sleep mode (action="on")', () => {
       it('should trigger sleep art content BEFORE setting circuit state', async () => {
         const callOrder: string[] = [];
 
@@ -101,7 +101,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
           event_type: 'vestaboard_circuit_control',
           data: {
             circuit_id: 'SLEEP_MODE',
-            action: 'off',
+            action: 'on',
           },
         };
 
@@ -116,7 +116,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
           event_type: 'vestaboard_circuit_control',
           data: {
             circuit_id: 'SLEEP_MODE',
-            action: 'off',
+            action: 'on',
           },
         };
 
@@ -136,7 +136,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
           event_type: 'vestaboard_circuit_control',
           data: {
             circuit_id: 'SLEEP_MODE',
-            action: 'off',
+            action: 'on',
           },
         };
 
@@ -152,7 +152,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
           event_type: 'vestaboard_circuit_control',
           data: {
             circuit_id: 'SLEEP_MODE',
-            action: 'off',
+            action: 'on',
           },
         };
 
@@ -163,7 +163,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
       });
     });
 
-    describe('Activating sleep mode (action="on")', () => {
+    describe('Exiting sleep mode (action="off")', () => {
       it('should trigger wakeup greeting content after setting circuit state', async () => {
         const callOrder: string[] = [];
 
@@ -180,7 +180,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
           event_type: 'vestaboard_circuit_control',
           data: {
             circuit_id: 'SLEEP_MODE',
-            action: 'on',
+            action: 'off',
           },
         };
 
@@ -195,7 +195,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
           event_type: 'vestaboard_circuit_control',
           data: {
             circuit_id: 'SLEEP_MODE',
-            action: 'on',
+            action: 'off',
           },
         };
 
@@ -215,7 +215,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
           event_type: 'vestaboard_circuit_control',
           data: {
             circuit_id: 'SLEEP_MODE',
-            action: 'on',
+            action: 'off',
           },
         };
 
@@ -323,7 +323,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
           event_type: 'vestaboard_circuit_control',
           data: {
             circuit_id: 'SLEEP_MODE',
-            action: 'on',
+            action: 'off',
           },
         };
 
@@ -357,7 +357,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
         event_type: 'vestaboard_circuit_control',
         data: {
           circuit_id: 'SLEEP_MODE',
-          action: 'off',
+          action: 'on',
         },
       };
 
@@ -405,7 +405,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
         event_type: 'vestaboard_circuit_control',
         data: {
           circuit_id: 'SLEEP_MODE',
-          action: 'on',
+          action: 'off',
         },
       };
 
@@ -446,7 +446,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
         event_type: 'vestaboard_circuit_control',
         data: {
           circuit_id: 'SLEEP_MODE',
-          action: 'off',
+          action: 'on',
         },
       };
 
