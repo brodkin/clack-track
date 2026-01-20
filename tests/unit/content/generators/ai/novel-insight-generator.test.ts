@@ -34,6 +34,16 @@ jest.mock('@/api/ai/index', () => ({
   },
 }));
 
+// Mock personality generation for consistent tests (avoid consuming Math.random)
+jest.mock('@/content/personality/index.js', () => ({
+  generatePersonalityDimensions: jest.fn(() => ({
+    mood: 'cheerful',
+    energyLevel: 'high',
+    humorStyle: 'witty',
+    obsession: 'coffee',
+  })),
+}));
+
 // Helper type for accessing protected members in tests
 type ProtectedNovelInsightGenerator = NovelInsightGenerator & {
   getSystemPromptFile(): string;

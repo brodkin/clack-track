@@ -12,6 +12,10 @@
  * - Random output style selection (mind-blown fact, provocative question, novel connection)
  * - Inherits retry logic and provider failover from base class
  *
+ * Uses Template Method hooks:
+ * - getTemplateVariables(): Injects topic and outputStyle into prompt
+ * - getCustomMetadata(): Tracks selection choices in metadata
+ *
  * Novel insights aim to reframe familiar concepts in unexpected ways,
  * offering perspectives that make viewers pause and see things differently.
  * The tone is thought-provoking yet accessible, encouraging curiosity
@@ -36,12 +40,9 @@
 
 import { AIPromptGenerator, type AIProviderAPIKeys } from '../ai-prompt-generator.js';
 import { PromptLoader } from '../../prompt-loader.js';
-import { ModelTierSelector, type ModelSelection } from '../../../api/ai/model-tier-selector.js';
-import { createAIProvider, AIProviderType } from '../../../api/ai/index.js';
-import { generatePersonalityDimensions } from '../../personality/index.js';
+import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
 import { ModelTier } from '../../../types/content-generator.js';
-import type { GenerationContext, GeneratedContent } from '../../../types/content-generator.js';
-import type { AIProvider } from '../../../types/ai.js';
+import type { GenerationContext } from '../../../types/content-generator.js';
 
 /**
  * Generates fresh perspectives and thought-provoking novel insights
@@ -260,6 +261,12 @@ export class NovelInsightGenerator extends AIPromptGenerator {
   ] as const;
 
   /**
+   * Selected values for the current generation, used by getCustomMetadata
+   */
+  private selectedTopic: string = '';
+  private selectedStyle: string = '';
+
+  /**
    * Programmatically selects a random topic from the TOPICS array.
    * Uses Math.random() for true randomness, unlike LLM-based selection
    * which exhibits bias toward certain topics.
@@ -323,140 +330,32 @@ export class NovelInsightGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Generates novel insight content with programmatic topic and style selection.
+   * Hook: Selects random topic and style, returns as template variables.
    *
-   * Overrides the base class generate() to:
-   * 1. Select a random topic from the curated TOPICS array
-   * 2. Select a random output style from OUTPUT_STYLES
-   * 3. Inject both as template variables into the user prompt
-   *
-   * This ensures true randomness in topic selection, unlike asking the LLM
-   * to "randomly select" which exhibits predictable bias.
-   *
-   * @param context - Context information for content generation
-   * @returns Generated content with text and metadata
-   * @throws Error if all AI providers fail
+   * @param _context - Generation context (unused, but required by hook signature)
+   * @returns Template variables with topic and outputStyle
    */
-  async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Step 1: Programmatically select topic and style
-    const selectedTopic = NovelInsightGenerator.selectTopic();
-    const selectedStyle = NovelInsightGenerator.selectOutputStyle();
+  protected async getTemplateVariables(
+    _context: GenerationContext
+  ): Promise<Record<string, string>> {
+    this.selectedTopic = NovelInsightGenerator.selectTopic();
+    this.selectedStyle = NovelInsightGenerator.selectOutputStyle();
 
-    // Step 2: Load system prompt with personality and date context
-    const personality = context.personality ?? generatePersonalityDimensions();
-    const loadedSystemPrompt = await this.promptLoader.loadPromptWithVariables(
-      'system',
-      this.getSystemPromptFile(),
-      {
-        mood: personality.mood,
-        energyLevel: personality.energyLevel,
-        humorStyle: personality.humorStyle,
-        obsession: personality.obsession,
-        persona: 'Houseboy',
-        // Include date template variable following AIPromptGenerator.buildTemplateVariables() pattern
-        date: context.timestamp.toLocaleDateString('en-US', {
-          weekday: 'long',
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        }),
-      }
-    );
-
-    // Step 3: Apply dimension substitution (maxChars, maxLines) to system prompt
-    const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
-
-    // Step 4: Load user prompt with topic and style injected
-    const userPrompt = await this.promptLoader.loadPromptWithVariables(
-      'user',
-      this.getUserPromptFile(),
-      {
-        topic: selectedTopic,
-        outputStyle: selectedStyle,
-      }
-    );
-
-    // If promptsOnly mode, return just the prompts without AI call
-    // This is used by ToolBasedGenerator to get prompts for its own AI call with tools
-    if (context.promptsOnly) {
-      return {
-        text: '',
-        outputMode: 'text',
-        metadata: {
-          tier: this.modelTier,
-          personality,
-          systemPrompt,
-          userPrompt,
-          selectedTopic,
-          selectedStyle,
-        },
-      };
-    }
-
-    // Step 5: Select model and generate
-    const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
-    let lastError: Error | null = null;
-
-    // Try preferred provider
-    try {
-      const provider = this.createProvider(selection);
-      const response = await provider.generate({ systemPrompt, userPrompt });
-
-      return {
-        text: response.text,
-        outputMode: 'text',
-        metadata: {
-          model: response.model,
-          tier: this.modelTier,
-          provider: selection.provider,
-          tokensUsed: response.tokensUsed,
-          personality,
-          selectedTopic,
-          selectedStyle,
-        },
-      };
-    } catch (error) {
-      lastError = error as Error;
-    }
-
-    // Try alternate provider
-    const alternate = this.modelTierSelector.getAlternate(selection);
-    if (alternate) {
-      try {
-        const alternateProvider = this.createProvider(alternate);
-        const response = await alternateProvider.generate({ systemPrompt, userPrompt });
-
-        return {
-          text: response.text,
-          outputMode: 'text',
-          metadata: {
-            model: response.model,
-            tier: this.modelTier,
-            provider: alternate.provider,
-            tokensUsed: response.tokensUsed,
-            failedOver: true,
-            primaryError: lastError?.message,
-            personality,
-            selectedTopic,
-            selectedStyle,
-          },
-        };
-      } catch (alternateError) {
-        lastError = alternateError as Error;
-      }
-    }
-
-    throw new Error(`All AI providers failed for tier ${this.modelTier}: ${lastError?.message}`);
+    return {
+      topic: this.selectedTopic,
+      outputStyle: this.selectedStyle,
+    };
   }
 
   /**
-   * Creates an AI provider instance for the given selection
+   * Hook: Returns selection choices in metadata.
+   *
+   * @returns Metadata with selectedTopic and selectedStyle
    */
-  private createProvider(selection: ModelSelection): AIProvider {
-    const apiKey = this['apiKeys'][selection.provider];
-    if (!apiKey) {
-      throw new Error(`API key not found for provider: ${selection.provider}`);
-    }
-    return createAIProvider(selection.provider as AIProviderType, apiKey, selection.model);
+  protected getCustomMetadata(): Record<string, unknown> {
+    return {
+      selectedTopic: this.selectedTopic,
+      selectedStyle: this.selectedStyle,
+    };
   }
 }
