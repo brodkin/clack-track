@@ -215,6 +215,9 @@ export class <ContentType>Generator extends AIPromptGenerator {
 
   /**
    * Generates content with data injection
+   *
+   * IMPORTANT: Must support promptsOnly flag for tool-based generation.
+   * When context.promptsOnly is true, return prompts without making AI call.
    */
   async generate(context: GenerationContext): Promise<GeneratedContent> {
     // Step 1: Fetch data (graceful fallback)
@@ -250,6 +253,22 @@ export class <ContentType>Generator extends AIPromptGenerator {
       this.getUserPromptFile(),
       { <dataVariable>: dataFormatted }  // e.g., { weather: dataFormatted }
     );
+
+    // Step 3.5: If promptsOnly mode, return prompts without AI call
+    // This is required for tool-based generation (ToolBasedGenerator wrapper)
+    if (context.promptsOnly) {
+      return {
+        text: '',
+        outputMode: 'text',
+        metadata: {
+          tier: this.modelTier,
+          personality,
+          systemPrompt,
+          userPrompt,
+          dataInjected: dataFormatted !== 'Data unavailable',
+        },
+      };
+    }
 
     // Step 4: Select model and generate
     const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
@@ -456,6 +475,81 @@ describe('<EventType>Notification', () => {
   });
 });
 ```
+
+---
+
+## Pattern D: Programmatic Generator
+
+For generators that create content without AI (patterns, countdowns, ASCII art).
+
+### Generator Class
+
+**File:** `src/content/generators/programmatic/<content-type>-generator.ts`
+
+```typescript
+/**
+ * <ContentType> Generator
+ *
+ * Programmatic generator that creates content without AI.
+ * Outputs in 'layout' mode with direct character codes.
+ */
+
+import { ProgrammaticGenerator } from '../programmatic-generator.js';
+import type { GeneratedContent, GenerationContext } from '@/types/content-generator.js';
+
+export class <ContentType>Generator extends ProgrammaticGenerator {
+  /**
+   * Generate content programmatically (no AI)
+   */
+  async generate(_context: GenerationContext): Promise<GeneratedContent> {
+    // Generate content programmatically
+    const patternData = this.createPattern();
+
+    return {
+      text: '',
+      outputMode: 'layout',
+      layout: {
+        rows: [],
+        characterCodes: patternData,
+      },
+      metadata: {
+        generator: '<content-type>-generator',
+      },
+    };
+  }
+
+  private createPattern(): number[][] {
+    // Return 6x22 array of Vestaboard character codes
+    // ...
+  }
+}
+```
+
+### Registry Entry (IMPORTANT: useToolBasedGeneration: false)
+
+**Programmatic generators MUST set `useToolBasedGeneration: false`** to avoid being wrapped with ToolBasedGenerator:
+
+```typescript
+registry.register(
+  {
+    id: '<content-type>',
+    name: '<Content Type> Generator',
+    priority: ContentPriority.NORMAL,
+    modelTier: ModelTier.LIGHT,  // Required but not used
+    applyFrame: false,  // Programmatic generators control full screen
+    useToolBasedGeneration: false,  // REQUIRED: Prevents AI wrapping
+  },
+  generators.<contentType>
+);
+```
+
+**Why `useToolBasedGeneration: false` is required:**
+
+Without this flag, the orchestrator wraps the generator with `ToolBasedGenerator`, which:
+
+1. Calls `generate()` with `promptsOnly: true` to extract prompts
+2. Programmatic generators have no prompts → empty content
+3. AI call fails with "messages must have non-empty content"
 
 ---
 

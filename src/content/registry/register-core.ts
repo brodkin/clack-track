@@ -200,6 +200,7 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       priority: ContentPriority.NORMAL,
       modelTier: ModelTier.LIGHT,
       applyFrame: false,
+      useToolBasedGeneration: false, // Programmatic generator - no AI prompts
     },
     generators.pattern
   );

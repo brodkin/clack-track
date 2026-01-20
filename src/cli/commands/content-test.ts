@@ -120,8 +120,11 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
 
     // Wrap generator with ToolBasedGenerator for validation loop
     // This matches the orchestrator's behavior for consistent testing
+    // Skip tool-based generation for programmatic generators (useToolBasedGeneration: false)
     let generator: ContentGenerator = registered.generator;
-    if (aiProvider) {
+    const useToolBased = registered.registration.useToolBasedGeneration !== false;
+
+    if (aiProvider && useToolBased) {
       const { toolBasedOptions } = registered.registration;
       generator = ToolBasedGenerator.wrap(registered.generator, {
         aiProvider,
@@ -129,6 +132,8 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
         exhaustionStrategy: toolBasedOptions?.exhaustionStrategy ?? 'throw',
       });
       log('Using tool-based generation (AI validation loop enabled)\n');
+    } else if (!useToolBased) {
+      log('Programmatic generator - using direct generation (no AI)\n');
     } else {
       log('⚠ No AI provider configured - using legacy generation mode\n');
     }

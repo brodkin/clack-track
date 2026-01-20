@@ -525,6 +525,114 @@ This content could appear anywhere. It has no edge, no personality, no reason to
 3. Require subversion ("motivational but with a twist")
 4. Reference current obsession for specificity
 
+## Tool-Based Content Generation
+
+All AI-powered generators use **tool-based generation** by default. Instead of accepting raw text responses, the AI must call the `submit_content` tool to submit content for server-side validation.
+
+### How It Works
+
+```
+Generator → ToolBasedGenerator wrapper → AI Provider → LLM calls submit_content tool
+                                                            ↓
+                                                  Server validates content
+                                                            ↓
+                                    ┌─────────────────────┴─────────────────────┐
+                                    ↓                                           ↓
+                              Accepted → Return content                   Rejected → Send feedback
+                                                                                ↓
+                                                                    LLM retries with improvements
+                                                                          (max 3 attempts)
+```
+
+### Validation Rules (Framed Content)
+
+When `applyFrame: true` (default), content is validated against these constraints:
+
+| Constraint    | Value             | Reason                                 |
+| ------------- | ----------------- | -------------------------------------- |
+| Max rows      | 5                 | Row 6 reserved for info bar            |
+| Max chars/row | 21                | Column 22 reserved for color bar       |
+| Character set | A-Z, 0-9, symbols | Vestaboard hardware limitation         |
+| Newlines      | Explicit only     | Content displayed exactly as validated |
+
+### Registration Flag: `useToolBasedGeneration`
+
+| Generator Type       | Flag Value            | Behavior                          |
+| -------------------- | --------------------- | --------------------------------- |
+| AI-powered (default) | `undefined` or `true` | Wrapped with ToolBasedGenerator   |
+| Programmatic         | `false`               | Direct generation, no AI wrapping |
+
+**Programmatic generators MUST set `useToolBasedGeneration: false`** to avoid empty prompt errors:
+
+```typescript
+registry.register(
+  {
+    id: 'pattern-art',
+    name: 'Mathematical Pattern Generator',
+    priority: ContentPriority.NORMAL,
+    modelTier: ModelTier.LIGHT,
+    applyFrame: false,
+    useToolBasedGeneration: false, // Required for programmatic generators
+  },
+  generators.pattern
+);
+```
+
+### The `promptsOnly` Flag
+
+When tool-based generation wraps a generator, it calls the base generator with `context.promptsOnly = true` to extract prompts without making an AI call. **Generators that override `generate()` MUST handle this flag:**
+
+```typescript
+async generate(context: GenerationContext): Promise<GeneratedContent> {
+  // Step 1: Prepare prompts
+  const systemPrompt = await this.loadSystemPrompt(context);
+  const userPrompt = await this.loadUserPrompt(context);
+
+  // Step 2: If promptsOnly, return prompts without AI call
+  if (context.promptsOnly) {
+    return {
+      text: '',
+      outputMode: 'text',
+      metadata: {
+        tier: this.modelTier,
+        systemPrompt,
+        userPrompt,
+        // Include any injected data for debugging
+      },
+    };
+  }
+
+  // Step 3: Normal AI generation flow...
+}
+```
+
+**Why this matters:** Without `promptsOnly` support, the generator makes a redundant AI call, then ToolBasedGenerator makes another call with tools, wasting tokens and causing errors.
+
+### Exhaustion Strategies
+
+When max attempts (default: 3) are reached without valid content:
+
+| Strategy          | Behavior                                     |
+| ----------------- | -------------------------------------------- |
+| `throw` (default) | Throw error, trigger P3 fallback             |
+| `use-last`        | Force-accept last submission with truncation |
+
+Configure per-generator in registration:
+
+```typescript
+registry.register(
+  {
+    id: 'my-generator',
+    // ... other fields
+    toolBasedOptions: {
+      maxAttempts: 5,
+      exhaustionStrategy: 'use-last',
+    },
+  },
+  generator
+);
+```
+
 ## Prompt Architecture
 
 ### Three-Layer System
@@ -596,14 +704,14 @@ The system prompt already defines constraints via `{{maxChars}}` and `{{maxLines
 
 ## Prompt Type Decision Table
 
-| Content Type        | Generator Base          | Model Tier | Needs Data?           | Example              |
-| ------------------- | ----------------------- | ---------- | --------------------- | -------------------- |
-| Motivational quotes | AIPromptGenerator       | LIGHT      | No                    | Affirmations, quotes |
-| Weather commentary  | AIPromptGenerator       | LIGHT      | Yes (`{{weather}}`)   | Witty weather takes  |
-| News summary        | AIPromptGenerator       | MEDIUM     | Yes (`{{headlines}}`) | News humor           |
-| HA notifications    | NotificationGenerator   | N/A        | Yes (eventData)       | Person arrived       |
-| Static fallback     | StaticFallbackGenerator | LIGHT      | No                    | Pre-written messages |
-| Greeting            | ProgrammaticGenerator   | LIGHT      | No                    | Time-based greetings |
+| Content Type        | Generator Base          | Model Tier | Needs Data?           | Tool-Based? | Example              |
+| ------------------- | ----------------------- | ---------- | --------------------- | ----------- | -------------------- |
+| Motivational quotes | AIPromptGenerator       | LIGHT      | No                    | Yes         | Affirmations, quotes |
+| Weather commentary  | AIPromptGenerator       | LIGHT      | Yes (`{{weather}}`)   | Yes         | Witty weather takes  |
+| News summary        | AIPromptGenerator       | MEDIUM     | Yes (`{{headlines}}`) | Yes         | News humor           |
+| HA notifications    | NotificationGenerator   | N/A        | Yes (eventData)       | No          | Person arrived       |
+| Static fallback     | StaticFallbackGenerator | LIGHT      | No                    | No          | Pre-written messages |
+| Visual patterns     | ProgrammaticGenerator   | LIGHT      | No                    | **No**      | ASCII art, patterns  |
 
 ## Workflow: Creating a New Generator
 
@@ -628,6 +736,13 @@ The system prompt already defines constraints via `{{maxChars}}` and `{{maxLines
 - P0 priority (immediate display)
 - No frame decoration
 - Examples: person-arrived, door-opened, temperature-alert
+
+**Pattern D - Programmatic Generator**
+
+- No AI required - generates content algorithmically
+- Full screen mode (outputMode: 'layout')
+- **MUST set `useToolBasedGeneration: false`** in registration
+- Examples: pattern-art, ascii-art, countdown-display
 
 ### Step 2: Create Prompt Files
 
@@ -714,12 +829,14 @@ Run through this checklist before submitting a new prompt/generator:
 - [ ] **Data fetching**: External data fetched in `generate()` if needed
 - [ ] **Error handling**: Graceful fallback if data fetch fails
 - [ ] **applyFrame**: Set `true` for P2/P3 generators (adds time/weather)
+- [ ] **promptsOnly support**: If overriding `generate()`, handle `context.promptsOnly` flag (return prompts in metadata without AI call)
 
 ### Registration
 
 - [ ] **Unique ID**: kebab-case, descriptive (e.g., `weather-focus`)
 - [ ] **Priority**: P0=NOTIFICATION, P2=NORMAL, P3=FALLBACK
 - [ ] **Model tier**: Matches generator constructor
+- [ ] **useToolBasedGeneration**: Set `false` for programmatic generators (no AI)
 
 ### Tests
 

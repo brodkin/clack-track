@@ -209,10 +209,13 @@ export class ContentOrchestrator {
         // Step 3: Generate with retry logic using factory pattern
         // Create a factory that returns the selected generator instance
         // If useToolBasedGeneration is enabled, wrap with ToolBasedGenerator
-        const { toolBasedOptions } = registeredGenerator.registration;
-        // Tool-based generation is now the default for all AI-powered generators
-        // Context flag can disable it (e.g., for debugging legacy behavior)
-        const useToolBasedGeneration = context.useToolBasedGeneration ?? true;
+        const { toolBasedOptions, useToolBasedGeneration: registrationFlag } =
+          registeredGenerator.registration;
+        // Tool-based generation is enabled by default for AI-powered generators
+        // Disabled for programmatic generators via registration (useToolBasedGeneration: false)
+        // Context flag can also disable it (e.g., for debugging legacy behavior)
+        const useToolBasedGeneration =
+          registrationFlag !== false && (context.useToolBasedGeneration ?? true);
 
         const generatorFactory: GeneratorFactory = (provider: AIProvider): ContentGenerator => {
           const baseGenerator = registeredGenerator.generator;
