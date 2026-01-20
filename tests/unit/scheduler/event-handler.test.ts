@@ -510,7 +510,7 @@ describe('EventHandler', () => {
         expect(mockCircuitBreaker.setCircuitState).toHaveBeenCalledWith('MASTER', 'off');
       });
 
-      it('should use inverted semantics for SLEEP_MODE: action "off" sets circuit state "on"', async () => {
+      it('should exit sleep mode when action="off" (unblock updates)', async () => {
         const event: HomeAssistantEvent = {
           event_type: 'vestaboard_circuit_control',
           data: {
@@ -521,11 +521,11 @@ describe('EventHandler', () => {
 
         await circuitControlCallback(event);
 
-        // SLEEP_MODE uses inverted semantics: action='off' (wake up) = circuit state 'on' (allow)
+        // action='off' = user wants to wake up → unblock updates internally
         expect(mockCircuitBreaker.setCircuitState).toHaveBeenCalledWith('SLEEP_MODE', 'on');
       });
 
-      it('should use inverted semantics for SLEEP_MODE: action "on" sets circuit state "off"', async () => {
+      it('should enter sleep mode when action="on" (block updates)', async () => {
         const event: HomeAssistantEvent = {
           event_type: 'vestaboard_circuit_control',
           data: {
@@ -536,7 +536,7 @@ describe('EventHandler', () => {
 
         await circuitControlCallback(event);
 
-        // SLEEP_MODE uses inverted semantics: action='on' (sleep) = circuit state 'off' (block)
+        // action='on' = user wants to sleep → block updates internally
         expect(mockCircuitBreaker.setCircuitState).toHaveBeenCalledWith('SLEEP_MODE', 'off');
       });
 
