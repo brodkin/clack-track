@@ -84,7 +84,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
       await eventHandler.shutdown();
     });
 
-    describe('SLEEP_MODE circuit OFF (entering sleep)', () => {
+    describe('Deactivating sleep mode (action="off")', () => {
       it('should trigger sleep art content BEFORE setting circuit state', async () => {
         const callOrder: string[] = [];
 
@@ -163,7 +163,7 @@ describe('Sleep Mode Flow Integration Tests', () => {
       });
     });
 
-    describe('SLEEP_MODE circuit ON (waking up)', () => {
+    describe('Activating sleep mode (action="on")', () => {
       it('should trigger wakeup greeting content after setting circuit state', async () => {
         const callOrder: string[] = [];
 

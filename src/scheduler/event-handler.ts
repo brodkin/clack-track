@@ -233,9 +233,9 @@ export class EventHandler {
   /**
    * Handle SLEEP_MODE circuit state changes with content generation
    *
-   * SLEEP_MODE uses inverted semantics from circuit breaker convention:
-   * - action='on' = ENTER sleep mode (be quiet, block updates)
-   * - action='off' = EXIT sleep mode (wake up, allow updates)
+   * User-facing semantics (matches CLI commands):
+   * - action='on' = user wants to ENTER sleep mode (be quiet, block updates)
+   * - action='off' = user wants to EXIT sleep mode (wake up, allow updates)
    *
    * Sleep mode transitions require specific content display:
    * - Entering sleep (action='on'): Display sleep art, THEN block
@@ -246,9 +246,9 @@ export class EventHandler {
   private async handleSleepModeChange(action: 'on' | 'off'): Promise<void> {
     if (!this.circuitBreaker) return;
 
-    // SLEEP_MODE semantics (inverted from circuit breaker convention):
-    // - action='on' = ENTER sleep mode (be quiet, block updates)
-    // - action='off' = EXIT sleep mode (wake up, allow updates)
+    // User-facing sleep mode semantics:
+    // - action='on' = user wants to ENTER sleep mode (be quiet, block updates)
+    // - action='off' = user wants to EXIT sleep mode (wake up, allow updates)
 
     if (action === 'on') {
       // Entering sleep mode: display sleep art BEFORE blocking

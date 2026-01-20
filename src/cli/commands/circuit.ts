@@ -178,7 +178,7 @@ export async function circuitStatusCommand(): Promise<void> {
  * ```
  */
 export async function circuitOnCommand(options: CircuitToggleOptions): Promise<void> {
-  // SLEEP_MODE uses inverted semantics: ON = enter sleep, OFF = wake up
+  // SLEEP_MODE: "circuit:on SLEEP_MODE" = user wants to enter sleep mode
   if (options.circuitId === 'SLEEP_MODE') {
     await enterSleepMode();
     return;
@@ -208,7 +208,7 @@ export async function circuitOnCommand(options: CircuitToggleOptions): Promise<v
 /**
  * Exit sleep mode (wake up) with full bootstrap
  *
- * Called by `circuit:off SLEEP_MODE` (inverted semantics)
+ * Called by `circuit:off SLEEP_MODE` - user wants to wake up
  *
  * When waking up from sleep mode:
  * 1. Unblock the circuit FIRST (allow content generation)
@@ -295,7 +295,7 @@ async function exitSleepMode(): Promise<void> {
  * ```
  */
 export async function circuitOffCommand(options: CircuitToggleOptions): Promise<void> {
-  // SLEEP_MODE uses inverted semantics: ON = enter sleep, OFF = wake up
+  // SLEEP_MODE: "circuit:off SLEEP_MODE" = user wants to wake up
   if (options.circuitId === 'SLEEP_MODE') {
     await exitSleepMode();
     return;
@@ -325,7 +325,7 @@ export async function circuitOffCommand(options: CircuitToggleOptions): Promise<
 /**
  * Enter sleep mode with full bootstrap
  *
- * Called by `circuit:on SLEEP_MODE` (inverted semantics)
+ * Called by `circuit:on SLEEP_MODE` - user wants to go to sleep
  *
  * When entering sleep mode:
  * 1. Display sleep art using SleepModeGenerator FIRST

@@ -250,7 +250,17 @@ All generators registered via `ContentRegistry.register(metadata, generator)`. S
 
 ### Sleep Mode System
 
-Sleep mode is a special display mode that shows a dark starfield art pattern with an AI-generated bedtime greeting. It breaks several standard conventions:
+Sleep mode is a special display mode that shows a dark starfield art pattern with an AI-generated bedtime greeting.
+
+**User Commands:**
+
+```bash
+# Enter sleep mode (display goodnight art, block updates)
+npm run circuit:on -- SLEEP_MODE
+
+# Exit sleep mode (display good morning, resume normal updates)
+npm run circuit:off -- SLEEP_MODE
+```
 
 **Architecture (Composite Generator):**
 
@@ -269,22 +279,9 @@ Overlay text on art → combined characterCodes layout
 | Frame decoration (time/weather)           | **No frame** - full 6x22 art display               |
 | `outputMode: 'text'` with text processing | **`outputMode: 'layout'`** with raw characterCodes |
 | P2 random selection                       | **P0 priority** - bypasses normal selection        |
-| Circuit state semantics (on=enabled)      | **Inverted** - state='off' means sleep is ACTIVE   |
 | Single generator                          | **Composite** - combines art + text generators     |
 
-**Circuit Breaker Semantics:**
-
-```
-CLI commands (user-facing):
-- circuit:on SLEEP_MODE  → ENTERS sleep mode (displays goodnight, blocks updates)
-- circuit:off SLEEP_MODE → EXITS sleep mode (displays good morning, resumes normal)
-
-Internal circuit state (inverted from CLI):
-- state='off' → Sleep mode is ON (blocking)
-- state='on'  → Sleep mode is OFF (normal operation)
-```
-
-**Why the internal inversion?** The circuit breaker pattern treats state='off' as "circuit open = blocking traffic". Since sleep mode blocks normal updates, the internal state is 'off' when sleep is active. The CLI commands use intuitive naming (on = enter sleep, off = exit sleep) while the internal state follows circuit breaker conventions.
+**Implementation Note:** Internally, sleep mode uses the circuit breaker's blocking state (`state='off'`) to prevent updates while sleeping. The CLI commands map user intent (`on` = enter sleep, `off` = wake up) to the appropriate internal state.
 
 **Text Overlay Behavior:**
 
