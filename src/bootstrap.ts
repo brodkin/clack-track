@@ -33,7 +33,6 @@ import { FortuneCookieGenerator } from './content/generators/ai/fortune-cookie-g
 import { CountdownGenerator } from './content/generators/ai/countdown-generator.js';
 import { DailyRoastGenerator } from './content/generators/ai/daily-roast-generator.js';
 import { HotTakeGenerator } from './content/generators/ai/hot-take-generator.js';
-import { ComplimentGenerator } from './content/generators/ai/compliment-generator.js';
 import { NovelInsightGenerator } from './content/generators/ai/novel-insight-generator.js';
 import { StoryFragmentGenerator } from './content/generators/ai/story-fragment-generator.js';
 import { TimePerspectiveGenerator } from './content/generators/ai/time-perspective-generator.js';
@@ -196,7 +195,6 @@ function createCoreGenerators(
     storyFragment: new StoryFragmentGenerator(promptLoader, modelTierSelector, apiKeys),
     timePerspective: new TimePerspectiveGenerator(promptLoader, modelTierSelector, apiKeys),
     hotTake: new HotTakeGenerator(promptLoader, modelTierSelector, apiKeys),
-    compliment: new ComplimentGenerator(promptLoader, modelTierSelector, apiKeys),
     novelInsight: new NovelInsightGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };

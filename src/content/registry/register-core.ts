@@ -28,7 +28,6 @@ import { ContentRegistry } from './content-registry.js';
  * @property {ContentGenerator} countdown - Countdown generator (P2, LIGHT)
  * @property {ContentGenerator} dailyRoast - Daily roast generator (P2, MEDIUM)
  * @property {ContentGenerator} hotTake - Hot take generator (P2, LIGHT)
- * @property {ContentGenerator} compliment - Compliment generator (P2, LIGHT)
  * @property {ContentGenerator} novelInsight - Novel insight generator (P2, MEDIUM)
  *
  * @example
@@ -47,7 +46,6 @@ import { ContentRegistry } from './content-registry.js';
  *   countdown: new CountdownGenerator(),
  *   dailyRoast: new DailyRoastGenerator(),
  *   hotTake: new HotTakeGenerator(),
- *   compliment: new ComplimentGenerator(),
  *   novelInsight: new NovelInsightGenerator(),
  *   staticFallback: new StaticFallbackGenerator()
  * };
@@ -84,8 +82,6 @@ export interface CoreGenerators {
   timePerspective: ContentGenerator;
   /** Hot take generator (P2, LIGHT, AI-powered) */
   hotTake: ContentGenerator;
-  /** Compliment generator (P2, LIGHT, AI-powered) */
-  compliment: ContentGenerator;
   /** Novel insight generator (P2, MEDIUM, AI-powered) */
   novelInsight: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
@@ -109,7 +105,6 @@ export interface CoreGenerators {
  *   - fortune-cookie: Twisted wisdom (LIGHT, AI)
  *   - countdown: Days until events (LIGHT, AI)
  *   - hot-take: Playful opinions (LIGHT, AI)
- *   - compliment: Uplifting affirmations (LIGHT, AI)
  *   - novel-insight: Fresh perspectives (MEDIUM, AI)
  * - **P3 Generator (FALLBACK priority)**:
  *   - static-fallback: Static message when AI fails (LIGHT)
@@ -304,17 +299,6 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.hotTake
-  );
-
-  registry.register(
-    {
-      id: 'compliment',
-      name: 'Compliment Generator',
-      priority: ContentPriority.NORMAL,
-      modelTier: ModelTier.LIGHT,
-      applyFrame: true,
-    },
-    generators.compliment
   );
 
   registry.register(
