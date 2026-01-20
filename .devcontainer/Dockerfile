@@ -11,6 +11,8 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     fzf \
     zip \
     unzip \
+    # MySQL CLI for connecting to mysql container
+    default-mysql-client \
     # Python dependencies for MCP support
     python3-dev \
     python3-pip \
