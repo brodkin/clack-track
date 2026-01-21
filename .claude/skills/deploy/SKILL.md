@@ -98,7 +98,8 @@ docker service logs clack-track_app --tail 50 --since 2m 2>&1 | grep -i "error\|
 
 ```bash
 # Check container health status
-docker inspect $(docker ps -q -f name=clack-track_app) --format '{{.State.Health.Status}}' 2>/dev/null || echo "No health check configured"
+# Note: Use -f name= for substring match (container names include random suffixes like clack-track_app.1.xyz123)
+docker inspect $(docker ps -q -f name=clack-track_app | head -1) --format '{{.State.Health.Status}}' 2>/dev/null || echo "No health check configured"
 ```
 
 ## Rollback Procedure
