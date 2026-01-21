@@ -7,6 +7,22 @@ description: Deploy Clack Track to production via Docker Swarm. Handles branch v
 
 Deploy the application to production Docker Swarm environment with safety checks and rollback capability.
 
+## Prerequisites
+
+### Load Production Environment
+
+**All deployment commands require `DOCKER_HOST` to be set.** Load it from `.env.production`:
+
+```bash
+# Load production environment (REQUIRED before any docker commands)
+source .env.production
+
+# Verify DOCKER_HOST is set
+echo "DOCKER_HOST=$DOCKER_HOST"
+```
+
+The `DOCKER_HOST` variable in `.env.production` contains the SSH connection string to the remote Docker daemon. This value may change over time - always source from the env file rather than hardcoding.
+
 ## Pre-Flight Checks
 
 Before deploying, validate the current state:
@@ -33,30 +49,32 @@ echo "Main is $BEHIND_COUNT commits behind develop"
 ### 2. Verify Production Environment
 
 ```bash
-# Load production environment
+# Ensure environment is loaded
 source .env.production
 
 # Test Docker connection
-DOCKER_HOST=ssh://rbrodkin@10.100.0.91 docker info --format '{{.ServerVersion}}'
+docker info --format '{{.ServerVersion}}'
 ```
 
 ## Deployment Workflow
+
+> **Note**: All `docker` commands below assume `DOCKER_HOST` is set via `source .env.production`
 
 ### Step 1: Build Production Image
 
 ```bash
 # Build with production tag
-DOCKER_HOST=ssh://rbrodkin@10.100.0.91 docker build -t clack-track:latest -t clack-track:$(git rev-parse --short HEAD) .
+docker build -t clack-track:latest -t clack-track:$(git rev-parse --short HEAD) .
 
 # Verify build succeeded
-DOCKER_HOST=ssh://rbrodkin@10.100.0.91 docker images clack-track:latest --format "{{.ID}} {{.CreatedAt}}"
+docker images clack-track:latest --format "{{.ID}} {{.CreatedAt}}"
 ```
 
 ### Step 2: Deploy to Swarm
 
 ```bash
 # Deploy stack with production compose
-DOCKER_HOST=ssh://rbrodkin@10.100.0.91 docker stack deploy -c docker-compose.prod.yml clack-track
+docker stack deploy -c docker-compose.prod.yml clack-track
 
 # Wait for service to stabilize (30 seconds)
 echo "Waiting for deployment to stabilize..."
@@ -67,23 +85,25 @@ sleep 30
 
 ```bash
 # Check service status
-DOCKER_HOST=ssh://rbrodkin@10.100.0.91 docker service ls --filter name=clack-track
+docker service ls --filter name=clack-track
 
 # Check replicas are running
-DOCKER_HOST=ssh://rbrodkin@10.100.0.91 docker service ps clack-track_app --format "{{.CurrentState}}"
+docker service ps clack-track_app --format "{{.CurrentState}}"
 
 # Check recent logs for errors
-DOCKER_HOST=ssh://rbrodkin@10.100.0.91 docker service logs clack-track_app --tail 50 --since 2m 2>&1 | grep -i "error\|fail\|exception" || echo "No errors found in recent logs"
+docker service logs clack-track_app --tail 50 --since 2m 2>&1 | grep -i "error\|fail\|exception" || echo "No errors found in recent logs"
 ```
 
 ### Step 4: Verify Application
 
 ```bash
 # Check container health
-DOCKER_HOST=ssh://rbrodkin@10.100.0.91 docker inspect $(DOCKER_HOST=ssh://rbrodkin@10.100.0.91 docker ps -q -f name=clack-track_app) --format '{{.State.Health.Status}}' 2>/dev/null || echo "No health check configured"
+docker inspect $(docker ps -q -f name=clack-track_app) --format '{{.State.Health.Status}}' 2>/dev/null || echo "No health check configured"
 
-# Test web endpoint if enabled
-curl -s -o /dev/null -w "%{http_code}" http://10.100.0.91:3000/health 2>/dev/null || echo "Web endpoint not accessible (may be expected)"
+# Test web endpoint if enabled (get host from DOCKER_HOST)
+# Extract host IP from DOCKER_HOST (format: ssh://user@host)
+DOCKER_IP=$(echo $DOCKER_HOST | sed 's|ssh://[^@]*@||')
+curl -s -o /dev/null -w "%{http_code}" http://${DOCKER_IP}:3000/health 2>/dev/null || echo "Web endpoint not accessible (may be expected)"
 ```
 
 ## Rollback Procedure
@@ -94,36 +114,38 @@ If deployment fails or issues are detected:
 
 ```bash
 # Rollback to previous version
-DOCKER_HOST=ssh://rbrodkin@10.100.0.91 docker service rollback clack-track_app
+docker service rollback clack-track_app
 
 # Verify rollback
-DOCKER_HOST=ssh://rbrodkin@10.100.0.91 docker service ps clack-track_app --format "{{.Image}} {{.CurrentState}}"
+docker service ps clack-track_app --format "{{.Image}} {{.CurrentState}}"
 ```
 
 ### Full Stack Rollback
 
 ```bash
 # Remove current stack
-DOCKER_HOST=ssh://rbrodkin@10.100.0.91 docker stack rm clack-track
+docker stack rm clack-track
 
 # Wait for cleanup
 sleep 10
 
 # Redeploy with previous known-good tag
-DOCKER_HOST=ssh://rbrodkin@10.100.0.91 docker stack deploy -c docker-compose.prod.yml clack-track
+docker stack deploy -c docker-compose.prod.yml clack-track
 ```
 
 ## Environment Variables
 
-All production configuration is in `.env.production`. Key variables:
+All production configuration is stored in `.env.production`. Key variables:
 
 | Variable | Purpose |
 |----------|---------|
-| `DOCKER_HOST` | Remote Docker endpoint (`ssh://rbrodkin@10.100.0.91`) |
+| `DOCKER_HOST` | Remote Docker endpoint (SSH connection string) |
 | `DOCKER_API_VERSION` | Docker API version for compatibility |
 | `DATABASE_URL` | MySQL connection string |
 | `VESTABOARD_LOCAL_API_KEY` | Vestaboard device authentication |
 | `AI_PROVIDER` | AI backend (anthropic/openai) |
+
+**Important**: Always load environment via `source .env.production` before running deployment commands. Never hardcode connection strings or credentials.
 
 ## Troubleshooting
 
@@ -131,8 +153,9 @@ For common deployment issues, see [troubleshooting.md](./troubleshooting.md).
 
 ## Safety Notes
 
-1. **Never deploy from a dirty working tree** - commit or stash changes first
-2. **Always verify branch state** - ensure main has the code you intend to deploy
-3. **Check service health after deploy** - don't walk away without verification
-4. **Keep rollback commands ready** - have them in clipboard during deploy
-5. **Monitor logs during initial deploy** - watch for startup errors
+1. **Always source .env.production first** - all docker commands require DOCKER_HOST
+2. **Never deploy from a dirty working tree** - commit or stash changes first
+3. **Always verify branch state** - ensure main has the code you intend to deploy
+4. **Check service health after deploy** - don't walk away without verification
+5. **Keep rollback commands ready** - have them in clipboard during deploy
+6. **Monitor logs during initial deploy** - watch for startup errors
