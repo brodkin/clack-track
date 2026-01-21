@@ -56,7 +56,7 @@ import { AIPromptGenerator, type AIProviderAPIKeys } from '../ai-prompt-generato
 import { PromptLoader } from '../../prompt-loader.js';
 import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
 import { ContentRepository } from '../../../storage/repositories/content-repo.js';
-import type { GenerationContext } from '../../../types/content-generator.js';
+import type { GenerationContext, GeneratedContent } from '../../../types/content-generator.js';
 import { ModelTier as ModelTierEnum } from '../../../types/content-generator.js';
 import type { ContentRecord } from '../../../storage/models/content.js';
 
@@ -416,5 +416,25 @@ export class SerialStoryGenerator extends AIPromptGenerator {
     }
 
     return metadata as unknown as Record<string, unknown>;
+  }
+
+  /**
+   * Generates serial story content with fresh state
+   *
+   * Clears cached story state at the start of each generation to ensure
+   * proper chapter progression when the same generator instance is reused
+   * across multiple updates (e.g., event-driven scenarios).
+   *
+   * @param context - Generation context
+   * @returns Generated content with story metadata
+   */
+  async generate(context: GenerationContext): Promise<GeneratedContent> {
+    // Clear cached state to force fresh DB query for this generation cycle
+    // This ensures getUserPromptFile() sees current story state, not stale cache
+    this.cachedStoryState = null;
+    this.selectedScenario = undefined;
+    this.selectedEmotionalBeat = undefined;
+
+    return super.generate(context);
   }
 }

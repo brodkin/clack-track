@@ -593,6 +593,23 @@ await repo.save({ text: 'Second', generatedAt: new Date() });
 - Strict mode enabled, output: `./dist`
 - Source maps enabled for debugging
 
+## Database Configuration
+
+**Development environment uses MySQL** with Docker container hostname `mysql`:
+
+```bash
+# Dev database connection (in .env)
+DATABASE_URL=mysql://root:devpassword@mysql:3306/clack_track
+```
+
+**Test environment uses SQLite** for speed and isolation (configured automatically by Jest).
+
+**Key database files:**
+
+- `src/storage/knex.ts` - Knex instance factory with connection pooling
+- `src/storage/models/` - Data access layer (ContentModel, VoteModel, etc.)
+- `src/storage/repositories/` - Repository pattern wrappers with error handling
+
 ## Quick Reference
 
 | Need              | Source                                                                            |
