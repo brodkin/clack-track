@@ -15,7 +15,8 @@
  * - Inherits retry logic and provider failover from base class
  *
  * Uses Template Method hooks:
- * - getCustomMetadata(): Adds titleInjected and formatOptions to metadata
+ * - getTemplateVariables(): Generates 6 random lucky numbers (10-99) for {{luckyNumbers}}
+ * - getCustomMetadata(): Adds titleInjected, formatOptions, and generatedLuckyNumbers to metadata
  * - postProcessContent(): Prepends programmatic title line to AI content
  *
  * @example
@@ -42,7 +43,11 @@
 import { AIPromptGenerator, type AIProviderAPIKeys } from '../ai-prompt-generator.js';
 import { PromptLoader } from '../../prompt-loader.js';
 import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
-import { ModelTier, type GeneratedContent } from '../../../types/content-generator.js';
+import {
+  ModelTier,
+  type GeneratedContent,
+  type GenerationContext,
+} from '../../../types/content-generator.js';
 
 /**
  * Programmatic title for fortune cookie content.
@@ -60,6 +65,12 @@ const FORTUNE_COOKIE_TITLE = '\uD83D\uDFE5 FORTUNE COOKIE \uD83D\uDFE5';
  * AI-generated content, ensuring consistent formatting with center alignment.
  */
 export class FortuneCookieGenerator extends AIPromptGenerator {
+  /**
+   * Stores the generated lucky numbers for metadata tracking.
+   * Format: space-separated 2-digit numbers (e.g., '14 67 23 91 45 82')
+   */
+  protected generatedLuckyNumbers: string = '';
+
   /**
    * Creates a new FortuneCookieGenerator instance
    *
@@ -101,9 +112,29 @@ export class FortuneCookieGenerator extends AIPromptGenerator {
   }
 
   /**
+   * Hook: Generates 6 random lucky numbers between 10-99 for prompt injection.
+   *
+   * Numbers are stored in the instance property for metadata tracking.
+   *
+   * @param _context - Generation context (unused, but required by hook signature)
+   * @returns Template variables with luckyNumbers string
+   */
+  protected async getTemplateVariables(
+    _context: GenerationContext
+  ): Promise<Record<string, string>> {
+    const numbers: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      // Generate random integer between 10 and 99 (inclusive)
+      numbers.push(Math.floor(Math.random() * 90) + 10);
+    }
+    this.generatedLuckyNumbers = numbers.join(' ');
+    return { luckyNumbers: this.generatedLuckyNumbers };
+  }
+
+  /**
    * Hook: Returns metadata indicating title was injected with center alignment.
    *
-   * @returns Metadata with titleInjected flag and formatOptions
+   * @returns Metadata with titleInjected flag, formatOptions, and generatedLuckyNumbers
    */
   protected getCustomMetadata(): Record<string, unknown> {
     return {
@@ -111,6 +142,7 @@ export class FortuneCookieGenerator extends AIPromptGenerator {
       formatOptions: {
         textAlign: 'center',
       },
+      generatedLuckyNumbers: this.generatedLuckyNumbers,
     };
   }
 

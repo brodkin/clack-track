@@ -24,6 +24,8 @@ import type { AIProvider } from '@/types/ai';
 type ProtectedFortuneCookieGenerator = FortuneCookieGenerator & {
   getSystemPromptFile(): string;
   getUserPromptFile(): string;
+  getTemplateVariables(context: GenerationContext): Promise<Record<string, string>>;
+  generatedLuckyNumbers: string;
   modelTier: ModelTier;
 };
 
@@ -157,6 +159,71 @@ LUCKY: 7 14 28 42`;
     });
   });
 
+  describe('getTemplateVariables()', () => {
+    it('should generate 6 random lucky numbers between 10-99', async () => {
+      const generator = new FortuneCookieGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        { openai: 'test-key' }
+      ) as ProtectedFortuneCookieGenerator;
+
+      const templateVars = await generator.getTemplateVariables(mockContext);
+
+      expect(templateVars.luckyNumbers).toBeDefined();
+      const numbers = templateVars.luckyNumbers.split(' ').map(Number);
+      expect(numbers).toHaveLength(6);
+      numbers.forEach((num) => {
+        expect(num).toBeGreaterThanOrEqual(10);
+        expect(num).toBeLessThanOrEqual(99);
+        expect(Number.isInteger(num)).toBe(true);
+      });
+    });
+
+    it('should return space-separated numbers', async () => {
+      const generator = new FortuneCookieGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        { openai: 'test-key' }
+      ) as ProtectedFortuneCookieGenerator;
+
+      const templateVars = await generator.getTemplateVariables(mockContext);
+
+      // Should be space-separated format like '14 67 23 91 45 82'
+      expect(templateVars.luckyNumbers).toMatch(/^\d{2}( \d{2}){5}$/);
+    });
+
+    it('should store generated numbers in instance property', async () => {
+      const generator = new FortuneCookieGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        { openai: 'test-key' }
+      ) as ProtectedFortuneCookieGenerator;
+
+      const templateVars = await generator.getTemplateVariables(mockContext);
+
+      expect(generator.generatedLuckyNumbers).toBe(templateVars.luckyNumbers);
+    });
+
+    it('should generate different numbers on each call', async () => {
+      const generator = new FortuneCookieGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        { openai: 'test-key' }
+      ) as ProtectedFortuneCookieGenerator;
+
+      // Generate multiple times and collect results
+      const results = new Set<string>();
+      for (let i = 0; i < 10; i++) {
+        const templateVars = await generator.getTemplateVariables(mockContext);
+        results.add(templateVars.luckyNumbers);
+      }
+
+      // With random generation, we should get at least 2 different results
+      // (probability of 10 identical random 6-number sequences is astronomically low)
+      expect(results.size).toBeGreaterThan(1);
+    });
+  });
+
   describe('generate()', () => {
     beforeEach(() => {
       // Mock createProviderForSelection to return our AI provider mock for each test
@@ -235,6 +302,20 @@ LUCKY: 7 14 28 42`;
         const result = await generator.generate(mockContext);
 
         expect(result.metadata?.titleInjected).toBe(true);
+      });
+
+      it('should include generatedLuckyNumbers in metadata', async () => {
+        const generator = new FortuneCookieGenerator(mockPromptLoader, mockModelTierSelector, {
+          openai: 'test-key',
+        });
+
+        const result = await generator.generate(mockContext);
+
+        expect(result.metadata?.generatedLuckyNumbers).toBeDefined();
+        expect(typeof result.metadata?.generatedLuckyNumbers).toBe('string');
+        // Verify format: 6 two-digit numbers space-separated
+        const luckyNumbers = result.metadata?.generatedLuckyNumbers as string;
+        expect(luckyNumbers).toMatch(/^\d{2}( \d{2}){5}$/);
       });
 
       it('should produce 5 lines total (title + 3 fortune lines + lucky numbers)', async () => {
