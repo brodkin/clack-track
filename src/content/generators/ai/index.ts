@@ -8,6 +8,7 @@
  * @module content/generators/ai
  */
 
+export { AlienFieldReportGenerator } from './alien-field-report-generator.js';
 export { DailyRoastGenerator } from './daily-roast-generator.js';
 export { FortuneCookieGenerator } from './fortune-cookie-generator.js';
 export { GlobalNewsGenerator } from './global-news-generator.js';
