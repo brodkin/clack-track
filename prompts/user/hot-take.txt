@@ -1,16 +1,28 @@
 Create a playful, cheeky hot take about a mundane everyday topic.
 
+HOT TAKE PARAMETERS:
+- Domain: {{hotTakeDomain}}
+- Angle: {{hotTakeAngle}}
+
 Requirements:
-- Strong stance on something trivial (food, daily habits, minor preferences)
+- Strong stance on something trivial within the specified domain
 - Tone must be PLAYFUL and LIGHT-HEARTED, never mean or actually controversial
 - Think "friendly debate at a dinner party" energy
 - Avoid politics, religion, or genuinely divisive topics
 
-Example mundane topics:
-- Best pizza topping
-- Morning showers vs night showers
-- Proper way to load a dishwasher
-- Ketchup on hot dogs
-- Socks with sandals
-
 Make the opinion bold and confident, but keep it fun and harmless.
+
+DOMAIN GUIDANCE:
+- FOOD: Culinary preferences and eating habits (pizza toppings, how to eat certain foods, best snacks)
+- DAILY_ROUTINES: Morning vs night habits, shower timing, bed-making philosophy
+- HOUSEHOLD: Dishwasher loading, toilet paper orientation, thermostat settings
+- FASHION: Socks with sandals, crocs, pajamas in public, matching outfits
+- TECHNOLOGY: Phone charging habits, notification settings, keyboard shortcuts
+- SOCIAL: Texting etiquette, how to say goodbye, appropriate emojis
+
+ANGLE GUIDANCE:
+- DEFENDER: Passionately defend an unpopular but harmless position
+- TRUTH_BOMB: Reveal an uncomfortable truth everyone secretly knows
+- CONTROVERSIAL_CORRECT: State something objectively true that people argue about anyway
+- REBEL: Reject a universally accepted mundane norm
+- CONVERT: Try to convince others your weird habit is actually superior
