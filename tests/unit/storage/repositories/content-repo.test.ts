@@ -12,8 +12,8 @@ describe('ContentRepository', () => {
   let contentModel: ContentModel;
   let contentRepo: ContentRepository;
 
-  beforeEach(async () => {
-    // Reset singleton to ensure clean state
+  beforeAll(async () => {
+    // Reset singleton to ensure clean state (once per test file)
     resetKnexInstance();
     knex = getKnexInstance();
 
@@ -71,14 +71,16 @@ describe('ContentRepository', () => {
         table.index('generatorId', 'idx_generator_id');
       });
     }
+  });
 
-    // Clean table for isolated tests
+  beforeEach(async () => {
+    // Clean table data for isolated tests (table structure persists)
     await knex('content').del();
     contentModel = new ContentModel(knex);
     contentRepo = new ContentRepository(contentModel);
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await closeKnexInstance();
   });
 
@@ -116,13 +118,12 @@ describe('ContentRepository', () => {
         aiProvider: 'openai',
       });
 
-      // Wait 1 second for MySQL DATETIME precision
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      // Use timestamp manipulation instead of real-time delay
+      // This avoids the 1-second wait while ensuring deterministic ordering
       await contentRepo.saveContent({
         text: 'Content 2',
         type: 'major',
-        generatedAt: new Date(),
+        generatedAt: new Date(now.getTime() + 1000),
         sentAt: null,
         aiProvider: 'openai',
       });

@@ -16,8 +16,10 @@ import { closeKnexInstance } from '../../src/storage/knex.js';
 // Set test environment variables
 process.env.NODE_ENV = 'test';
 
-// Configure global test timeout (30 seconds)
-jest.setTimeout(30000);
+// Configure global test timeout (10 seconds)
+// Performance requirement: Individual tests should complete within 10s
+// E2E tests have a separate 60s timeout configured in jest.config.cjs
+jest.setTimeout(10000);
 
 // Example: Add custom matchers
 // expect.extend({

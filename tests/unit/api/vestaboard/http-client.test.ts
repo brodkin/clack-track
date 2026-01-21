@@ -13,12 +13,44 @@ import type { AnimationOptions } from '@/api/vestaboard/types';
 const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 global.fetch = mockFetch;
 
+/**
+ * Helper to run a promise with fake timers, advancing timers until the promise settles.
+ * This properly handles the async retry loop with fake timers.
+ */
+async function runWithFakeTimers<T>(promise: Promise<T>): Promise<T> {
+  let settled = false;
+  let result: T;
+  let error: unknown;
+
+  promise
+    .then(r => {
+      result = r;
+      settled = true;
+    })
+    .catch(e => {
+      error = e;
+      settled = true;
+    });
+
+  // Keep advancing timers until the promise settles
+  while (!settled) {
+    await jest.advanceTimersByTimeAsync(100);
+  }
+
+  if (error) {
+    throw error;
+  }
+  return result!;
+}
+
 describe('VestaboardHTTPClient', () => {
   let client: VestaboardHTTPClient;
   const mockApiKey = 'test-api-key';
   const mockBaseUrl = 'http://vestaboard.local:7000';
 
   beforeEach(() => {
+    // Use fake timers for deterministic timer testing (avoids real delays in retry logic)
+    jest.useFakeTimers();
     jest.clearAllMocks();
     client = new VestaboardHTTPClient({
       apiKey: mockApiKey,
@@ -30,6 +62,7 @@ describe('VestaboardHTTPClient', () => {
 
   afterEach(() => {
     jest.clearAllTimers();
+    jest.useRealTimers();
   });
 
   describe('constructor', () => {
@@ -130,8 +163,10 @@ describe('VestaboardHTTPClient', () => {
         },
       });
 
-      await expect(client.post(mockLayout)).rejects.toThrow(VestaboardRateLimitError);
-    }, 15000);
+      await expect(runWithFakeTimers(client.post(mockLayout))).rejects.toThrow(
+        VestaboardRateLimitError
+      );
+    });
 
     it('should extract Retry-After header from 429 response', async () => {
       mockFetch.mockResolvedValue({
@@ -144,13 +179,13 @@ describe('VestaboardHTTPClient', () => {
       });
 
       try {
-        await client.post(mockLayout);
+        await runWithFakeTimers(client.post(mockLayout));
         throw new Error('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(VestaboardRateLimitError);
         expect((error as VestaboardRateLimitError).retryAfter).toBe(120);
       }
-    }, 15000);
+    });
 
     it('should throw VestaboardServerError on 500+', async () => {
       mockFetch.mockResolvedValue({
@@ -159,20 +194,26 @@ describe('VestaboardHTTPClient', () => {
         statusText: 'Service Unavailable',
       });
 
-      await expect(client.post(mockLayout)).rejects.toThrow(VestaboardServerError);
-    }, 15000); // Increase timeout for retry logic
+      await expect(runWithFakeTimers(client.post(mockLayout))).rejects.toThrow(
+        VestaboardServerError
+      );
+    });
 
     it('should throw VestaboardTimeoutError on timeout', async () => {
       mockFetch.mockRejectedValue(new Error('The operation was aborted'));
 
-      await expect(client.post(mockLayout)).rejects.toThrow(VestaboardTimeoutError);
-    }, 15000);
+      await expect(runWithFakeTimers(client.post(mockLayout))).rejects.toThrow(
+        VestaboardTimeoutError
+      );
+    });
 
     it('should throw VestaboardConnectionError on network failure', async () => {
       mockFetch.mockRejectedValue(new Error('Network error'));
 
-      await expect(client.post(mockLayout)).rejects.toThrow(VestaboardConnectionError);
-    }, 15000);
+      await expect(runWithFakeTimers(client.post(mockLayout))).rejects.toThrow(
+        VestaboardConnectionError
+      );
+    });
 
     it('should retry on retryable errors', async () => {
       // First call fails with 503, second succeeds
@@ -188,32 +229,51 @@ describe('VestaboardHTTPClient', () => {
           status: 200,
         });
 
-      await client.post(mockLayout);
+      await runWithFakeTimers(client.post(mockLayout));
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
     it('should use exponential backoff between retries', async () => {
-      // All calls fail - will exhaust 3 attempts (initial + 2 retries)
+      // All calls fail - will exhaust 4 attempts (initial + 3 retries, since maxRetries=3)
       mockFetch.mockResolvedValue({
         ok: false,
         status: 503,
         statusText: 'Service Unavailable',
       });
 
-      const startTime = Date.now();
-      await expect(client.post(mockLayout)).rejects.toThrow(VestaboardServerError);
-      const elapsed = Date.now() - startTime;
+      let settled = false;
+      let caughtError: unknown;
+      const promise = client.post(mockLayout);
 
-      // With exponential backoff:
-      // Attempt 0: 0ms delay (initial attempt)
-      // Attempt 1: ~1000ms delay (1000 * 2^0)
-      // Attempt 2: ~2000ms delay (1000 * 2^1)
-      // Total: ~3000ms minimum
-      // Allow 500ms variance for system overhead
-      expect(elapsed).toBeGreaterThanOrEqual(2500);
-      expect(elapsed).toBeLessThan(10000); // Upper bound sanity check
-    }, 15000);
+      // Track when promise settles
+      promise.catch(e => {
+        caughtError = e;
+        settled = true;
+      });
+
+      // Verify fetch is called once initially
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      // First retry delay: 1000ms (1000 * 2^0)
+      await jest.advanceTimersByTimeAsync(1000);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      // Second retry delay: 2000ms (1000 * 2^1)
+      await jest.advanceTimersByTimeAsync(2000);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+
+      // Third retry delay: 4000ms (1000 * 2^2)
+      await jest.advanceTimersByTimeAsync(4000);
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+
+      // Wait for promise to settle
+      while (!settled) {
+        await jest.advanceTimersByTimeAsync(100);
+      }
+
+      expect(caughtError).toBeInstanceOf(VestaboardServerError);
+    });
 
     it('should not retry on non-retryable errors', async () => {
       mockFetch.mockResolvedValueOnce({
@@ -232,21 +292,23 @@ describe('VestaboardHTTPClient', () => {
         apiKey: mockApiKey,
         baseUrl: mockBaseUrl,
         maxRetries: 2,
-        timeoutMs: 50000, // Increase timeout to avoid timeout interference
+        timeoutMs: 50000,
       });
 
-      mockFetch.mockClear(); // Clear any previous calls
+      mockFetch.mockClear();
       mockFetch.mockResolvedValue({
         ok: false,
         status: 503,
         statusText: 'Service Unavailable',
       });
 
-      await expect(limitedClient.post(mockLayout)).rejects.toThrow(VestaboardServerError);
+      await expect(runWithFakeTimers(limitedClient.post(mockLayout))).rejects.toThrow(
+        VestaboardServerError
+      );
 
       // Initial attempt + 2 retries = 3 total
       expect(mockFetch).toHaveBeenCalledTimes(3);
-    }, 15000);
+    });
 
     it('should throw VestaboardAuthenticationError when response body contains "invalid api key"', async () => {
       mockFetch.mockResolvedValueOnce({
@@ -256,7 +318,7 @@ describe('VestaboardHTTPClient', () => {
       } as Response);
 
       await expect(client.post(mockLayout)).rejects.toThrow(VestaboardAuthenticationError);
-    }, 15000);
+    });
 
     it('should throw VestaboardAuthenticationError when response body contains "INVALID API KEY" (case-insensitive)', async () => {
       mockFetch.mockResolvedValueOnce({
@@ -276,8 +338,10 @@ describe('VestaboardHTTPClient', () => {
         statusText: 'Bad Request',
       } as Response);
 
-      await expect(client.post(mockLayout)).rejects.toThrow('HTTP error 400: Bad Request');
-    }, 15000);
+      await expect(runWithFakeTimers(client.post(mockLayout))).rejects.toThrow(
+        'HTTP error 400: Bad Request'
+      );
+    });
 
     it('should throw generic Error on 404 Not Found', async () => {
       // Generic errors are retryable, so all attempts will fail
@@ -287,20 +351,22 @@ describe('VestaboardHTTPClient', () => {
         statusText: 'Not Found',
       } as Response);
 
-      await expect(client.post(mockLayout)).rejects.toThrow('HTTP error 404: Not Found');
-    }, 15000);
+      await expect(runWithFakeTimers(client.post(mockLayout))).rejects.toThrow(
+        'HTTP error 404: Not Found'
+      );
+    });
 
     it('should handle non-Error exceptions and wrap them in VestaboardConnectionError', async () => {
       mockFetch.mockRejectedValue('string error not an Error object');
 
       try {
-        await client.post(mockLayout);
+        await runWithFakeTimers(client.post(mockLayout));
         throw new Error('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(VestaboardConnectionError);
         expect((error as Error).message).toBe('Unknown connection error');
       }
-    }, 15000);
+    });
   });
 
   describe('postWithAnimation', () => {
@@ -417,10 +483,10 @@ describe('VestaboardHTTPClient', () => {
         },
       } as Response);
 
-      await expect(client.postWithAnimation(mockLayout, mockOptions)).rejects.toThrow(
-        VestaboardRateLimitError
-      );
-    }, 15000);
+      await expect(
+        runWithFakeTimers(client.postWithAnimation(mockLayout, mockOptions))
+      ).rejects.toThrow(VestaboardRateLimitError);
+    });
 
     it('should throw VestaboardServerError on 500+ in postWithAnimation', async () => {
       mockFetch.mockResolvedValue({
@@ -429,10 +495,10 @@ describe('VestaboardHTTPClient', () => {
         statusText: 'Service Unavailable',
       } as Response);
 
-      await expect(client.postWithAnimation(mockLayout, mockOptions)).rejects.toThrow(
-        VestaboardServerError
-      );
-    }, 15000);
+      await expect(
+        runWithFakeTimers(client.postWithAnimation(mockLayout, mockOptions))
+      ).rejects.toThrow(VestaboardServerError);
+    });
 
     it('should throw VestaboardAuthenticationError when animation response body contains "invalid api key"', async () => {
       mockFetch.mockResolvedValueOnce({
@@ -449,18 +515,18 @@ describe('VestaboardHTTPClient', () => {
     it('should throw VestaboardTimeoutError on timeout in postWithAnimation', async () => {
       mockFetch.mockRejectedValue(new Error('The operation was aborted'));
 
-      await expect(client.postWithAnimation(mockLayout, mockOptions)).rejects.toThrow(
-        VestaboardTimeoutError
-      );
-    }, 15000);
+      await expect(
+        runWithFakeTimers(client.postWithAnimation(mockLayout, mockOptions))
+      ).rejects.toThrow(VestaboardTimeoutError);
+    });
 
     it('should throw VestaboardConnectionError on network failure in postWithAnimation', async () => {
       mockFetch.mockRejectedValue(new Error('Network error'));
 
-      await expect(client.postWithAnimation(mockLayout, mockOptions)).rejects.toThrow(
-        VestaboardConnectionError
-      );
-    }, 15000);
+      await expect(
+        runWithFakeTimers(client.postWithAnimation(mockLayout, mockOptions))
+      ).rejects.toThrow(VestaboardConnectionError);
+    });
   });
 
   describe('executeWithRetry edge cases', () => {
@@ -477,7 +543,7 @@ describe('VestaboardHTTPClient', () => {
       const shortTimeoutClient = new VestaboardHTTPClient({
         apiKey: mockApiKey,
         baseUrl: mockBaseUrl,
-        timeoutMs: 100, // Very short timeout
+        timeoutMs: 100,
         maxRetries: 0,
       });
 
@@ -491,8 +557,10 @@ describe('VestaboardHTTPClient', () => {
           })
       );
 
-      await expect(shortTimeoutClient.post(mockLayout)).rejects.toThrow(VestaboardTimeoutError);
-    }, 15000);
+      await expect(runWithFakeTimers(shortTimeoutClient.post(mockLayout))).rejects.toThrow(
+        VestaboardTimeoutError
+      );
+    });
 
     it('should execute exponential backoff delay callback on retries', async () => {
       // Force retries with server errors
@@ -513,13 +581,19 @@ describe('VestaboardHTTPClient', () => {
           status: 200,
         });
 
-      const startTime = Date.now();
-      await client.post(mockLayout);
-      const elapsed = Date.now() - startTime;
+      const promise = client.post(mockLayout);
 
-      // Should have delays from exponential backoff
-      expect(elapsed).toBeGreaterThanOrEqual(1000); // At least 1s for first retry
-    }, 15000);
+      // Verify first retry is attempted after 1000ms delay
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      await jest.advanceTimersByTimeAsync(1000);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      // Verify second retry is attempted after 2000ms delay
+      await jest.advanceTimersByTimeAsync(2000);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+
+      await promise;
+    });
   });
 
   describe('get', () => {
@@ -590,7 +664,7 @@ describe('VestaboardHTTPClient', () => {
           json: async () => mockResponseLayout,
         });
 
-      const result = await client.get();
+      const result = await runWithFakeTimers(client.get());
 
       expect(result).toEqual(mockResponseLayout);
       expect(mockFetch).toHaveBeenCalledTimes(2);
