@@ -485,6 +485,108 @@ if (eventHandler) {
 - Tests MUST run in worktrees under `./trees/`, never from root directory
 - Coverage reports in `coverage/` directory
 
+### Testing Standards
+
+**Performance Expectations:**
+
+- Unit tests: < 5 seconds per file
+- Integration tests: < 10 seconds per file
+- Full test suite: < 60 seconds
+- Global timeout: 10 seconds (e2e has 60s override)
+
+**Timer Mocking Pattern:**
+
+Tests that involve delays, timeouts, or retries MUST use Jest fake timers instead of real time:
+
+```typescript
+// ✅ CORRECT - Use fake timers for delay testing
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+it('should handle exponential backoff', async () => {
+  const promise = client.retryWithBackoff();
+  await jest.advanceTimersByTimeAsync(1000); // Simulate first delay
+  await jest.advanceTimersByTimeAsync(2000); // Simulate second delay
+  await expect(promise).resolves.toBe(true);
+});
+
+// ❌ WRONG - Real timers waste test execution time
+it('should handle exponential backoff', async () => {
+  const startTime = Date.now();
+  await client.retryWithBackoff(); // Waits REAL time!
+  expect(Date.now() - startTime).toBeGreaterThan(3000);
+});
+```
+
+**Reference implementations:** `tests/unit/scheduler/cron.test.ts`, `tests/unit/scheduler/trigger-matcher.test.ts`
+
+**Database Test Setup Pattern:**
+
+Database tests should use `beforeAll`/`afterAll` for connection lifecycle:
+
+```typescript
+// ✅ CORRECT - Connection once per suite, data cleanup per test
+let knex: Knex;
+
+beforeAll(async () => {
+  resetKnexInstance();
+  knex = getKnexInstance();
+  await knex.schema.createTable('content', ...);
+});
+
+beforeEach(async () => {
+  await knex('content').del(); // Just clean data
+});
+
+afterAll(async () => {
+  await closeKnexInstance();
+});
+
+// ❌ WRONG - Connection per test is slow
+beforeEach(async () => {
+  resetKnexInstance();
+  knex = getKnexInstance();
+  await knex.schema.createTable('content', ...); // Recreated each test!
+});
+
+afterEach(async () => {
+  await closeKnexInstance(); // Closed each test!
+});
+```
+
+**Reference implementations:** `tests/unit/storage/models/content.test.ts`, `tests/unit/storage/repositories/content-repo.test.ts`
+
+**Timestamp Ordering Without Real Delays:**
+
+When testing ordering by timestamps, use timestamp manipulation instead of real delays:
+
+```typescript
+// ✅ CORRECT - Manipulate timestamps directly
+const now = new Date();
+await repo.save({ text: 'First', generatedAt: new Date(now.getTime()) });
+await repo.save({ text: 'Second', generatedAt: new Date(now.getTime() + 1000) });
+
+// ❌ WRONG - Real delays waste time
+await repo.save({ text: 'First', generatedAt: new Date() });
+await new Promise(resolve => setTimeout(resolve, 1000)); // Wastes 1 second!
+await repo.save({ text: 'Second', generatedAt: new Date() });
+```
+
+**Anti-Patterns to Avoid:**
+
+| Anti-Pattern                    | Problem                      | Solution                            |
+| ------------------------------- | ---------------------------- | ----------------------------------- |
+| Real `setTimeout` in tests      | Slow test execution          | Use `jest.advanceTimersByTimeAsync` |
+| `Date.now()` elapsed assertions | Tests actual wall-clock time | Use fake timers or timestamp values |
+| Per-test database connections   | Expensive setup/teardown     | Use `beforeAll`/`afterAll`          |
+| Real delays for ordering tests  | Wastes seconds per test      | Use timestamp manipulation          |
+| Large test timeouts (>10s)      | Masks slow tests             | Fix the test or use fake timers     |
+
 ### TypeScript Configuration
 
 - Target: ES2022, Module: Node16 (ES modules)

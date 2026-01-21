@@ -10,8 +10,8 @@ describe('ContentModel', () => {
   let knex: Knex;
   let contentModel: ContentModel;
 
-  beforeEach(async () => {
-    // Reset singleton to ensure clean state
+  beforeAll(async () => {
+    // Reset singleton to ensure clean state (once per test file)
     resetKnexInstance();
     knex = getKnexInstance();
 
@@ -69,13 +69,15 @@ describe('ContentModel', () => {
         table.index('generatorId', 'idx_generator_id');
       });
     }
+  });
 
-    // Clean table for isolated tests
+  beforeEach(async () => {
+    // Clean table data for isolated tests (table structure persists)
     await knex('content').del();
     contentModel = new ContentModel(knex);
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await closeKnexInstance();
   });
 

@@ -36,6 +36,15 @@ import * as haWebsocket from 'home-assistant-js-websocket';
 jest.mock('home-assistant-js-websocket');
 
 describe('Home Assistant WebSocket Client Integration Tests', () => {
+  // Enable fake timers for all tests in this suite
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   // Test configuration
   const testConfig: HomeAssistantConnectionConfig = {
     url: 'ws://homeassistant.local:8123/api/websocket',
@@ -515,7 +524,7 @@ describe('Home Assistant WebSocket Client Integration Tests', () => {
 
       // Act: Query, wait for cache expiry, query again
       await client.getState('light.living_room');
-      await new Promise(resolve => setTimeout(resolve, 150)); // Wait for cache to expire
+      await jest.advanceTimersByTimeAsync(150); // Wait for cache to expire
       await client.getState('light.living_room');
 
       // Assert: Should call getStates twice (cache expired)
@@ -672,8 +681,8 @@ describe('Home Assistant WebSocket Client Integration Tests', () => {
       // Act: Trigger reconnection
       client.triggerReconnection();
 
-      // Wait for reconnection attempt
-      await new Promise(resolve => setTimeout(resolve, 150));
+      // Wait for reconnection attempt (using fake timers)
+      await jest.advanceTimersByTimeAsync(150);
 
       // Assert: Should attempt reconnection
       expect(haWebsocket.createConnection).toHaveBeenCalled();
@@ -703,7 +712,7 @@ describe('Home Assistant WebSocket Client Integration Tests', () => {
       // Act: Simulate reconnection
       (haWebsocket.createConnection as jest.Mock).mockResolvedValue(mockConnection);
       client.triggerReconnection();
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await jest.advanceTimersByTimeAsync(150);
 
       // Trigger event after reconnection
       eventListeners.get('state_changed')?.({ event_type: 'state_changed', data: { after: true } });
@@ -730,13 +739,13 @@ describe('Home Assistant WebSocket Client Integration Tests', () => {
 
       // Act: Trigger reconnection attempts
       client.triggerReconnection();
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await jest.advanceTimersByTimeAsync(150);
 
       client.triggerReconnection();
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await jest.advanceTimersByTimeAsync(150);
 
       client.triggerReconnection();
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await jest.advanceTimersByTimeAsync(150);
 
       // Assert: Should stop after maxAttempts
       const maxAttemptsWarnings = logCapture.warn.filter(log =>
@@ -765,7 +774,7 @@ describe('Home Assistant WebSocket Client Integration Tests', () => {
       // Trigger reconnection - should work AFTER manual disconnect completes
       // (isManualDisconnect flag is reset after disconnect finishes)
       client.triggerReconnection();
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await jest.advanceTimersByTimeAsync(150);
 
       // Assert: Reconnection should have been attempted (after disconnect completes)
       // This is expected behavior - manual disconnect only prevents AUTOMATIC reconnection
