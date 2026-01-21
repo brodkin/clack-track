@@ -2,7 +2,7 @@ Create a fortune cookie message with a twist.
 
 Your response must be EXACTLY 4 lines:
 - Lines 1-3: The fortune wisdom (clever, surprising, or delightfully weird)
-- Line 4: ONLY the lucky numbers (6 numbers, space-separated, NO prefix like "LUCKY:" or "NUMBERS:")
+- Line 4: ONLY the lucky numbers (NO prefix like "LUCKY:" - just the numbers)
 
 Example format:
 YOUR FUTURE HOLDS
@@ -16,10 +16,27 @@ Mix of approaches:
 - Playful subversions of fortune cookie cliches
 
 Lucky numbers strategy:
-- If numbers relate to your fortune's content, USE THEMATIC NUMBERS you create:
-  - Fortune about cats? Try 9 (lives), 4 (paws), 12 (hours of sleep)
-  - Fortune about work? Try 5 (workdays), 40 (hours), 2 (weeks vacation)
-  - Fortune about food? Try 3 (meals), 86 (restaurant code), 350 (oven temp)
-- If no numbers feel meaningful, use these: {{luckyNumbers}}
+The numbers should ADD to the joke, not just relate to the topic. Make the reader smile when they "get it."
+
+Examples of numbers that extend the joke:
+- Fortune about Disneyland? → 1955 (founding year - insider knowledge)
+- Fortune about 7-Eleven? → 7 11 24 7 (the brand name + open 24/7)
+- Fortune about weed? → 420 24 7 (the meme number + stoned around the clock)
+- Fortune about tech frustration? → 404 500 503 (error codes)
+- Fortune about Vegas? → 21 7 7 7 777 (blackjack + slots)
+- Fortune about heartbreak? → 2 1 (it takes two, now there's one)
+- Fortune about procrastination? → 11 59 (one minute before deadline)
+- Fortune about coffee addiction? → 5 5 5 5 5 5 (your 5am alarm, 6 days a week)
+
+Number humor categories:
+- Famous years (1955, 1984, 1999, 2012)
+- Meme/cultural numbers (420, 69, 1337, 404, 86)
+- Patterns that tell a story (2 1, 10 9 8 7 6 5 4 3 2 1)
+- Repetition for emphasis (5 5 5 5 5, 9 9 9)
+- Times and countdowns (11 59, 3 2 1)
+
+Use 1-6 numbers - whatever serves the joke best. One perfect number beats six random ones.
+
+If nothing clever fits your fortune, use these: {{luckyNumbers}}
 
 The fortune should make someone smile or chuckle. Surprise them.

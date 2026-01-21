@@ -253,6 +253,28 @@ LUCKY: 7 14 28 42`;
       expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
     });
 
+    it('should pass luckyNumbers to PromptLoader template variables', async () => {
+      const generator = new FortuneCookieGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      await generator.generate(mockContext);
+
+      // Verify loadPromptWithVariables was called with luckyNumbers in variables
+      expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalled();
+
+      // Find the call for the user prompt (fortune-cookie.txt)
+      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
+        (call) => call[0] === 'user' && call[1] === 'fortune-cookie.txt'
+      );
+
+      expect(userPromptCall).toBeDefined();
+      // Third argument is the template variables object
+      const templateVars = userPromptCall?.[2] as Record<string, string>;
+      expect(templateVars.luckyNumbers).toBeDefined();
+      expect(templateVars.luckyNumbers).toMatch(/^\d{2}( \d{2}){5}$/);
+    });
+
     it('should generate content with expected GeneratedContent structure', async () => {
       const generator = new FortuneCookieGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
