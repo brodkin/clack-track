@@ -13,7 +13,18 @@ echo "DOCKER_HOST=$DOCKER_HOST"  # Verify it's set
 
 The `DOCKER_HOST` variable contains the SSH connection to the remote Docker daemon. Get this value from `.env.production` - never hardcode it as it may change.
 
-**Container naming**: Docker Swarm generates container names with random suffixes (e.g., `clack-track_app.1.xyz123abc`). Commands below use `-f name=clack-track_app` which does substring matching, plus `| head -1` to select one container when there are multiple replicas.
+**Container naming**: Docker Swarm generates container names with random suffixes (e.g., `clack-track_app.1.xyz123abc`). To get the current container ID from a known service name:
+
+```bash
+# Get container ID for a service (recommended)
+CONTAINER_ID=$(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1)
+
+# Then use it in commands
+docker exec $CONTAINER_ID env | grep DATABASE
+docker inspect $CONTAINER_ID --format '{{.State.Health.Status}}'
+```
+
+Commands below use this pattern or the shorthand `$(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1)`.
 
 ## Connection Issues
 
@@ -106,7 +117,7 @@ docker inspect clack-track_app --format '{{json .Spec.TaskTemplate.ContainerSpec
 
 **Check health status**:
 ```bash
-docker inspect $(docker ps -q -f name=clack-track_app | head -1) --format '{{json .State.Health}}' | jq .
+docker inspect $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) --format '{{json .State.Health}}' | jq .
 ```
 
 ## Database Issues
@@ -122,20 +133,20 @@ docker service ps clack-track_mysql
 
 **Test database connectivity from app container**:
 ```bash
-docker exec $(docker ps -q -f name=clack-track_app | head -1) sh -c 'nc -zv mysql 3306'
+docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) sh -c 'nc -zv mysql 3306'
 ```
 
 **Verify database credentials**:
 ```bash
 # Check environment variables in container
-docker exec $(docker ps -q -f name=clack-track_app | head -1) env | grep DATABASE
+docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) env | grep DATABASE
 ```
 
 ### Migration Issues
 
 **Run migrations manually**:
 ```bash
-docker exec $(docker ps -q -f name=clack-track_app | head -1) npm run migrate
+docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) npm run migrate
 ```
 
 ## Network Issues
@@ -144,12 +155,12 @@ docker exec $(docker ps -q -f name=clack-track_app | head -1) npm run migrate
 
 **Test outbound connectivity**:
 ```bash
-docker exec $(docker ps -q -f name=clack-track_app | head -1) sh -c 'curl -s https://api.anthropic.com/ -o /dev/null -w "%{http_code}"'
+docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) sh -c 'curl -s https://api.anthropic.com/ -o /dev/null -w "%{http_code}"'
 ```
 
 **Check DNS resolution**:
 ```bash
-docker exec $(docker ps -q -f name=clack-track_app | head -1) nslookup api.anthropic.com
+docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) nslookup api.anthropic.com
 ```
 
 ### Vestaboard Connection Issues
@@ -159,12 +170,12 @@ docker exec $(docker ps -q -f name=clack-track_app | head -1) nslookup api.anthr
 **Check Vestaboard connectivity** (get URL from `.env.production` VESTABOARD_LOCAL_API_URL):
 ```bash
 # Check the VESTABOARD_LOCAL_API_URL from .env.production
-docker exec $(docker ps -q -f name=clack-track_app | head -1) env | grep VESTABOARD_LOCAL_API_URL
+docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) env | grep VESTABOARD_LOCAL_API_URL
 ```
 
 **Verify API key is set**:
 ```bash
-docker exec $(docker ps -q -f name=clack-track_app | head -1) env | grep VESTABOARD
+docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) env | grep VESTABOARD
 ```
 
 ## Secret Management
@@ -238,7 +249,7 @@ docker service inspect clack-track_app --format '{{json .Spec.TaskTemplate.Resou
 
 **Check memory limits**:
 ```bash
-docker inspect $(docker ps -q -f name=clack-track_app | head -1) --format '{{.HostConfig.Memory}}'
+docker inspect $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) --format '{{.HostConfig.Memory}}'
 ```
 
 **View memory usage history**:
