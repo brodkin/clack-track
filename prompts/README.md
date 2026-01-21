@@ -18,7 +18,6 @@ System prompts define:
 ### Available System Prompts
 
 - `major-update-base.txt` - Base system prompt for major content updates
-- `minor-update-base.txt` - System prompt for time/weather-only updates
 
 ## User Prompts
 

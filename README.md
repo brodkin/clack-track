@@ -142,8 +142,7 @@ AI behavior is controlled through organized text file prompts in the `prompts/` 
 ```
 prompts/
 ├── system/              # System-level prompts (role, constraints)
-│   ├── major-update-base.txt
-│   └── minor-update-base.txt
+│   └── major-update-base.txt
 └── user/                # Content type prompts
     ├── haiku.txt
     ├── news-summary.txt
