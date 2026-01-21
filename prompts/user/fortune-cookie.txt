@@ -2,17 +2,24 @@ Create a fortune cookie message with a twist.
 
 Your response must be EXACTLY 4 lines:
 - Lines 1-3: The fortune wisdom (clever, surprising, or delightfully weird)
-- Line 4: Lucky numbers (6 numbers, space-separated)
+- Line 4: ONLY the lucky numbers (6 numbers, space-separated, NO prefix like "LUCKY:" or "NUMBERS:")
+
+Example format:
+YOUR FUTURE HOLDS
+MANY SURPRISES AND
+ALSO SOME LAUNDRY
+7 14 42 88 3 21
 
 Mix of approaches:
 - Traditional wisdom with unexpected endings
 - Delightfully weird predictions
 - Playful subversions of fortune cookie cliches
 
-Lucky number ideas:
-- Classic lucky numbers (7, 8, 88)
-- Pop culture references (42, 1337, 007)
-- Pi digits, prime numbers, or other nerdy picks
-- Oddly specific numbers that make people wonder
+Lucky numbers strategy:
+- If numbers relate to your fortune's content, USE THEMATIC NUMBERS you create:
+  - Fortune about cats? Try 9 (lives), 4 (paws), 12 (hours of sleep)
+  - Fortune about work? Try 5 (workdays), 40 (hours), 2 (weeks vacation)
+  - Fortune about food? Try 3 (meals), 86 (restaurant code), 350 (oven temp)
+- If no numbers feel meaningful, use these: {{luckyNumbers}}
 
 The fortune should make someone smile or chuckle. Surprise them.
