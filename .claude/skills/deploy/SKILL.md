@@ -97,13 +97,8 @@ docker service logs clack-track_app --tail 50 --since 2m 2>&1 | grep -i "error\|
 ### Step 4: Verify Application
 
 ```bash
-# Check container health
+# Check container health status
 docker inspect $(docker ps -q -f name=clack-track_app) --format '{{.State.Health.Status}}' 2>/dev/null || echo "No health check configured"
-
-# Test web endpoint if enabled (get host from DOCKER_HOST)
-# Extract host IP from DOCKER_HOST (format: ssh://user@host)
-DOCKER_IP=$(echo $DOCKER_HOST | sed 's|ssh://[^@]*@||')
-curl -s -o /dev/null -w "%{http_code}" http://${DOCKER_IP}:3000/health 2>/dev/null || echo "Web endpoint not accessible (may be expected)"
 ```
 
 ## Rollback Procedure
