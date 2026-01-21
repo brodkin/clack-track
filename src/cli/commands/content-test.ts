@@ -120,16 +120,22 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
 
     // Wrap generator with ToolBasedGenerator for validation loop
     // This matches the orchestrator's behavior for consistent testing
+    // Only AI generators (with isAIGenerator marker) get wrapped
     let generator: ContentGenerator = registered.generator;
-    if (aiProvider) {
+    const isAIGenerator = registered.generator.isAIGenerator === true;
+
+    if (isAIGenerator && aiProvider) {
       const { toolBasedOptions } = registered.registration;
       generator = ToolBasedGenerator.wrap(registered.generator, {
         aiProvider,
         maxAttempts: toolBasedOptions?.maxAttempts ?? 3,
         exhaustionStrategy: toolBasedOptions?.exhaustionStrategy ?? 'throw',
       });
-    } else {
+      log('Using tool-based generation (AI validation loop enabled)\n');
+    } else if (isAIGenerator && !aiProvider) {
       log('Warning: No AI provider configured - tool-based validation will be skipped\n');
+    } else {
+      log('Programmatic generator - running directly (no AI validation)\n');
     }
 
     // Measure generation time
@@ -273,8 +279,22 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
     log('TIMING INFORMATION');
     log('='.repeat(60));
     log(`Generation time: ${generationTime}ms`);
-    log(`Timestamp: ${context.timestamp.toISOString()}\n`);
+    log(`Timestamp: ${context.timestamp.toISOString()}`);
 
+    // Display tool-based generation metrics if available
+    if (content.metadata?.toolAttempts !== undefined) {
+      log('');
+      log('='.repeat(60));
+      log('TOOL-BASED GENERATION METRICS');
+      log('='.repeat(60));
+      log(`Tool attempts: ${content.metadata.toolAttempts}`);
+      log(`Accepted: ${content.metadata.toolAccepted ? 'Yes' : 'No'}`);
+      if (content.metadata.toolExhausted) {
+        log(`Exhausted: Yes (forced acceptance)`);
+      }
+    }
+
+    log('');
     log('✅ Test completed successfully\n');
   } catch (err) {
     error('Failed to test content generator:', err);

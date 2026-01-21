@@ -423,6 +423,14 @@ export interface ContentGenerator {
    * ```
    */
   validate(): Promise<GeneratorValidationResult>;
+
+  /**
+   * Marker indicating this is an AI-powered generator.
+   * When true, the orchestrator wraps with ToolBasedGenerator for validation.
+   * AI generators (extending AIPromptGenerator) set this to true automatically.
+   * Programmatic generators leave this undefined/false.
+   */
+  readonly isAIGenerator?: boolean;
 }
 
 /**
