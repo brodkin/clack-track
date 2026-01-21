@@ -60,6 +60,7 @@ describe('registerCoreContent', () => {
     timePerspective: createMockGenerator('timePerspective'),
     hotTake: createMockGenerator('hotTake'),
     novelInsight: createMockGenerator('novelInsight'),
+    languageLesson: createMockGenerator('languageLesson'),
     staticFallback: createMockGenerator('fallback'),
   });
 
@@ -100,8 +101,8 @@ describe('registerCoreContent', () => {
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
       // motivational, globalNews, techNews, localNews, weather, haiku, seasonal, pattern,
       // showerThought, fortuneCookie, countdown, dailyRoast, storyFragment, timePerspective,
-      // hotTake, novelInsight = 16
-      expect(normalPriorityGens.length).toBe(16);
+      // hotTake, novelInsight, languageLesson = 17
+      expect(normalPriorityGens.length).toBe(17);
     });
   });
 
@@ -137,8 +138,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const allGenerators = registry.getAll();
-      // 16 P2 + 1 P3 = 17 total
-      expect(allGenerators.length).toBe(17);
+      // 17 P2 + 1 P3 = 18 total
+      expect(allGenerators.length).toBe(18);
     });
 
     it('should maintain correct priority distribution', () => {
@@ -150,10 +151,10 @@ describe('registerCoreContent', () => {
       const fallbackGens = registry.getByPriority(ContentPriority.FALLBACK);
       const notificationGens = registry.getByPriority(ContentPriority.NOTIFICATION);
 
-      // 16 P2 generators: motivational, globalNews, techNews, localNews, weather, haiku,
+      // 17 P2 generators: motivational, globalNews, techNews, localNews, weather, haiku,
       // seasonal, pattern, showerThought, fortuneCookie, countdown, dailyRoast, storyFragment,
-      // timePerspective, hotTake, novelInsight
-      expect(normalGens.length).toBe(16);
+      // timePerspective, hotTake, novelInsight, languageLesson
+      expect(normalGens.length).toBe(17);
       expect(fallbackGens.length).toBe(1);
       expect(notificationGens.length).toBe(0);
     });
@@ -217,8 +218,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      // All 16 P2 generators including 3 news generators
-      expect(normalPriorityGens.length).toBe(16);
+      // All 17 P2 generators including 3 news generators
+      expect(normalPriorityGens.length).toBe(17);
     });
 
     it('should not register old news-summary generator', () => {
@@ -262,6 +263,23 @@ describe('registerCoreContent', () => {
       expect(registered?.registration.modelTier).toBe(ModelTier.MEDIUM);
       expect(registered?.registration.applyFrame).toBe(true);
       expect(registered?.generator).toBe(generators.novelInsight);
+    });
+  });
+
+  describe('Language Lesson Generator', () => {
+    it('should register language-lesson generator with correct metadata', () => {
+      const generators = createFullGenerators();
+
+      registerCoreContent(registry, generators);
+
+      const registered = registry.getById('language-lesson');
+      expect(registered).toBeDefined();
+      expect(registered?.registration.id).toBe('language-lesson');
+      expect(registered?.registration.name).toBe('Language Lesson Generator');
+      expect(registered?.registration.priority).toBe(ContentPriority.NORMAL);
+      expect(registered?.registration.modelTier).toBe(ModelTier.LIGHT);
+      expect(registered?.registration.applyFrame).toBe(true);
+      expect(registered?.generator).toBe(generators.languageLesson);
     });
   });
 });

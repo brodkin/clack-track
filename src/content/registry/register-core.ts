@@ -29,6 +29,7 @@ import { ContentRegistry } from './content-registry.js';
  * @property {ContentGenerator} dailyRoast - Daily roast generator (P2, MEDIUM)
  * @property {ContentGenerator} hotTake - Hot take generator (P2, LIGHT)
  * @property {ContentGenerator} novelInsight - Novel insight generator (P2, MEDIUM)
+ * @property {ContentGenerator} languageLesson - Language lesson generator (P2, LIGHT)
  *
  * @example
  * ```typescript
@@ -47,6 +48,7 @@ import { ContentRegistry } from './content-registry.js';
  *   dailyRoast: new DailyRoastGenerator(),
  *   hotTake: new HotTakeGenerator(),
  *   novelInsight: new NovelInsightGenerator(),
+ *   languageLesson: new LanguageLessonGenerator(),
  *   staticFallback: new StaticFallbackGenerator()
  * };
  * ```
@@ -84,6 +86,8 @@ export interface CoreGenerators {
   hotTake: ContentGenerator;
   /** Novel insight generator (P2, MEDIUM, AI-powered) */
   novelInsight: ContentGenerator;
+  /** Language lesson generator (P2, LIGHT, AI-powered) */
+  languageLesson: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -106,6 +110,7 @@ export interface CoreGenerators {
  *   - countdown: Days until events (LIGHT, AI)
  *   - hot-take: Playful opinions (LIGHT, AI)
  *   - novel-insight: Fresh perspectives (MEDIUM, AI)
+ *   - language-lesson: Duolingo-style micro-lessons (LIGHT, AI)
  * - **P3 Generator (FALLBACK priority)**:
  *   - static-fallback: Static message when AI fails (LIGHT)
  *
@@ -310,6 +315,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.novelInsight
+  );
+
+  registry.register(
+    {
+      id: 'language-lesson',
+      name: 'Language Lesson Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.languageLesson
   );
 
   // Register P3 fallback generator (FALLBACK priority)
