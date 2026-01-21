@@ -285,9 +285,7 @@ export class SerialStoryGenerator extends AIPromptGenerator {
     }
 
     // Sort chapters chronologically (oldest first) for continuation context
-    const chronologicalChapters = isNewStory
-      ? []
-      : [...previousChapters].reverse();
+    const chronologicalChapters = isNewStory ? [] : [...previousChapters].reverse();
 
     // Determine arc phase based on current chapter
     const arcPhase = this.getArcPhase(currentChapter);

@@ -12,8 +12,12 @@
  * - Reuses SCENARIO and EMOTIONAL_BEAT dictionaries from story-fragment-generator
  */
 
-import { SerialStoryGenerator, StoryState } from '@/content/generators/ai/serial-story-generator';
-import { SCENARIO, EMOTIONAL_BEAT } from '@/content/generators/ai/story-fragment-generator';
+import {
+  SerialStoryGenerator,
+  StoryState,
+  SCENARIO,
+  EMOTIONAL_BEAT,
+} from '@/content/generators/ai/serial-story-generator';
 import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector';
 import { ContentRepository } from '@/storage/repositories/content-repo';
