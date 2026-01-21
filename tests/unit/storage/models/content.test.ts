@@ -752,6 +752,152 @@ describe('ContentModel', () => {
     });
   });
 
+  describe('findByGeneratorIdLatest', () => {
+    test('should find content records by generatorId ordered by generatedAt DESC', async () => {
+      const now = new Date();
+
+      // Create content for generator 'haiku'
+      await contentModel.create({
+        text: 'Haiku 1',
+        type: 'major',
+        generatedAt: new Date(now.getTime()),
+        sentAt: null,
+        aiProvider: 'openai',
+        generatorId: 'haiku',
+        generatorName: 'Haiku Generator',
+        priority: 2,
+      });
+
+      await contentModel.create({
+        text: 'Haiku 2',
+        type: 'major',
+        generatedAt: new Date(now.getTime() + 1000),
+        sentAt: null,
+        aiProvider: 'openai',
+        generatorId: 'haiku',
+        generatorName: 'Haiku Generator',
+        priority: 2,
+      });
+
+      // Create content for a different generator
+      await contentModel.create({
+        text: 'News 1',
+        type: 'major',
+        generatedAt: new Date(now.getTime() + 2000),
+        sentAt: null,
+        aiProvider: 'openai',
+        generatorId: 'news-summary',
+        generatorName: 'News Summary Generator',
+        priority: 2,
+      });
+
+      const results = await contentModel.findByGeneratorIdLatest('haiku', 10);
+
+      expect(results).toHaveLength(2);
+      expect(results.every(c => c.generatorId === 'haiku')).toBe(true);
+      // Verify descending order by generatedAt
+      expect(results[0].text).toBe('Haiku 2');
+      expect(results[1].text).toBe('Haiku 1');
+    });
+
+    test('should respect limit parameter', async () => {
+      const now = new Date();
+
+      for (let i = 0; i < 5; i++) {
+        await contentModel.create({
+          text: `Haiku ${i}`,
+          type: 'major',
+          generatedAt: new Date(now.getTime() + i * 1000),
+          sentAt: null,
+          aiProvider: 'openai',
+          generatorId: 'haiku',
+          generatorName: 'Haiku Generator',
+          priority: 2,
+        });
+      }
+
+      const results = await contentModel.findByGeneratorIdLatest('haiku', 2);
+
+      expect(results).toHaveLength(2);
+    });
+
+    test('should return empty array when no content matches generatorId', async () => {
+      const now = new Date();
+
+      await contentModel.create({
+        text: 'News 1',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        generatorId: 'news-summary',
+        generatorName: 'News Summary Generator',
+        priority: 2,
+      });
+
+      const results = await contentModel.findByGeneratorIdLatest('haiku', 10);
+
+      expect(results).toEqual([]);
+    });
+
+    test('should return empty array when no content exists', async () => {
+      const results = await contentModel.findByGeneratorIdLatest('haiku', 10);
+
+      expect(results).toEqual([]);
+    });
+
+    test('should default to limit of 10', async () => {
+      const now = new Date();
+
+      for (let i = 0; i < 15; i++) {
+        await contentModel.create({
+          text: `Haiku ${i}`,
+          type: 'major',
+          generatedAt: new Date(now.getTime() + i * 1000),
+          sentAt: null,
+          aiProvider: 'openai',
+          generatorId: 'haiku',
+          generatorName: 'Haiku Generator',
+          priority: 2,
+        });
+      }
+
+      const results = await contentModel.findByGeneratorIdLatest('haiku');
+
+      expect(results).toHaveLength(10);
+    });
+
+    test('should include content with null generatorId when searching for null', async () => {
+      const now = new Date();
+
+      // Content without generatorId
+      await contentModel.create({
+        text: 'Legacy Content',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
+      // Content with generatorId
+      await contentModel.create({
+        text: 'Haiku 1',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        generatorId: 'haiku',
+        generatorName: 'Haiku Generator',
+        priority: 2,
+      });
+
+      const results = await contentModel.findByGeneratorIdLatest('haiku', 10);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].text).toBe('Haiku 1');
+    });
+  });
+
   describe('findFailures', () => {
     test('should find all failed content records', async () => {
       const now = new Date();

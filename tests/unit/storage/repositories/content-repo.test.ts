@@ -179,6 +179,139 @@ describe('ContentRepository', () => {
     });
   });
 
+  describe('findLatestByGenerator', () => {
+    test('should find content records by generatorId', async () => {
+      const now = new Date();
+
+      await contentRepo.saveContent({
+        text: 'Haiku 1',
+        type: 'major',
+        generatedAt: new Date(now.getTime()),
+        sentAt: null,
+        aiProvider: 'openai',
+        generatorId: 'haiku',
+        generatorName: 'Haiku Generator',
+        priority: 2,
+      });
+
+      await contentRepo.saveContent({
+        text: 'Haiku 2',
+        type: 'major',
+        generatedAt: new Date(now.getTime() + 1000),
+        sentAt: null,
+        aiProvider: 'openai',
+        generatorId: 'haiku',
+        generatorName: 'Haiku Generator',
+        priority: 2,
+      });
+
+      await contentRepo.saveContent({
+        text: 'News 1',
+        type: 'major',
+        generatedAt: new Date(now.getTime() + 2000),
+        sentAt: null,
+        aiProvider: 'openai',
+        generatorId: 'news-summary',
+        generatorName: 'News Summary Generator',
+        priority: 2,
+      });
+
+      const results = await contentRepo.findLatestByGenerator('haiku', 10);
+
+      expect(results).toHaveLength(2);
+      expect(results.every(c => c.generatorId === 'haiku')).toBe(true);
+      // Verify descending order by generatedAt
+      expect(results[0].text).toBe('Haiku 2');
+      expect(results[1].text).toBe('Haiku 1');
+    });
+
+    test('should respect limit parameter', async () => {
+      const now = new Date();
+
+      for (let i = 0; i < 5; i++) {
+        await contentRepo.saveContent({
+          text: `Haiku ${i}`,
+          type: 'major',
+          generatedAt: new Date(now.getTime() + i * 1000),
+          sentAt: null,
+          aiProvider: 'openai',
+          generatorId: 'haiku',
+          generatorName: 'Haiku Generator',
+          priority: 2,
+        });
+      }
+
+      const results = await contentRepo.findLatestByGenerator('haiku', 2);
+
+      expect(results).toHaveLength(2);
+    });
+
+    test('should return empty array when no content matches generatorId', async () => {
+      const now = new Date();
+
+      await contentRepo.saveContent({
+        text: 'News 1',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        generatorId: 'news-summary',
+        generatorName: 'News Summary Generator',
+        priority: 2,
+      });
+
+      const results = await contentRepo.findLatestByGenerator('haiku', 10);
+
+      expect(results).toEqual([]);
+    });
+
+    test('should return empty array when database is empty', async () => {
+      const results = await contentRepo.findLatestByGenerator('haiku', 10);
+
+      expect(results).toEqual([]);
+    });
+
+    test('should default to limit of 10', async () => {
+      const now = new Date();
+
+      for (let i = 0; i < 15; i++) {
+        await contentRepo.saveContent({
+          text: `Haiku ${i}`,
+          type: 'major',
+          generatedAt: new Date(now.getTime() + i * 1000),
+          sentAt: null,
+          aiProvider: 'openai',
+          generatorId: 'haiku',
+          generatorName: 'Haiku Generator',
+          priority: 2,
+        });
+      }
+
+      const results = await contentRepo.findLatestByGenerator('haiku');
+
+      expect(results).toHaveLength(10);
+    });
+
+    test('should handle database errors gracefully and return empty array', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const mockModel = {
+        findByGeneratorIdLatest: jest.fn().mockRejectedValue(new Error('Database error')),
+      };
+
+      const failingRepo = new ContentRepository(mockModel as unknown as ContentModel);
+      const results = await failingRepo.findLatestByGenerator('haiku', 10);
+
+      expect(results).toEqual([]);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to fetch content by generator'),
+        expect.any(Error)
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+  });
+
   describe('cleanupOldRecords', () => {
     test('should delete records older than retention period', async () => {
       const now = new Date();
