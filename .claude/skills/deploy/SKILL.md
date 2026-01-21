@@ -11,11 +11,11 @@ Deploy the application to production Docker Swarm environment with safety checks
 
 ### Load Production Environment
 
-**All deployment commands require `DOCKER_HOST` to be set.** Load it from `.env.production`:
+**All deployment commands require `DOCKER_HOST` to be set.** Load and export it from `.env.production`:
 
 ```bash
-# Load production environment (REQUIRED before any docker commands)
-source .env.production
+# Load and export production environment (REQUIRED before any docker commands)
+set -a; source .env.production; set +a
 
 # Verify DOCKER_HOST is set
 echo "DOCKER_HOST=$DOCKER_HOST"
@@ -49,8 +49,8 @@ echo "Main is $BEHIND_COUNT commits behind develop"
 ### 2. Verify Production Environment
 
 ```bash
-# Ensure environment is loaded
-source .env.production
+# Ensure environment is loaded and exported
+set -a; source .env.production; set +a
 
 # Test Docker connection
 docker info --format '{{.ServerVersion}}'

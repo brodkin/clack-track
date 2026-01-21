@@ -4,10 +4,10 @@ Common issues and solutions for Clack Track production deployments.
 
 ## Prerequisites
 
-**All commands in this guide assume `DOCKER_HOST` is set.** Load it first:
+**All commands in this guide assume `DOCKER_HOST` is set.** Load and export it first:
 
 ```bash
-source .env.production
+set -a; source .env.production; set +a
 echo "DOCKER_HOST=$DOCKER_HOST"  # Verify it's set
 ```
 
@@ -57,7 +57,7 @@ Commands below use this pattern or the shorthand `$(docker ps -q -f "label=com.d
 
 **Solution**: Set the API version explicitly (check `.env.production` for `DOCKER_API_VERSION`):
 ```bash
-source .env.production
+set -a; source .env.production; set +a
 docker info
 ```
 
