@@ -81,6 +81,8 @@ export class CircuitBreakerRepository {
         .where('circuit_id', circuitId)
         .first();
 
+      console.log(`[DEBUG] getState ${circuitId}: row.state=${row?.state}`);
+
       if (!row) {
         return null;
       }
@@ -124,7 +126,13 @@ export class CircuitBreakerRepository {
         updateData.state_changed_at = update.stateChangedAt;
       }
 
-      await this.knex('circuit_breaker_state').where('circuit_id', circuitId).update(updateData);
+      const rowsAffected = await this.knex('circuit_breaker_state')
+        .where('circuit_id', circuitId)
+        .update(updateData);
+      console.log(
+        `[DEBUG] setState ${circuitId}: rows affected=${rowsAffected}, updateData=`,
+        JSON.stringify(updateData)
+      );
     } catch (error) {
       console.warn('Failed to set circuit state:', error);
     }

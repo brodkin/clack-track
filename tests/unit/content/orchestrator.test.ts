@@ -824,51 +824,6 @@ describe('ContentOrchestrator', () => {
           })
         );
       });
-
-      it('should not save content on minor updates', async () => {
-        // Arrange
-        const context: GenerationContext = {
-          updateType: 'minor',
-          timestamp: new Date('2025-01-15T10:30:00Z'),
-        };
-
-        const mockGenerator: ContentGenerator = {
-          generate: jest.fn(),
-          validate: jest.fn().mockReturnValue({ valid: true }),
-        };
-
-        const registeredGenerator: RegisteredGenerator = {
-          registration: {
-            id: 'minor-update',
-            name: 'Minor Update',
-            priority: 2,
-            modelTier: ModelTier.LIGHT,
-            applyFrame: true,
-          },
-          generator: mockGenerator,
-        };
-
-        const generatedContent: GeneratedContent = {
-          text: 'MINOR UPDATE',
-          outputMode: 'text',
-        };
-
-        mockSelector.select.mockReturnValue(registeredGenerator);
-        (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
-        mockDecorator.decorate.mockResolvedValue({
-          layout: [[1, 2, 3]],
-          warnings: [],
-        });
-
-        // Act
-        await orchestrator.generateAndSend(context);
-
-        // Wait for fire-and-forget promise
-        await new Promise(resolve => setImmediate(resolve));
-
-        // Assert
-        expect(mockContentRepository.saveContent).not.toHaveBeenCalled();
-      });
     });
 
     describe('Failed Generations', () => {

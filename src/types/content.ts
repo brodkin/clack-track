@@ -29,9 +29,10 @@ export interface ContentGenerationContext {
 /**
  * Block reasons for when content generation is blocked
  * - 'master_circuit_off' - Master circuit is OFF, blocking all updates
+ * - 'sleep_mode_active' - Sleep mode is active, blocking updates during quiet hours
  * - 'provider_unavailable' - All AI providers are unavailable (circuits open)
  */
-export type BlockReason = 'master_circuit_off' | 'provider_unavailable';
+export type BlockReason = 'master_circuit_off' | 'sleep_mode_active' | 'provider_unavailable';
 
 /**
  * Circuit state information for diagnostics
@@ -39,6 +40,8 @@ export type BlockReason = 'master_circuit_off' | 'provider_unavailable';
 export interface CircuitStateInfo {
   /** Whether the master circuit is enabled (true = ON, false = OFF) */
   master: boolean;
+  /** Whether sleep mode is disabled (true = sleep mode OFF, false = sleep mode ON/active) */
+  sleepMode?: boolean;
   /** Provider circuit ID that was checked (if applicable) */
   provider?: string;
 }

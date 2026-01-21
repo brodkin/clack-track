@@ -7,6 +7,9 @@
  * These commands use lightweight initialization (database only) instead of
  * full bootstrap to avoid starting the web server, scheduler, and HA client.
  *
+ * Exception: SLEEP_MODE circuit uses full bootstrap to enable content generation
+ * when toggling sleep mode on/off.
+ *
  * @module cli/commands/circuit
  */
 
@@ -14,6 +17,8 @@ import { getKnexInstance, closeKnexInstance } from '../../storage/knex.js';
 import { CircuitBreakerService } from '../../services/circuit-breaker-service.js';
 import { CircuitBreakerRepository } from '../../storage/repositories/circuit-breaker-repo.js';
 import type { CircuitBreakerState } from '../../types/circuit-breaker.js';
+import { bootstrap, type BootstrapResult } from '../../bootstrap.js';
+import { log, warn } from '../../utils/logger.js';
 
 /**
  * Options for circuit:on and circuit:off commands
@@ -161,14 +166,24 @@ export async function circuitStatusCommand(): Promise<void> {
  * Uses lightweight initialization (database only) - does not start
  * web server, scheduler, or Home Assistant client.
  *
+ * Exception: SLEEP_MODE circuit uses full bootstrap to display wakeup greeting
+ * when exiting sleep mode.
+ *
  * @param options - Command options containing circuitId
  *
  * @example
  * ```bash
  * npm run circuit:on -- MASTER
+ * npm run circuit:on -- SLEEP_MODE  # Enters sleep mode (display art, block updates)
  * ```
  */
 export async function circuitOnCommand(options: CircuitToggleOptions): Promise<void> {
+  // SLEEP_MODE: "circuit:on SLEEP_MODE" = user wants to enter sleep mode
+  if (options.circuitId === 'SLEEP_MODE') {
+    await enterSleepMode();
+    return;
+  }
+
   const knex = getKnexInstance();
 
   try {
@@ -191,6 +206,76 @@ export async function circuitOnCommand(options: CircuitToggleOptions): Promise<v
 }
 
 /**
+ * Exit sleep mode (wake up) with full bootstrap
+ *
+ * Called by `circuit:off SLEEP_MODE` - user wants to wake up
+ *
+ * When waking up from sleep mode:
+ * 1. Unblock the circuit FIRST (allow content generation)
+ * 2. Display wakeup greeting using WakeupGreetingGenerator
+ *
+ * Uses full bootstrap to access ContentOrchestrator for content generation.
+ */
+async function exitSleepMode(): Promise<void> {
+  let scheduler: BootstrapResult['scheduler'] | null = null;
+  let haClient: BootstrapResult['haClient'] = null;
+  let knex: BootstrapResult['knex'] = null;
+
+  try {
+    log('Waking up from sleep mode...');
+
+    // Full bootstrap to access orchestrator for content generation
+    const {
+      orchestrator,
+      circuitBreaker,
+      scheduler: bootstrapScheduler,
+      haClient: bootstrapHaClient,
+      knex: bootstrapKnex,
+    } = await bootstrap();
+    scheduler = bootstrapScheduler;
+    haClient = bootstrapHaClient;
+    knex = bootstrapKnex;
+
+    // Validate circuit exists
+    if (!circuitBreaker) {
+      console.error('Error: Circuit breaker service not available');
+      return;
+    }
+
+    const circuit = await circuitBreaker.getCircuitStatus('SLEEP_MODE');
+    if (!circuit) {
+      console.error("Error: Circuit 'SLEEP_MODE' not found");
+      return;
+    }
+
+    // Step 1: Unblock the circuit FIRST (allow content generation)
+    await circuitBreaker.setCircuitState('SLEEP_MODE', 'on');
+    log('Sleep mode disabled - updates now allowed');
+
+    // Step 2: Display wakeup greeting
+    try {
+      const result = await orchestrator.generateAndSend({
+        updateType: 'major',
+        timestamp: new Date(),
+        generatorId: 'wakeup-greeting-generator',
+      });
+      if (result.success) {
+        log('Wakeup greeting displayed successfully');
+      } else {
+        warn('Wakeup greeting not displayed:', result.blockReason ?? 'unknown');
+      }
+    } catch (error) {
+      warn('Failed to display wakeup greeting:', error);
+      // Circuit is already unblocked, so normal content updates can resume
+    }
+
+    console.log('Sleep mode is now OFF - wakeup greeting displayed, regular updates will resume');
+  } finally {
+    await cleanupBootstrapResources(scheduler, haClient, knex);
+  }
+}
+
+/**
  * Circuit off command - disables a circuit (turns it OFF)
  *
  * Sets the specified circuit state to 'off', blocking traffic.
@@ -198,14 +283,24 @@ export async function circuitOnCommand(options: CircuitToggleOptions): Promise<v
  * Uses lightweight initialization (database only) - does not start
  * web server, scheduler, or Home Assistant client.
  *
+ * Exception: SLEEP_MODE circuit uses full bootstrap to display sleep art
+ * before entering sleep mode.
+ *
  * @param options - Command options containing circuitId
  *
  * @example
  * ```bash
  * npm run circuit:off -- MASTER
+ * npm run circuit:off -- SLEEP_MODE  # Exits sleep mode (wake up, display greeting)
  * ```
  */
 export async function circuitOffCommand(options: CircuitToggleOptions): Promise<void> {
+  // SLEEP_MODE: "circuit:off SLEEP_MODE" = user wants to wake up
+  if (options.circuitId === 'SLEEP_MODE') {
+    await exitSleepMode();
+    return;
+  }
+
   const knex = getKnexInstance();
 
   try {
@@ -224,6 +319,119 @@ export async function circuitOffCommand(options: CircuitToggleOptions): Promise<
     console.log(`Circuit '${options.circuitId}' has been turned OFF (disabled)`);
   } finally {
     await closeKnexInstance();
+  }
+}
+
+/**
+ * Enter sleep mode with full bootstrap
+ *
+ * Called by `circuit:on SLEEP_MODE` - user wants to go to sleep
+ *
+ * When entering sleep mode:
+ * 1. Display sleep art using SleepModeGenerator FIRST
+ * 2. Block the circuit (prevent subsequent updates)
+ *
+ * Uses full bootstrap to access ContentOrchestrator for content generation.
+ */
+async function enterSleepMode(): Promise<void> {
+  let scheduler: BootstrapResult['scheduler'] | null = null;
+  let haClient: BootstrapResult['haClient'] = null;
+  let knex: BootstrapResult['knex'] = null;
+
+  try {
+    log('Entering sleep mode...');
+
+    // Full bootstrap to access orchestrator for content generation
+    const {
+      orchestrator,
+      circuitBreaker,
+      scheduler: bootstrapScheduler,
+      haClient: bootstrapHaClient,
+      knex: bootstrapKnex,
+    } = await bootstrap();
+    scheduler = bootstrapScheduler;
+    haClient = bootstrapHaClient;
+    knex = bootstrapKnex;
+
+    // Validate circuit exists
+    if (!circuitBreaker) {
+      console.error('Error: Circuit breaker service not available');
+      return;
+    }
+
+    const circuit = await circuitBreaker.getCircuitStatus('SLEEP_MODE');
+    if (!circuit) {
+      console.error("Error: Circuit 'SLEEP_MODE' not found");
+      return;
+    }
+
+    // Step 1: Display sleep art BEFORE blocking
+    try {
+      const result = await orchestrator.generateAndSend({
+        updateType: 'major',
+        timestamp: new Date(),
+        generatorId: 'sleep-mode-generator',
+      });
+      if (result.success) {
+        log('Sleep mode art displayed successfully');
+      } else {
+        warn('Sleep mode art not displayed:', result.blockReason ?? 'unknown');
+      }
+    } catch (error) {
+      warn('Failed to display sleep mode art:', error);
+      // Continue to set circuit state even if content generation fails
+    }
+
+    // Step 2: Block the circuit (prevent subsequent updates)
+    await circuitBreaker.setCircuitState('SLEEP_MODE', 'off');
+    log('Sleep mode enabled - updates now blocked');
+
+    console.log('Sleep mode is now ON - goodnight art displayed, updates are blocked');
+  } finally {
+    await cleanupBootstrapResources(scheduler, haClient, knex);
+  }
+}
+
+/**
+ * Clean up bootstrap resources for CLI commands
+ *
+ * Stops scheduler, disconnects HA client, and closes Knex connection
+ * to allow the CLI process to exit cleanly.
+ *
+ * @param scheduler - CronScheduler instance from bootstrap
+ * @param haClient - HomeAssistantClient instance from bootstrap
+ * @param knex - Knex instance from bootstrap
+ */
+async function cleanupBootstrapResources(
+  scheduler: BootstrapResult['scheduler'] | null,
+  haClient: BootstrapResult['haClient'],
+  knex: BootstrapResult['knex']
+): Promise<void> {
+  // Stop scheduler to prevent dangling timers
+  if (scheduler) {
+    try {
+      scheduler.stop();
+    } catch {
+      // Ignore scheduler stop errors - not critical for CLI command
+    }
+  }
+
+  // Disconnect Home Assistant WebSocket to allow process to exit
+  if (haClient) {
+    try {
+      await haClient.disconnect();
+    } catch {
+      // Ignore disconnect errors - not critical for CLI command
+    }
+  }
+
+  // Close Knex database connection to allow process to exit
+  if (knex) {
+    try {
+      await closeKnexInstance();
+    } catch {
+      // Ignore Knex close errors - not critical for CLI command
+    }
   }
 }
 

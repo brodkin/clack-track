@@ -42,6 +42,8 @@ export interface EnvironmentConfig {
   vestaboard?: {
     apiKey: string;
     apiUrl: string;
+    /** Board model: 'black' (default) or 'white' - affects color tile behavior */
+    model: 'black' | 'white';
   };
 
   // AI Providers
@@ -126,7 +128,8 @@ export function loadConfig(): EnvironmentConfig {
         'VESTABOARD_LOCAL_API_URL',
         'http://localhost:7000'
       );
-      return apiKey ? { apiKey, apiUrl } : undefined;
+      const model = getOptionalEnv('VESTABOARD_MODEL', 'black') as 'black' | 'white';
+      return apiKey ? { apiKey, apiUrl, model } : undefined;
     })(),
 
     ai: {

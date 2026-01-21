@@ -8,7 +8,6 @@
  * @module content/generators/ai
  */
 
-export { ComplimentGenerator } from './compliment-generator.js';
 export { DailyRoastGenerator } from './daily-roast-generator.js';
 export { FortuneCookieGenerator } from './fortune-cookie-generator.js';
 export { GlobalNewsGenerator } from './global-news-generator.js';
@@ -21,8 +20,10 @@ export { NovelInsightGenerator } from './novel-insight-generator.js';
 export { ParadoxEngineGenerator } from './paradox-engine-generator.js';
 export { SeasonalGenerator } from './seasonal-generator.js';
 export { ShowerThoughtGenerator } from './shower-thought-generator.js';
+export { SleepGreetingGenerator } from './sleep-greeting-generator.js';
 export { StoryFragmentGenerator } from './story-fragment-generator.js';
 export { TechNewsGenerator } from './tech-news-generator.js';
 export { TimePerspectiveGenerator } from './time-perspective-generator.js';
+export { WakeupGreetingGenerator } from './wakeup-greeting-generator.js';
 export { WeatherGenerator } from './weather-generator.js';
 export { WordOfTheDayGenerator } from './word-of-the-day-generator.js';

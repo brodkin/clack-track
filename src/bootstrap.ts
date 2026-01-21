@@ -31,11 +31,13 @@ import { ShowerThoughtGenerator } from './content/generators/ai/shower-thought-g
 import { FortuneCookieGenerator } from './content/generators/ai/fortune-cookie-generator.js';
 import { DailyRoastGenerator } from './content/generators/ai/daily-roast-generator.js';
 import { HotTakeGenerator } from './content/generators/ai/hot-take-generator.js';
-import { ComplimentGenerator } from './content/generators/ai/compliment-generator.js';
 import { NovelInsightGenerator } from './content/generators/ai/novel-insight-generator.js';
 import { StoryFragmentGenerator } from './content/generators/ai/story-fragment-generator.js';
 import { TimePerspectiveGenerator } from './content/generators/ai/time-perspective-generator.js';
+import { LanguageLessonGenerator } from './content/generators/ai/language-lesson-generator.js';
+import { WakeupGreetingGenerator } from './content/generators/ai/wakeup-greeting-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
+import { SleepModeGenerator } from './content/generators/programmatic/sleep-mode-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
 import { RSSClient } from './api/data-sources/rss-client.js';
 import { PromptLoader } from './content/prompt-loader.js';
@@ -52,6 +54,7 @@ import {
 } from './storage/repositories/index.js';
 import { CircuitBreakerService } from './services/circuit-breaker-service.js';
 import type { AIProvider } from './types/ai.js';
+import { ContentPriority, ModelTier } from './types/content-generator.js';
 import { TriggerConfigLoader } from './config/trigger-config.js';
 import { TriggerMatcher } from './scheduler/trigger-matcher.js';
 import { log as logMessage, warn } from './utils/logger.js';
@@ -189,8 +192,8 @@ function createCoreGenerators(
     storyFragment: new StoryFragmentGenerator(promptLoader, modelTierSelector, apiKeys),
     timePerspective: new TimePerspectiveGenerator(promptLoader, modelTierSelector, apiKeys),
     hotTake: new HotTakeGenerator(promptLoader, modelTierSelector, apiKeys),
-    compliment: new ComplimentGenerator(promptLoader, modelTierSelector, apiKeys),
     novelInsight: new NovelInsightGenerator(promptLoader, modelTierSelector, apiKeys),
+    languageLesson: new LanguageLessonGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }
@@ -359,6 +362,42 @@ export async function bootstrap(): Promise<BootstrapResult> {
   const notificationFactory = new HANotificationGeneratorFactory();
   registerNotifications(registry, notificationFactory);
 
+  // Step 5b: Register sleep mode generators (explicit invocation only, not in P2 rotation)
+  // These generators are invoked explicitly via generatorId from circuit breaker events.
+  // Using NOTIFICATION priority WITHOUT eventTriggerPattern ensures they:
+  // - Are NOT included in P2 random selection (only P2 generators are randomly selected)
+  // - Are NOT triggered by HA events (no eventTriggerPattern defined)
+  // - CAN be looked up by ID for explicit invocation via orchestrator.generateAndSend({ generatorId })
+  const sleepModeGenerator = new SleepModeGenerator(promptLoader, modelTierSelector, apiKeys);
+  registry.register(
+    {
+      id: 'sleep-mode-generator',
+      name: 'Sleep Mode Generator',
+      priority: ContentPriority.NOTIFICATION,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: false, // Full-screen sleep art, no frame
+      tags: ['sleep-mode', 'explicit-only'],
+    },
+    sleepModeGenerator
+  );
+
+  const wakeupGreetingGenerator = new WakeupGreetingGenerator(
+    promptLoader,
+    modelTierSelector,
+    apiKeys
+  );
+  registry.register(
+    {
+      id: 'wakeup-greeting-generator',
+      name: 'Wakeup Greeting Generator',
+      priority: ContentPriority.NOTIFICATION,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true, // Standard framed content
+      tags: ['sleep-mode', 'explicit-only'],
+    },
+    wakeupGreetingGenerator
+  );
+
   // Step 6: Create core content infrastructure
   const selector = new ContentSelector(registry);
   const vestaboardClient = createVestaboardClient({
@@ -429,7 +468,12 @@ export async function bootstrap(): Promise<BootstrapResult> {
 
   // Step 12: Create CronScheduler for periodic updates
   const minorUpdateGenerator = new MinorUpdateGenerator(orchestrator, frameDecorator);
-  const scheduler = new CronScheduler(minorUpdateGenerator, vestaboardClient, orchestrator);
+  const scheduler = new CronScheduler(
+    minorUpdateGenerator,
+    vestaboardClient,
+    orchestrator,
+    circuitBreakerService
+  );
 
   // Return all initialized components
   return {

@@ -26,8 +26,8 @@ import { ContentRegistry } from './content-registry.js';
  * @property {ContentGenerator} fortuneCookie - Fortune cookie generator (P2, LIGHT)
  * @property {ContentGenerator} dailyRoast - Daily roast generator (P2, MEDIUM)
  * @property {ContentGenerator} hotTake - Hot take generator (P2, LIGHT)
- * @property {ContentGenerator} compliment - Compliment generator (P2, LIGHT)
  * @property {ContentGenerator} novelInsight - Novel insight generator (P2, MEDIUM)
+ * @property {ContentGenerator} languageLesson - Language lesson generator (P2, LIGHT)
  *
  * @example
  * ```typescript
@@ -43,8 +43,8 @@ import { ContentRegistry } from './content-registry.js';
  *   fortuneCookie: new FortuneCookieGenerator(),
  *   dailyRoast: new DailyRoastGenerator(),
  *   hotTake: new HotTakeGenerator(),
- *   compliment: new ComplimentGenerator(),
  *   novelInsight: new NovelInsightGenerator(),
+ *   languageLesson: new LanguageLessonGenerator(),
  *   staticFallback: new StaticFallbackGenerator()
  * };
  * ```
@@ -76,10 +76,10 @@ export interface CoreGenerators {
   timePerspective: ContentGenerator;
   /** Hot take generator (P2, LIGHT, AI-powered) */
   hotTake: ContentGenerator;
-  /** Compliment generator (P2, LIGHT, AI-powered) */
-  compliment: ContentGenerator;
   /** Novel insight generator (P2, MEDIUM, AI-powered) */
   novelInsight: ContentGenerator;
+  /** Language lesson generator (P2, LIGHT, AI-powered) */
+  languageLesson: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -99,8 +99,8 @@ export interface CoreGenerators {
  *   - shower-thought: Philosophical musings (LIGHT, AI)
  *   - fortune-cookie: Twisted wisdom (LIGHT, AI)
  *   - hot-take: Playful opinions (LIGHT, AI)
- *   - compliment: Uplifting affirmations (LIGHT, AI)
  *   - novel-insight: Fresh perspectives (MEDIUM, AI)
+ *   - language-lesson: Duolingo-style micro-lessons (LIGHT, AI)
  * - **P3 Generator (FALLBACK priority)**:
  *   - static-fallback: Static message when AI fails (LIGHT)
  *
@@ -277,17 +277,6 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
 
   registry.register(
     {
-      id: 'compliment',
-      name: 'Compliment Generator',
-      priority: ContentPriority.NORMAL,
-      modelTier: ModelTier.LIGHT,
-      applyFrame: true,
-    },
-    generators.compliment
-  );
-
-  registry.register(
-    {
       id: 'novel-insight',
       name: 'Novel Insight Generator',
       priority: ContentPriority.NORMAL,
@@ -295,6 +284,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.novelInsight
+  );
+
+  registry.register(
+    {
+      id: 'language-lesson',
+      name: 'Language Lesson Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.languageLesson
   );
 
   // Register P3 fallback generator (FALLBACK priority)

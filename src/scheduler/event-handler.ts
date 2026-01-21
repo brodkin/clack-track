@@ -100,6 +100,19 @@ export class EventHandler {
         }
       }
 
+      // Check SLEEP_MODE circuit after MASTER
+      if (this.circuitBreaker) {
+        try {
+          if (await this.circuitBreaker.isCircuitOpen('SLEEP_MODE')) {
+            log('SLEEP_MODE circuit is active - blocking HA-triggered generation');
+            return;
+          }
+        } catch (error) {
+          // Fail-open: if circuit check fails, proceed with generation
+          warn('Circuit check failed, proceeding with generation:', error);
+        }
+      }
+
       // Use orchestrator to generate and send content
       await this.orchestrator.generateAndSend({
         updateType: 'major',
@@ -139,6 +152,19 @@ export class EventHandler {
         }
       }
 
+      // Check SLEEP_MODE circuit after MASTER
+      if (this.circuitBreaker) {
+        try {
+          if (await this.circuitBreaker.isCircuitOpen('SLEEP_MODE')) {
+            log('SLEEP_MODE circuit is active - blocking HA-triggered generation');
+            return;
+          }
+        } catch (error) {
+          // Fail-open: if circuit check fails, proceed with generation
+          warn('Circuit check failed, proceeding with generation:', error);
+        }
+      }
+
       log(`Trigger matched: ${result.trigger?.name} for ${entityId} -> ${newState}`);
       await this.orchestrator.generateAndSend({
         updateType: 'major',
@@ -163,6 +189,10 @@ export class EventHandler {
    * - 'on': Enable the circuit (allow traffic)
    * - 'off': Disable the circuit (block traffic)
    * - 'reset': Reset provider circuit to operational state with cleared counters
+   *
+   * Special handling for SLEEP_MODE circuit:
+   * - When SLEEP_MODE turns OFF (entering sleep): Display sleep art BEFORE blocking
+   * - When SLEEP_MODE turns ON (waking up): Unblock FIRST, then display wakeup greeting
    */
   private async handleCircuitControlEvent(event: HomeAssistantEvent): Promise<void> {
     if (!this.circuitBreaker) return;
@@ -187,6 +217,9 @@ export class EventHandler {
         // Reset is specifically for provider circuits
         await this.circuitBreaker.resetProviderCircuit(circuitId);
         log(`Circuit ${circuitId} reset via Home Assistant event`);
+      } else if (circuitId === 'SLEEP_MODE') {
+        // Special handling for SLEEP_MODE circuit
+        await this.handleSleepModeChange(action);
       } else {
         // 'on' or 'off' actions use setCircuitState
         await this.circuitBreaker.setCircuitState(circuitId, action);
@@ -194,6 +227,77 @@ export class EventHandler {
       }
     } catch (error) {
       warn(`Failed to handle circuit control event for ${circuitId}:`, error);
+    }
+  }
+
+  /**
+   * Handle SLEEP_MODE circuit state changes with content generation
+   *
+   * User-facing semantics (matches CLI commands):
+   * - action='on' = user wants to ENTER sleep mode (be quiet, block updates)
+   * - action='off' = user wants to EXIT sleep mode (wake up, allow updates)
+   *
+   * Sleep mode transitions require specific content display:
+   * - Entering sleep (action='on'): Display sleep art, THEN block
+   * - Waking up (action='off'): Unblock FIRST, then display wakeup greeting
+   *
+   * @param action - The SLEEP_MODE action ('on' to sleep, 'off' to wake)
+   */
+  private async handleSleepModeChange(action: 'on' | 'off'): Promise<void> {
+    if (!this.circuitBreaker) return;
+
+    // User-facing sleep mode semantics:
+    // - action='on' = user wants to ENTER sleep mode (be quiet, block updates)
+    // - action='off' = user wants to EXIT sleep mode (wake up, allow updates)
+
+    if (action === 'on') {
+      // Entering sleep mode: display sleep art BEFORE blocking
+      // This ensures the sleep art is shown before subsequent updates are blocked
+      try {
+        const result = await this.orchestrator.generateAndSend({
+          updateType: 'major',
+          timestamp: new Date(),
+          generatorId: 'sleep-mode-generator',
+        });
+        if (result.success) {
+          log('Sleep mode art displayed successfully');
+        } else if (result.blocked) {
+          warn(`Sleep mode art blocked: ${result.blockReason}`);
+        } else {
+          warn('Sleep mode art generation failed');
+        }
+      } catch (error) {
+        warn('Failed to display sleep mode art:', error);
+        // Continue to set circuit state even if content generation fails
+      }
+
+      // Now set the circuit to OFF (block subsequent updates)
+      await this.circuitBreaker.setCircuitState('SLEEP_MODE', 'off');
+      log('SLEEP_MODE activated - updates blocked');
+    } else {
+      // Waking up: unblock FIRST, then display wakeup greeting
+      // This ensures the wakeup greeting generation isn't blocked
+      await this.circuitBreaker.setCircuitState('SLEEP_MODE', 'on');
+      log('SLEEP_MODE deactivated - updates allowed');
+
+      // Now display the wakeup greeting
+      try {
+        const result = await this.orchestrator.generateAndSend({
+          updateType: 'major',
+          timestamp: new Date(),
+          generatorId: 'wakeup-greeting-generator',
+        });
+        if (result.success) {
+          log('Wakeup greeting displayed successfully');
+        } else if (result.blocked) {
+          warn(`Wakeup greeting blocked: ${result.blockReason}`);
+        } else {
+          warn('Wakeup greeting generation failed');
+        }
+      } catch (error) {
+        warn('Failed to display wakeup greeting:', error);
+        // Circuit is already unblocked, so normal content updates can resume
+      }
     }
   }
 

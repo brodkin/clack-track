@@ -21,7 +21,8 @@
 import { MinorUpdateGenerator } from '../content/generators/index.js';
 import type { VestaboardClient } from '../api/vestaboard/index.js';
 import type { ContentOrchestrator } from '../content/orchestrator.js';
-import { log } from '../utils/logger.js';
+import type { CircuitBreakerService } from '../services/circuit-breaker-service.js';
+import { log, warn } from '../utils/logger.js';
 
 /**
  * Interval duration for minor updates (1 minute)
@@ -32,6 +33,7 @@ export class CronScheduler {
   private readonly minorUpdateGenerator: MinorUpdateGenerator;
   private readonly vestaboardClient: VestaboardClient;
   private readonly orchestrator: ContentOrchestrator;
+  private readonly circuitBreaker?: CircuitBreakerService;
   private intervalId: NodeJS.Timeout | null = null;
 
   /**
@@ -40,15 +42,18 @@ export class CronScheduler {
    * @param minorUpdateGenerator - Generator for minor updates (retrieves cache, applies frame)
    * @param vestaboardClient - Client for sending content to Vestaboard
    * @param orchestrator - ContentOrchestrator for checking cache availability
+   * @param circuitBreaker - Optional circuit breaker for SLEEP_MODE blocking
    */
   constructor(
     minorUpdateGenerator: MinorUpdateGenerator,
     vestaboardClient: VestaboardClient,
-    orchestrator: ContentOrchestrator
+    orchestrator: ContentOrchestrator,
+    circuitBreaker?: CircuitBreakerService
   ) {
     this.minorUpdateGenerator = minorUpdateGenerator;
     this.vestaboardClient = vestaboardClient;
     this.orchestrator = orchestrator;
+    this.circuitBreaker = circuitBreaker;
   }
 
   /**
@@ -115,6 +120,19 @@ export class CronScheduler {
           "Minor update skipped - waiting for first major update. Run 'npm run generate' or wait for Home Assistant event."
         );
         return;
+      }
+
+      // Step 0.5: Check SLEEP_MODE circuit before generating
+      if (this.circuitBreaker) {
+        try {
+          if (await this.circuitBreaker.isCircuitOpen('SLEEP_MODE')) {
+            log('SLEEP_MODE circuit is active - blocking minor update');
+            return;
+          }
+        } catch (error) {
+          // Fail-open: if circuit check fails, proceed with update
+          warn('Circuit check failed, proceeding with minor update:', error);
+        }
       }
 
       // Step 1: Check if minor update should be skipped

@@ -4,6 +4,9 @@
   "service": "node-dev",
   "workspaceFolder": "/workspace",
   "remoteUser": "vscode",
+  "containerEnv": {
+    "NODE_OPTIONS": "--max-old-space-size=6144"
+  },
   "build": {
     "args": {
       "INVALIDATE_CACHE": "${localEnv:USER}${localEnv:USERNAME}"

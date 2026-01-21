@@ -5,9 +5,11 @@
  * 1. generateWithRetry supports ToolBasedGenerator wrapper
  * 2. Provider failover works with tool-based generators (OpenAI fails -> Anthropic with tools)
  * 3. Tool metadata (toolAttempts, toolAccepted) flows through to final content
- * 4. Configuration flag useToolBasedGeneration controls wrapper application
- * 5. Circuit breaker integration preserved with tool-based generators
- * 6. Backward compatibility - generators without tools still work
+ * 4. Circuit breaker integration preserved with tool-based generators
+ * 5. Backward compatibility - non-AI generators pass through without tool wrapping
+ *
+ * Note: Tool-based generation is always enabled for AI generators.
+ * The toolBasedOptions in ContentRegistration can customize behavior (maxAttempts, exhaustionStrategy).
  */
 
 import { generateWithRetry } from '@/content/orchestrator-retry';
@@ -742,31 +744,31 @@ describe('Tool-Based Generation Integration', () => {
 });
 
 /**
- * Tests for ContentOrchestrator's useToolBasedGeneration configuration
+ * Tests for ContentOrchestrator toolBasedOptions configuration
  *
  * These tests verify the type definitions and configuration structure
- * for tool-based generation support in ContentRegistration.
+ * for tool-based generation options in ContentRegistration.
+ * Tool-based generation is always enabled; these tests verify option configuration.
  */
-describe('ContentOrchestrator useToolBasedGeneration Configuration', () => {
-  describe('useToolBasedGeneration flag on registration', () => {
-    it('should be documented as optional with default false', () => {
+describe('ContentOrchestrator toolBasedOptions Configuration', () => {
+  describe('toolBasedOptions on registration', () => {
+    it('should allow toolBasedOptions to be optional (uses defaults)', () => {
       // This is a type-system test - if it compiles, the interface is correct
-      const registrationWithoutFlag = {
+      const registrationWithoutOptions = {
         id: 'test-gen',
         name: 'Test Generator',
         priority: 2,
         modelTier: 'light' as const,
         applyFrame: true,
-        // useToolBasedGeneration not specified - should default to false
+        // toolBasedOptions not specified - should use defaults (maxAttempts: 3, exhaustionStrategy: 'throw')
       };
 
-      const registrationWithFlag = {
-        id: 'test-gen-tools',
-        name: 'Test Generator with Tools',
+      const registrationWithOptions = {
+        id: 'test-gen-custom',
+        name: 'Test Generator with Custom Options',
         priority: 2,
         modelTier: 'light' as const,
         applyFrame: true,
-        useToolBasedGeneration: true,
         toolBasedOptions: {
           maxAttempts: 5,
           exhaustionStrategy: 'use-last' as const,
@@ -774,24 +776,9 @@ describe('ContentOrchestrator useToolBasedGeneration Configuration', () => {
       };
 
       // These should compile without errors
-      expect(registrationWithoutFlag.id).toBe('test-gen');
-      expect(registrationWithFlag.useToolBasedGeneration).toBe(true);
-      expect(registrationWithFlag.toolBasedOptions?.maxAttempts).toBe(5);
-    });
-
-    it('should allow toolBasedOptions to be optional even when useToolBasedGeneration is true', () => {
-      const registration = {
-        id: 'minimal-tool-gen',
-        name: 'Minimal Tool Generator',
-        priority: 2,
-        modelTier: 'light' as const,
-        applyFrame: true,
-        useToolBasedGeneration: true,
-        // toolBasedOptions not specified - should use defaults
-      };
-
-      expect(registration.useToolBasedGeneration).toBe(true);
-      expect(registration.toolBasedOptions).toBeUndefined();
+      expect(registrationWithoutOptions.id).toBe('test-gen');
+      expect(registrationWithoutOptions.toolBasedOptions).toBeUndefined();
+      expect(registrationWithOptions.toolBasedOptions?.maxAttempts).toBe(5);
     });
   });
 
@@ -802,7 +789,6 @@ describe('ContentOrchestrator useToolBasedGeneration Configuration', () => {
         name: 'Test Generator',
         priority: 2,
         modelTier: 'light' as const,
-        useToolBasedGeneration: true,
         toolBasedOptions: {
           maxAttempts: 10,
         },
@@ -817,7 +803,6 @@ describe('ContentOrchestrator useToolBasedGeneration Configuration', () => {
         name: 'Test Generator Throw',
         priority: 2,
         modelTier: 'light' as const,
-        useToolBasedGeneration: true,
         toolBasedOptions: {
           exhaustionStrategy: 'throw' as const,
         },
@@ -828,7 +813,6 @@ describe('ContentOrchestrator useToolBasedGeneration Configuration', () => {
         name: 'Test Generator Use Last',
         priority: 2,
         modelTier: 'light' as const,
-        useToolBasedGeneration: true,
         toolBasedOptions: {
           exhaustionStrategy: 'use-last' as const,
         },

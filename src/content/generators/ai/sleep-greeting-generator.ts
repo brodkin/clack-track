@@ -1,27 +1,25 @@
 /**
- * Compliment Generator
+ * Sleep Greeting Generator
  *
  * Concrete implementation of AIPromptGenerator for generating
- * genuine compliments and affirmations directed at the viewer.
+ * soothing bedtime greetings using AI, with programmatic theme injection.
  *
  * Features:
  * - Uses prompts/system/major-update-base.txt for system context
- * - Uses prompts/user/compliment.txt for compliment content guidance
- * - Topic and style dictionaries for high-effectiveness variability
- * - Random topic/style injection via {{topic}} and {{style}} template variables
- * - Optimized with LIGHT model tier for efficiency (simple messages)
- * - Uses second-person voice ('you') for direct, personal connection
- * - Wholesome, uplifting tone - occasionally cheeky but always kind
+ * - Uses prompts/user/sleep-greeting.txt for bedtime content guidance
+ * - Theme dictionary for high-effectiveness variability (15+ themes)
+ * - Random theme injection via {{theme}} template variable
+ * - Optimized with LIGHT model tier for efficiency (short, simple content)
+ * - Output fits 2-3 rows maximum (center of 6-row display)
  * - Inherits retry logic and provider failover from base class
  *
  * Variability System:
- * - COMPLIMENT_TOPICS (20+ items): What to compliment (e.g., "your energy today")
- * - COMPLIMENT_STYLES (8+ items): How to deliver it (e.g., "sincere", "over-the-top dramatic")
+ * - BEDTIME_THEMES (15+ items): Sleep/bedtime concepts (e.g., "cozy blanket", "dreamland")
  * - Random selection ensures varied outputs across generations
  *
  * @example
  * ```typescript
- * const generator = new ComplimentGenerator(
+ * const generator = new SleepGreetingGenerator(
  *   promptLoader,
  *   modelTierSelector,
  *   { openai: 'sk-...', anthropic: 'sk-ant-...' }
@@ -32,7 +30,7 @@
  *   timezone: 'America/New_York'
  * });
  *
- * console.log(content.text); // "HEY YOU\nYOU'RE DOING GREAT\nKEEP IT UP CHAMP"
+ * console.log(content.text); // "SWEET DREAMS\nREST WELL TONIGHT"
  * ```
  */
 
@@ -46,80 +44,57 @@ import { ModelTier } from '../../../types/content-generator.js';
 import type { AIProvider } from '../../../types/ai.js';
 
 /**
- * Topics/subjects to compliment the viewer about
+ * Bedtime themes for sleep greeting variability
  *
- * Covers diverse areas: personality, abilities, presence, effort, taste, impact
- * Each topic should work naturally in the phrase "compliment about [topic]"
+ * Covers diverse sleep-related concepts: cozy comfort, dreaming, nighttime imagery,
+ * classic bedtime references, and peaceful rest themes.
+ * Each theme should work naturally in the phrase "create a bedtime greeting about [theme]"
  */
-export const COMPLIMENT_TOPICS: readonly string[] = [
-  // Personality & Vibe
-  'your energy today',
-  'your positive attitude',
-  'your unique vibe',
-  'your contagious smile',
-  'your calm presence',
+export const BEDTIME_THEMES: readonly string[] = [
+  // Cozy Comfort
+  'cozy blanket',
+  'warm pillow',
+  'soft pajamas',
+  'snuggling in',
 
-  // Abilities & Skills
-  'your creativity',
-  'your problem-solving skills',
-  'your hustle and work ethic',
-  'your attention to detail',
-  'your ability to stay focused',
+  // Dreaming
+  'dreamland',
+  'sweet dreams',
+  'pleasant dreams',
+  'dream adventures',
 
-  // Taste & Style
-  'your taste in music',
-  'your fashion sense',
-  'your home decor choices',
-  'your excellent taste in friends',
-  'your playlist selections',
+  // Nighttime Imagery
+  'stargazing',
+  'moonlight',
+  'twinkling stars',
+  'peaceful night sky',
 
-  // Impact & Presence
-  'the way you light up a room',
-  'your impact on others',
-  'how you make people feel welcome',
-  'your thoughtful gestures',
-  'the effect you have on the mood',
+  // Classic Bedtime
+  'counting sheep',
+  'bedtime stories',
+  'lullaby',
+  'goodnight wishes',
 
-  // Effort & Growth
-  'how hard you work',
-  'your dedication to improvement',
-  'the progress you have made',
-  'your resilience through challenges',
-  'your commitment to your goals',
+  // Peaceful Rest
+  'restful slumber',
+  'deep relaxation',
+  'peaceful night',
+  'recharging energy',
 ] as const;
 
 /**
- * Delivery styles for compliments
+ * Generates soothing bedtime greetings for the viewer
  *
- * Controls the tone and approach - from sincere to absurdist
- * Each style creates a distinctly different feel for the compliment
- */
-export const COMPLIMENT_STYLES: readonly string[] = [
-  'sincere and heartfelt',
-  'over-the-top dramatic',
-  'poetic and lyrical',
-  'absurdist but endearing',
-  'casual and breezy',
-  'hype man energy',
-  'gentle and encouraging',
-  'playfully exaggerated',
-  'warm and cozy',
-  'confidently matter-of-fact',
-] as const;
-
-/**
- * Generates genuine compliments and affirmations for the viewer
- *
- * Extends AIPromptGenerator with compliment-specific prompts,
+ * Extends AIPromptGenerator with sleep-greeting-specific prompts,
  * efficient LIGHT model tier selection, and variability dictionaries.
- * Uses second-person voice for a direct, personal connection with the reader.
+ * Designed for short, centered content that fits 2-3 rows of a Vestaboard display.
  *
- * Injects random {{topic}} and {{style}} via template variables to ensure
+ * Injects random {{theme}} via template variables to ensure
  * each generation produces meaningfully different content.
  */
-export class ComplimentGenerator extends AIPromptGenerator {
+export class SleepGreetingGenerator extends AIPromptGenerator {
   /**
-   * Creates a new ComplimentGenerator instance
+   * Creates a new SleepGreetingGenerator instance
    *
    * @param promptLoader - Loader for system and user prompt files
    * @param modelTierSelector - Selector for tier-based model selection with fallback
@@ -130,7 +105,7 @@ export class ComplimentGenerator extends AIPromptGenerator {
     modelTierSelector: ModelTierSelector,
     apiKeys: AIProviderAPIKeys = {}
   ) {
-    // Use LIGHT tier for compliments (simple content, fast and cheap)
+    // Use LIGHT tier for sleep greetings (simple content, fast and cheap)
     super(promptLoader, modelTierSelector, ModelTier.LIGHT, apiKeys);
   }
 
@@ -149,41 +124,31 @@ export class ComplimentGenerator extends AIPromptGenerator {
   /**
    * Returns the filename for the user prompt
    *
-   * Uses the compliment prompt which specifies the content type,
-   * structure, and tone for genuine, uplifting compliments.
+   * Uses the sleep-greeting prompt which specifies the content type,
+   * structure, and tone for soothing bedtime messages.
    *
    * @returns Filename of the user prompt
    */
   protected getUserPromptFile(): string {
-    return 'compliment.txt';
+    return 'sleep-greeting.txt';
   }
 
   /**
-   * Selects a random topic from the COMPLIMENT_TOPICS dictionary
+   * Selects a random theme from the BEDTIME_THEMES dictionary
    *
-   * @returns A randomly selected compliment topic
+   * @returns A randomly selected bedtime theme
    */
-  selectRandomTopic(): string {
-    const index = Math.floor(Math.random() * COMPLIMENT_TOPICS.length);
-    return COMPLIMENT_TOPICS[index];
+  selectRandomTheme(): string {
+    const index = Math.floor(Math.random() * BEDTIME_THEMES.length);
+    return BEDTIME_THEMES[index];
   }
 
   /**
-   * Selects a random style from the COMPLIMENT_STYLES dictionary
-   *
-   * @returns A randomly selected compliment style
-   */
-  selectRandomStyle(): string {
-    const index = Math.floor(Math.random() * COMPLIMENT_STYLES.length);
-    return COMPLIMENT_STYLES[index];
-  }
-
-  /**
-   * Generates compliment content with topic and style variability injection
+   * Generates sleep greeting content with theme variability injection
    *
    * Workflow:
-   * 1. Select random topic and style from dictionaries
-   * 2. Load prompts with topic/style injected via template variables
+   * 1. Select random theme from dictionary
+   * 2. Load prompts with theme injected via template variables
    * 3. Generate content using AI provider with failover support
    *
    * @param context - Context information for content generation
@@ -191,9 +156,8 @@ export class ComplimentGenerator extends AIPromptGenerator {
    * @throws Error if all AI providers fail
    */
   async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Step 1: Select random topic and style for variability
-    const selectedTopic = this.selectRandomTopic();
-    const selectedStyle = this.selectRandomStyle();
+    // Step 1: Select random theme for variability
+    const selectedTheme = this.selectRandomTheme();
 
     // Step 2: Load system prompt with personality
     const personality = context.personality ?? generatePersonalityDimensions();
@@ -212,13 +176,12 @@ export class ComplimentGenerator extends AIPromptGenerator {
     // Apply dimension substitution (maxChars, maxLines) to system prompt
     const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
 
-    // Step 3: Load user prompt with topic and style injected
+    // Step 3: Load user prompt with theme injected
     const userPrompt = await this.promptLoader.loadPromptWithVariables(
       'user',
       this.getUserPromptFile(),
       {
-        topic: selectedTopic,
-        style: selectedStyle,
+        theme: selectedTheme,
       }
     );
 
@@ -232,19 +195,8 @@ export class ComplimentGenerator extends AIPromptGenerator {
       personality,
       systemPrompt,
       userPrompt,
-      selectedTopic,
-      selectedStyle,
+      selectedTheme,
     };
-
-    // If promptsOnly mode, return just the prompts without AI call
-    // This is used by ToolBasedGenerator to get prompts for its own AI call with tools
-    if (context.promptsOnly) {
-      return {
-        text: '',
-        outputMode: 'text',
-        metadata: baseMetadata,
-      };
-    }
 
     // Try preferred provider
     try {

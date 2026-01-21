@@ -160,6 +160,17 @@ export class ContentOrchestrator {
       };
     }
 
+    // Step 0.5: Check SLEEP_MODE circuit (after MASTER)
+    if (this.circuitBreaker && (await this.circuitBreaker.isCircuitOpen('SLEEP_MODE'))) {
+      console.log('SLEEP_MODE circuit is active - blocking content generation');
+      return {
+        success: false,
+        blocked: true,
+        blockReason: 'sleep_mode_active',
+        circuitState: { master: true, sleepMode: false },
+      };
+    }
+
     // Step 1: Pre-fetch data if dataProvider is available and this is a major update
     if (this.dataProvider && context.updateType === 'major') {
       try {
@@ -208,28 +219,21 @@ export class ContentOrchestrator {
       try {
         // Step 3: Generate with retry logic using factory pattern
         // Create a factory that returns the selected generator instance
-        // If useToolBasedGeneration is enabled, wrap with ToolBasedGenerator
-        const { toolBasedOptions, useToolBasedGeneration: registrationFlag } =
-          registeredGenerator.registration;
-        // Tool-based generation is enabled by default for AI-powered generators
-        // Disabled for programmatic generators via registration (useToolBasedGeneration: false)
-        // Context flag can also disable it (e.g., for debugging legacy behavior)
-        const useToolBasedGeneration =
-          registrationFlag !== false && (context.useToolBasedGeneration ?? true);
+        const { toolBasedOptions, useToolBasedGeneration } = registeredGenerator.registration;
+        // Tool-based generation is enabled by default, disabled for programmatic generators
+        const shouldUseToolBased = useToolBasedGeneration !== false;
 
         const generatorFactory: GeneratorFactory = (provider: AIProvider): ContentGenerator => {
           const baseGenerator = registeredGenerator.generator;
 
-          // Wrap with ToolBasedGenerator if enabled for this generator
-          if (useToolBasedGeneration) {
+          // Wrap with ToolBasedGenerator for AI-powered validation loop (unless disabled)
+          if (shouldUseToolBased) {
             return ToolBasedGenerator.wrap(baseGenerator, {
               aiProvider: provider,
               maxAttempts: toolBasedOptions?.maxAttempts ?? 3,
               exhaustionStrategy: toolBasedOptions?.exhaustionStrategy ?? 'throw',
             });
           }
-
-          // Return base generator without tool wrapping (backward compatible)
           return baseGenerator;
         };
 

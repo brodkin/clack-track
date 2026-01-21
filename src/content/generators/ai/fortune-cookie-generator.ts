@@ -14,6 +14,10 @@
  * - Optimized with LIGHT model tier for efficiency (simple fortunes)
  * - Inherits retry logic and provider failover from base class
  *
+ * Uses Template Method hooks:
+ * - getCustomMetadata(): Adds titleInjected and formatOptions to metadata
+ * - postProcessContent(): Prepends programmatic title line to AI content
+ *
  * @example
  * ```typescript
  * const generator = new FortuneCookieGenerator(
@@ -38,11 +42,7 @@
 import { AIPromptGenerator, type AIProviderAPIKeys } from '../ai-prompt-generator.js';
 import { PromptLoader } from '../../prompt-loader.js';
 import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
-import {
-  ModelTier,
-  type GenerationContext,
-  type GeneratedContent,
-} from '../../../types/content-generator.js';
+import { ModelTier, type GeneratedContent } from '../../../types/content-generator.js';
 
 /**
  * Programmatic title for fortune cookie content.
@@ -56,10 +56,8 @@ const FORTUNE_COOKIE_TITLE = '\uD83D\uDFE5 FORTUNE COOKIE \uD83D\uDFE5';
  * Extends AIPromptGenerator with fortune-cookie-specific prompts,
  * efficient LIGHT model tier selection, and programmatic title injection.
  *
- * The generator overrides generate() to:
- * 1. Call parent generate() for AI content (3 lines fortune + 1 line lucky numbers)
- * 2. Prepend programmatic title line
- * 3. Return combined content with center alignment
+ * Uses the postProcessContent hook to prepend a title line to the
+ * AI-generated content, ensuring consistent formatting with center alignment.
  */
 export class FortuneCookieGenerator extends AIPromptGenerator {
   /**
@@ -103,46 +101,37 @@ export class FortuneCookieGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Generates fortune cookie content with programmatic title injection.
+   * Hook: Returns metadata indicating title was injected with center alignment.
    *
-   * Workflow:
-   * 1. Call parent generate() to get AI content (3 lines fortune + 1 line lucky numbers)
-   * 2. Prepend programmatic title line
-   * 3. Return combined content with center alignment format option
+   * @returns Metadata with titleInjected flag and formatOptions
+   */
+  protected getCustomMetadata(): Record<string, unknown> {
+    return {
+      titleInjected: true,
+      formatOptions: {
+        textAlign: 'center',
+      },
+    };
+  }
+
+  /**
+   * Hook: Prepends programmatic title line to AI-generated content.
    *
    * Output structure (5 lines total):
    * - Line 1: Programmatic title with color bars
    * - Lines 2-4: AI-generated fortune wisdom
    * - Line 5: AI-generated lucky numbers
    *
-   * @param context - Context information for content generation
-   * @returns Generated content with title prepended and center alignment
-   * @throws Error if AI provider fails
+   * @param content - AI-generated content (3 lines fortune + 1 line lucky numbers)
+   * @returns Content with title prepended and center alignment
    */
-  async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Get AI-generated content (3 lines fortune + 1 line lucky numbers)
-    // If promptsOnly mode, parent class returns prompts without AI call
-    const aiContent = await super.generate(context);
-
-    // If promptsOnly mode, return the prompts from parent without modification
-    if (context.promptsOnly) {
-      return aiContent;
-    }
-
+  protected postProcessContent(content: GeneratedContent): GeneratedContent {
     // Prepend programmatic title to AI content
-    const combinedText = `${FORTUNE_COOKIE_TITLE}\n${aiContent.text}`;
+    const combinedText = `${FORTUNE_COOKIE_TITLE}\n${content.text}`;
 
-    // Return with center alignment for classic fortune cookie aesthetic
     return {
+      ...content,
       text: combinedText,
-      outputMode: 'text',
-      metadata: {
-        ...aiContent.metadata,
-        formatOptions: {
-          textAlign: 'center',
-        },
-        titleInjected: true,
-      },
     };
   }
 }

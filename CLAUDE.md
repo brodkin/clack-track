@@ -134,6 +134,48 @@ src/web/frontend/
 - Limited character set (uppercase letters, numbers, symbols)
 - All content formatted via `text-layout.ts` before sending
 
+### Vestaboard Hardware Models
+
+**CRITICAL**: Vestaboard sells two physical models with different color behavior:
+
+| Model               | Code 0 (blank) | Code 69    | Configuration            |
+| ------------------- | -------------- | ---------- | ------------------------ |
+| **Black** (default) | Shows BLACK    | WHITE tile | `VESTABOARD_MODEL=black` |
+| **White**           | Shows WHITE    | BLACK tile | `VESTABOARD_MODEL=white` |
+
+**Why this matters:**
+
+- Code 0 (blank) shows the board's natural flap color - black on black boards, white on white boards
+- Code 69 is a color tile that's swapped between models - WHITE on black boards, BLACK on white boards
+- Sleep mode and other generators that need solid black backgrounds must use the correct code
+
+**For white Vestaboard owners:**
+
+```bash
+# Add to .env
+VESTABOARD_MODEL=white
+```
+
+**Implementation pattern:**
+
+```typescript
+import { getBlackCode } from '@/config/constants.js';
+import { config } from '@/config/env.js';
+
+// Returns code 0 for black boards, code 69 for white boards
+const blackCode = getBlackCode(config.vestaboard?.model);
+```
+
+**Character codes reference:**
+
+- 0 = blank (shows board's natural color)
+- 1-26 = A-Z (amber letters)
+- 27-36 = 0-9
+- 37-62 = symbols
+- 63-69 = color tiles (red, orange, yellow, green, blue, violet, white/black)
+- 70 = explicit black tile (may not work on all firmware)
+- 71 = filled (adaptive)
+
 ### Prompts System
 
 - `prompts/system/` - Role and constraint definitions (major/minor update base prompts)
@@ -189,15 +231,23 @@ Generator → AI Provider → LLM calls submit_content tool
 | `throw` (default) | Throw error, trigger P3 fallback             |
 | `use-last`        | Force-accept last submission with truncation |
 
-**Opting Out** (for testing/debugging):
+**Configuring Tool-Based Options** (via ContentRegistration):
 
 ```typescript
-// Disable tool-based generation for a specific request
-await orchestrator.generateAndSend({
-  updateType: 'major',
-  timestamp: new Date(),
-  useToolBasedGeneration: false, // Use legacy direct-response mode
-});
+// Configure tool-based generation options in generator registration
+ContentRegistry.getInstance().register(
+  {
+    id: 'custom-generator',
+    name: 'Custom Generator',
+    priority: ContentPriority.NORMAL,
+    modelTier: ModelTier.LIGHT,
+    toolBasedOptions: {
+      maxAttempts: 5, // Default: 3
+      exhaustionStrategy: 'use-last', // Default: 'throw'
+    },
+  },
+  customGenerator
+);
 ```
 
 **Why Tool-Based Generation:**
@@ -264,6 +314,55 @@ All generators registered via `ContentRegistry.register(metadata, generator)`. S
 - **P0 (NOTIFICATION)** - Event pattern matching for HA events (immediate, no frame)
 - **P2 (NORMAL)** - Random selection from available generators
 - **P3 (FALLBACK)** - Static fallback when all else fails
+
+### Sleep Mode System
+
+Sleep mode is a special display mode that shows a dark starfield art pattern with an AI-generated bedtime greeting.
+
+**User Commands:**
+
+```bash
+# Enter sleep mode (display goodnight art, block updates)
+npm run circuit:on -- SLEEP_MODE
+
+# Exit sleep mode (display good morning, resume normal updates)
+npm run circuit:off -- SLEEP_MODE
+```
+
+**Architecture (Composite Generator):**
+
+```
+SleepModeGenerator
+├── SleepArtGenerator (programmatic) → generates 6x22 starfield pattern
+└── SleepGreetingGenerator (AI) → generates bedtime text
+    ↓
+Overlay text on art → combined characterCodes layout
+```
+
+**Convention Breaks:**
+
+| Standard Convention                       | Sleep Mode Behavior                                |
+| ----------------------------------------- | -------------------------------------------------- |
+| Frame decoration (time/weather)           | **No frame** - full 6x22 art display               |
+| `outputMode: 'text'` with text processing | **`outputMode: 'layout'`** with raw characterCodes |
+| P2 random selection                       | **P0 priority** - bypasses normal selection        |
+| Single generator                          | **Composite** - combines art + text generators     |
+
+**Implementation Note:** Internally, sleep mode uses the circuit breaker's blocking state (`state='off'`) to prevent updates while sleeping. The CLI commands map user intent (`on` = enter sleep, `off` = wake up) to the appropriate internal state.
+
+**Text Overlay Behavior:**
+
+- Text centered vertically and horizontally
+- Spaces are **transparent** (preserve underlying art pattern)
+- Letters use actual character codes (1-26) displayed in amber
+- Unsupported characters become black (blend with background)
+
+**Key Files:**
+
+- `src/content/generators/programmatic/sleep-mode-generator.ts` - Composite generator
+- `src/content/generators/programmatic/sleep-art-generator.ts` - Starfield pattern
+- `src/content/generators/ai/sleep-greeting-generator.ts` - AI bedtime text
+- `src/cli/commands/circuit.ts` - `enterSleepMode()` and `exitSleepMode()` functions
 
 ### Home Assistant Integration
 

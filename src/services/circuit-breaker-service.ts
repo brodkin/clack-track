@@ -42,7 +42,7 @@ export const MANUAL_CIRCUITS: CircuitDefinition[] = [
     circuitId: 'SLEEP_MODE',
     circuitType: 'manual',
     defaultState: 'off',
-    description: 'Quiet hours mode - reserved for future use',
+    description: 'Quiet hours mode - blocks all updates when on',
   },
 ];
 
@@ -110,8 +110,15 @@ export const CIRCUIT_BREAKER_CONFIG = {
  * await service.setCircuitState('MASTER', 'off');
  * ```
  */
+let instanceCounter = 0;
+
 export class CircuitBreakerService {
-  constructor(private repository: CircuitBreakerRepository) {}
+  private instanceId: number;
+
+  constructor(private repository: CircuitBreakerRepository) {
+    this.instanceId = ++instanceCounter;
+    console.log(`[DEBUG] CircuitBreakerService instance #${this.instanceId} created`);
+  }
 
   /**
    * Initialize all circuits (manual and provider) in the database
@@ -145,10 +152,17 @@ export class CircuitBreakerService {
       const state = await this.repository.getState(circuitId);
       if (!state) {
         // Circuit doesn't exist - default to allowing traffic
+        console.log(
+          `[DEBUG] isCircuitOpen #${this.instanceId} ${circuitId}: no state found, returning false (allow)`
+        );
         return false;
       }
       // "Open" circuit blocks traffic - only 'off' state blocks
-      return state.state === 'off';
+      const isOpen = state.state === 'off';
+      console.log(
+        `[DEBUG] isCircuitOpen #${this.instanceId} ${circuitId}: state=${state.state}, isOpen=${isOpen}`
+      );
+      return isOpen;
     } catch (error) {
       console.warn(`Failed to check circuit ${circuitId}:`, error);
       // On error, default to allowing traffic (fail-open)
@@ -167,10 +181,20 @@ export class CircuitBreakerService {
    */
   async setCircuitState(circuitId: string, state: CircuitState): Promise<void> {
     try {
+      const beforeState = await this.repository.getState(circuitId);
+      console.log(
+        `[DEBUG] setCircuitState #${this.instanceId} ${circuitId}: before=${beforeState?.state}, setting to=${state}`
+      );
+
       await this.repository.setState(circuitId, {
         state,
         stateChangedAt: new Date().toISOString(),
       });
+
+      const afterState = await this.repository.getState(circuitId);
+      console.log(
+        `[DEBUG] setCircuitState #${this.instanceId} ${circuitId}: after=${afterState?.state}`
+      );
     } catch (error) {
       console.warn(`Failed to set circuit ${circuitId} state:`, error);
     }

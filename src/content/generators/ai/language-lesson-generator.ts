@@ -12,6 +12,10 @@
  * - Supports 7 languages with romanization for non-Latin scripts
  * - Inherits retry logic and provider failover from base class
  *
+ * Uses Template Method hooks:
+ * - getTemplateVariables(): Injects duolingoVoice, phraseType, language, and format
+ * - getCustomMetadata(): Tracks selection choices in metadata
+ *
  * Romanization Requirements:
  * - Chinese: Pinyin (NI HAO)
  * - Japanese: Romaji (KONNICHIWA)
@@ -37,12 +41,9 @@
 
 import { AIPromptGenerator, type AIProviderAPIKeys } from '../ai-prompt-generator.js';
 import { PromptLoader } from '../../prompt-loader.js';
-import { ModelTierSelector, type ModelSelection } from '../../../api/ai/model-tier-selector.js';
-import { createAIProvider, AIProviderType } from '../../../api/ai/index.js';
-import { generatePersonalityDimensions } from '../../personality/index.js';
+import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
 import { ModelTier } from '../../../types/content-generator.js';
-import type { GenerationContext, GeneratedContent } from '../../../types/content-generator.js';
-import type { AIProvider } from '../../../types/ai.js';
+import type { GenerationContext } from '../../../types/content-generator.js';
 
 /**
  * Generates Duolingo-style micro-lessons with absurd-but-educational phrases
@@ -99,6 +100,14 @@ export class LanguageLessonGenerator extends AIPromptGenerator {
    * PHRASE_TRANSLATION: Shows phrase and translation (only format - fill-the-blank removed due to Vestaboard character constraints)
    */
   static readonly FORMATS: readonly string[] = ['PHRASE_TRANSLATION'] as const;
+
+  /**
+   * Selected values for the current generation, used by getCustomMetadata
+   */
+  private selectedVoice: string = '';
+  private selectedPhraseType: string = '';
+  private selectedLanguage: string = '';
+  private selectedFormat: string = '';
 
   /**
    * Programmatically selects a random Duolingo voice.
@@ -185,152 +194,38 @@ export class LanguageLessonGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Generates language lesson content with programmatic selection of variables.
+   * Hook: Selects random values and returns as template variables.
    *
-   * Overrides the base class generate() to:
-   * 1. Select a random Duolingo voice
-   * 2. Select a random phrase type
-   * 3. Select a random language
-   * 4. Select a random format
-   * 5. Inject all four as template variables into the user prompt
-   *
-   * This ensures true randomness in selection, unlike asking the LLM
-   * to "randomly select" which exhibits predictable bias.
-   *
-   * @param context - Context information for content generation
-   * @returns Generated content with text and metadata
-   * @throws Error if all AI providers fail
+   * @param _context - Generation context (unused, but required by hook signature)
+   * @returns Template variables with duolingoVoice, phraseType, language, and format
    */
-  async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Step 1: Programmatically select all variables
-    const selectedVoice = LanguageLessonGenerator.selectDuolingoVoice();
-    const selectedPhraseType = LanguageLessonGenerator.selectPhraseType();
-    const selectedLanguage = LanguageLessonGenerator.selectLanguage();
-    const selectedFormat = LanguageLessonGenerator.selectFormat();
+  protected async getTemplateVariables(
+    _context: GenerationContext
+  ): Promise<Record<string, string>> {
+    this.selectedVoice = LanguageLessonGenerator.selectDuolingoVoice();
+    this.selectedPhraseType = LanguageLessonGenerator.selectPhraseType();
+    this.selectedLanguage = LanguageLessonGenerator.selectLanguage();
+    this.selectedFormat = LanguageLessonGenerator.selectFormat();
 
-    // Step 2: Load system prompt with personality and date context
-    const personality = context.personality ?? generatePersonalityDimensions();
-    const loadedSystemPrompt = await this.promptLoader.loadPromptWithVariables(
-      'system',
-      this.getSystemPromptFile(),
-      {
-        mood: personality.mood,
-        energyLevel: personality.energyLevel,
-        humorStyle: personality.humorStyle,
-        obsession: personality.obsession,
-        persona: 'Houseboy',
-        // Include date template variable following AIPromptGenerator.buildTemplateVariables() pattern
-        date: context.timestamp.toLocaleDateString('en-US', {
-          weekday: 'long',
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        }),
-      }
-    );
-
-    // Step 3: Apply dimension substitution (maxChars, maxLines) to system prompt
-    const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
-
-    // Step 4: Load user prompt with all four variables injected
-    const userPrompt = await this.promptLoader.loadPromptWithVariables(
-      'user',
-      this.getUserPromptFile(),
-      {
-        duolingoVoice: selectedVoice,
-        phraseType: selectedPhraseType,
-        language: selectedLanguage,
-        format: selectedFormat,
-      }
-    );
-
-    // If promptsOnly mode, return just the prompts without AI call
-    // This is used by ToolBasedGenerator to get prompts for its own AI call with tools
-    if (context.promptsOnly) {
-      return {
-        text: '',
-        outputMode: 'text',
-        metadata: {
-          tier: this.modelTier,
-          personality,
-          systemPrompt,
-          userPrompt,
-          selectedVoice,
-          selectedPhraseType,
-          selectedLanguage,
-          selectedFormat,
-        },
-      };
-    }
-
-    // Step 5: Select model and generate
-    const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
-    let lastError: Error | null = null;
-
-    // Try preferred provider
-    try {
-      const provider = this.createProvider(selection);
-      const response = await provider.generate({ systemPrompt, userPrompt });
-
-      return {
-        text: response.text,
-        outputMode: 'text',
-        metadata: {
-          model: response.model,
-          tier: this.modelTier,
-          provider: selection.provider,
-          tokensUsed: response.tokensUsed,
-          personality,
-          selectedVoice,
-          selectedPhraseType,
-          selectedLanguage,
-          selectedFormat,
-        },
-      };
-    } catch (error) {
-      lastError = error as Error;
-    }
-
-    // Try alternate provider
-    const alternate = this.modelTierSelector.getAlternate(selection);
-    if (alternate) {
-      try {
-        const alternateProvider = this.createProvider(alternate);
-        const response = await alternateProvider.generate({ systemPrompt, userPrompt });
-
-        return {
-          text: response.text,
-          outputMode: 'text',
-          metadata: {
-            model: response.model,
-            tier: this.modelTier,
-            provider: alternate.provider,
-            tokensUsed: response.tokensUsed,
-            failedOver: true,
-            primaryError: lastError?.message,
-            personality,
-            selectedVoice,
-            selectedPhraseType,
-            selectedLanguage,
-            selectedFormat,
-          },
-        };
-      } catch (alternateError) {
-        lastError = alternateError as Error;
-      }
-    }
-
-    throw new Error(`All AI providers failed for tier ${this.modelTier}: ${lastError?.message}`);
+    return {
+      duolingoVoice: this.selectedVoice,
+      phraseType: this.selectedPhraseType,
+      language: this.selectedLanguage,
+      format: this.selectedFormat,
+    };
   }
 
   /**
-   * Creates an AI provider instance for the given selection
+   * Hook: Returns selection choices in metadata.
+   *
+   * @returns Metadata with all selected values
    */
-  private createProvider(selection: ModelSelection): AIProvider {
-    const apiKey = this['apiKeys'][selection.provider];
-    if (!apiKey) {
-      throw new Error(`API key not found for provider: ${selection.provider}`);
-    }
-    return createAIProvider(selection.provider as AIProviderType, apiKey, selection.model);
+  protected getCustomMetadata(): Record<string, unknown> {
+    return {
+      selectedVoice: this.selectedVoice,
+      selectedPhraseType: this.selectedPhraseType,
+      selectedLanguage: this.selectedLanguage,
+      selectedFormat: this.selectedFormat,
+    };
   }
 }

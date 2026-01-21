@@ -10,6 +10,7 @@ export const COLOR_CODES = {
   BLUE: 67,
   VIOLET: 68,
   WHITE: 69,
+  BLACK: 70, // Explicit black tile (for white Vestaboards)
 } as const;
 
 /**

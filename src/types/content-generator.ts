@@ -179,11 +179,6 @@ export interface GenerationContext {
    */
   generatorId?: string;
   /**
-   * Optional flag to force tool-based generation for testing.
-   * When true, overrides the generator's registration setting.
-   */
-  useToolBasedGeneration?: boolean;
-  /**
    * Internal flag used by ToolBasedGenerator to get prompts without making AI call.
    * When true, AIPromptGenerator returns prompts in metadata without calling the AI provider.
    * This allows ToolBasedGenerator to manage the AI call with tool support.
@@ -571,14 +566,15 @@ export interface ContentRegistration {
    */
   formatOptions?: GeneratorFormatOptions;
   /**
-   * Whether to enable tool-based generation for this generator.
-   * When true, the orchestrator wraps the generator with ToolBasedGenerator,
-   * enabling the submit_content tool for iterative content refinement.
-   * @default false (for backward compatibility)
+   * Whether to use tool-based generation for this generator.
+   * Defaults to true for AI-powered generators.
+   * Set to false for programmatic generators that don't use AI prompts.
    */
   useToolBasedGeneration?: boolean;
   /**
-   * Tool-based generation options (only used when useToolBasedGeneration is true).
+   * Tool-based generation options.
+   * Controls the behavior of the ToolBasedGenerator wrapper which is always
+   * applied to AI generators for iterative content refinement.
    */
   toolBasedOptions?: {
     /** Maximum submission attempts before giving up (default: 3) */

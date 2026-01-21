@@ -17,6 +17,10 @@
  * - Optimized with LIGHT model tier (selection + application, not generation)
  * - Inherits retry logic and provider failover from base class
  *
+ * Uses Template Method hooks:
+ * - getTemplateVariables(): Injects paradox and application into prompt
+ * - getCustomMetadata(): Tracks selection choices in metadata
+ *
  * @example
  * ```typescript
  * const generator = new ParadoxEngineGenerator(
@@ -38,27 +42,11 @@
  * ```
  */
 
+import { AIPromptGenerator, type AIProviderAPIKeys } from '../ai-prompt-generator.js';
 import { PromptLoader } from '../../prompt-loader.js';
 import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
-import { createAIProvider, AIProviderType } from '../../../api/ai/index.js';
-import { generatePersonalityDimensions, type TemplateVariables } from '../../personality/index.js';
-import { DimensionSubstitutor } from '../../dimension-substitutor.js';
-import type {
-  ContentGenerator,
-  GenerationContext,
-  GeneratedContent,
-  GeneratorValidationResult,
-  ModelTier,
-} from '../../../types/content-generator.js';
+import type { GenerationContext } from '../../../types/content-generator.js';
 import { ModelTier as ModelTierEnum } from '../../../types/content-generator.js';
-import type { AIProvider } from '../../../types/ai.js';
-import type { ModelSelection } from '../../../api/ai/model-tier-selector.js';
-import { join } from 'path';
-
-/**
- * Type-safe API key provider mapping
- */
-export type AIProviderAPIKeys = Record<string, string>;
 
 /**
  * Generates logical paradoxes applied to relatable everyday situations
@@ -66,7 +54,7 @@ export type AIProviderAPIKeys = Record<string, string>;
  * Uses a curated database of classic paradoxes and applies them to
  * everyday contexts for humor and philosophical reflection.
  */
-export class ParadoxEngineGenerator implements ContentGenerator {
+export class ParadoxEngineGenerator extends AIPromptGenerator {
   /**
    * Curated database of classic logical paradoxes
    *
@@ -166,11 +154,11 @@ export class ParadoxEngineGenerator implements ContentGenerator {
     'YOUR_MEETING_SCHEDULE',
   ] as const;
 
-  protected readonly promptLoader: PromptLoader;
-  protected readonly modelTierSelector: ModelTierSelector;
-  protected readonly modelTier: ModelTier;
-  private readonly apiKeys: AIProviderAPIKeys;
-  private readonly dimensionSubstitutor: DimensionSubstitutor;
+  /**
+   * Selected values for the current generation, used by getCustomMetadata
+   */
+  private selectedParadox: string = '';
+  private selectedApplication: string = '';
 
   /**
    * Creates a new ParadoxEngineGenerator instance
@@ -184,12 +172,8 @@ export class ParadoxEngineGenerator implements ContentGenerator {
     modelTierSelector: ModelTierSelector,
     apiKeys: AIProviderAPIKeys = {}
   ) {
-    this.promptLoader = promptLoader;
-    this.modelTierSelector = modelTierSelector;
     // Use LIGHT tier for paradox application (selection + application, not generation)
-    this.modelTier = ModelTierEnum.LIGHT;
-    this.apiKeys = apiKeys;
-    this.dimensionSubstitutor = new DimensionSubstitutor();
+    super(promptLoader, modelTierSelector, ModelTierEnum.LIGHT, apiKeys);
   }
 
   /**
@@ -237,244 +221,32 @@ export class ParadoxEngineGenerator implements ContentGenerator {
   }
 
   /**
-   * Validates the generator configuration
+   * Hook: Selects random paradox and application, returns as template variables.
    *
-   * Checks that both system and user prompt files exist and can be loaded.
-   *
-   * @returns Validation result with any errors encountered
+   * @param _context - Generation context (unused, but required by hook signature)
+   * @returns Template variables with paradox and application (spaces instead of underscores)
    */
-  async validate(): Promise<GeneratorValidationResult> {
-    const errors: string[] = [];
-
-    // Check if system prompt exists by trying to load it
-    const systemPromptPath = join('prompts', 'system', this.getSystemPromptFile());
-    try {
-      await this.promptLoader.loadPrompt('system', this.getSystemPromptFile());
-    } catch {
-      errors.push(`System prompt not found: ${systemPromptPath}`);
-    }
-
-    // Check if user prompt exists by trying to load it
-    const userPromptPath = join('prompts', 'user', this.getUserPromptFile());
-    try {
-      await this.promptLoader.loadPrompt('user', this.getUserPromptFile());
-    } catch {
-      errors.push(`User prompt not found: ${userPromptPath}`);
-    }
+  protected async getTemplateVariables(
+    _context: GenerationContext
+  ): Promise<Record<string, string>> {
+    this.selectedParadox = this.selectRandomParadox();
+    this.selectedApplication = this.selectRandomApplication();
 
     return {
-      valid: errors.length === 0,
-      errors: errors.length > 0 ? errors : undefined,
+      paradox: this.selectedParadox.replace(/_/g, ' '),
+      application: this.selectedApplication.replace(/_/g, ' '),
     };
   }
 
   /**
-   * Generates content using AI with automatic provider failover
+   * Hook: Returns selection choices in metadata.
    *
-   * Workflow:
-   * 1. Selects random paradox and application context
-   * 2. Generates personality dimensions for content variety
-   * 3. Loads system and user prompts with template variable substitution
-   * 4. Selects preferred model based on tier
-   * 5. Attempts generation with preferred provider
-   * 6. On failure, retries with alternate provider (if available)
-   * 7. Throws if all providers fail
-   *
-   * @param context - Context information for content generation
-   * @returns Generated content with text and metadata
-   * @throws Error if all AI providers fail
+   * @returns Metadata with paradox and application (original format with underscores)
    */
-  async generate(context: GenerationContext): Promise<GeneratedContent> {
-    // Select random paradox and application for this generation
-    const paradox = this.selectRandomParadox();
-    const application = this.selectRandomApplication();
-
-    // Generate personality dimensions (use provided or create new)
-    const personality = context.personality ?? generatePersonalityDimensions();
-
-    // Build template variables from personality, context, AND paradox selections
-    const templateVars = this.buildTemplateVariables(personality, context, paradox, application);
-
-    // Load prompts with variable substitution (personality, date, paradox, application, etc.)
-    const loadedSystemPrompt = await this.promptLoader.loadPromptWithVariables(
-      'system',
-      this.getSystemPromptFile(),
-      templateVars
-    );
-    const userPrompt = await this.promptLoader.loadPromptWithVariables(
-      'user',
-      this.getUserPromptFile(),
-      templateVars
-    );
-
-    // Apply dimension substitution (maxChars, maxLines) to system prompt
-    const systemPrompt = this.applyDimensionSubstitution(loadedSystemPrompt);
-
-    // Format the user prompt with context
-    const formattedUserPrompt = this.formatUserPrompt(userPrompt, context);
-
-    // Select model for this tier
-    const selection: ModelSelection = this.modelTierSelector.select(this.modelTier);
-
-    let lastError: Error | null = null;
-
-    // Build base metadata (reused for both primary and failover responses)
-    const baseMetadata = {
-      tier: this.modelTier,
-      personality,
-      systemPrompt,
-      userPrompt: formattedUserPrompt,
-      paradox,
-      application,
-    };
-
-    // If promptsOnly mode, return just the prompts without AI call
-    // This is used by ToolBasedGenerator to get prompts for its own AI call with tools
-    if (context.promptsOnly) {
-      return {
-        text: '',
-        outputMode: 'text',
-        metadata: baseMetadata,
-      };
-    }
-
-    // Try preferred provider
-    try {
-      const provider = this.createProviderForSelection(selection);
-      const response = await provider.generate({
-        systemPrompt,
-        userPrompt: formattedUserPrompt,
-      });
-
-      return {
-        text: response.text,
-        outputMode: 'text',
-        metadata: {
-          ...baseMetadata,
-          model: response.model,
-          provider: selection.provider,
-          tokensUsed: response.tokensUsed,
-        },
-      };
-    } catch (error) {
-      lastError = error as Error;
-    }
-
-    // Try alternate provider
-    const alternate = this.modelTierSelector.getAlternate(selection);
-    if (alternate) {
-      try {
-        const alternateProvider = this.createProviderForSelection(alternate);
-        const response = await alternateProvider.generate({
-          systemPrompt,
-          userPrompt: formattedUserPrompt,
-        });
-
-        return {
-          text: response.text,
-          outputMode: 'text',
-          metadata: {
-            ...baseMetadata,
-            model: response.model,
-            provider: alternate.provider,
-            tokensUsed: response.tokensUsed,
-            failedOver: true,
-            primaryError: lastError?.message,
-          },
-        };
-      } catch (alternateError) {
-        lastError = alternateError as Error;
-      }
-    }
-
-    // All providers failed
-    throw new Error(`All AI providers failed for tier ${this.modelTier}: ${lastError?.message}`);
-  }
-
-  /**
-   * Builds template variables from personality dimensions, context, and paradox selections
-   *
-   * @param personality - Personality dimensions for this generation
-   * @param context - Generation context with timestamp and other data
-   * @param paradox - Selected paradox identifier
-   * @param application - Selected application context
-   * @returns Template variables map for prompt substitution
-   */
-  private buildTemplateVariables(
-    personality: { mood: string; energyLevel: string; humorStyle: string; obsession: string },
-    context: GenerationContext,
-    paradox: string,
-    application: string
-  ): TemplateVariables {
-    const timestamp = context.timestamp;
-
+  protected getCustomMetadata(): Record<string, unknown> {
     return {
-      // Personality dimensions
-      mood: personality.mood,
-      energyLevel: personality.energyLevel,
-      humorStyle: personality.humorStyle,
-      obsession: personality.obsession,
-
-      // Date/time context
-      date: timestamp.toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      }),
-      time: timestamp.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-      }),
-
-      // Static persona (could be made configurable later)
-      persona: 'Houseboy',
-
-      // Paradox-specific variables
-      paradox: paradox.replace(/_/g, ' '),
-      application: application.replace(/_/g, ' '),
+      paradox: this.selectedParadox,
+      application: this.selectedApplication,
     };
-  }
-
-  /**
-   * Creates an AI provider instance for the given selection
-   *
-   * @param selection - Model selection with provider and model identifier
-   * @returns Configured AI provider instance
-   * @throws Error if API key not found for provider
-   */
-  private createProviderForSelection(selection: ModelSelection): AIProvider {
-    const apiKey = this.apiKeys[selection.provider];
-    if (!apiKey) {
-      throw new Error(`API key not found for provider: ${selection.provider}`);
-    }
-
-    return createAIProvider(selection.provider as AIProviderType, apiKey, selection.model);
-  }
-
-  /**
-   * Applies dimension substitution to a prompt template
-   *
-   * Replaces {{maxChars}} and {{maxLines}} placeholders with values.
-   * Uses DimensionSubstitutor for the actual substitution.
-   *
-   * @param prompt - Prompt template with potential dimension placeholders
-   * @returns Prompt with dimension variables substituted
-   */
-  protected applyDimensionSubstitution(prompt: string): string {
-    return this.dimensionSubstitutor.substitute(prompt);
-  }
-
-  /**
-   * Returns the user prompt without additional context
-   *
-   * The user prompt already contains all necessary instructions.
-   * Adding context caused the AI to echo it back in output.
-   *
-   * @param userPrompt - Base user prompt text
-   * @returns User prompt unchanged
-   */
-  private formatUserPrompt(userPrompt: string, _context: GenerationContext): string {
-    return userPrompt;
   }
 }
