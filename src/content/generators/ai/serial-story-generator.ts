@@ -59,12 +59,52 @@ import { ContentRepository } from '../../../storage/repositories/content-repo.js
 import type { GenerationContext } from '../../../types/content-generator.js';
 import { ModelTier as ModelTierEnum } from '../../../types/content-generator.js';
 import type { ContentRecord } from '../../../storage/models/content.js';
-import {
-  SCENARIO,
-  EMOTIONAL_BEAT,
-  type ScenarioType,
-  type EmotionalBeatType,
-} from './story-fragment-generator.js';
+
+/**
+ * Scenario dictionary for serial stories
+ *
+ * Each scenario represents a moment type that can anchor a micro-fiction scene.
+ * The scenario provides the situational context for the emotional beat.
+ */
+export const SCENARIO = [
+  'KEEPING_OBJECT',
+  'AFTER_PHONE_CALL',
+  'ALMOST_SPOKE',
+  'LAST_TIME',
+  'WAITING',
+  'FOUND_NOTE',
+  'EMPTY_CHAIR',
+  'HELD_DOOR',
+  'PACKED_BOX',
+  'KEPT_SECRET',
+  'RETURNED_KEY',
+  'WRONG_NUMBER',
+  'OLD_PHOTO',
+  'MISSED_TRAIN',
+  'LEFT_MESSAGE',
+  'UNOPENED_LETTER',
+  'SAVED_SEAT',
+] as const;
+
+/**
+ * Emotional beat dictionary for serial stories
+ *
+ * Each emotional beat represents the core feeling to convey through action,
+ * not by naming the emotion directly.
+ */
+export const EMOTIONAL_BEAT = [
+  'LOSS',
+  'HOPE',
+  'REGRET',
+  'RELIEF',
+  'LONGING',
+  'RESOLVE',
+  'TENDERNESS',
+  'ACCEPTANCE',
+] as const;
+
+export type ScenarioType = (typeof SCENARIO)[number];
+export type EmotionalBeatType = (typeof EMOTIONAL_BEAT)[number];
 
 /**
  * Arc phases for narrative guidance
