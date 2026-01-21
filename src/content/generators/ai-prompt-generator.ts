@@ -102,6 +102,12 @@ export type AIProviderAPIKeys = Record<string, string>;
  * and handling provider failover during content generation.
  */
 export abstract class AIPromptGenerator implements ContentGenerator {
+  /**
+   * Marker indicating this is an AI-powered generator.
+   * Used by the orchestrator to determine if ToolBasedGenerator wrapping is needed.
+   */
+  readonly isAIGenerator = true;
+
   protected readonly promptLoader: PromptLoader;
   protected readonly modelTierSelector: ModelTierSelector;
   protected readonly modelTier: ModelTier;

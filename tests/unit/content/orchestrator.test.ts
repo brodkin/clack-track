@@ -117,6 +117,7 @@ describe('ContentOrchestrator', () => {
       const mockGenerator: ContentGenerator = {
         generate: jest.fn(),
         validate: jest.fn().mockReturnValue({ valid: true }),
+        isAIGenerator: true, // Mark as AI generator for tool-based wrapping
       };
 
       const registeredGenerator: RegisteredGenerator = {

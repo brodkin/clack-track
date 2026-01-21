@@ -161,18 +161,16 @@ LUCKY: 7 14 28 42`;
 
   describe('getTemplateVariables()', () => {
     it('should generate 6 random lucky numbers between 10-99', async () => {
-      const generator = new FortuneCookieGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' }
-      ) as ProtectedFortuneCookieGenerator;
+      const generator = new FortuneCookieGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      }) as ProtectedFortuneCookieGenerator;
 
       const templateVars = await generator.getTemplateVariables(mockContext);
 
       expect(templateVars.luckyNumbers).toBeDefined();
       const numbers = templateVars.luckyNumbers.split(' ').map(Number);
       expect(numbers).toHaveLength(6);
-      numbers.forEach((num) => {
+      numbers.forEach(num => {
         expect(num).toBeGreaterThanOrEqual(10);
         expect(num).toBeLessThanOrEqual(99);
         expect(Number.isInteger(num)).toBe(true);
@@ -180,11 +178,9 @@ LUCKY: 7 14 28 42`;
     });
 
     it('should return space-separated numbers', async () => {
-      const generator = new FortuneCookieGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' }
-      ) as ProtectedFortuneCookieGenerator;
+      const generator = new FortuneCookieGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      }) as ProtectedFortuneCookieGenerator;
 
       const templateVars = await generator.getTemplateVariables(mockContext);
 
@@ -193,11 +189,9 @@ LUCKY: 7 14 28 42`;
     });
 
     it('should store generated numbers in instance property', async () => {
-      const generator = new FortuneCookieGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' }
-      ) as ProtectedFortuneCookieGenerator;
+      const generator = new FortuneCookieGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      }) as ProtectedFortuneCookieGenerator;
 
       const templateVars = await generator.getTemplateVariables(mockContext);
 
@@ -205,11 +199,9 @@ LUCKY: 7 14 28 42`;
     });
 
     it('should generate different numbers on each call', async () => {
-      const generator = new FortuneCookieGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' }
-      ) as ProtectedFortuneCookieGenerator;
+      const generator = new FortuneCookieGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      }) as ProtectedFortuneCookieGenerator;
 
       // Generate multiple times and collect results
       const results = new Set<string>();
@@ -265,7 +257,7 @@ LUCKY: 7 14 28 42`;
 
       // Find the call for the user prompt (fortune-cookie.txt)
       const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
-        (call) => call[0] === 'user' && call[1] === 'fortune-cookie.txt'
+        call => call[0] === 'user' && call[1] === 'fortune-cookie.txt'
       );
 
       expect(userPromptCall).toBeDefined();

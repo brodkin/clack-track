@@ -423,6 +423,14 @@ export interface ContentGenerator {
    * ```
    */
   validate(): Promise<GeneratorValidationResult>;
+
+  /**
+   * Marker indicating this is an AI-powered generator.
+   * When true, the orchestrator wraps with ToolBasedGenerator for validation.
+   * AI generators (extending AIPromptGenerator) set this to true automatically.
+   * Programmatic generators leave this undefined/false.
+   */
+  readonly isAIGenerator?: boolean;
 }
 
 /**
@@ -565,12 +573,6 @@ export interface ContentRegistration {
    * When not specified, default formatting is applied.
    */
   formatOptions?: GeneratorFormatOptions;
-  /**
-   * Whether to use tool-based generation for this generator.
-   * Defaults to true for AI-powered generators.
-   * Set to false for programmatic generators that don't use AI prompts.
-   */
-  useToolBasedGeneration?: boolean;
   /**
    * Tool-based generation options.
    * Controls the behavior of the ToolBasedGenerator wrapper which is always
