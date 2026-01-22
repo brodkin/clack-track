@@ -10,7 +10,7 @@ async function loadLatestContent() {
 
     if (data.success && data.data) {
       displayContent(data.data);
-      currentContentId = data.data.content.id;
+      currentContentId = data.data.id;
     }
   } catch (error) {
     console.error('Failed to load content:', error);
@@ -18,9 +18,8 @@ async function loadLatestContent() {
 }
 
 // Display content in Vestaboard preview
-function displayContent(data) {
+function displayContent(content) {
   const display = document.getElementById('vestaboard-display');
-  const { content } = data;
 
   // Split text into rows (max 6 rows, 22 chars each)
   const rows = formatForVestaboard(content.text);
@@ -93,7 +92,7 @@ async function loadContentHistory() {
     const data = await response.json();
 
     if (data.success && data.data) {
-      displayHistory(data.data.items);
+      displayHistory(data.data);
     }
   } catch (error) {
     console.error('Failed to load history:', error);
@@ -129,7 +128,7 @@ async function loadDebugLogs() {
     const data = await response.json();
 
     if (data.success && data.data) {
-      displayLogs(data.data.logs);
+      displayLogs(data.data);
     }
   } catch (error) {
     console.error('Failed to load logs:', error);
