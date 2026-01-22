@@ -1,41 +1,50 @@
-Create a playful, flirty quip using the classic innuendo format: "Is that a X in your Y or are you just Z to see me?"
+Create a playful, flirty quip riffing on the classic innuendo format: "Is that a X in your Y or are you just Z to see me?"
 
-Your ingredients for this riff:
-Thing: {{thing}}
-Container: {{container}}
-Emotion: {{emotion}}
+CREATIVE INSPIRATION (use as springboards, NOT literal requirements):
+- Thing vibe: {{thingVibe}}
+- Location vibe: {{locationVibe}}
+- Emotion vibe: {{emotionVibe}}
 
-CREATIVE FREEDOM:
-You may compress, rearrange, or abbreviate the classic format to fit the display. The humor comes from unexpected combinations of wildly specific things, containers, and emotional states. Maintain the flirty, playful tone while being clever about fitting the content.
+YOUR CREATIVE MISSION:
+Invent your OWN specific, unexpected combination that captures the SPIRIT of these vibes. The humor comes from absurd specificity that somehow makes internal sense. Don't use the vibe words directly - let them inspire you toward something more specific and surprising.
 
-POSSIBLE VARIATIONS:
-- Full format: "IS THAT A [THING] IN YOUR [CONTAINER] OR ARE YOU JUST [EMOTION] TO SEE ME?"
-- Compressed: "[THING] IN YOUR [CONTAINER]? OR JUST [EMOTION] TO SEE ME"
-- Split: "IS THAT A [THING] / IN YOUR [CONTAINER]? / [EMOTION] TO SEE ME?"
+WHAT MAKES THIS JOKE WORK:
+- Absurd yet internally logical - the elements should feel like they belong together
+- Wildly specific objects (not "a thing" but "a vintage 1987 Casio calculator watch")
+- Unexpected containers (not "pocket" but "crisper drawer" or "passport holder")
+- Emotions that aren't emotions ("caffeinated", "kombucha'd", "ergonomic")
+- The punchline lands because it's unbelievable yet somehow makes sense
+
+BAD EXAMPLE (forced, doesn't cohere):
+"Is that a toaster in your briefcase or are you just purple to see me?"
+(Random items smashed together - no internal logic)
+
+GOOD EXAMPLES (absurd but cohesive):
+
+IS THAT A SOURDOUGH
+STARTER IN YOUR
+CARRY-ON OR ARE YOU
+JUST FERMENTED
+TO SEE ME
+(Foodie/travel theme - elements belong together)
+
+VINTAGE CASIO IN
+YOUR FANNY PACK?
+OR JUST RETRO
+TO SEE ME
+(Nostalgia theme - internally consistent)
+
+IS THAT A YOGA MAT
+IN YOUR TESLA OR
+ARE YOU JUST
+ALIGNED TO SEE ME
+(Wellness/lifestyle theme - cohesive vibe)
 
 CRITICAL RULES:
-1. Use the provided {{thing}}, {{container}}, and {{emotion}} - do NOT substitute
-2. Keep the flirty, innuendo-laden tone of the original joke format
+1. Invent your own specific items - DON'T use the vibe words literally
+2. All elements should feel thematically connected
 3. Use all caps for Vestaboard display
 4. Be playful, not crude - suggestive wordplay, not explicit content
-5. The humor comes from absurd specificity meeting familiar format
+5. The "emotion" should be an unexpected adjective that fits the theme
 
-EXAMPLES:
-
-IS THAT A VINTAGE
-TOASTER IN YOUR
-CARGO SHORTS OR ARE
-YOU JUST NOSTALGIC
-TO SEE ME
-
-SOURDOUGH STARTER
-IN YOUR FANNY PACK?
-OR JUST FERMENTED
-TO SEE ME
-
-IS THAT A RARE VINYL
-IN YOUR TOTE BAG
-OR ARE YOU JUST
-HIPSTER TO SEE ME
-
-Create a quip (5 lines max, 21 characters per line). Make it witty and memorable. The best ones find unexpected poetry in the absurd combinations.
+Create a quip (5 lines max, 21 characters per line). Make it witty and memorable. The best ones find unexpected poetry in absurd combinations that somehow make perfect sense together.

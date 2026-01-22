@@ -9,14 +9,20 @@
  * - Uses prompts/system/major-update-base.txt for system context
  * - Uses prompts/user/happy-to-see-me.txt for joke format guidance
  * - Uses LIGHT model tier for cost efficiency
- * - Injects random thing, container, and emotion into prompts via triple dictionary
+ * - Injects thematic vibes (not literal items) to inspire cohesive comedy
  * - Inherits retry logic and provider failover from base class
  *
+ * DESIGN PHILOSOPHY:
+ * The dictionaries provide INSPIRATION, not literal requirements.
+ * The AI should create its own specific, cohesive combinations that
+ * capture the SPIRIT of the vibes. This allows for absurd humor that
+ * makes internal sense - the key to landing the joke.
+ *
  * Uses Template Method hooks:
- * - getTemplateVariables(): Injects thing, container, emotion
+ * - getTemplateVariables(): Injects thingVibe, locationVibe, emotionVibe
  * - getCustomMetadata(): Tracks selection choices in metadata
  *
- * Format: Flirty, playful quips with unexpected combinations
+ * Format: Flirty, playful quips with internally consistent absurdity
  *
  * @example
  * ```typescript
@@ -31,7 +37,7 @@
  *   timezone: 'America/New_York'
  * });
  *
- * console.log(content.text); // "IS THAT A VINTAGE\nTOASTER IN YOUR..."
+ * console.log(content.text); // "IS THAT A VINTAGE\nCASIO IN YOUR..."
  * ```
  */
 
@@ -42,145 +48,125 @@ import type { GenerationContext } from '../../../types/content-generator.js';
 import { ModelTier as ModelTierEnum } from '../../../types/content-generator.js';
 
 /**
- * Dictionary of wildly specific things that might be found in unexpected places
+ * Thematic vibes for things/objects
  *
- * Each entry should be specific enough to be funny but recognizable
- * enough to land. Aim for visual absurdity and cultural touchstones.
+ * These are creative springboards, not literal requirements.
+ * The AI should invent its own specific items inspired by these themes.
  */
-export const THINGS = [
-  'vintage toaster',
-  'sourdough starter',
-  'rare vinyl record',
-  'kombucha scoby',
-  'tamagotchi',
-  'swiss army knife',
-  'mechanical keyboard',
-  'crystals collection',
-  'cast iron skillet',
-  'travel humidor',
-  'yoga mat',
-  'reusable straws',
-  'instant pot',
-  'noise canceling headphones',
-  'essential oils kit',
-  'cheese wheel',
-  'bonsai tree',
-  'artisanal pickles jar',
-  'french press',
-  'record player',
-  'polaroid camera',
-  'meditation cushion',
-  'standing desk',
-  'air fryer',
-  'weighted blanket',
-  'espresso machine',
-  'bread maker',
-  'sous vide cooker',
-  'smart watch',
-  'drone',
+export const THING_VIBES = [
+  'retro tech nostalgia',
+  'artisanal food culture',
+  'wellness obsession',
+  'hipster accessories',
+  'suburban dad energy',
+  'millennial anxiety objects',
+  'gen-z chaos items',
+  'cottagecore aesthetics',
+  'corporate wellness',
+  'vinyl collector vibes',
+  'plant parent energy',
+  'sourdough era relics',
+  'crossfit culture',
+  'true crime podcast gear',
+  'astrology girl items',
+  'crypto bro accessories',
+  'minimalist essentials',
+  'maximalist treasures',
+  'thrift store finds',
+  'farmers market hauls',
 ] as const;
 
 /**
- * Dictionary of unexpected containers or locations
+ * Thematic vibes for locations/containers
  *
- * Mix of clothing, bags, furniture, and abstract spaces
- * that create comedic juxtaposition with the things.
+ * These inspire unexpected places where things might be found.
+ * The AI should invent specific, surprising containers.
  */
-export const CONTAINERS = [
-  'cargo shorts',
-  'fanny pack',
-  'tote bag',
-  'sock drawer',
-  'glove compartment',
-  'coat pocket',
-  'messenger bag',
-  'briefcase',
-  'backpack',
-  'duffle bag',
-  'lunchbox',
-  'filing cabinet',
-  'medicine cabinet',
-  'junk drawer',
-  'garage',
-  'basement',
-  'attic',
-  'closet',
-  'trunk',
-  'cubicle',
-  'locker',
-  'purse',
-  'wallet',
-  'carry on',
-  'overhead bin',
-  'desk drawer',
-  'nightstand',
-  'pantry',
-  'freezer',
-  'shed',
+export const LOCATION_VIBES = [
+  'domestic hiding spots',
+  'travel storage chaos',
+  'office desk archaeology',
+  'car organization disasters',
+  'pocket ecosystems',
+  'bag dimension portals',
+  'kitchen junk drawers',
+  'bathroom cabinet secrets',
+  'garage treasure zones',
+  'closet archaeology',
+  'nightstand mysteries',
+  'coat pocket universes',
+  'gym bag ecosystems',
+  'diaper bag dimensions',
+  'purse black holes',
+  'backpack time capsules',
+  'glove box graveyards',
+  'freezer archaeology',
+  'attic discoveries',
+  'basement kingdoms',
 ] as const;
 
 /**
- * Dictionary of unexpected emotional states
+ * Thematic vibes for emotional states
  *
- * Mix adjective-style emotions that can follow "are you just X to see me"
- * including creative non-standard emotions for comedic effect.
+ * These inspire the punchline emotion - should be adjectives
+ * that aren't really emotions but capture a feeling/aesthetic.
  */
-export const EMOTIONS = [
-  'happy',
-  'excited',
-  'thrilled',
-  'nostalgic',
-  'fermented',
-  'caffeinated',
-  'organized',
-  'minimalist',
-  'bougie',
-  'hipster',
-  'mindful',
-  'hydrated',
-  'zen',
-  'artisanal',
-  'sustainable',
-  'vintage',
-  'curated',
-  'aesthetic',
-  'cozy',
-  'ergonomic',
+export const EMOTION_VIBES = [
+  'caffeinated energy',
+  'fermented patience',
+  'organized chaos',
+  'nostalgic yearning',
+  'sustainable guilt',
+  'curated authenticity',
+  'optimized efficiency',
+  'aligned chakras',
+  'grounded presence',
+  'vintage coolness',
+  'artisanal sincerity',
+  'organic enthusiasm',
+  'minimalist joy',
+  'maximalist delight',
+  'ergonomic comfort',
+  'hydrated clarity',
+  'manifested abundance',
+  'aesthetic satisfaction',
+  'cozy contentment',
+  'chaotic neutral',
 ] as const;
 
-export type Thing = (typeof THINGS)[number];
-export type Container = (typeof CONTAINERS)[number];
-export type Emotion = (typeof EMOTIONS)[number];
+export type ThingVibe = (typeof THING_VIBES)[number];
+export type LocationVibe = (typeof LOCATION_VIBES)[number];
+export type EmotionVibe = (typeof EMOTION_VIBES)[number];
 
 /**
- * Generates playful innuendo-style jokes with unexpected combinations
+ * Generates playful innuendo-style jokes with thematically cohesive elements
  *
  * Extends AIPromptGenerator with happy-to-see-me-specific prompts,
  * LIGHT model tier selection for cost efficiency, and
- * random thing/container/emotion injection for variety.
+ * thematic vibe injection that INSPIRES (not dictates) the output.
  */
 export class HappyToSeeMeGenerator extends AIPromptGenerator {
   /**
-   * Static access to things dictionary for testing
+   * Static access to thing vibes for testing
    */
-  static readonly THINGS = THINGS;
+  static readonly THING_VIBES = THING_VIBES;
 
   /**
-   * Static access to containers dictionary for testing
+   * Static access to location vibes for testing
    */
-  static readonly CONTAINERS = CONTAINERS;
+  static readonly LOCATION_VIBES = LOCATION_VIBES;
 
   /**
-   * Static access to emotions dictionary for testing
+   * Static access to emotion vibes for testing
    */
-  static readonly EMOTIONS = EMOTIONS;
+  static readonly EMOTION_VIBES = EMOTION_VIBES;
 
   /**
    * Selected values for the current generation, used by getCustomMetadata
    */
-  private selectedThing: string = '';
-  private selectedContainer: string = '';
-  private selectedEmotion: string = '';
+  private selectedThingVibe: string = '';
+  private selectedLocationVibe: string = '';
+  private selectedEmotionVibe: string = '';
 
   /**
    * Creates a new HappyToSeeMeGenerator instance
@@ -223,67 +209,70 @@ export class HappyToSeeMeGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Selects a random thing from the dictionary
+   * Selects a random thing vibe from the dictionary
    *
-   * @returns The selected thing
+   * @returns The selected vibe theme
    */
-  selectRandomThing(): string {
-    return THINGS[Math.floor(Math.random() * THINGS.length)];
+  selectRandomThingVibe(): string {
+    return THING_VIBES[Math.floor(Math.random() * THING_VIBES.length)];
   }
 
   /**
-   * Selects a random container from the dictionary
+   * Selects a random location vibe from the dictionary
    *
-   * @returns The selected container
+   * @returns The selected vibe theme
    */
-  selectRandomContainer(): string {
-    return CONTAINERS[Math.floor(Math.random() * CONTAINERS.length)];
+  selectRandomLocationVibe(): string {
+    return LOCATION_VIBES[Math.floor(Math.random() * LOCATION_VIBES.length)];
   }
 
   /**
-   * Selects a random emotion from the dictionary
+   * Selects a random emotion vibe from the dictionary
    *
-   * @returns The selected emotion
+   * @returns The selected vibe theme
    */
-  selectRandomEmotion(): string {
-    return EMOTIONS[Math.floor(Math.random() * EMOTIONS.length)];
+  selectRandomEmotionVibe(): string {
+    return EMOTION_VIBES[Math.floor(Math.random() * EMOTION_VIBES.length)];
   }
 
   /**
-   * Hook: Selects random thing, container, and emotion, returns as template variables.
+   * Hook: Selects random vibes, returns as template variables.
+   *
+   * These vibes INSPIRE the AI's output but don't dictate it.
+   * The AI creates its own cohesive, specific combinations.
    *
    * @param _context - Generation context (unused, but required by hook signature)
-   * @returns Template variables with thing, container, emotion
+   * @returns Template variables with thingVibe, locationVibe, emotionVibe
    */
   protected async getTemplateVariables(
     _context: GenerationContext
   ): Promise<Record<string, string>> {
-    const thing = this.selectRandomThing();
-    const container = this.selectRandomContainer();
-    const emotion = this.selectRandomEmotion();
+    const thingVibe = this.selectRandomThingVibe();
+    const locationVibe = this.selectRandomLocationVibe();
+    const emotionVibe = this.selectRandomEmotionVibe();
 
     // Cache for metadata
-    this.selectedThing = thing;
-    this.selectedContainer = container;
-    this.selectedEmotion = emotion;
+    this.selectedThingVibe = thingVibe;
+    this.selectedLocationVibe = locationVibe;
+    this.selectedEmotionVibe = emotionVibe;
 
     return {
-      thing,
-      container,
-      emotion,
+      thingVibe,
+      locationVibe,
+      emotionVibe,
     };
   }
 
   /**
    * Hook: Returns selection choices in metadata.
    *
-   * @returns Metadata with thing, container, and emotion
+   * @returns Metadata with thingVibe, locationVibe, and emotionVibe
    */
   protected getCustomMetadata(): Record<string, unknown> {
     return {
-      thing: this.selectedThing,
-      container: this.selectedContainer,
-      emotion: this.selectedEmotion,
+      thingVibe: this.selectedThingVibe,
+      locationVibe: this.selectedLocationVibe,
+      emotionVibe: this.selectedEmotionVibe,
     };
   }
 }

@@ -6,11 +6,11 @@
  * - Uses LIGHT model tier for cost efficiency
  * - Validates prompt files exist
  * - Returns correct system and user prompt file names
- * - Injects random thing, container, and emotion into prompts
- * - Covers all dictionaries (THINGS, CONTAINERS, EMOTIONS)
- * - THINGS dictionary has 30+ unique entries
- * - CONTAINERS dictionary has 30+ unique entries
- * - EMOTIONS dictionary has 20+ unique entries
+ * - Injects thematic vibes (not literal items) into prompts
+ * - Covers all vibe dictionaries (THING_VIBES, LOCATION_VIBES, EMOTION_VIBES)
+ * - THING_VIBES has 20+ unique entries
+ * - LOCATION_VIBES has 20+ unique entries
+ * - EMOTION_VIBES has 20+ unique entries
  * - Random selection produces variety (100-output variability test)
  */
 
@@ -24,9 +24,9 @@ type ProtectedHappyToSeeMeGenerator = HappyToSeeMeGenerator & {
   getSystemPromptFile(): string;
   getUserPromptFile(): string;
   modelTier: ModelTier;
-  selectRandomThing(): string;
-  selectRandomContainer(): string;
-  selectRandomEmotion(): string;
+  selectRandomThingVibe(): string;
+  selectRandomLocationVibe(): string;
+  selectRandomEmotionVibe(): string;
 };
 
 describe('HappyToSeeMeGenerator', () => {
@@ -146,20 +146,20 @@ describe('HappyToSeeMeGenerator', () => {
     });
   });
 
-  describe('thing selection', () => {
-    it('should select from valid things', () => {
+  describe('thing vibe selection', () => {
+    it('should select from valid thing vibes', () => {
       const generator = new HappyToSeeMeGenerator(
         mockPromptLoader,
         mockModelTierSelector,
         {}
       ) as ProtectedHappyToSeeMeGenerator;
 
-      const validThings = HappyToSeeMeGenerator.THINGS;
+      const validVibes = HappyToSeeMeGenerator.THING_VIBES;
 
       // Run multiple times to test randomness
       for (let i = 0; i < 50; i++) {
-        const thing = generator.selectRandomThing();
-        expect(validThings).toContain(thing);
+        const vibe = generator.selectRandomThingVibe();
+        expect(validVibes).toContain(vibe);
       }
     });
 
@@ -171,83 +171,83 @@ describe('HappyToSeeMeGenerator', () => {
       ) as ProtectedHappyToSeeMeGenerator;
 
       // Run 100 times to test variety
-      const selectedThings = new Set<string>();
+      const selectedVibes = new Set<string>();
       for (let i = 0; i < 100; i++) {
-        selectedThings.add(generator.selectRandomThing());
-      }
-
-      // With 100 iterations and 30 items, should hit multiple unique values
-      expect(selectedThings.size).toBeGreaterThan(5);
-    });
-  });
-
-  describe('container selection', () => {
-    it('should select from valid containers', () => {
-      const generator = new HappyToSeeMeGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        {}
-      ) as ProtectedHappyToSeeMeGenerator;
-
-      const validContainers = HappyToSeeMeGenerator.CONTAINERS;
-
-      // Run multiple times to test randomness
-      for (let i = 0; i < 50; i++) {
-        const container = generator.selectRandomContainer();
-        expect(validContainers).toContain(container);
-      }
-    });
-
-    it('should produce variety in selections', () => {
-      const generator = new HappyToSeeMeGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        {}
-      ) as ProtectedHappyToSeeMeGenerator;
-
-      // Run 100 times to test variety
-      const selectedContainers = new Set<string>();
-      for (let i = 0; i < 100; i++) {
-        selectedContainers.add(generator.selectRandomContainer());
-      }
-
-      // With 100 iterations and 30 items, should hit multiple unique values
-      expect(selectedContainers.size).toBeGreaterThan(5);
-    });
-  });
-
-  describe('emotion selection', () => {
-    it('should select from valid emotions', () => {
-      const generator = new HappyToSeeMeGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        {}
-      ) as ProtectedHappyToSeeMeGenerator;
-
-      const validEmotions = HappyToSeeMeGenerator.EMOTIONS;
-
-      // Run multiple times to test randomness
-      for (let i = 0; i < 50; i++) {
-        const emotion = generator.selectRandomEmotion();
-        expect(validEmotions).toContain(emotion);
-      }
-    });
-
-    it('should produce variety in selections', () => {
-      const generator = new HappyToSeeMeGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        {}
-      ) as ProtectedHappyToSeeMeGenerator;
-
-      // Run 100 times to test variety
-      const selectedEmotions = new Set<string>();
-      for (let i = 0; i < 100; i++) {
-        selectedEmotions.add(generator.selectRandomEmotion());
+        selectedVibes.add(generator.selectRandomThingVibe());
       }
 
       // With 100 iterations and 20 items, should hit multiple unique values
-      expect(selectedEmotions.size).toBeGreaterThan(5);
+      expect(selectedVibes.size).toBeGreaterThan(5);
+    });
+  });
+
+  describe('location vibe selection', () => {
+    it('should select from valid location vibes', () => {
+      const generator = new HappyToSeeMeGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        {}
+      ) as ProtectedHappyToSeeMeGenerator;
+
+      const validVibes = HappyToSeeMeGenerator.LOCATION_VIBES;
+
+      // Run multiple times to test randomness
+      for (let i = 0; i < 50; i++) {
+        const vibe = generator.selectRandomLocationVibe();
+        expect(validVibes).toContain(vibe);
+      }
+    });
+
+    it('should produce variety in selections', () => {
+      const generator = new HappyToSeeMeGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        {}
+      ) as ProtectedHappyToSeeMeGenerator;
+
+      // Run 100 times to test variety
+      const selectedVibes = new Set<string>();
+      for (let i = 0; i < 100; i++) {
+        selectedVibes.add(generator.selectRandomLocationVibe());
+      }
+
+      // With 100 iterations and 20 items, should hit multiple unique values
+      expect(selectedVibes.size).toBeGreaterThan(5);
+    });
+  });
+
+  describe('emotion vibe selection', () => {
+    it('should select from valid emotion vibes', () => {
+      const generator = new HappyToSeeMeGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        {}
+      ) as ProtectedHappyToSeeMeGenerator;
+
+      const validVibes = HappyToSeeMeGenerator.EMOTION_VIBES;
+
+      // Run multiple times to test randomness
+      for (let i = 0; i < 50; i++) {
+        const vibe = generator.selectRandomEmotionVibe();
+        expect(validVibes).toContain(vibe);
+      }
+    });
+
+    it('should produce variety in selections', () => {
+      const generator = new HappyToSeeMeGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        {}
+      ) as ProtectedHappyToSeeMeGenerator;
+
+      // Run 100 times to test variety
+      const selectedVibes = new Set<string>();
+      for (let i = 0; i < 100; i++) {
+        selectedVibes.add(generator.selectRandomEmotionVibe());
+      }
+
+      // With 100 iterations and 20 items, should hit multiple unique values
+      expect(selectedVibes.size).toBeGreaterThan(5);
     });
   });
 
@@ -262,9 +262,13 @@ describe('HappyToSeeMeGenerator', () => {
       });
       mockModelTierSelector.getAlternate.mockReturnValue(null);
 
-      const generator = new HappyToSeeMeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedHappyToSeeMeGenerator;
+      const generator = new HappyToSeeMeGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        {
+          openai: 'test-key',
+        }
+      ) as ProtectedHappyToSeeMeGenerator;
 
       // Verify the generator uses the correct prompt files via protected methods
       expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
@@ -280,7 +284,7 @@ describe('HappyToSeeMeGenerator', () => {
       expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
     });
 
-    it('should inject all three template variables into user prompt', async () => {
+    it('should inject all three vibe template variables into user prompt', async () => {
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
         provider: 'openai',
@@ -299,87 +303,84 @@ describe('HappyToSeeMeGenerator', () => {
         // May fail without AI provider - we're testing the prompt loading
       }
 
-      // Verify loadPromptWithVariables was called with all three template variables
+      // Verify loadPromptWithVariables was called with all three vibe template variables
       const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
         call => call[0] === 'user' && call[1] === 'happy-to-see-me.txt'
       );
 
       expect(userPromptCall).toBeDefined();
       const variables = userPromptCall?.[2];
-      expect(variables).toHaveProperty('thing');
-      expect(variables).toHaveProperty('container');
-      expect(variables).toHaveProperty('emotion');
+      expect(variables).toHaveProperty('thingVibe');
+      expect(variables).toHaveProperty('locationVibe');
+      expect(variables).toHaveProperty('emotionVibe');
     });
   });
 
-  describe('THINGS constant', () => {
-    it('should have 30+ unique entries', () => {
-      const things = HappyToSeeMeGenerator.THINGS;
-      expect(things.length).toBeGreaterThanOrEqual(30);
-
-      // Verify all entries are unique
-      const uniqueThings = new Set(things);
-      expect(uniqueThings.size).toBe(things.length);
-    });
-
-    it('should contain expected items', () => {
-      const things = HappyToSeeMeGenerator.THINGS;
-
-      // Verify some expected entries
-      expect(things).toContain('vintage toaster');
-      expect(things).toContain('sourdough starter');
-      expect(things).toContain('rare vinyl record');
-      expect(things).toContain('kombucha scoby');
-      expect(things).toContain('mechanical keyboard');
-    });
-  });
-
-  describe('CONTAINERS constant', () => {
-    it('should have 30+ unique entries', () => {
-      const containers = HappyToSeeMeGenerator.CONTAINERS;
-      expect(containers.length).toBeGreaterThanOrEqual(30);
-
-      // Verify all entries are unique
-      const uniqueContainers = new Set(containers);
-      expect(uniqueContainers.size).toBe(containers.length);
-    });
-
-    it('should contain expected items', () => {
-      const containers = HappyToSeeMeGenerator.CONTAINERS;
-
-      // Verify some expected entries
-      expect(containers).toContain('cargo shorts');
-      expect(containers).toContain('fanny pack');
-      expect(containers).toContain('tote bag');
-      expect(containers).toContain('sock drawer');
-      expect(containers).toContain('glove compartment');
-    });
-  });
-
-  describe('EMOTIONS constant', () => {
+  describe('THING_VIBES constant', () => {
     it('should have 20+ unique entries', () => {
-      const emotions = HappyToSeeMeGenerator.EMOTIONS;
-      expect(emotions.length).toBeGreaterThanOrEqual(20);
+      const vibes = HappyToSeeMeGenerator.THING_VIBES;
+      expect(vibes.length).toBeGreaterThanOrEqual(20);
 
       // Verify all entries are unique
-      const uniqueEmotions = new Set(emotions);
-      expect(uniqueEmotions.size).toBe(emotions.length);
+      const uniqueVibes = new Set(vibes);
+      expect(uniqueVibes.size).toBe(vibes.length);
     });
 
-    it('should contain expected items', () => {
-      const emotions = HappyToSeeMeGenerator.EMOTIONS;
+    it('should contain thematic inspiration items', () => {
+      const vibes = HappyToSeeMeGenerator.THING_VIBES;
 
-      // Verify some expected entries (mix of standard and creative)
-      expect(emotions).toContain('happy');
-      expect(emotions).toContain('excited');
-      expect(emotions).toContain('nostalgic');
-      expect(emotions).toContain('fermented'); // creative non-standard emotion
-      expect(emotions).toContain('caffeinated'); // creative non-standard emotion
+      // Verify some expected thematic entries
+      expect(vibes).toContain('retro tech nostalgia');
+      expect(vibes).toContain('artisanal food culture');
+      expect(vibes).toContain('wellness obsession');
+      expect(vibes).toContain('hipster accessories');
+    });
+  });
+
+  describe('LOCATION_VIBES constant', () => {
+    it('should have 20+ unique entries', () => {
+      const vibes = HappyToSeeMeGenerator.LOCATION_VIBES;
+      expect(vibes.length).toBeGreaterThanOrEqual(20);
+
+      // Verify all entries are unique
+      const uniqueVibes = new Set(vibes);
+      expect(uniqueVibes.size).toBe(vibes.length);
+    });
+
+    it('should contain thematic inspiration items', () => {
+      const vibes = HappyToSeeMeGenerator.LOCATION_VIBES;
+
+      // Verify some expected thematic entries
+      expect(vibes).toContain('domestic hiding spots');
+      expect(vibes).toContain('travel storage chaos');
+      expect(vibes).toContain('office desk archaeology');
+      expect(vibes).toContain('pocket ecosystems');
+    });
+  });
+
+  describe('EMOTION_VIBES constant', () => {
+    it('should have 20+ unique entries', () => {
+      const vibes = HappyToSeeMeGenerator.EMOTION_VIBES;
+      expect(vibes.length).toBeGreaterThanOrEqual(20);
+
+      // Verify all entries are unique
+      const uniqueVibes = new Set(vibes);
+      expect(uniqueVibes.size).toBe(vibes.length);
+    });
+
+    it('should contain thematic inspiration items', () => {
+      const vibes = HappyToSeeMeGenerator.EMOTION_VIBES;
+
+      // Verify some expected thematic entries (non-standard emotions)
+      expect(vibes).toContain('caffeinated energy');
+      expect(vibes).toContain('fermented patience');
+      expect(vibes).toContain('organized chaos');
+      expect(vibes).toContain('nostalgic yearning');
     });
   });
 
   describe('metadata', () => {
-    it('should include thing, container, and emotion in metadata', async () => {
+    it('should include thingVibe, locationVibe, and emotionVibe in metadata', async () => {
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
         provider: 'openai',
@@ -399,18 +400,44 @@ describe('HappyToSeeMeGenerator', () => {
         promptsOnly: true,
       });
 
-      expect(result.metadata).toHaveProperty('thing');
-      expect(result.metadata).toHaveProperty('container');
-      expect(result.metadata).toHaveProperty('emotion');
+      expect(result.metadata).toHaveProperty('thingVibe');
+      expect(result.metadata).toHaveProperty('locationVibe');
+      expect(result.metadata).toHaveProperty('emotionVibe');
 
-      // Verify thing is from valid pool
-      expect(HappyToSeeMeGenerator.THINGS).toContain(result.metadata?.thing);
+      // Verify vibes are from valid pools
+      expect(HappyToSeeMeGenerator.THING_VIBES).toContain(result.metadata?.thingVibe);
+      expect(HappyToSeeMeGenerator.LOCATION_VIBES).toContain(result.metadata?.locationVibe);
+      expect(HappyToSeeMeGenerator.EMOTION_VIBES).toContain(result.metadata?.emotionVibe);
+    });
+  });
 
-      // Verify container is from valid pool
-      expect(HappyToSeeMeGenerator.CONTAINERS).toContain(result.metadata?.container);
+  describe('design philosophy', () => {
+    it('should use vibes as inspiration not literal requirements', () => {
+      // This is a documentation/design test - vibes should be thematic, not specific items
+      const thingVibes = HappyToSeeMeGenerator.THING_VIBES;
+      const locationVibes = HappyToSeeMeGenerator.LOCATION_VIBES;
+      const emotionVibes = HappyToSeeMeGenerator.EMOTION_VIBES;
 
-      // Verify emotion is from valid pool
-      expect(HappyToSeeMeGenerator.EMOTIONS).toContain(result.metadata?.emotion);
+      // Vibes should be descriptive themes, not specific items
+      // They should contain words like "vibes", "energy", "culture", "aesthetics", etc.
+      const thematicWords = ['vibes', 'energy', 'culture', 'aesthetics', 'chaos', 'obsession'];
+      const hasThematicContent = thingVibes.some(vibe =>
+        thematicWords.some(word => vibe.includes(word))
+      );
+      expect(hasThematicContent).toBe(true);
+
+      // Location vibes should be conceptual, not literal places
+      const conceptualWords = ['archaeology', 'ecosystems', 'portals', 'dimensions', 'mysteries'];
+      const hasConceptualLocations = locationVibes.some(vibe =>
+        conceptualWords.some(word => vibe.includes(word))
+      );
+      expect(hasConceptualLocations).toBe(true);
+
+      // Emotion vibes should be non-standard emotions/states
+      const nonStandardEmotions = emotionVibes.filter(vibe =>
+        !['happy', 'sad', 'angry', 'excited', 'scared'].some(basic => vibe.includes(basic))
+      );
+      expect(nonStandardEmotions.length).toBeGreaterThan(15); // Most should be non-standard
     });
   });
 });
