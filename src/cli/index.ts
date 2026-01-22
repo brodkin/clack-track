@@ -6,6 +6,7 @@ import {
   contentListCommand,
   contentTestCommand,
   dbResetCommand,
+  dbMigrateCommand,
   circuitStatusCommand,
   circuitOnCommand,
   circuitOffCommand,
@@ -126,6 +127,9 @@ export async function runCLI(args: string[]): Promise<void> {
       });
       break;
     }
+    case 'db:migrate':
+      await dbMigrateCommand();
+      break;
     case 'circuit:status':
       await circuitStatusCommand();
       break;
@@ -180,6 +184,7 @@ Usage:
   npm run content:list                  List all registered content generators
   npm run content:test <id> [options]   Test a specific generator without sending
   npm run db:reset [options]            Reset database (development/test only)
+  npm run db:migrate                    Run pending database migrations
   npm run circuit:status                Show status of all circuit breakers
   npm run circuit:on <id>               Turn a circuit ON (enable)
   npm run circuit:off <id>              Turn a circuit OFF (disable)
@@ -195,6 +200,7 @@ Available commands:
   content:list    List all registered content generators
   content:test    Test a specific generator (dry run)
   db:reset        Reset database with safety guards (dev/test only)
+  db:migrate      Run pending database migrations
   circuit:status  Show status of all circuit breakers
   circuit:on      Turn a circuit ON (enable traffic flow)
   circuit:off     Turn a circuit OFF (block traffic)

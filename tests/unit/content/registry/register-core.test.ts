@@ -59,6 +59,7 @@ describe('registerCoreContent', () => {
     hotTake: createMockGenerator('hotTake'),
     novelInsight: createMockGenerator('novelInsight'),
     languageLesson: createMockGenerator('languageLesson'),
+    alienFieldReport: createMockGenerator('alienFieldReport'),
     staticFallback: createMockGenerator('fallback'),
   });
 
@@ -85,8 +86,8 @@ describe('registerCoreContent', () => {
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
       // globalNews, techNews, localNews, weather, haiku, seasonal, pattern,
       // showerThought, fortuneCookie, dailyRoast, storyFragment, timePerspective,
-      // hotTake, novelInsight, languageLesson = 15
-      expect(normalPriorityGens.length).toBe(15);
+      // hotTake, novelInsight, languageLesson, alienFieldReport = 16
+      expect(normalPriorityGens.length).toBe(16);
     });
   });
 
@@ -122,8 +123,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const allGenerators = registry.getAll();
-      // 15 P2 + 1 P3 = 16 total
-      expect(allGenerators.length).toBe(16);
+      // 16 P2 + 1 P3 = 17 total
+      expect(allGenerators.length).toBe(17);
     });
 
     it('should maintain correct priority distribution', () => {
@@ -135,10 +136,10 @@ describe('registerCoreContent', () => {
       const fallbackGens = registry.getByPriority(ContentPriority.FALLBACK);
       const notificationGens = registry.getByPriority(ContentPriority.NOTIFICATION);
 
-      // 15 P2 generators: globalNews, techNews, localNews, weather, haiku,
+      // 16 P2 generators: globalNews, techNews, localNews, weather, haiku,
       // seasonal, pattern, showerThought, fortuneCookie, dailyRoast, storyFragment,
-      // timePerspective, hotTake, novelInsight, languageLesson
-      expect(normalGens.length).toBe(15);
+      // timePerspective, hotTake, novelInsight, languageLesson, alienFieldReport
+      expect(normalGens.length).toBe(16);
       expect(fallbackGens.length).toBe(1);
       expect(notificationGens.length).toBe(0);
     });
@@ -202,8 +203,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      // All 15 P2 generators including 3 news generators
-      expect(normalPriorityGens.length).toBe(15);
+      // All 16 P2 generators including 3 news generators
+      expect(normalPriorityGens.length).toBe(16);
     });
 
     it('should not register old news-summary generator', () => {

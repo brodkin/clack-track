@@ -53,6 +53,9 @@ COPY --from=builder /app/dist ./dist
 # Copy prompts (required at runtime)
 COPY prompts/ ./prompts/
 
+# Copy migrations (required for database setup)
+COPY migrations/ ./migrations/
+
 # Create non-root user
 RUN groupadd -r clacktrack && useradd -r -g clacktrack clacktrack
 RUN chown -R clacktrack:clacktrack /app

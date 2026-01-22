@@ -33,6 +33,7 @@ Commands below use this pattern or the shorthand `$(docker ps -q -f "label=com.d
 **Symptom**: `ssh: connect to host <ip> port 22: Connection refused`
 
 **Solutions**:
+
 1. Verify the host is reachable (extract IP from DOCKER_HOST):
    ```bash
    # Get host from DOCKER_HOST
@@ -56,6 +57,7 @@ Commands below use this pattern or the shorthand `$(docker ps -q -f "label=com.d
 **Symptom**: `Error response from daemon: client version X.XX is too new`
 
 **Solution**: Set the API version explicitly (check `.env.production` for `DOCKER_API_VERSION`):
+
 ```bash
 set -a; source .env.production; set +a
 docker info
@@ -66,6 +68,7 @@ docker info
 **Symptom**: `permission denied while trying to connect to the Docker daemon socket`
 
 **Solution**: Ensure remote user is in docker group:
+
 ```bash
 SSH_TARGET=$(echo $DOCKER_HOST | sed 's|ssh://||')
 ssh $SSH_TARGET "groups"
@@ -77,16 +80,19 @@ ssh $SSH_TARGET "groups"
 ### Service Won't Start
 
 **Check service status**:
+
 ```bash
 docker service ps clack-track_app --no-trunc
 ```
 
 **View detailed error logs**:
+
 ```bash
 docker service logs clack-track_app --tail 100
 ```
 
 **Common causes**:
+
 - Missing environment variables
 - Database connection failure
 - Port already in use
@@ -95,11 +101,13 @@ docker service logs clack-track_app --tail 100
 ### Container Keeps Restarting
 
 **Check restart count and state**:
+
 ```bash
 docker service ps clack-track_app --format "{{.Name}} {{.CurrentState}} {{.Error}}"
 ```
 
 **View logs from crashed container**:
+
 ```bash
 # Get container ID (even if stopped)
 docker ps -a -f name=clack-track_app --format "{{.ID}}"
@@ -111,11 +119,13 @@ docker logs <container-id>
 ### Health Check Failing
 
 **Inspect health check configuration**:
+
 ```bash
 docker inspect clack-track_app --format '{{json .Spec.TaskTemplate.ContainerSpec.Healthcheck}}' | jq .
 ```
 
 **Check health status**:
+
 ```bash
 docker inspect $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) --format '{{json .State.Health}}' | jq .
 ```
@@ -127,16 +137,19 @@ docker inspect $(docker ps -q -f "label=com.docker.swarm.service.name=clack-trac
 **Symptom**: `ECONNREFUSED` or `ER_ACCESS_DENIED_ERROR`
 
 **Check MySQL container is running**:
+
 ```bash
 docker service ps clack-track_mysql
 ```
 
 **Test database connectivity from app container**:
+
 ```bash
 docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) sh -c 'nc -zv mysql 3306'
 ```
 
 **Verify database credentials**:
+
 ```bash
 # Check environment variables in container
 docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) env | grep DATABASE
@@ -145,6 +158,7 @@ docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_a
 ### Migration Issues
 
 **Run migrations manually**:
+
 ```bash
 docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) npm run migrate
 ```
@@ -154,11 +168,13 @@ docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_a
 ### Service Can't Reach External APIs
 
 **Test outbound connectivity**:
+
 ```bash
 docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) sh -c 'curl -s https://api.anthropic.com/ -o /dev/null -w "%{http_code}"'
 ```
 
 **Check DNS resolution**:
+
 ```bash
 docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) nslookup api.anthropic.com
 ```
@@ -168,12 +184,14 @@ docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_a
 **Symptom**: Vestaboard not updating
 
 **Check Vestaboard connectivity** (get URL from `.env.production` VESTABOARD_LOCAL_API_URL):
+
 ```bash
 # Check the VESTABOARD_LOCAL_API_URL from .env.production
 docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) env | grep VESTABOARD_LOCAL_API_URL
 ```
 
 **Verify API key is set**:
+
 ```bash
 docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) env | grep VESTABOARD
 ```
@@ -183,11 +201,13 @@ docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_a
 ### Viewing Configured Secrets
 
 **List Docker secrets**:
+
 ```bash
 docker secret ls
 ```
 
 **Check which secrets a service uses**:
+
 ```bash
 docker service inspect clack-track_app --format '{{json .Spec.TaskTemplate.ContainerSpec.Secrets}}' | jq .
 ```
@@ -248,11 +268,13 @@ docker service inspect clack-track_app --format '{{json .Spec.TaskTemplate.Resou
 **Symptom**: Container killed with exit code 137
 
 **Check memory limits**:
+
 ```bash
 docker inspect $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) --format '{{.HostConfig.Memory}}'
 ```
 
 **View memory usage history**:
+
 ```bash
 docker stats --no-stream --format "{{.Name}}: {{.MemUsage}}"
 ```
@@ -287,10 +309,10 @@ ssh $SSH_TARGET "sudo systemctl restart docker"
 
 > **Remember**: Run `source .env.production` before using these commands
 
-| Issue | First Command to Run |
-|-------|---------------------|
-| Service not starting | `docker service logs clack-track_app --tail 50` |
-| Connection refused | `ping -c 3 $(echo $DOCKER_HOST \| sed 's\|ssh://[^@]*@\|\|')` |
-| Container crashing | `docker service ps clack-track_app --no-trunc` |
-| Database error | `docker service ps clack-track_mysql` |
-| Memory issues | `docker stats --no-stream` |
+| Issue                | First Command to Run                                          |
+| -------------------- | ------------------------------------------------------------- |
+| Service not starting | `docker service logs clack-track_app --tail 50`               |
+| Connection refused   | `ping -c 3 $(echo $DOCKER_HOST \| sed 's\|ssh://[^@]*@\|\|')` |
+| Container crashing   | `docker service ps clack-track_app --no-trunc`                |
+| Database error       | `docker service ps clack-track_mysql`                         |
+| Memory issues        | `docker stats --no-stream`                                    |

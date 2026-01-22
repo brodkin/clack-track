@@ -62,13 +62,7 @@ export const SUBJECT_CATEGORIES = {
     'update avoidance',
     'cable management',
   ],
-  SOCIAL: [
-    'small talk',
-    'elevator behavior',
-    'queue formation',
-    'gift exchange',
-    'group photos',
-  ],
+  SOCIAL: ['small talk', 'elevator behavior', 'queue formation', 'gift exchange', 'group photos'],
   TEMPORAL: [
     'alarm snoozing',
     'deadline panic',

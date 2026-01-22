@@ -22,7 +22,7 @@
     "frame": "node dist/index.js frame",
     "db:reset": "tsx src/cli/index.ts db:reset",
     "db:reset:seed": "tsx src/cli/index.ts db:reset --seed",
-    "db:migrate": "tsx node_modules/knex/bin/cli.js migrate:latest --knexfile knexfile.ts",
+    "db:migrate": "tsx src/cli/index.ts db:migrate",
     "db:rollback": "tsx node_modules/knex/bin/cli.js migrate:rollback --knexfile knexfile.ts",
     "db:seed": "tsx node_modules/knex/bin/cli.js seed:run --knexfile knexfile.ts",
     "circuit:status": "node dist/index.js circuit:status",
