@@ -86,6 +86,8 @@ export interface CoreGenerators {
   alienFieldReport: ContentGenerator;
   /** Happy to see me generator (P2, LIGHT, AI-powered) */
   happyToSeeMe: ContentGenerator;
+  /** Yo momma generator (P2, LIGHT, AI-powered) */
+  yoMomma: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -324,6 +326,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.happyToSeeMe
+  );
+
+  registry.register(
+    {
+      id: 'yo-momma',
+      name: 'Yo Momma Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.yoMomma
   );
 
   // Register P3 fallback generator (FALLBACK priority)

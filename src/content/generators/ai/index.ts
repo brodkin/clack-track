@@ -11,6 +11,7 @@
 export { AlienFieldReportGenerator } from './alien-field-report-generator.js';
 export { DailyRoastGenerator } from './daily-roast-generator.js';
 export { HappyToSeeMeGenerator } from './happy-to-see-me-generator.js';
+export { YoMommaGenerator } from './yo-momma-generator.js';
 export { FortuneCookieGenerator } from './fortune-cookie-generator.js';
 export { GlobalNewsGenerator } from './global-news-generator.js';
 export { HaikuGenerator } from './haiku-generator.js';

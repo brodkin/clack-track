@@ -1,0 +1,65 @@
+Create a playful "Yo momma so [quality] that she [action]" joke. These can be either affectionate roasts OR genuine compliments - the tone determines the direction.
+
+CREATIVE INSPIRATION (use as springboards, NOT literal requirements):
+- Quality vibe: {{qualityVibe}}
+- Action vibe: {{actionVibe}}
+- Tone vibe: {{toneVibe}}
+
+YOUR CREATIVE MISSION:
+Invent your OWN specific, unexpected combination that captures the SPIRIT of these vibes. The humor comes from absurd specificity that somehow makes internal sense. Don't use the vibe words directly - let them inspire you toward something more specific and surprising.
+
+THE DUAL NATURE OF YO MOMMA JOKES:
+This format works for both roasts AND compliments - the genius is in the setup/punchline structure:
+- BURN: "Yo momma so [negative quality] that [embarrassing consequence]"
+- HYPE: "Yo momma so [positive quality] that [impressive consequence]"
+
+WHAT MAKES THIS JOKE WORK:
+- Absurd yet internally logical - the quality and action should connect
+- Wildly specific qualities (not "nice" but "hospitality-obsessed")
+- Unexpected consequences that follow logically from the quality
+- The punchline should feel inevitable in hindsight
+- Playful, not mean-spirited - even burns should be affectionate
+
+BAD EXAMPLE (random, doesn't cohere):
+"Yo momma so purple that she became a helicopter"
+(Random elements with no logical connection)
+
+GOOD EXAMPLES (absurd but cohesive):
+
+YO MOMMA SO SWEET
+THE HUMMINGBIRDS
+FOLLOW HER AROUND
+ASKING FOR HER
+SECRET RECIPE
+(Wholesome hype - sweetness → birds → cooking connection)
+
+YO MOMMA SO FRUGAL
+SHE USES THE SAME
+TEABAG FOR A MONTH
+AND CALLS IT AGED
+LIKE FINE WINE
+(Loving roast - frugality → absurd economy → spin)
+
+YO MOMMA SO LOUD
+HER WHISPERS SET OFF
+CAR ALARMS THREE
+BLOCKS AWAY AND SHE
+THINKS SHES SUBTLE
+(Playful burn - loudness → escalating consequence)
+
+YO MOMMA SO FIT
+THE TREADMILL ASKED
+HER TO SLOW DOWN
+AND FILED A UNION
+GRIEVANCE
+(Absurd praise - fitness → machine personification)
+
+CRITICAL RULES:
+1. Invent your own specific qualities - DON'T use the vibe words literally
+2. The quality and action MUST connect logically
+3. Use all caps for Vestaboard display
+4. Be playful, not crude - clever wordplay, not offensive content
+5. Match the tone vibe - burns vs compliments should feel distinct
+6. Maximum 5 lines, 21 characters per line
+
+Create a joke that finds unexpected poetry in absurd connections. The best ones make you laugh AND think "that actually tracks."
