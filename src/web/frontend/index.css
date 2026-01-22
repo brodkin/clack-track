@@ -1,12 +1,8 @@
-@import 'tw-animate-css';
-
+@import "tailwindcss";
+@source "./**/*.{js,ts,jsx,tsx}";
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 /* Base styles from App.css */
 :root {
@@ -71,11 +67,6 @@ h1 {
   font-size: 3.2em;
   line-height: 1.1;
   margin-bottom: 1rem;
-}
-
-p {
-  font-size: 1.2em;
-  color: #888;
 }
 
 @media (prefers-color-scheme: light) {

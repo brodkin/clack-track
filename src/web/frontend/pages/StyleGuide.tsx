@@ -53,21 +53,24 @@ import {
 function ColorSwatch({
   name,
   cssVar,
-  className,
 }: {
   name: string;
   cssVar: string;
-  className: string;
+  className?: string;
 }) {
   return (
     <div className="flex flex-col">
       <div
-        className={`h-16 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}
+        className="h-20 rounded-lg border-2 border-gray-300 dark:border-gray-600 shadow-sm"
+        style={{ backgroundColor: `var(${cssVar})` }}
+        title={cssVar}
       />
       <p className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
         {name}
       </p>
-      <p className="text-xs text-gray-500 dark:text-gray-400">{cssVar}</p>
+      <code className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+        {cssVar}
+      </code>
     </div>
   );
 }
@@ -268,38 +271,62 @@ console.log(sayHello('Vestaboard'));`}</code>
         <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
           Text Colors
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
-          <div>
-            <p className="text-gray-900 dark:text-white font-medium">Primary</p>
-            <p className="text-xs text-gray-500">gray-900 / white</p>
+        <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg grid grid-cols-4 gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full border border-gray-300 bg-gray-900 shrink-0" />
+            <div>
+              <p className="text-gray-900 dark:text-gray-100 font-medium">Primary</p>
+              <p className="text-xs text-gray-500">gray-900</p>
+            </div>
           </div>
-          <div>
-            <p className="text-gray-700 dark:text-gray-300">Secondary</p>
-            <p className="text-xs text-gray-500">gray-700 / gray-300</p>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full border border-gray-300 bg-gray-700 shrink-0" />
+            <div>
+              <p className="text-gray-700 dark:text-gray-300 font-medium">Secondary</p>
+              <p className="text-xs text-gray-500">gray-700</p>
+            </div>
           </div>
-          <div>
-            <p className="text-gray-500 dark:text-gray-400">Muted</p>
-            <p className="text-xs text-gray-500">gray-500 / gray-400</p>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full border border-gray-300 bg-gray-500 shrink-0" />
+            <div>
+              <p className="text-gray-500 font-medium">Muted</p>
+              <p className="text-xs text-gray-500">gray-500</p>
+            </div>
           </div>
-          <div>
-            <p className="text-blue-600 dark:text-blue-400">Link</p>
-            <p className="text-xs text-gray-500">blue-600 / blue-400</p>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full border border-gray-300 bg-blue-600 shrink-0" />
+            <div>
+              <p className="text-blue-600 font-medium">Link</p>
+              <p className="text-xs text-gray-500">blue-600</p>
+            </div>
           </div>
-          <div>
-            <p className="text-green-600 dark:text-green-400">Success</p>
-            <p className="text-xs text-gray-500">green-600 / green-400</p>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full border border-gray-300 bg-green-600 shrink-0" />
+            <div>
+              <p className="text-green-600 font-medium">Success</p>
+              <p className="text-xs text-gray-500">green-600</p>
+            </div>
           </div>
-          <div>
-            <p className="text-red-600 dark:text-red-400">Error</p>
-            <p className="text-xs text-gray-500">red-600 / red-400</p>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full border border-gray-300 bg-red-600 shrink-0" />
+            <div>
+              <p className="text-red-600 font-medium">Error</p>
+              <p className="text-xs text-gray-500">red-600</p>
+            </div>
           </div>
-          <div>
-            <p className="text-yellow-600 dark:text-yellow-400">Warning</p>
-            <p className="text-xs text-gray-500">yellow-600 / yellow-400</p>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full border border-gray-300 bg-yellow-600 shrink-0" />
+            <div>
+              <p className="text-yellow-600 font-medium">Warning</p>
+              <p className="text-xs text-gray-500">yellow-600</p>
+            </div>
           </div>
-          <div>
-            <p className="text-purple-600 dark:text-purple-400">Accent</p>
-            <p className="text-xs text-gray-500">purple-600 / purple-400</p>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full border border-gray-300 bg-purple-600 shrink-0" />
+            <div>
+              <p className="text-purple-600 font-medium">Accent</p>
+              <p className="text-xs text-gray-500">purple-600</p>
+            </div>
           </div>
         </div>
       </div>
@@ -323,42 +350,14 @@ function ColorsSection() {
           Core Theme Colors
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
-          <ColorSwatch
-            name="Background"
-            cssVar="--background"
-            className="bg-background"
-          />
-          <ColorSwatch
-            name="Foreground"
-            cssVar="--foreground"
-            className="bg-foreground"
-          />
-          <ColorSwatch
-            name="Primary"
-            cssVar="--primary"
-            className="bg-primary"
-          />
-          <ColorSwatch
-            name="Primary Foreground"
-            cssVar="--primary-foreground"
-            className="bg-primary-foreground"
-          />
-          <ColorSwatch
-            name="Secondary"
-            cssVar="--secondary"
-            className="bg-secondary"
-          />
-          <ColorSwatch
-            name="Secondary Foreground"
-            cssVar="--secondary-foreground"
-            className="bg-secondary-foreground"
-          />
-          <ColorSwatch name="Muted" cssVar="--muted" className="bg-muted" />
-          <ColorSwatch
-            name="Muted Foreground"
-            cssVar="--muted-foreground"
-            className="bg-muted-foreground"
-          />
+          <ColorSwatch name="Background" cssVar="--background" />
+          <ColorSwatch name="Foreground" cssVar="--foreground" />
+          <ColorSwatch name="Primary" cssVar="--primary" />
+          <ColorSwatch name="Primary Foreground" cssVar="--primary-foreground" />
+          <ColorSwatch name="Secondary" cssVar="--secondary" />
+          <ColorSwatch name="Secondary Foreground" cssVar="--secondary-foreground" />
+          <ColorSwatch name="Muted" cssVar="--muted" />
+          <ColorSwatch name="Muted Foreground" cssVar="--muted-foreground" />
         </div>
       </div>
 
@@ -368,18 +367,10 @@ function ColorsSection() {
           Accent & Semantic Colors
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
-          <ColorSwatch name="Accent" cssVar="--accent" className="bg-accent" />
-          <ColorSwatch
-            name="Accent Foreground"
-            cssVar="--accent-foreground"
-            className="bg-accent-foreground"
-          />
-          <ColorSwatch
-            name="Destructive"
-            cssVar="--destructive"
-            className="bg-destructive"
-          />
-          <ColorSwatch name="Ring" cssVar="--ring" className="bg-ring" />
+          <ColorSwatch name="Accent" cssVar="--accent" />
+          <ColorSwatch name="Accent Foreground" cssVar="--accent-foreground" />
+          <ColorSwatch name="Destructive" cssVar="--destructive" />
+          <ColorSwatch name="Ring" cssVar="--ring" />
         </div>
       </div>
 
@@ -389,22 +380,10 @@ function ColorsSection() {
           Card & Popover Colors
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
-          <ColorSwatch name="Card" cssVar="--card" className="bg-card" />
-          <ColorSwatch
-            name="Card Foreground"
-            cssVar="--card-foreground"
-            className="bg-card-foreground"
-          />
-          <ColorSwatch
-            name="Popover"
-            cssVar="--popover"
-            className="bg-popover"
-          />
-          <ColorSwatch
-            name="Popover Foreground"
-            cssVar="--popover-foreground"
-            className="bg-popover-foreground"
-          />
+          <ColorSwatch name="Card" cssVar="--card" />
+          <ColorSwatch name="Card Foreground" cssVar="--card-foreground" />
+          <ColorSwatch name="Popover" cssVar="--popover" />
+          <ColorSwatch name="Popover Foreground" cssVar="--popover-foreground" />
         </div>
       </div>
 
@@ -414,8 +393,8 @@ function ColorsSection() {
           Border & Input Colors
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
-          <ColorSwatch name="Border" cssVar="--border" className="bg-border" />
-          <ColorSwatch name="Input" cssVar="--input" className="bg-input" />
+          <ColorSwatch name="Border" cssVar="--border" />
+          <ColorSwatch name="Input" cssVar="--input" />
         </div>
       </div>
 
@@ -425,31 +404,11 @@ function ColorsSection() {
           Chart Colors
         </h3>
         <div className="grid grid-cols-3 md:grid-cols-5 gap-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
-          <ColorSwatch
-            name="Chart 1"
-            cssVar="--chart-1"
-            className="bg-chart-1"
-          />
-          <ColorSwatch
-            name="Chart 2"
-            cssVar="--chart-2"
-            className="bg-chart-2"
-          />
-          <ColorSwatch
-            name="Chart 3"
-            cssVar="--chart-3"
-            className="bg-chart-3"
-          />
-          <ColorSwatch
-            name="Chart 4"
-            cssVar="--chart-4"
-            className="bg-chart-4"
-          />
-          <ColorSwatch
-            name="Chart 5"
-            cssVar="--chart-5"
-            className="bg-chart-5"
-          />
+          <ColorSwatch name="Chart 1" cssVar="--chart-1" />
+          <ColorSwatch name="Chart 2" cssVar="--chart-2" />
+          <ColorSwatch name="Chart 3" cssVar="--chart-3" />
+          <ColorSwatch name="Chart 4" cssVar="--chart-4" />
+          <ColorSwatch name="Chart 5" cssVar="--chart-5" />
         </div>
       </div>
 
@@ -459,26 +418,10 @@ function ColorsSection() {
           Sidebar Colors
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
-          <ColorSwatch
-            name="Sidebar"
-            cssVar="--sidebar"
-            className="bg-sidebar"
-          />
-          <ColorSwatch
-            name="Sidebar Foreground"
-            cssVar="--sidebar-foreground"
-            className="bg-sidebar-foreground"
-          />
-          <ColorSwatch
-            name="Sidebar Primary"
-            cssVar="--sidebar-primary"
-            className="bg-sidebar-primary"
-          />
-          <ColorSwatch
-            name="Sidebar Accent"
-            cssVar="--sidebar-accent"
-            className="bg-sidebar-accent"
-          />
+          <ColorSwatch name="Sidebar" cssVar="--sidebar" />
+          <ColorSwatch name="Sidebar Foreground" cssVar="--sidebar-foreground" />
+          <ColorSwatch name="Sidebar Primary" cssVar="--sidebar-primary" />
+          <ColorSwatch name="Sidebar Accent" cssVar="--sidebar-accent" />
         </div>
       </div>
 

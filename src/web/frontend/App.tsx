@@ -2,7 +2,7 @@ import { Suspense, lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { RouteLoading } from './components/RouteLoading';
-import './App.css';
+import './index.css';
 
 const Welcome = lazy(() => import('./pages/Welcome'));
 const History = lazy(() => import('./pages/History'));
