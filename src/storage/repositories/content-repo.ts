@@ -104,6 +104,23 @@ export class ContentRepository {
     }
   }
 
+  /**
+   * Find the latest content records for a specific generator
+   * Ordered by generatedAt descending (newest first)
+   *
+   * @param generatorId - The generator ID to filter by
+   * @param limit - Maximum number of records to return (default: 10)
+   * @returns Promise<ContentRecord[]> - Records or empty array on error
+   */
+  async findLatestByGenerator(generatorId: string, limit: number = 10): Promise<ContentRecord[]> {
+    try {
+      return await this.model.findByGeneratorIdLatest(generatorId, limit);
+    } catch (error) {
+      console.warn(`Failed to fetch content by generator (${generatorId}):`, error);
+      return [];
+    }
+  }
+
   // Legacy methods for backward compatibility
   async saveContent(content: Omit<ContentRecord, 'id'>): Promise<ContentRecord | null> {
     try {

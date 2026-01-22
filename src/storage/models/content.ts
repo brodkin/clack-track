@@ -317,6 +317,25 @@ export class ContentModel {
   }
 
   /**
+   * Find the latest content records for a specific generator
+   * Ordered by generatedAt descending (newest first)
+   *
+   * @param generatorId - The generator ID to filter by
+   * @param limit - Maximum number of records to return (default: 10)
+   * @returns Content records for the specified generator, newest first
+   */
+  async findByGeneratorIdLatest(generatorId: string, limit: number = 10): Promise<ContentRecord[]> {
+    const safeLimit = this.safeLimit(limit);
+    const rows = await this.knex('content')
+      .select(ContentModel.SELECT_FIELDS)
+      .where('generatorId', generatorId)
+      .orderBy('generatedAt', 'desc')
+      .limit(safeLimit);
+
+    return rows.map(row => this.mapRowToContentRecord(row));
+  }
+
+  /**
    * Find content records with validation attempts above threshold
    * Useful for analytics and debugging tool-based generation
    *

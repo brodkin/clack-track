@@ -42,6 +42,7 @@ echo "Main is $BEHIND_COUNT commits behind develop"
 **If main is behind develop**, prompt the user:
 
 > Main branch is X commits behind develop. Do you want to:
+>
 > 1. Merge develop into main first (recommended)
 > 2. Deploy current main anyway
 > 3. Cancel deployment
@@ -133,13 +134,13 @@ docker stack deploy -c docker-compose.prod.yml clack-track
 
 All production configuration is stored in `.env.production`. Key variables:
 
-| Variable | Purpose |
-|----------|---------|
-| `DOCKER_HOST` | Remote Docker endpoint (SSH connection string) |
-| `DOCKER_API_VERSION` | Docker API version for compatibility |
-| `DATABASE_URL` | MySQL connection string |
-| `VESTABOARD_LOCAL_API_KEY` | Vestaboard device authentication |
-| `AI_PROVIDER` | AI backend (anthropic/openai) |
+| Variable                   | Purpose                                        |
+| -------------------------- | ---------------------------------------------- |
+| `DOCKER_HOST`              | Remote Docker endpoint (SSH connection string) |
+| `DOCKER_API_VERSION`       | Docker API version for compatibility           |
+| `DATABASE_URL`             | MySQL connection string                        |
+| `VESTABOARD_LOCAL_API_KEY` | Vestaboard device authentication               |
+| `AI_PROVIDER`              | AI backend (anthropic/openai)                  |
 
 **Important**: Always load environment via `source .env.production` before running deployment commands. Never hardcode connection strings or credentials.
 

@@ -24,6 +24,11 @@ import { VESTABOARD } from '../../config/constants.js';
  *
  * On success: { accepted: true, preview: [...] }
  * On failure: { accepted: false, preview: [...], errors: [...], hint: "..." }
+ *
+ * For serial story content, includes:
+ * - continueStory: REQUIRED boolean indicating if the story should continue
+ *   (true = story continues, false = this is the final chapter)
+ * - chapterSummary: brief summary of the chapter for context tracking
  */
 export interface SubmitContentResult {
   /** Whether the content was accepted */
@@ -34,6 +39,10 @@ export interface SubmitContentResult {
   errors?: string[];
   /** Helpful hint for fixing the content (only present on failure) */
   hint?: string;
+  /** Whether to continue the story (true = continue, false = this is the final chapter) */
+  continueStory?: boolean;
+  /** Brief summary of the chapter content (passed through from params) */
+  chapterSummary?: string;
 }
 
 /**
@@ -42,6 +51,10 @@ export interface SubmitContentResult {
 export interface SubmitContentParams {
   /** The content to submit for display */
   content: string;
+  /** Whether to continue the story after this chapter (true = continue, false = final chapter) */
+  continueStory?: boolean;
+  /** Brief summary of the chapter content for context tracking (optional) */
+  chapterSummary?: string;
 }
 
 /**
@@ -66,8 +79,21 @@ export const submitContentToolDefinition: ToolDefinition = {
           'Use \\n for line breaks. Supported characters: A-Z, 0-9, space, and ' +
           'common punctuation (.,:;!?\'"-()+=/). Content is uppercased automatically.',
       },
+      continueStory: {
+        type: 'boolean',
+        description:
+          'REQUIRED for serial stories. Set to true to continue the story in the next chapter. ' +
+          'Set to false when this chapter concludes the story arc. ' +
+          'You MUST explicitly decide whether the story continues or ends.',
+      },
+      chapterSummary: {
+        type: 'string',
+        description:
+          'A brief summary of this chapter content (1-2 sentences). ' +
+          'Used for maintaining story context across chapters in serial narratives.',
+      },
     },
-    required: ['content'],
+    required: ['content', 'continueStory'],
   },
 };
 
@@ -208,7 +234,7 @@ function generateHint(validationResult: ValidationResult, originalContent: strin
 export async function executeSubmitContent(
   params: SubmitContentParams
 ): Promise<SubmitContentResult> {
-  const { content } = params;
+  const { content, continueStory, chapterSummary } = params;
 
   // Validate content using the existing validator
   const validationResult = validateTextContent(content);
@@ -218,12 +244,25 @@ export async function executeSubmitContent(
   const previewResult = renderer.render(content);
   const preview = previewResult.toAsciiArt().split('\n');
 
+  // Build base result with serial story params passed through
+  const baseResult: Partial<SubmitContentResult> = {
+    preview,
+  };
+
+  // Only include serial story params if they were provided
+  if (continueStory !== undefined) {
+    baseResult.continueStory = continueStory;
+  }
+  if (chapterSummary !== undefined) {
+    baseResult.chapterSummary = chapterSummary;
+  }
+
   // Build result based on validation outcome
   if (validationResult.valid) {
     return {
       accepted: true,
-      preview,
-    };
+      ...baseResult,
+    } as SubmitContentResult;
   }
 
   // Generate actionable errors and hints for rejection
@@ -232,8 +271,8 @@ export async function executeSubmitContent(
 
   return {
     accepted: false,
-    preview,
     errors,
     hint,
-  };
+    ...baseResult,
+  } as SubmitContentResult;
 }

@@ -32,7 +32,7 @@ import { FortuneCookieGenerator } from './content/generators/ai/fortune-cookie-g
 import { DailyRoastGenerator } from './content/generators/ai/daily-roast-generator.js';
 import { HotTakeGenerator } from './content/generators/ai/hot-take-generator.js';
 import { NovelInsightGenerator } from './content/generators/ai/novel-insight-generator.js';
-import { StoryFragmentGenerator } from './content/generators/ai/story-fragment-generator.js';
+import { SerialStoryGenerator } from './content/generators/ai/serial-story-generator.js';
 import { TimePerspectiveGenerator } from './content/generators/ai/time-perspective-generator.js';
 import { LanguageLessonGenerator } from './content/generators/ai/language-lesson-generator.js';
 import { AlienFieldReportGenerator } from './content/generators/ai/alien-field-report-generator.js';
@@ -175,7 +175,8 @@ function createCoreGenerators(
   promptLoader: PromptLoader,
   modelTierSelector: ModelTierSelector,
   apiKeys: Record<string, string>,
-  weatherService?: WeatherService
+  weatherService?: WeatherService,
+  contentRepository?: ContentRepository
 ): CoreGenerators {
   const rssClient = new RSSClient();
 
@@ -190,7 +191,9 @@ function createCoreGenerators(
     showerThought: new ShowerThoughtGenerator(promptLoader, modelTierSelector, apiKeys),
     fortuneCookie: new FortuneCookieGenerator(promptLoader, modelTierSelector, apiKeys),
     dailyRoast: new DailyRoastGenerator(promptLoader, modelTierSelector, apiKeys),
-    storyFragment: new StoryFragmentGenerator(promptLoader, modelTierSelector, apiKeys),
+    serialStory: contentRepository
+      ? new SerialStoryGenerator(promptLoader, modelTierSelector, contentRepository, apiKeys)
+      : new StaticFallbackGenerator('prompts/static'), // Fallback when no repository
     timePerspective: new TimePerspectiveGenerator(promptLoader, modelTierSelector, apiKeys),
     hotTake: new HotTakeGenerator(promptLoader, modelTierSelector, apiKeys),
     novelInsight: new NovelInsightGenerator(promptLoader, modelTierSelector, apiKeys),
@@ -357,7 +360,8 @@ export async function bootstrap(): Promise<BootstrapResult> {
     promptLoader,
     modelTierSelector,
     apiKeys,
-    weatherService
+    weatherService,
+    contentRepository
   );
   registerCoreContent(registry, coreGenerators);
 

@@ -1,0 +1,33 @@
+Write the opening chapter of a serialized micro-story.
+
+SCENARIO: {{scenario}}
+EMOTIONAL BEAT: {{emotionalBeat}}
+
+SERIAL STORY STRUCTURE:
+This is Chapter 1 of an 8-12 chapter arc. Your job is to hook the reader.
+
+CHAPTER 1 GOALS:
+- Introduce the protagonist through ACTION, not description
+- Establish the central tension or mystery
+- End with a hook that makes readers want more
+- Plant seeds for the story arc WITHOUT resolving anything
+
+ARC GUIDANCE (8-12 chapters):
+- Chapters 1-3: RISING ACTION - Introduce conflict, build stakes, deepen mystery
+- Chapters 4-6: COMPLICATIONS - Obstacles, setbacks, character reveals
+- Chapters 7-9: ESCALATION - Stakes peak, tension highest, crisis point
+- Chapters 10-12: RESOLUTION - Climax and satisfying conclusion
+
+CRITICAL RULES:
+- Complete the chapter cleanly - no ellipses or trailing off
+- Show emotion through ACTION, never name emotions directly
+- Include ONE specific sensory detail that grounds the scene
+- 4-5 lines maximum per chapter
+- NO BLANK LINES between lines
+- This chapter must STAND ALONE while promising more
+
+STORY CONTINUATION:
+For Chapter 1, you MUST set continueStory=true in your tool submission.
+This is the beginning of an 8-12 chapter journey - never end on Chapter 1.
+
+Write Chapter 1 that hooks the reader and promises an engaging journey ahead.

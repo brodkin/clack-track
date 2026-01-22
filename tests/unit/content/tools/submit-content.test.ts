@@ -18,6 +18,7 @@ import {
   submitContentToolDefinition,
   executeSubmitContent,
   SubmitContentResult,
+  SubmitContentParams,
 } from '@/content/tools/submit-content';
 
 describe('SubmitContent Tool', () => {
@@ -401,6 +402,126 @@ describe('SubmitContent Tool', () => {
       if (!result.accepted) {
         expect(typeof result.hint).toBe('string');
       }
+    });
+  });
+
+  describe('Serial Story Parameters', () => {
+    describe('SubmitContentParams Interface', () => {
+      it('should accept continueStory boolean parameter (false = final chapter)', async () => {
+        const params: SubmitContentParams = {
+          content: 'CHAPTER END',
+          continueStory: false,
+        };
+        const result = await executeSubmitContent(params);
+
+        expect(result.accepted).toBe(true);
+        expect(result.continueStory).toBe(false);
+      });
+
+      it('should accept chapterSummary optional string parameter', async () => {
+        const params: SubmitContentParams = {
+          content: 'CHAPTER ONE',
+          chapterSummary: 'The hero begins their journey',
+        };
+        const result = await executeSubmitContent(params);
+
+        expect(result.accepted).toBe(true);
+        expect(result.chapterSummary).toBe('The hero begins their journey');
+      });
+
+      it('should accept both continueStory and chapterSummary together', async () => {
+        const params: SubmitContentParams = {
+          content: 'THE END',
+          continueStory: false,
+          chapterSummary: 'The hero saves the day and returns home',
+        };
+        const result = await executeSubmitContent(params);
+
+        expect(result.accepted).toBe(true);
+        expect(result.continueStory).toBe(false);
+        expect(result.chapterSummary).toBe('The hero saves the day and returns home');
+      });
+
+      it('should work without optional serial story params (backwards compatible)', async () => {
+        const params: SubmitContentParams = {
+          content: 'SIMPLE CONTENT',
+        };
+        const result = await executeSubmitContent(params);
+
+        expect(result.accepted).toBe(true);
+        expect(result.continueStory).toBeUndefined();
+        expect(result.chapterSummary).toBeUndefined();
+      });
+
+      it('should pass through continueStory=true correctly (story continues)', async () => {
+        const params: SubmitContentParams = {
+          content: 'CHAPTER TWO',
+          continueStory: true,
+        };
+        const result = await executeSubmitContent(params);
+
+        expect(result.accepted).toBe(true);
+        expect(result.continueStory).toBe(true);
+      });
+
+      it('should pass through empty chapterSummary string', async () => {
+        const params: SubmitContentParams = {
+          content: 'CHAPTER THREE',
+          chapterSummary: '',
+        };
+        const result = await executeSubmitContent(params);
+
+        expect(result.accepted).toBe(true);
+        expect(result.chapterSummary).toBe('');
+      });
+
+      it('should include serial story params in failed submissions', async () => {
+        const params: SubmitContentParams = {
+          content: 'L1\nL2\nL3\nL4\nL5\nL6', // Too many lines
+          continueStory: false,
+          chapterSummary: 'Story summary',
+        };
+        const result = await executeSubmitContent(params);
+
+        expect(result.accepted).toBe(false);
+        expect(result.continueStory).toBe(false);
+        expect(result.chapterSummary).toBe('Story summary');
+      });
+    });
+
+    describe('Tool Definition for Serial Story Params', () => {
+      it('should define continueStory as boolean parameter', () => {
+        const { parameters } = submitContentToolDefinition;
+        expect(parameters.properties!.continueStory).toBeDefined();
+        expect(parameters.properties!.continueStory.type).toBe('boolean');
+        // Required for serial stories (description emphasizes this)
+        expect(parameters.required).toContain('continueStory');
+      });
+
+      it('should define chapterSummary as optional string parameter', () => {
+        const { parameters } = submitContentToolDefinition;
+        expect(parameters.properties!.chapterSummary).toBeDefined();
+        expect(parameters.properties!.chapterSummary.type).toBe('string');
+        // Should NOT be in required array (optional)
+        expect(parameters.required).not.toContain('chapterSummary');
+      });
+
+      it('should have description for continueStory parameter emphasizing it is required for serial stories', () => {
+        const { parameters } = submitContentToolDefinition;
+        const param = parameters.properties!.continueStory;
+        expect(param.description).toBeDefined();
+        expect(param.description!.length).toBeGreaterThan(10);
+        // Should mention it's required for serial stories and explain true/false meaning
+        expect(param.description!.toLowerCase()).toMatch(/required|continue|story|end/);
+      });
+
+      it('should have description for chapterSummary parameter', () => {
+        const { parameters } = submitContentToolDefinition;
+        const param = parameters.properties!.chapterSummary;
+        expect(param.description).toBeDefined();
+        expect(param.description!.length).toBeGreaterThan(10);
+        expect(param.description!.toLowerCase()).toMatch(/summary|chapter/);
+      });
     });
   });
 

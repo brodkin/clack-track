@@ -72,8 +72,8 @@ export interface CoreGenerators {
   fortuneCookie: ContentGenerator;
   /** Daily roast generator (P2, MEDIUM, AI-powered) */
   dailyRoast: ContentGenerator;
-  /** Story fragment generator (P2, MEDIUM, AI-powered) */
-  storyFragment: ContentGenerator;
+  /** Serial story generator (P2, MEDIUM, AI-powered) */
+  serialStory: ContentGenerator;
   /** Time perspective generator (P2, MEDIUM, AI-powered) */
   timePerspective: ContentGenerator;
   /** Hot take generator (P2, LIGHT, AI-powered) */
@@ -249,13 +249,13 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
 
   registry.register(
     {
-      id: 'story-fragment',
-      name: 'Story Fragment Generator',
+      id: 'serial-story',
+      name: 'Serial Story Generator',
       priority: ContentPriority.NORMAL,
       modelTier: ModelTier.MEDIUM,
       applyFrame: true,
     },
-    generators.storyFragment
+    generators.serialStory
   );
 
   registry.register(
