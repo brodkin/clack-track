@@ -3,14 +3,9 @@
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
     image: clack-track:latest
-    container_name: clack-track
-    restart: unless-stopped
     ports:
-      - '3000:3000'
+      - '3030:3000'
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
@@ -31,11 +26,13 @@ services:
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
       - VAPID_SUBJECT=${VAPID_SUBJECT:-}
-    depends_on:
-      mysql:
-        condition: service_healthy
     networks:
       - clack-network
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
     healthcheck:
       test:
         [
@@ -51,8 +48,6 @@ services:
 
   mysql:
     image: mysql:8.0
-    container_name: clack-track-db
-    restart: unless-stopped
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-clacktrack}
       - MYSQL_DATABASE=clack_track
@@ -69,7 +64,8 @@ services:
 
 networks:
   clack-network:
-    driver: bridge
+    driver: overlay
+    attachable: true
 
 volumes:
   mysql_data:

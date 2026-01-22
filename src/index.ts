@@ -30,6 +30,7 @@ async function main() {
       'content:list',
       'content:test',
       'db:reset',
+      'db:migrate',
       'circuit:status',
       'circuit:on',
       'circuit:off',

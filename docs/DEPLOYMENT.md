@@ -1,14 +1,24 @@
 # Deployment Guide
 
-This guide covers deploying Clack Track to Docker Swarm using the provided deployment scripts. The system uses Git SHA-based image tagging for reliable version management and rolling updates.
+This guide covers deploying Clack Track to Docker Swarm. The system uses Git SHA-based image tagging for reliable version management and rolling updates.
+
+## Quick Start
+
+Use the `/deploy` skill in Claude Code for guided deployment:
+
+```
+/deploy
+```
+
+The skill provides pre-flight checks, step-by-step commands, health verification, and rollback procedures.
 
 ## Overview
 
-The deployment workflow consists of:
+The deployment workflow uses:
 
-1. **deploy.sh** - Builds and deploys the application to a remote Docker Swarm host via SSH
+1. **`/deploy` skill** - Interactive deployment guide with pre-flight checks and health verification
 2. **secrets.sh** - Manages Docker secrets for sensitive configuration values
-3. **stack.yml** - Docker Swarm stack configuration defining services, networks, and volumes
+3. **docker-compose.prod.yml** - Docker Swarm stack configuration defining services, networks, and volumes
 
 ## Prerequisites
 
@@ -105,47 +115,27 @@ Done!
 
 ### Step 3: Deploy the Stack
 
-Run the deployment script:
+Use the `/deploy` skill for guided deployment, or run manually:
 
 ```bash
-./deploy.sh
+# Load production environment
+set -a; source .env.production; set +a
+
+# Build and deploy
+docker build -t clack-track:latest -t clack-track:$(git rev-parse --short HEAD) .
+docker stack deploy -c docker-compose.prod.yml clack-track
+
+# Wait for services to stabilize
+echo "Waiting for deployment to stabilize..."
+sleep 30
 ```
 
 **Expected Output:**
 
 ```
-=== Clack Track Swarm Deployment ===
-Using DOCKER_HOST: ssh://user@192.168.1.50
-
-Checking Swarm status...
-✓ Swarm mode active
-
-Checking secrets...
-✓ Required secrets exist
-
-Git SHA: a1b2c3d
-
-Step 1/2: Building image on remote...
-(Sending build context over SSH - this may take a moment)
-[... build output ...]
-Tagged image: clack-track:a1b2c3d (also :latest)
-
-Step 2/2: Deploying stack...
 Creating network clack-track_clack-network
 Creating service clack-track_mysql
 Creating service clack-track_app
-
-Waiting for services to start...
-
-=== Stack Status ===
-ID             NAME               MODE         REPLICAS   IMAGE
-abc123         clack-track_app    replicated   1/1        clack-track:a1b2c3d
-def456         clack-track_mysql  replicated   1/1        mysql:8.0
-
-=== Deployment Complete ===
-View services:  DOCKER_HOST=ssh://user@192.168.1.50 docker stack services clack-track
-View logs:      DOCKER_HOST=ssh://user@192.168.1.50 docker service logs -f clack-track_app
-Remove stack:   DOCKER_HOST=ssh://user@192.168.1.50 docker stack rm clack-track
 ```
 
 ### Step 4: Verify Deployment
@@ -175,7 +165,7 @@ Access the web interface at `http://your-nas-ip:3030`
 
 The deployment system uses Git commit SHAs for image tags:
 
-1. `deploy.sh` captures the current Git commit SHA (short form, 7 characters)
+1. Build captures the current Git commit SHA (short form, 7 characters)
 2. Builds the image with tag `clack-track:<sha>` (e.g., `clack-track:a1b2c3d`)
 3. Also tags as `clack-track:latest` for convenience
 4. Deploys the stack with the SHA-tagged image
@@ -188,14 +178,16 @@ The deployment system uses Git commit SHAs for image tags:
 
 ### Deploying Updates
 
-To deploy a new version:
+To deploy a new version, use the `/deploy` skill or run manually:
 
 ```bash
 # Pull latest code
 git pull origin main
 
-# Deploy (automatically uses current commit SHA)
-./deploy.sh
+# Load environment and deploy
+set -a; source .env.production; set +a
+docker build -t clack-track:latest -t clack-track:$(git rev-parse --short HEAD) .
+docker stack deploy -c docker-compose.prod.yml clack-track
 ```
 
 The Swarm performs a rolling update:
@@ -222,8 +214,10 @@ To deploy a specific Git commit:
 # Checkout the specific commit
 git checkout a1b2c3d
 
-# Deploy
-./deploy.sh
+# Load environment and deploy
+set -a; source .env.production; set +a
+docker build -t clack-track:latest -t clack-track:$(git rev-parse --short HEAD) .
+docker stack deploy -c docker-compose.prod.yml clack-track
 
 # Return to main branch
 git checkout main
@@ -356,8 +350,10 @@ git log --oneline -10
 # Checkout that commit
 git checkout abc1234
 
-# Deploy
-./deploy.sh
+# Load environment and deploy
+set -a; source .env.production; set +a
+docker build -t clack-track:latest -t clack-track:$(git rev-parse --short HEAD) .
+docker stack deploy -c docker-compose.prod.yml clack-track
 
 # Return to main
 git checkout main
@@ -407,8 +403,10 @@ docker stack rm clack-track
 # Wait for removal to complete
 sleep 10
 
-# Redeploy
-./deploy.sh
+# Redeploy using /deploy skill or manually
+set -a; source .env.production; set +a
+docker build -t clack-track:latest .
+docker stack deploy -c docker-compose.prod.yml clack-track
 ```
 
 **Warning:** This causes downtime. Use only when rolling updates fail.
@@ -424,11 +422,11 @@ sleep 10
 **Solution:**
 
 ```bash
-# Option 1: Set in .env.production
+# Set in .env.production
 echo 'DOCKER_HOST=ssh://user@192.168.1.50' >> .env.production
 
-# Option 2: Pass as argument
-./deploy.sh ssh://user@192.168.1.50
+# Then load it before running docker commands
+set -a; source .env.production; set +a
 ```
 
 ---
@@ -484,7 +482,11 @@ ssh user@192.168.1.50 'docker swarm init'
 docker stack rm clack-track
 ./secrets.sh delete
 ./secrets.sh create
-./deploy.sh
+
+# Redeploy
+set -a; source .env.production; set +a
+docker build -t clack-track:latest .
+docker stack deploy -c docker-compose.prod.yml clack-track
 ```
 
 ### Build Errors
@@ -522,7 +524,11 @@ npm install
 # Commit and redeploy
 git add package-lock.json
 git commit -m "fix: regenerate package-lock.json"
-./deploy.sh
+
+# Redeploy using /deploy skill or manually
+set -a; source .env.production; set +a
+docker build -t clack-track:latest .
+docker stack deploy -c docker-compose.prod.yml clack-track
 ```
 
 ### Service Failures
@@ -646,22 +652,6 @@ docker service update --force clack-track_app
 docker stack rm clack-track
 ```
 
-### Secrets Management
-
-```bash
-# List all secrets
-./secrets.sh list
-
-# Create secrets (first time)
-./secrets.sh create
-
-# Rotate a single secret (zero-downtime)
-./secrets.sh rotate vestaboard_api_key
-
-# Delete all secrets (requires stack removal first)
-./secrets.sh delete
-```
-
 ### Monitoring
 
 ```bash
@@ -708,14 +698,14 @@ docker inspect --format='{{json .Status.ContainerStatus.Health.Status}}' \
 - [ ] `.env.production` created from example
 - [ ] Required values configured (DOCKER_HOST, Vestaboard, AI provider)
 - [ ] `./secrets.sh create` completed
-- [ ] `./deploy.sh` completed successfully
+- [ ] Deployment completed (use `/deploy` skill or manual commands)
 - [ ] Web interface accessible at `http://host:3030`
 - [ ] Application logs show no errors
 
 ### Regular Updates
 
 - [ ] Pull latest code: `git pull`
-- [ ] Run deployment: `./deploy.sh`
+- [ ] Run deployment using `/deploy` skill or manual commands
 - [ ] Verify services healthy: `docker stack services clack-track`
 - [ ] Check logs for errors: `docker service logs clack-track_app`
 
