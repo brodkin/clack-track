@@ -36,6 +36,7 @@ import { SerialStoryGenerator } from './content/generators/ai/serial-story-gener
 import { TimePerspectiveGenerator } from './content/generators/ai/time-perspective-generator.js';
 import { LanguageLessonGenerator } from './content/generators/ai/language-lesson-generator.js';
 import { AlienFieldReportGenerator } from './content/generators/ai/alien-field-report-generator.js';
+import { HappyToSeeMeGenerator } from './content/generators/ai/happy-to-see-me-generator.js';
 import { WakeupGreetingGenerator } from './content/generators/ai/wakeup-greeting-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { SleepModeGenerator } from './content/generators/programmatic/sleep-mode-generator.js';
@@ -199,6 +200,7 @@ function createCoreGenerators(
     novelInsight: new NovelInsightGenerator(promptLoader, modelTierSelector, apiKeys),
     languageLesson: new LanguageLessonGenerator(promptLoader, modelTierSelector, apiKeys),
     alienFieldReport: new AlienFieldReportGenerator(promptLoader, modelTierSelector, apiKeys),
+    happyToSeeMe: new HappyToSeeMeGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }

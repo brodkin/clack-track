@@ -1,0 +1,41 @@
+Create a playful, flirty quip using the classic innuendo format: "Is that a X in your Y or are you just Z to see me?"
+
+Your ingredients for this riff:
+Thing: {{thing}}
+Container: {{container}}
+Emotion: {{emotion}}
+
+CREATIVE FREEDOM:
+You may compress, rearrange, or abbreviate the classic format to fit the display. The humor comes from unexpected combinations of wildly specific things, containers, and emotional states. Maintain the flirty, playful tone while being clever about fitting the content.
+
+POSSIBLE VARIATIONS:
+- Full format: "IS THAT A [THING] IN YOUR [CONTAINER] OR ARE YOU JUST [EMOTION] TO SEE ME?"
+- Compressed: "[THING] IN YOUR [CONTAINER]? OR JUST [EMOTION] TO SEE ME"
+- Split: "IS THAT A [THING] / IN YOUR [CONTAINER]? / [EMOTION] TO SEE ME?"
+
+CRITICAL RULES:
+1. Use the provided {{thing}}, {{container}}, and {{emotion}} - do NOT substitute
+2. Keep the flirty, innuendo-laden tone of the original joke format
+3. Use all caps for Vestaboard display
+4. Be playful, not crude - suggestive wordplay, not explicit content
+5. The humor comes from absurd specificity meeting familiar format
+
+EXAMPLES:
+
+IS THAT A VINTAGE
+TOASTER IN YOUR
+CARGO SHORTS OR ARE
+YOU JUST NOSTALGIC
+TO SEE ME
+
+SOURDOUGH STARTER
+IN YOUR FANNY PACK?
+OR JUST FERMENTED
+TO SEE ME
+
+IS THAT A RARE VINYL
+IN YOUR TOTE BAG
+OR ARE YOU JUST
+HIPSTER TO SEE ME
+
+Create a quip (5 lines max, 21 characters per line). Make it witty and memorable. The best ones find unexpected poetry in the absurd combinations.

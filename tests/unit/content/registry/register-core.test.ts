@@ -54,11 +54,13 @@ describe('registerCoreContent', () => {
     showerThought: createMockGenerator('showerThought'),
     fortuneCookie: createMockGenerator('fortuneCookie'),
     dailyRoast: createMockGenerator('dailyRoast'),
-    storyFragment: createMockGenerator('storyFragment'),
+    serialStory: createMockGenerator('serialStory'),
     timePerspective: createMockGenerator('timePerspective'),
     hotTake: createMockGenerator('hotTake'),
     novelInsight: createMockGenerator('novelInsight'),
     languageLesson: createMockGenerator('languageLesson'),
+    alienFieldReport: createMockGenerator('alienFieldReport'),
+    happyToSeeMe: createMockGenerator('happyToSeeMe'),
     staticFallback: createMockGenerator('fallback'),
   });
 
@@ -84,9 +86,9 @@ describe('registerCoreContent', () => {
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
       // globalNews, techNews, localNews, weather, haiku, seasonal, pattern,
-      // showerThought, fortuneCookie, dailyRoast, storyFragment, timePerspective,
-      // hotTake, novelInsight, languageLesson = 15
-      expect(normalPriorityGens.length).toBe(15);
+      // showerThought, fortuneCookie, dailyRoast, serialStory, timePerspective,
+      // hotTake, novelInsight, languageLesson, alienFieldReport, happyToSeeMe = 17
+      expect(normalPriorityGens.length).toBe(17);
     });
   });
 
@@ -122,8 +124,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const allGenerators = registry.getAll();
-      // 15 P2 + 1 P3 = 16 total
-      expect(allGenerators.length).toBe(16);
+      // 17 P2 + 1 P3 = 18 total
+      expect(allGenerators.length).toBe(18);
     });
 
     it('should maintain correct priority distribution', () => {
@@ -135,10 +137,10 @@ describe('registerCoreContent', () => {
       const fallbackGens = registry.getByPriority(ContentPriority.FALLBACK);
       const notificationGens = registry.getByPriority(ContentPriority.NOTIFICATION);
 
-      // 15 P2 generators: globalNews, techNews, localNews, weather, haiku,
-      // seasonal, pattern, showerThought, fortuneCookie, dailyRoast, storyFragment,
-      // timePerspective, hotTake, novelInsight, languageLesson
-      expect(normalGens.length).toBe(15);
+      // 17 P2 generators: globalNews, techNews, localNews, weather, haiku,
+      // seasonal, pattern, showerThought, fortuneCookie, dailyRoast, serialStory,
+      // timePerspective, hotTake, novelInsight, languageLesson, alienFieldReport, happyToSeeMe
+      expect(normalGens.length).toBe(17);
       expect(fallbackGens.length).toBe(1);
       expect(notificationGens.length).toBe(0);
     });
@@ -202,8 +204,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      // All 15 P2 generators including 3 news generators
-      expect(normalPriorityGens.length).toBe(15);
+      // All 17 P2 generators including 3 news generators
+      expect(normalPriorityGens.length).toBe(17);
     });
 
     it('should not register old news-summary generator', () => {
