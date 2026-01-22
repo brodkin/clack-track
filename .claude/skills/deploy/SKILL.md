@@ -75,15 +75,14 @@ docker images clack-track:latest --format "{{.ID}} {{.CreatedAt}}"
 
 **Migrations must run BEFORE the service update to ensure the database schema is ready.**
 
+**Important:** The network must be `attachable: true` (configured in docker-compose.prod.yml) for `docker run` to connect. If the network isn't attachable, remove and redeploy the stack.
+
 ```bash
 # Run migrations as a one-shot container on the Swarm network
 docker run --rm \
   --network clack-track_clack-network \
-  -e DB_HOST="$DB_HOST" \
-  -e DB_PORT="$DB_PORT" \
-  -e DB_NAME="$DB_NAME" \
-  -e DB_USER="$DB_USER" \
-  -e DB_PASSWORD="$DB_PASSWORD" \
+  -e DATABASE_URL="$DATABASE_URL" \
+  -e DATABASE_TYPE="$DATABASE_TYPE" \
   clack-track:latest \
   node dist/cli/index.js db:migrate
 

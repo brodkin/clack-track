@@ -199,6 +199,37 @@ docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_a
 
 ## Network Issues
 
+### Network Not Attachable (Migration Container Fails)
+
+**Symptom**: `network clack-track_clack-network not manually attachable`
+
+This error occurs when running `docker run --network clack-track_clack-network` for migrations.
+
+**Cause**: Docker Swarm overlay networks must have `attachable: true` to allow standalone containers to connect. The docker-compose.prod.yml configures this, but existing networks don't get updated during `docker stack deploy`.
+
+**Solution**: Remove and recreate the stack to rebuild the network:
+
+```bash
+# Remove the stack (services will stop)
+docker stack rm clack-track
+
+# Wait for full cleanup (network won't delete while services exist)
+sleep 15
+
+# Remove the network explicitly if still present
+docker network rm clack-track_clack-network 2>/dev/null || true
+
+# Redeploy (creates network with attachable: true)
+docker stack deploy -c docker-compose.prod.yml clack-track
+```
+
+**Verify network is attachable**:
+
+```bash
+docker network inspect clack-track_clack-network --format '{{.Attachable}}'
+# Should return: true
+```
+
 ### Service Can't Reach External APIs
 
 **Test outbound connectivity**:
