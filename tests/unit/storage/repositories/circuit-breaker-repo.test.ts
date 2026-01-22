@@ -23,8 +23,8 @@ describe('CircuitBreakerRepository', () => {
   let knex: Knex;
   let repository: CircuitBreakerRepository;
 
-  beforeEach(async () => {
-    // Reset singleton to ensure clean state
+  beforeAll(async () => {
+    // Reset singleton to ensure clean state (once per test file)
     resetKnexInstance();
     knex = getKnexInstance();
 
@@ -63,13 +63,15 @@ describe('CircuitBreakerRepository', () => {
         table.index('circuit_type', 'idx_circuit_breaker_circuit_type');
       });
     }
+  });
 
-    // Clean table for isolated tests
+  beforeEach(async () => {
+    // Clean table data for isolated tests (table structure persists)
     await knex('circuit_breaker_state').del();
     repository = new CircuitBreakerRepository(knex);
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await closeKnexInstance();
   });
 

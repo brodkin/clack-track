@@ -14,6 +14,15 @@ jest.mock('../../../src/cli/commands/index.js', () => ({
   testBoardCommand: jest.fn().mockResolvedValue(undefined),
   testAICommand: jest.fn().mockResolvedValue(undefined),
   testHACommand: jest.fn().mockResolvedValue(undefined),
+  dbMigrateCommand: jest.fn().mockResolvedValue(undefined),
+  dbResetCommand: jest.fn().mockResolvedValue(undefined),
+  contentListCommand: jest.fn().mockResolvedValue(undefined),
+  contentTestCommand: jest.fn().mockResolvedValue(undefined),
+  circuitStatusCommand: jest.fn().mockResolvedValue(undefined),
+  circuitOnCommand: jest.fn().mockResolvedValue(undefined),
+  circuitOffCommand: jest.fn().mockResolvedValue(undefined),
+  circuitResetCommand: jest.fn().mockResolvedValue(undefined),
+  circuitWatchCommand: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('../../../src/cli/commands/frame.js', () => ({
@@ -217,6 +226,33 @@ describe('CLI parseOptions', () => {
         expect.objectContaining({
           provider: 'anthropic',
           interactive: true,
+        })
+      );
+    });
+  });
+
+  describe('Database commands', () => {
+    it('should route db:migrate to dbMigrateCommand', async () => {
+      const { dbMigrateCommand } = await import('../../../src/cli/commands/index.js');
+      jest.mocked(dbMigrateCommand).mockClear();
+
+      // Simulate: node dist/cli/index.js db:migrate
+      await runCLI(['node', 'script.js', 'db:migrate']);
+
+      expect(jest.mocked(dbMigrateCommand)).toHaveBeenCalledTimes(1);
+    });
+
+    it('should route db:reset to dbResetCommand', async () => {
+      const { dbResetCommand } = await import('../../../src/cli/commands/index.js');
+      jest.mocked(dbResetCommand).mockClear();
+
+      // Simulate: node dist/cli/index.js db:reset --force
+      await runCLI(['node', 'script.js', 'db:reset', '--force']);
+
+      expect(jest.mocked(dbResetCommand)).toHaveBeenCalledTimes(1);
+      expect(jest.mocked(dbResetCommand)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          force: true,
         })
       );
     });

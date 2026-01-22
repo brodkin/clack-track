@@ -46,8 +46,14 @@ describe('Database npm scripts', () => {
   describe('db:migrate script', () => {
     it('should be defined in package.json', () => {
       expect(packageJson.scripts['db:migrate']).toBeDefined();
-      expect(packageJson.scripts['db:migrate']).toContain('migrate:latest');
-      expect(packageJson.scripts['db:migrate']).toContain('--knexfile knexfile.ts');
+      expect(packageJson.scripts['db:migrate']).toContain('tsx src/cli/index.ts db:migrate');
+    });
+
+    it('should use correct command structure', () => {
+      const script = packageJson.scripts['db:migrate'];
+
+      // Verify command structure without executing (matches db:reset pattern)
+      expect(script).toMatch(/^tsx src\/cli\/index\.ts db:migrate$/);
     });
   });
 
@@ -83,8 +89,14 @@ describe('Database npm scripts', () => {
       expect(packageJson.scripts['db:reset:seed']).toContain('tsx');
     });
 
-    it('should use knex CLI for migration commands', () => {
-      expect(packageJson.scripts['db:migrate']).toContain('knex');
+    it('should use tsx for db:migrate command', () => {
+      // db:migrate uses custom CLI handler (like db:reset)
+      expect(packageJson.scripts['db:migrate']).toContain('tsx');
+      expect(packageJson.scripts['db:migrate']).toContain('src/cli/index.ts');
+    });
+
+    it('should use knex CLI for rollback and seed commands', () => {
+      // db:rollback and db:seed still use direct knex CLI
       expect(packageJson.scripts['db:rollback']).toContain('knex');
       expect(packageJson.scripts['db:seed']).toContain('knex');
     });
