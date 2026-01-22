@@ -16,7 +16,7 @@
  * - Optimized with MEDIUM model tier for story coherence
  *
  * Story State Detection:
- * - New story: No previous chapters, OR last chapter had isFinalChapter:true,
+ * - New story: No previous chapters, OR last chapter had continueStory:false,
  *   OR chapter count >= maxChapters
  * - Continuation: Previous chapters exist and story is not complete
  *
@@ -130,7 +130,7 @@ export interface StoryState {
  *
  * This interface includes:
  * - Fields set by the generator (storyChapter, isNewStory, arcPhase, scenario, emotionalBeat)
- * - Fields set by the AI via submit_content tool (isFinalChapter, chapterSummary)
+ * - Fields set by the AI via submit_content tool (continueStory, chapterSummary)
  */
 export interface StoryChapterMetadata {
   /** Chapter number */
@@ -143,8 +143,8 @@ export interface StoryChapterMetadata {
   scenario?: ScenarioType;
   /** Emotional beat used (chapter 1 only) */
   emotionalBeat?: EmotionalBeatType;
-  /** Whether this is the final chapter of the story (set by AI via submit_content tool) */
-  isFinalChapter?: boolean;
+  /** Whether to continue the story (true = continue, false = this is the final chapter) */
+  continueStory?: boolean;
   /** Brief summary of this chapter for context in continuations (set by AI via submit_content tool) */
   chapterSummary?: string;
 }
@@ -246,7 +246,7 @@ export class SerialStoryGenerator extends AIPromptGenerator {
    *
    * Story is "new" when:
    * - No previous chapters exist
-   * - Last chapter had isFinalChapter:true in metadata
+   * - Last chapter had continueStory:false in metadata
    * - Chapter count >= maxChapters
    *
    * @returns Story state with chapter info and arc phase
@@ -269,15 +269,16 @@ export class SerialStoryGenerator extends AIPromptGenerator {
 
     if (previousChapters.length > 0) {
       // Check if the most recent chapter was the final chapter
+      // Final chapter is indicated by continueStory === false
       const latestChapter = previousChapters[0];
       const latestMetadata = latestChapter.metadata as StoryChapterMetadata | undefined;
-      const isFinalChapter = latestMetadata?.isFinalChapter ?? false;
+      const storyEnded = latestMetadata?.continueStory === false;
 
       // Check if we've reached max chapters
       const chapterCount = previousChapters.length;
       const reachedMaxChapters = chapterCount >= this.maxChapters;
 
-      if (!isFinalChapter && !reachedMaxChapters) {
+      if (!storyEnded && !reachedMaxChapters) {
         // Continue the story
         isNewStory = false;
         currentChapter = chapterCount + 1;
@@ -378,6 +379,10 @@ export class SerialStoryGenerator extends AIPromptGenerator {
     this.selectedScenario = undefined;
     this.selectedEmotionalBeat = undefined;
 
+    // Calculate chapter budget counters for ending guidance
+    const chaptersRemaining = Math.max(0, 12 - state.currentChapter);
+    const mustEndIn = Math.max(0, this.maxChapters - state.currentChapter);
+
     return {
       previousChapters: this.formatPreviousChapters(state.previousChapters),
       currentChapter: String(state.currentChapter),
@@ -385,6 +390,9 @@ export class SerialStoryGenerator extends AIPromptGenerator {
       isMidArc: String(state.arcPhase === 'mid'),
       isLateArc: String(state.arcPhase === 'late'),
       isResolutionArc: String(state.arcPhase === 'resolution'),
+      isOverdue: String(state.currentChapter > 12),
+      chaptersRemaining: String(chaptersRemaining),
+      mustEndIn: String(mustEndIn),
     };
   }
 

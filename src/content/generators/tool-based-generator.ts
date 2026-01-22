@@ -242,21 +242,41 @@ export class ToolBasedGenerator implements ContentGenerator {
       const normalizedContent = rawContent.toUpperCase();
       lastSubmission = normalizedContent;
 
-      // Execute the submit_content tool
-      lastValidationResult = await executeSubmitContent({ content: normalizedContent });
+      // Extract optional serial story parameters
+      const continueStory = toolCall.arguments.continueStory as boolean | undefined;
+      const chapterSummary = toolCall.arguments.chapterSummary as string | undefined;
 
-      // If accepted, return the content
+      // Execute the submit_content tool with all parameters
+      lastValidationResult = await executeSubmitContent({
+        content: normalizedContent,
+        continueStory,
+        chapterSummary,
+      });
+
+      // If accepted, return the content with serial story metadata
       if (lastValidationResult.accepted) {
+        const resultMetadata: ToolBasedMetadata = {
+          ...baseResult.metadata,
+          model: response.model,
+          tokensUsed: response.tokensUsed,
+          toolAttempts: attempts,
+          toolAccepted: true,
+        };
+
+        // Merge serial story parameters into metadata if present
+        if (lastValidationResult.continueStory !== undefined) {
+          (resultMetadata as Record<string, unknown>).continueStory =
+            lastValidationResult.continueStory;
+        }
+        if (lastValidationResult.chapterSummary !== undefined) {
+          (resultMetadata as Record<string, unknown>).chapterSummary =
+            lastValidationResult.chapterSummary;
+        }
+
         return {
           text: normalizedContent,
           outputMode: 'text',
-          metadata: {
-            ...baseResult.metadata,
-            model: response.model,
-            tokensUsed: response.tokensUsed,
-            toolAttempts: attempts,
-            toolAccepted: true,
-          } as ToolBasedMetadata,
+          metadata: resultMetadata,
         };
       }
 

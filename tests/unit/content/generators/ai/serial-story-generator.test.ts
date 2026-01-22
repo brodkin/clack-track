@@ -183,7 +183,7 @@ describe('SerialStoryGenerator', () => {
         aiProvider: 'openai',
         metadata: {
           storyChapter: 1,
-          isFinalChapter: false,
+          continueStory: true,
           chapterSummary: 'A mysterious door appeared',
         },
         generatorId: 'serial-story',
@@ -224,7 +224,7 @@ describe('SerialStoryGenerator', () => {
       expect(state.previousChapters).toEqual([]);
     });
 
-    it('should detect continuation when previous chapters exist without isFinalChapter', async () => {
+    it('should detect continuation when previous chapters exist with continueStory:true', async () => {
       const previousChapter: ContentRecord = {
         id: 1,
         text: 'Chapter 1 content',
@@ -234,7 +234,7 @@ describe('SerialStoryGenerator', () => {
         aiProvider: 'openai',
         metadata: {
           storyChapter: 1,
-          isFinalChapter: false,
+          continueStory: true,
           chapterSummary: 'A mysterious door appeared',
         },
         generatorId: 'serial-story',
@@ -255,7 +255,7 @@ describe('SerialStoryGenerator', () => {
       expect(state.previousChapters).toHaveLength(1);
     });
 
-    it('should detect new story when last chapter had isFinalChapter:true', async () => {
+    it('should detect new story when last chapter had continueStory:false', async () => {
       const finalChapter: ContentRecord = {
         id: 1,
         text: 'Final chapter content',
@@ -265,7 +265,7 @@ describe('SerialStoryGenerator', () => {
         aiProvider: 'openai',
         metadata: {
           storyChapter: 8,
-          isFinalChapter: true,
+          continueStory: false,
           chapterSummary: 'The story concludes',
         },
         generatorId: 'serial-story',
@@ -297,7 +297,7 @@ describe('SerialStoryGenerator', () => {
           aiProvider: 'openai',
           metadata: {
             storyChapter: i,
-            isFinalChapter: false,
+            continueStory: true,
             chapterSummary: `Summary for chapter ${i}`,
           },
           generatorId: 'serial-story',
@@ -369,7 +369,7 @@ describe('SerialStoryGenerator', () => {
         aiProvider: 'openai',
         metadata: {
           storyChapter: 1,
-          isFinalChapter: false,
+          continueStory: true,
           chapterSummary: 'A mysterious door appeared in the old barn',
         },
         generatorId: 'serial-story',
@@ -399,7 +399,7 @@ describe('SerialStoryGenerator', () => {
         generatedAt: new Date(),
         sentAt: new Date(),
         aiProvider: 'openai',
-        metadata: { storyChapter: 1, isFinalChapter: false, chapterSummary: 'Summary' },
+        metadata: { storyChapter: 1, continueStory: true, chapterSummary: 'Summary' },
         generatorId: 'serial-story',
       };
       mockContentRepository.findLatestByGenerator.mockResolvedValue([previousChapter]);
@@ -430,7 +430,7 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - (4 - i) * 1000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: i, isFinalChapter: false, chapterSummary: `Summary ${i}` },
+          metadata: { storyChapter: i, continueStory: true, chapterSummary: `Summary ${i}` },
           generatorId: 'serial-story',
         });
       }
@@ -462,7 +462,7 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - (7 - i) * 1000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: i, isFinalChapter: false, chapterSummary: `Summary ${i}` },
+          metadata: { storyChapter: i, continueStory: true, chapterSummary: `Summary ${i}` },
           generatorId: 'serial-story',
         });
       }
@@ -494,7 +494,7 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - (10 - i) * 1000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: i, isFinalChapter: false, chapterSummary: `Summary ${i}` },
+          metadata: { storyChapter: i, continueStory: true, chapterSummary: `Summary ${i}` },
           generatorId: 'serial-story',
         });
       }
@@ -514,6 +514,96 @@ describe('SerialStoryGenerator', () => {
       expect(variables.isMidArc).toBe('false');
       expect(variables.isLateArc).toBe('false');
       expect(variables.isResolutionArc).toBe('true');
+    });
+
+    it('should include chaptersRemaining for continuation (chapters until target end at 12)', async () => {
+      const previousChapter: ContentRecord = {
+        id: 1,
+        text: 'Chapter 1',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: new Date(),
+        aiProvider: 'openai',
+        metadata: { storyChapter: 1, continueStory: true, chapterSummary: 'Summary' },
+        generatorId: 'serial-story',
+      };
+      mockContentRepository.findLatestByGenerator.mockResolvedValue([previousChapter]);
+
+      const generator = new SerialStoryGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        mockContentRepository,
+        { openai: 'test-key' }
+      ) as ProtectedSerialStoryGenerator;
+
+      const variables = await generator.getTemplateVariables(mockContext);
+
+      // Chapter 2: chaptersRemaining = 12 - 2 = 10
+      expect(variables.chaptersRemaining).toBe('10');
+    });
+
+    it('should include mustEndIn for continuation (chapters until hard max)', async () => {
+      const chapters: ContentRecord[] = [];
+      for (let i = 10; i >= 1; i--) {
+        chapters.push({
+          id: i,
+          text: `Chapter ${i}`,
+          type: 'major',
+          generatedAt: new Date(Date.now() - (10 - i) * 1000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: i, continueStory: true, chapterSummary: `Summary ${i}` },
+          generatorId: 'serial-story',
+        });
+      }
+      mockContentRepository.findLatestByGenerator.mockResolvedValue(chapters);
+
+      const generator = new SerialStoryGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        mockContentRepository,
+        { openai: 'test-key' },
+        15 // maxChapters
+      ) as ProtectedSerialStoryGenerator;
+
+      const variables = await generator.getTemplateVariables(mockContext);
+
+      // Chapter 11: mustEndIn = 15 - 11 = 4
+      expect(variables.mustEndIn).toBe('4');
+      // chaptersRemaining = 12 - 11 = 1
+      expect(variables.chaptersRemaining).toBe('1');
+    });
+
+    it('should clamp chaptersRemaining to 0 when past target', async () => {
+      const chapters: ContentRecord[] = [];
+      for (let i = 13; i >= 1; i--) {
+        chapters.push({
+          id: i,
+          text: `Chapter ${i}`,
+          type: 'major',
+          generatedAt: new Date(Date.now() - (13 - i) * 1000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: i, continueStory: true, chapterSummary: `Summary ${i}` },
+          generatorId: 'serial-story',
+        });
+      }
+      mockContentRepository.findLatestByGenerator.mockResolvedValue(chapters);
+
+      const generator = new SerialStoryGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        mockContentRepository,
+        { openai: 'test-key' },
+        15
+      ) as ProtectedSerialStoryGenerator;
+
+      const variables = await generator.getTemplateVariables(mockContext);
+
+      // Chapter 14: chaptersRemaining = max(0, 12 - 14) = 0
+      expect(variables.chaptersRemaining).toBe('0');
+      // mustEndIn = max(0, 15 - 14) = 1
+      expect(variables.mustEndIn).toBe('1');
     });
   });
 
@@ -549,7 +639,7 @@ describe('SerialStoryGenerator', () => {
         generatedAt: new Date(),
         sentAt: new Date(),
         aiProvider: 'openai',
-        metadata: { storyChapter: 1, isFinalChapter: false, chapterSummary: 'Summary' },
+        metadata: { storyChapter: 1, continueStory: true, chapterSummary: 'Summary' },
         generatorId: 'serial-story',
       };
       mockContentRepository.findLatestByGenerator.mockResolvedValue([previousChapter]);
@@ -693,7 +783,7 @@ describe('SerialStoryGenerator', () => {
         generatedAt: new Date(),
         sentAt: new Date(),
         aiProvider: 'openai',
-        metadata: { storyChapter: 1, isFinalChapter: false, chapterSummary: 'A door appeared' },
+        metadata: { storyChapter: 1, continueStory: true, chapterSummary: 'A door appeared' },
         generatorId: 'serial-story',
       };
       mockContentRepository.findLatestByGenerator.mockResolvedValue([previousChapter]);

@@ -407,15 +407,15 @@ describe('SubmitContent Tool', () => {
 
   describe('Serial Story Parameters', () => {
     describe('SubmitContentParams Interface', () => {
-      it('should accept isFinalChapter optional boolean parameter', async () => {
+      it('should accept continueStory boolean parameter (false = final chapter)', async () => {
         const params: SubmitContentParams = {
           content: 'CHAPTER END',
-          isFinalChapter: true,
+          continueStory: false,
         };
         const result = await executeSubmitContent(params);
 
         expect(result.accepted).toBe(true);
-        expect(result.isFinalChapter).toBe(true);
+        expect(result.continueStory).toBe(false);
       });
 
       it('should accept chapterSummary optional string parameter', async () => {
@@ -429,16 +429,16 @@ describe('SubmitContent Tool', () => {
         expect(result.chapterSummary).toBe('The hero begins their journey');
       });
 
-      it('should accept both isFinalChapter and chapterSummary together', async () => {
+      it('should accept both continueStory and chapterSummary together', async () => {
         const params: SubmitContentParams = {
           content: 'THE END',
-          isFinalChapter: true,
+          continueStory: false,
           chapterSummary: 'The hero saves the day and returns home',
         };
         const result = await executeSubmitContent(params);
 
         expect(result.accepted).toBe(true);
-        expect(result.isFinalChapter).toBe(true);
+        expect(result.continueStory).toBe(false);
         expect(result.chapterSummary).toBe('The hero saves the day and returns home');
       });
 
@@ -449,19 +449,19 @@ describe('SubmitContent Tool', () => {
         const result = await executeSubmitContent(params);
 
         expect(result.accepted).toBe(true);
-        expect(result.isFinalChapter).toBeUndefined();
+        expect(result.continueStory).toBeUndefined();
         expect(result.chapterSummary).toBeUndefined();
       });
 
-      it('should pass through isFinalChapter=false correctly', async () => {
+      it('should pass through continueStory=true correctly (story continues)', async () => {
         const params: SubmitContentParams = {
           content: 'CHAPTER TWO',
-          isFinalChapter: false,
+          continueStory: true,
         };
         const result = await executeSubmitContent(params);
 
         expect(result.accepted).toBe(true);
-        expect(result.isFinalChapter).toBe(false);
+        expect(result.continueStory).toBe(true);
       });
 
       it('should pass through empty chapterSummary string', async () => {
@@ -478,24 +478,24 @@ describe('SubmitContent Tool', () => {
       it('should include serial story params in failed submissions', async () => {
         const params: SubmitContentParams = {
           content: 'L1\nL2\nL3\nL4\nL5\nL6', // Too many lines
-          isFinalChapter: true,
+          continueStory: false,
           chapterSummary: 'Story summary',
         };
         const result = await executeSubmitContent(params);
 
         expect(result.accepted).toBe(false);
-        expect(result.isFinalChapter).toBe(true);
+        expect(result.continueStory).toBe(false);
         expect(result.chapterSummary).toBe('Story summary');
       });
     });
 
     describe('Tool Definition for Serial Story Params', () => {
-      it('should define isFinalChapter as optional boolean parameter', () => {
+      it('should define continueStory as boolean parameter', () => {
         const { parameters } = submitContentToolDefinition;
-        expect(parameters.properties!.isFinalChapter).toBeDefined();
-        expect(parameters.properties!.isFinalChapter.type).toBe('boolean');
-        // Should NOT be in required array (optional)
-        expect(parameters.required).not.toContain('isFinalChapter');
+        expect(parameters.properties!.continueStory).toBeDefined();
+        expect(parameters.properties!.continueStory.type).toBe('boolean');
+        // Required for serial stories (description emphasizes this)
+        expect(parameters.required).toContain('continueStory');
       });
 
       it('should define chapterSummary as optional string parameter', () => {
@@ -506,12 +506,13 @@ describe('SubmitContent Tool', () => {
         expect(parameters.required).not.toContain('chapterSummary');
       });
 
-      it('should have description for isFinalChapter parameter', () => {
+      it('should have description for continueStory parameter emphasizing it is required for serial stories', () => {
         const { parameters } = submitContentToolDefinition;
-        const param = parameters.properties!.isFinalChapter;
+        const param = parameters.properties!.continueStory;
         expect(param.description).toBeDefined();
         expect(param.description!.length).toBeGreaterThan(10);
-        expect(param.description!.toLowerCase()).toMatch(/final|chapter|end/);
+        // Should mention it's required for serial stories and explain true/false meaning
+        expect(param.description!.toLowerCase()).toMatch(/required|continue|story|end/);
       });
 
       it('should have description for chapterSummary parameter', () => {

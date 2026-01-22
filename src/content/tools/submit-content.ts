@@ -25,8 +25,9 @@ import { VESTABOARD } from '../../config/constants.js';
  * On success: { accepted: true, preview: [...] }
  * On failure: { accepted: false, preview: [...], errors: [...], hint: "..." }
  *
- * For serial story content, may include:
- * - isFinalChapter: boolean indicating if this is the story's final chapter
+ * For serial story content, includes:
+ * - continueStory: REQUIRED boolean indicating if the story should continue
+ *   (true = story continues, false = this is the final chapter)
  * - chapterSummary: brief summary of the chapter for context tracking
  */
 export interface SubmitContentResult {
@@ -38,8 +39,8 @@ export interface SubmitContentResult {
   errors?: string[];
   /** Helpful hint for fixing the content (only present on failure) */
   hint?: string;
-  /** Whether this is the final chapter of a serial story (passed through from params) */
-  isFinalChapter?: boolean;
+  /** Whether to continue the story (true = continue, false = this is the final chapter) */
+  continueStory?: boolean;
   /** Brief summary of the chapter content (passed through from params) */
   chapterSummary?: string;
 }
@@ -50,8 +51,8 @@ export interface SubmitContentResult {
 export interface SubmitContentParams {
   /** The content to submit for display */
   content: string;
-  /** Whether this is the final chapter of a serial story (optional) */
-  isFinalChapter?: boolean;
+  /** Whether to continue the story after this chapter (true = continue, false = final chapter) */
+  continueStory?: boolean;
   /** Brief summary of the chapter content for context tracking (optional) */
   chapterSummary?: string;
 }
@@ -78,11 +79,12 @@ export const submitContentToolDefinition: ToolDefinition = {
           'Use \\n for line breaks. Supported characters: A-Z, 0-9, space, and ' +
           'common punctuation (.,:;!?\'"-()+=/). Content is uppercased automatically.',
       },
-      isFinalChapter: {
+      continueStory: {
         type: 'boolean',
         description:
-          'Set to true if this is the final chapter of a serial story. ' +
-          'Used to signal story completion for chapter tracking and archival.',
+          'REQUIRED for serial stories. Set to true to continue the story in the next chapter. ' +
+          'Set to false when this chapter concludes the story arc. ' +
+          'You MUST explicitly decide whether the story continues or ends.',
       },
       chapterSummary: {
         type: 'string',
@@ -91,7 +93,7 @@ export const submitContentToolDefinition: ToolDefinition = {
           'Used for maintaining story context across chapters in serial narratives.',
       },
     },
-    required: ['content'],
+    required: ['content', 'continueStory'],
   },
 };
 
@@ -232,7 +234,7 @@ function generateHint(validationResult: ValidationResult, originalContent: strin
 export async function executeSubmitContent(
   params: SubmitContentParams
 ): Promise<SubmitContentResult> {
-  const { content, isFinalChapter, chapterSummary } = params;
+  const { content, continueStory, chapterSummary } = params;
 
   // Validate content using the existing validator
   const validationResult = validateTextContent(content);
@@ -248,8 +250,8 @@ export async function executeSubmitContent(
   };
 
   // Only include serial story params if they were provided
-  if (isFinalChapter !== undefined) {
-    baseResult.isFinalChapter = isFinalChapter;
+  if (continueStory !== undefined) {
+    baseResult.continueStory = continueStory;
   }
   if (chapterSummary !== undefined) {
     baseResult.chapterSummary = chapterSummary;

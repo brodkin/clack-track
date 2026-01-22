@@ -3,56 +3,41 @@ Continue the serialized micro-story.
 STORY SO FAR:
 {{previousChapters}}
 
-CURRENT CHAPTER: {{currentChapter}} of approximately 8-12 total
+YOU ARE WRITING: Chapter {{currentChapter}}
 
-ARC GUIDANCE (8-12 chapters):
-- Chapters 1-3: RISING ACTION - Introduce conflict, build stakes, deepen mystery
-- Chapters 4-6: COMPLICATIONS - Obstacles, setbacks, character reveals
-- Chapters 7-9: ESCALATION - Stakes peak, tension highest, crisis point
-- Chapters 10-12: RESOLUTION - Climax and satisfying conclusion
+CHAPTER BUDGET:
+- Chapters remaining before target end: {{chaptersRemaining}}
+- HARD DEADLINE (story cut off after): {{mustEndIn}} chapters
 
-WHERE YOU ARE IN THE ARC:
-{{#if isEarlyArc}}
-RISING ACTION PHASE: Build tension. Add complications. Deepen the mystery or conflict.
-Do NOT resolve anything yet - the story is just getting started.
-{{/if}}
-{{#if isMidArc}}
-COMPLICATIONS PHASE: The protagonist faces real obstacles. Setbacks occur.
-Reveal something unexpected. Stakes should feel higher than before.
-{{/if}}
-{{#if isLateArc}}
-ESCALATION PHASE: Peak tension. Crisis point approaching or reached.
-Everything should feel urgent. The story is heading toward climax.
-{{/if}}
-{{#if isResolutionArc}}
-RESOLUTION PHASE: Bring the story to a satisfying close. Resolve the central conflict.
-Deliver emotional payoff. When the story feels complete, mark it as final.
-{{/if}}
+Plan your ending NOW if chaptersRemaining is 2 or fewer.
 
-CONTINUATION REQUIREMENTS:
+ARC PACING BY CHAPTER:
+- Chapters 1-3: RISING ACTION - Build tension, introduce conflict
+- Chapters 4-6: COMPLICATIONS - Obstacles and setbacks
+- Chapters 7-9: ESCALATION - Peak tension, crisis point
+- Chapters 10-12: RESOLUTION - Wrap up and conclude
+- Chapters 13+: OVERDUE - You must end the story NOW
+
+CHAPTER REQUIREMENTS:
 - Build directly on what came before
 - Advance the plot meaningfully - something must CHANGE
-- Maintain consistent tone and character
-- Each chapter should work standalone while serving the larger arc
-- End with momentum (early/mid arc) or closure (resolution arc)
-
-CRITICAL RULES:
 - Complete the chapter cleanly - no ellipses or trailing off
 - Show emotion through ACTION, never name emotions directly
 - Include ONE specific sensory detail per chapter
-- 4-5 lines maximum
-- NO BLANK LINES between lines
+- 4-5 lines maximum, NO BLANK LINES between lines
 
-FINAL CHAPTER FLAG:
-When the story reaches its natural ending (central conflict resolved, emotional arc
-complete), you MUST use the isFinalChapter tool parameter set to true. Signs a story
-is ready to end:
-- The central tension has been resolved
-- The protagonist has changed or learned something
-- Continuing would feel forced or anticlimactic
-- The emotional journey feels complete
+STORY ENDING CRITERIA - Check these before deciding to continue or end:
+[ ] The central conflict from Chapter 1 has been resolved
+[ ] The emotional arc has reached its destination
+[ ] The protagonist has changed or made a defining choice
+[ ] There is no remaining tension that demands resolution
 
-Do NOT end prematurely (before chapter 8) unless the story truly demands it.
-Do NOT drag it out past chapter 12 - find the ending.
+WHEN TO END (continueStory decision):
+You MUST set continueStory in your tool submission.
 
-Write the next chapter that advances this story toward its eventual conclusion.
+- Chapters 1-7: SET continueStory=true (keep building)
+- Chapters 8-9: If 3+ criteria above are met, SET continueStory=false
+- Chapters 10-12: If 2+ criteria above are met, SET continueStory=false
+- Chapters 13+: SET continueStory=false. No exceptions. End the story.
+
+Write chapter {{currentChapter}} now.

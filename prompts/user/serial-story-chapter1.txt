@@ -26,9 +26,8 @@ CRITICAL RULES:
 - NO BLANK LINES between lines
 - This chapter must STAND ALONE while promising more
 
-FINAL CHAPTER FLAG:
-When you determine the story has reached its natural ending (resolution complete,
-emotional arc satisfied), you MUST use the isFinalChapter tool parameter to signal
-this is the last chapter. Do NOT end prematurely - most stories need 8-12 chapters.
+STORY CONTINUATION:
+For Chapter 1, you MUST set continueStory=true in your tool submission.
+This is the beginning of an 8-12 chapter journey - never end on Chapter 1.
 
 Write Chapter 1 that hooks the reader and promises an engaging journey ahead.
