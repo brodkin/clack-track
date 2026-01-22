@@ -8,6 +8,7 @@ const Welcome = lazy(() => import('./pages/Welcome'));
 const History = lazy(() => import('./pages/History'));
 const Account = lazy(() => import('./pages/Account'));
 const Login = lazy(() => import('./pages/Login'));
+const StyleGuide = lazy(() => import('./pages/StyleGuide'));
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="/flipside" element={<History />} />
           <Route path="/account" element={<Account />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/style-guide" element={<StyleGuide />} />
         </Routes>
       </Suspense>
     </AuthProvider>

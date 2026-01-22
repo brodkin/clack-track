@@ -22,11 +22,17 @@ interface NavigationProps {
   className?: string;
 }
 
+// Check if we're in development mode
+// Works in both Vite (NODE_ENV set by Vite) and Jest (NODE_ENV=test)
+const isDev = process.env.NODE_ENV !== 'production';
+
 const navLinks = [
   { to: '/', label: 'Welcome' },
   { to: '/flipside', label: 'The Flip Side' },
   { to: '/account', label: 'Account' },
   { to: '/login', label: 'Login' },
+  // Style Guide only visible in development (and test environments)
+  ...(isDev ? [{ to: '/style-guide', label: 'Style Guide' }] : []),
 ];
 
 /**
