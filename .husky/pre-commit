@@ -1,8 +1,23 @@
-# Run unit tests (fail fast)
-npm run test:unit -- --bail || exit 1
+# Check if code files are staged (TypeScript, JavaScript)
+CODE_PATTERN='\.(ts|tsx|js|jsx|mjs|cjs)$'
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
 
-# Run type checking
-npm run typecheck || exit 1
+has_code_changes() {
+    echo "$STAGED_FILES" | grep -qE "$CODE_PATTERN"
+}
+
+# Only run tests and typecheck if code files are modified
+if has_code_changes; then
+    echo "Code changes detected - running tests and typecheck..."
+
+    # Run unit tests (fail fast)
+    npm run test:unit -- --bail || exit 1
+
+    # Run type checking
+    npm run typecheck || exit 1
+else
+    echo "No code changes - skipping tests and typecheck"
+fi
 
 # Run linting with auto-fix
 npm run lint:fix || exit 1
