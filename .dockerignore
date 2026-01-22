@@ -43,7 +43,6 @@ temp/
 Thumbs.db
 
 # Deployment scripts (not needed in image)
-deploy.sh
 secrets.sh
 docker-compose.prod.yml
 stack.yml

@@ -2,13 +2,32 @@
 
 Deploy to a Docker Swarm host (NAS, VM, etc.) directly from your devcontainer using SSH.
 
-## Prerequisites
+## Quick Start
+
+Use the `/deploy` skill in Claude Code for guided deployment:
+
+```
+/deploy
+```
+
+The skill provides:
+
+- Pre-flight checks (branch state, environment validation)
+- Step-by-step build and deploy commands
+- Health check verification
+- Rollback procedures
+
+## Manual Deployment
+
+If you prefer manual deployment:
+
+### Prerequisites
 
 - Docker Swarm active on your target host
 - SSH key access to the host
 - Your SSH user in the `docker` group on the remote host
 
-## Quick Start
+### Steps
 
 ```bash
 # 1. Configure production environment
@@ -21,81 +40,44 @@ cp .env.production.example .env.production
 #    - OPENAI_API_KEY (or ANTHROPIC_API_KEY)
 #    - MYSQL_ROOT_PASSWORD
 
-# 3. Create secrets on Swarm (one-time)
+# 3. Load and export production environment
+set -a; source .env.production; set +a
+
+# 4. Create secrets on Swarm (one-time)
 ./secrets.sh create
 
-# 4. Deploy
-./deploy.sh
+# 5. Build and deploy
+docker build -t clack-track:latest .
+docker stack deploy -c docker-compose.prod.yml clack-track
 ```
 
 ## Architecture
 
 ```
 Devcontainer                         NAS Docker Swarm
-┌────────────────────┐               ┌────────────────────────────┐
-│ Source code        │               │ Secrets (encrypted):       │
-│ stack.yml          │───SSH────────▶│   ├─ database_password     │
-│ .env.production    │  DOCKER_HOST  │   ├─ vestaboard_api_key    │
-│ deploy.sh          │               │   ├─ openai_api_key        │
-└────────────────────┘               │   └─ ...                   │
-                                     │                            │
-  Build context sent                 │ Services:                  │
-  over SSH, image                    │   ├─ clack-track_app       │
-  built on remote                    │   └─ clack-track_mysql     │
-                                     │                            │
-                                     │ Volumes:                   │
-                                     │   └─ mysql_data            │
-                                     └────────────────────────────┘
-```
-
-## How It Works
-
-The deployment uses `DOCKER_HOST=ssh://user@host` to run Docker commands on the remote host:
-
-1. **Build**: Source code is sent over SSH, image is built on the NAS
-2. **Secrets**: Created once, stored encrypted in Swarm
-3. **Deploy**: Stack deployed via `docker stack deploy`
-
-No Docker daemon needed locally - just the Docker CLI and SSH access.
-
-## Ongoing Deployments
-
-After initial setup, deploying updates is a single command:
-
-```bash
-./deploy.sh
-```
-
-This will:
-
-1. Send build context to the NAS over SSH
-2. Build the Docker image on the NAS
-3. Update the running stack
-
-## Managing Secrets
-
-Secrets are encrypted and stored in Docker Swarm, not on the filesystem.
-
-```bash
-# List secrets
-./secrets.sh list
-
-# Update secrets (requires removing the stack first)
-DOCKER_HOST=ssh://user@nas docker stack rm clack-track
-./secrets.sh update
-./deploy.sh
-
-# Delete all secrets
-./secrets.sh delete
++--------------------+               +----------------------------+
+| Source code        |               | Secrets (encrypted):       |
+| docker-compose     |---SSH-------->|   +-- database_password    |
+| .env.production    |  DOCKER_HOST  |   +-- vestaboard_api_key   |
+| /deploy skill      |               |   +-- openai_api_key       |
++--------------------+               |   +-- ...                  |
+                                     |                            |
+  Build context sent                 | Services:                  |
+  over SSH, image                    |   +-- clack-track_app      |
+  built on remote                    |   +-- clack-track_mysql    |
+                                     |                            |
+                                     | Volumes:                   |
+                                     |   +-- mysql_data           |
+                                     +----------------------------+
 ```
 
 ## Useful Commands
 
-All commands require `DOCKER_HOST` set (loaded from `.env.production` or exported):
+All commands require `DOCKER_HOST` set (load from `.env.production`):
 
 ```bash
-# Export for convenience (or commands will load from .env.production)
-export DOCKER_HOST=ssh://user@your-nas-ip
+# Load environment
+set -a; source .env.production; set +a
 
 # View running services
 docker stack services clack-track
@@ -141,86 +123,13 @@ docker service ps clack-track_app
 
 ## Troubleshooting
 
-### "Permission denied" on docker commands
+See the `/deploy` skill's troubleshooting section for common issues and solutions:
 
-Your SSH user needs to be in the `docker` group on the NAS:
-
-```bash
-# On the NAS
-sudo usermod -aG docker your-username
-# Log out and back in
+```
+/deploy
 ```
 
-### "Swarm not active" error
-
-```bash
-# Initialize Swarm on the NAS (via SSH)
-ssh user@your-nas "docker swarm init"
-```
-
-### Service won't start
-
-```bash
-# Check service status
-docker service ps clack-track_app --no-trunc
-
-# Check logs for errors
-docker service logs clack-track_app
-```
-
-### Build is slow
-
-The entire build context is sent over SSH. To speed this up:
-
-1. Ensure `.dockerignore` excludes unnecessary files
-2. Consider using a local Docker registry
-
-### SSH connection issues
-
-```bash
-# Test SSH connection
-ssh user@your-nas-ip "docker info"
-
-# If using non-standard port
-DOCKER_HOST=ssh://user@nas-ip:2222
-```
-
-### Home Assistant connection fails with .local hostname
-
-Docker containers cannot resolve `.local` mDNS hostnames (e.g., `homeassistant.local`). This is a fundamental limitation of how Docker networking handles multicast DNS.
-
-**Symptoms:**
-
-- `ENOTFOUND homeassistant.local` errors in logs
-- Home Assistant integration fails to connect
-- Works fine outside Docker but fails inside container
-
-**Solutions:**
-
-1. **Use IP address** (recommended):
-
-   ```bash
-   # In .env.production or secrets
-   HOME_ASSISTANT_URL=http://10.100.0.10:8123
-   ```
-
-2. **Use a proper DNS hostname** (if available):
-   ```bash
-   HOME_ASSISTANT_URL=http://ha.example.com:8123
-   ```
-
-**Finding your Home Assistant IP:**
-
-```bash
-# From a machine that can resolve mDNS
-ping homeassistant.local
-# Note the IP address in the response
-
-# Or check your router's DHCP leases
-# Or in Home Assistant: Settings → System → Network
-```
-
-**Note:** If you update the `HOME_ASSISTANT_URL` secret, you must remove and redeploy the stack for the change to take effect (see [Managing Secrets](#managing-secrets)).
+Or check `.claude/skills/deploy/troubleshooting.md` directly.
 
 ## SSH Key Setup
 
