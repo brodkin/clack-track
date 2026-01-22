@@ -71,7 +71,33 @@ docker build -t clack-track:latest -t clack-track:$(git rev-parse --short HEAD) 
 docker images clack-track:latest --format "{{.ID}} {{.CreatedAt}}"
 ```
 
-### Step 2: Deploy to Swarm
+### Step 2: Run Migrations
+
+**Migrations must run BEFORE the service update to ensure the database schema is ready.**
+
+```bash
+# Run migrations as a one-shot container on the Swarm network
+docker run --rm \
+  --network clack-track_clack-network \
+  -e DB_HOST="$DB_HOST" \
+  -e DB_PORT="$DB_PORT" \
+  -e DB_NAME="$DB_NAME" \
+  -e DB_USER="$DB_USER" \
+  -e DB_PASSWORD="$DB_PASSWORD" \
+  clack-track:latest \
+  node dist/cli/index.js db:migrate
+
+# Verify migrations succeeded (exit code check is automatic with set -e)
+echo "Migrations completed successfully"
+```
+
+**If migrations fail:**
+
+- The deployment should be aborted immediately
+- Do NOT proceed to Step 3 (Deploy to Swarm)
+- See [Migration Rollback](#migration-rollback) section for recovery steps
+
+### Step 3: Deploy to Swarm
 
 ```bash
 # Deploy stack with production compose
@@ -82,7 +108,7 @@ echo "Waiting for deployment to stabilize..."
 sleep 30
 ```
 
-### Step 3: Health Check Verification
+### Step 4: Health Check Verification
 
 ```bash
 # Check service status
@@ -95,7 +121,7 @@ docker service ps clack-track_app --format "{{.CurrentState}}"
 docker service logs clack-track_app --tail 50 --since 2m 2>&1 | grep -i "error\|fail\|exception" || echo "No errors found in recent logs"
 ```
 
-### Step 4: Verify Application
+### Step 5: Verify Application
 
 ```bash
 # Check container health status
@@ -106,6 +132,37 @@ docker inspect $(docker ps -q -f "label=com.docker.swarm.service.name=clack-trac
 ## Rollback Procedure
 
 If deployment fails or issues are detected:
+
+### Migration Rollback
+
+**Important**: Database migrations cannot be automatically rolled back. If migrations fail or cause issues:
+
+1. **Identify the failed migration:**
+
+   ```bash
+   # Check migration status in the database
+   docker run --rm \
+     --network clack-track_clack-network \
+     -e DB_HOST="$DB_HOST" \
+     -e DB_PORT="$DB_PORT" \
+     -e DB_NAME="$DB_NAME" \
+     -e DB_USER="$DB_USER" \
+     -e DB_PASSWORD="$DB_PASSWORD" \
+     clack-track:latest \
+     node dist/cli/index.js db:migrate --status
+   ```
+
+2. **Manual rollback options:**
+   - **If migration partially completed**: Manually reverse the schema changes using SQL
+   - **If data corruption occurred**: Restore from database backup
+   - **If new columns added**: Old application version may still work (additive changes are backward-compatible)
+
+3. **Prevent future issues:**
+   - Always test migrations on a staging database first
+   - Ensure migrations are idempotent where possible
+   - Keep database backups before deploying migrations
+
+**Note**: The `db:migrate` command only runs forward migrations. There is no automatic rollback command. Plan migrations carefully and consider backward compatibility.
 
 ### Quick Rollback (Previous Image)
 

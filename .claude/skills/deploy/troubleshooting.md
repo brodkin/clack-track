@@ -160,8 +160,42 @@ docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_a
 **Run migrations manually**:
 
 ```bash
-docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) npm run migrate
+docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) node dist/cli/index.js db:migrate
 ```
+
+**Check migration status**:
+
+```bash
+docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) npx knex migrate:status --knexfile knexfile.ts
+```
+
+### Migration Rollback
+
+**Symptom**: Migration failed partway through, database in inconsistent state
+
+**Check current migration status** (shows applied vs pending migrations):
+
+```bash
+docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) npx knex migrate:status --knexfile knexfile.ts
+```
+
+**Rollback the last batch of migrations**:
+
+```bash
+docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) npx knex migrate:rollback --knexfile knexfile.ts
+```
+
+**Rollback all migrations** (use with caution):
+
+```bash
+docker exec $(docker ps -q -f "label=com.docker.swarm.service.name=clack-track_app" | head -1) npx knex migrate:rollback --all --knexfile knexfile.ts
+```
+
+**Common rollback scenarios**:
+
+- Migration syntax error: Fix migration file, rollback, re-run
+- Wrong column type: Rollback, update migration, re-run
+- Missing dependency: Install dependency, re-run migration (no rollback needed)
 
 ## Network Issues
 
@@ -309,10 +343,12 @@ ssh $SSH_TARGET "sudo systemctl restart docker"
 
 > **Remember**: Run `source .env.production` before using these commands
 
-| Issue                | First Command to Run                                          |
-| -------------------- | ------------------------------------------------------------- |
-| Service not starting | `docker service logs clack-track_app --tail 50`               |
-| Connection refused   | `ping -c 3 $(echo $DOCKER_HOST \| sed 's\|ssh://[^@]*@\|\|')` |
-| Container crashing   | `docker service ps clack-track_app --no-trunc`                |
-| Database error       | `docker service ps clack-track_mysql`                         |
-| Memory issues        | `docker stats --no-stream`                                    |
+| Issue                | First Command to Run                                                         |
+| -------------------- | ---------------------------------------------------------------------------- |
+| Service not starting | `docker service logs clack-track_app --tail 50`                              |
+| Connection refused   | `ping -c 3 $(echo $DOCKER_HOST \| sed 's\|ssh://[^@]*@\|\|')`                |
+| Container crashing   | `docker service ps clack-track_app --no-trunc`                               |
+| Database error       | `docker service ps clack-track_mysql`                                        |
+| Memory issues        | `docker stats --no-stream`                                                   |
+| Migration failed     | `docker exec $CONTAINER_ID npx knex migrate:status --knexfile knexfile.ts`   |
+| Rollback migration   | `docker exec $CONTAINER_ID npx knex migrate:rollback --knexfile knexfile.ts` |
