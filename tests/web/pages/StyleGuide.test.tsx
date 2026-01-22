@@ -299,9 +299,7 @@ describe('StyleGuide Page', () => {
       });
       fireEvent.click(successButton);
 
-      expect(mockedToast.success).toHaveBeenCalledWith(
-        'Success! Operation completed.'
-      );
+      expect(mockedToast.success).toHaveBeenCalledWith('Success! Operation completed.');
     });
   });
 
@@ -340,9 +338,7 @@ describe('StyleGuide Page', () => {
 
       // Find interactive voting buttons (not the disabled loading state ones)
       const goodButtons = screen.getAllByRole('button', { name: /good/i });
-      const interactiveGoodButton = goodButtons.find(
-        btn => !(btn as HTMLButtonElement).disabled
-      );
+      const interactiveGoodButton = goodButtons.find(btn => !(btn as HTMLButtonElement).disabled);
 
       if (interactiveGoodButton) {
         fireEvent.click(interactiveGoodButton);

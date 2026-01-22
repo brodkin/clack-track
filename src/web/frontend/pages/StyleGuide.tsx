@@ -50,14 +50,7 @@ import {
 /**
  * Color swatch component for displaying a single color
  */
-function ColorSwatch({
-  name,
-  cssVar,
-}: {
-  name: string;
-  cssVar: string;
-  className?: string;
-}) {
+function ColorSwatch({ name, cssVar }: { name: string; cssVar: string; className?: string }) {
   return (
     <div className="flex flex-col">
       <div
@@ -65,12 +58,8 @@ function ColorSwatch({
         style={{ backgroundColor: `var(${cssVar})` }}
         title={cssVar}
       />
-      <p className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-        {name}
-      </p>
-      <code className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-        {cssVar}
-      </code>
+      <p className="mt-2 text-sm font-medium text-gray-900 dark:text-white">{name}</p>
+      <code className="text-xs text-gray-500 dark:text-gray-400 font-mono">{cssVar}</code>
     </div>
   );
 }
@@ -87,9 +76,7 @@ function TypographySection() {
 
       {/* Heading Scale */}
       <div className="mb-8">
-        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
-          Heading Scale
-        </h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">Heading Scale</h3>
         <div className="space-y-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
           <div>
             <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
@@ -144,9 +131,7 @@ function TypographySection() {
 
       {/* Font Families */}
       <div className="mb-8">
-        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
-          Font Families
-        </h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">Font Families</h3>
         <div className="space-y-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
           <div>
             <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
@@ -180,9 +165,7 @@ function TypographySection() {
 
       {/* Body Text */}
       <div className="mb-8">
-        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
-          Body Text
-        </h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">Body Text</h3>
         <div className="space-y-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
           <div>
             <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
@@ -215,8 +198,8 @@ function TypographySection() {
               text-lg (Large text)
             </span>
             <p className="text-lg text-gray-700 dark:text-gray-300">
-              Large body text for emphasis or introductory paragraphs.
-              The quick brown fox jumps over the lazy dog.
+              Large body text for emphasis or introductory paragraphs. The quick brown fox jumps
+              over the lazy dog.
             </p>
           </div>
         </div>
@@ -229,19 +212,21 @@ function TypographySection() {
         </h3>
         <div className="space-y-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
           <div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
-              Inline code
-            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Inline code</span>
             <p className="text-base text-gray-700 dark:text-gray-300">
-              Use <code className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono text-pink-600 dark:text-pink-400">const</code> for
-              constants and <code className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono text-pink-600 dark:text-pink-400">function</code> for
-              function declarations.
+              Use{' '}
+              <code className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono text-pink-600 dark:text-pink-400">
+                const
+              </code>{' '}
+              for constants and{' '}
+              <code className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono text-pink-600 dark:text-pink-400">
+                function
+              </code>{' '}
+              for function declarations.
             </p>
           </div>
           <div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
-              Code block
-            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Code block</span>
             <pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded-lg overflow-x-auto">
               <code className="text-sm font-mono">{`const greeting = 'Hello, World!';
 
@@ -268,9 +253,7 @@ console.log(sayHello('Vestaboard'));`}</code>
 
       {/* Text Colors */}
       <div className="mb-8">
-        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
-          Text Colors
-        </h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">Text Colors</h3>
         <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg grid grid-cols-4 gap-4">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded-full border border-gray-300 bg-gray-900 shrink-0" />
@@ -400,9 +383,7 @@ function ColorsSection() {
 
       {/* Chart Colors */}
       <div className="mb-8">
-        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
-          Chart Colors
-        </h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">Chart Colors</h3>
         <div className="grid grid-cols-3 md:grid-cols-5 gap-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
           <ColorSwatch name="Chart 1" cssVar="--chart-1" />
           <ColorSwatch name="Chart 2" cssVar="--chart-2" />
@@ -527,9 +508,7 @@ function ButtonsSection() {
 
       {/* All Sizes */}
       <div className="mb-8">
-        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
-          Button Sizes
-        </h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">Button Sizes</h3>
         <div className="flex flex-wrap items-end gap-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
           <div className="flex flex-col items-center gap-2">
             <Button size="sm">Small</Button>
@@ -581,9 +560,7 @@ function ButtonsSection() {
 
       {/* With Icons */}
       <div className="mb-8">
-        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
-          With Icons
-        </h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">With Icons</h3>
         <div className="flex flex-wrap gap-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
           <Button>
             <Plus />
@@ -657,21 +634,11 @@ function ButtonsSection() {
             <thead>
               <tr>
                 <th className="text-left text-xs text-gray-500 pb-4">Size</th>
-                <th className="text-center text-xs text-gray-500 pb-4">
-                  default
-                </th>
-                <th className="text-center text-xs text-gray-500 pb-4">
-                  destructive
-                </th>
-                <th className="text-center text-xs text-gray-500 pb-4">
-                  outline
-                </th>
-                <th className="text-center text-xs text-gray-500 pb-4">
-                  secondary
-                </th>
-                <th className="text-center text-xs text-gray-500 pb-4">
-                  ghost
-                </th>
+                <th className="text-center text-xs text-gray-500 pb-4">default</th>
+                <th className="text-center text-xs text-gray-500 pb-4">destructive</th>
+                <th className="text-center text-xs text-gray-500 pb-4">outline</th>
+                <th className="text-center text-xs text-gray-500 pb-4">secondary</th>
+                <th className="text-center text-xs text-gray-500 pb-4">ghost</th>
               </tr>
             </thead>
             <tbody>
@@ -840,14 +807,14 @@ function CardsAndBadgesSection() {
                 <Badge variant="secondary">New</Badge>
               </div>
               <CardDescription>
-                This is the card description that provides additional context
-                about the card content.
+                This is the card description that provides additional context about the card
+                content.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                This is the main content area of the card. It can contain any
-                type of content including text, images, or other components.
+                This is the main content area of the card. It can contain any type of content
+                including text, images, or other components.
               </p>
             </CardContent>
             <CardFooter className="flex justify-between">
@@ -870,9 +837,7 @@ function CardsAndBadgesSection() {
               <CardDescription>Basic card with header</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Minimal content example.
-              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Minimal content example.</p>
             </CardContent>
           </Card>
 
@@ -912,9 +877,7 @@ function CardsAndBadgesSection() {
 
       {/* Stacked Cards */}
       <div className="mb-8">
-        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
-          Stacked Cards
-        </h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">Stacked Cards</h3>
         <div className="space-y-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
           <Card>
             <CardHeader className="py-4">
@@ -971,14 +934,10 @@ function FormsSection() {
 
       {/* Input States */}
       <div className="mb-8">
-        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
-          Input States
-        </h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">Input States</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
           <div>
-            <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">
-              Default
-            </label>
+            <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">Default</label>
             <Input placeholder="Enter text..." />
           </div>
           <div>
@@ -988,9 +947,7 @@ function FormsSection() {
             <Input defaultValue="Hello, World!" />
           </div>
           <div>
-            <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">
-              Disabled
-            </label>
+            <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">Disabled</label>
             <Input placeholder="Disabled input" disabled />
           </div>
           <div>
@@ -1001,41 +958,29 @@ function FormsSection() {
               placeholder="Invalid input"
               className="border-red-500 focus-visible:ring-red-500"
             />
-            <p className="text-xs text-red-500 mt-1">
-              This field is required
-            </p>
+            <p className="text-xs text-red-500 mt-1">This field is required</p>
           </div>
         </div>
       </div>
 
       {/* Input Types */}
       <div className="mb-8">
-        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
-          Input Types
-        </h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">Input Types</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
           <div>
-            <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">
-              Text
-            </label>
+            <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">Text</label>
             <Input type="text" placeholder="Text input" />
           </div>
           <div>
-            <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">
-              Email
-            </label>
+            <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">Email</label>
             <Input type="email" placeholder="email@example.com" />
           </div>
           <div>
-            <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">
-              Password
-            </label>
+            <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">Password</label>
             <Input type="password" placeholder="••••••••" />
           </div>
           <div>
-            <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">
-              Number
-            </label>
+            <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">Number</label>
             <Input type="number" placeholder="0" />
           </div>
         </div>
@@ -1088,22 +1033,16 @@ function FormsSection() {
 
       {/* Separator */}
       <div className="mb-8">
-        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
-          Separator
-        </h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">Separator</h3>
         <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            Horizontal Separator
-          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Horizontal Separator</p>
           <div className="space-y-4">
             <p className="text-gray-700 dark:text-gray-300">Content above</p>
             <Separator />
             <p className="text-gray-700 dark:text-gray-300">Content below</p>
           </div>
 
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 mt-8">
-            Vertical Separator
-          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 mt-8">Vertical Separator</p>
           <div className="flex items-center gap-4 h-8">
             <span className="text-gray-700 dark:text-gray-300">Item 1</span>
             <Separator orientation="vertical" />
@@ -1112,9 +1051,7 @@ function FormsSection() {
             <span className="text-gray-700 dark:text-gray-300">Item 3</span>
           </div>
 
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 mt-8">
-            With Text
-          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 mt-8">With Text</p>
           <div className="flex items-center gap-4">
             <Separator className="flex-1" />
             <span className="text-xs text-gray-500">OR</span>
@@ -1141,8 +1078,8 @@ function FormsSection() {
                 <SheetHeader>
                   <SheetTitle>Sheet Title</SheetTitle>
                   <SheetDescription>
-                    This is a sheet component that slides in from the side.
-                    It&apos;s commonly used for mobile navigation or detail views.
+                    This is a sheet component that slides in from the side. It&apos;s commonly used
+                    for mobile navigation or detail views.
                   </SheetDescription>
                 </SheetHeader>
                 <div className="py-4">
@@ -1165,8 +1102,8 @@ function FormsSection() {
             </Sheet>
           </div>
           <p className="text-xs text-gray-500 mt-4">
-            Click the button above to see the Sheet component in action.
-            The Sheet slides in from the right side of the screen.
+            Click the button above to see the Sheet component in action. The Sheet slides in from
+            the right side of the screen.
           </p>
         </div>
       </div>
@@ -1190,10 +1127,7 @@ function FormsSection() {
             >
               Error Toast
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => toast.info('Info: This is informational.')}
-            >
+            <Button variant="outline" onClick={() => toast.info('Info: This is informational.')}>
               Info Toast
             </Button>
             <Button
@@ -1218,8 +1152,8 @@ function FormsSection() {
             </Button>
           </div>
           <p className="text-xs text-gray-500 mt-4">
-            Click the buttons above to trigger different toast notifications.
-            Toasts appear at the bottom-right of the screen.
+            Click the buttons above to trigger different toast notifications. Toasts appear at the
+            bottom-right of the screen.
           </p>
         </div>
       </div>
@@ -1280,18 +1214,16 @@ function FeatureComponentsSection() {
         </h3>
         <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Displays Vestaboard content in a 6×22 character grid with split-flap
-            aesthetic. Amber text on black background mimics the physical board.
+            Displays Vestaboard content in a 6×22 character grid with split-flap aesthetic. Amber
+            text on black background mimics the physical board.
           </p>
           <VestaboardPreview content={SAMPLE_VESTABOARD_CONTENT} />
           <div className="mt-4 text-xs text-gray-500">
             <p>
-              <strong>Props:</strong> content: number[][] (6×22 character codes),
-              className?: string
+              <strong>Props:</strong> content: number[][] (6×22 character codes), className?: string
             </p>
             <p className="mt-1">
-              <strong>Character codes:</strong> 0=blank, 1-26=A-Z, 27=1, 28=2...
-              36=0, 37-62=symbols
+              <strong>Character codes:</strong> 0=blank, 1-26=A-Z, 27=1, 28=2... 36=0, 37-62=symbols
             </p>
           </div>
         </div>
@@ -1299,13 +1231,11 @@ function FeatureComponentsSection() {
 
       {/* VotingButtons */}
       <div className="mb-8">
-        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
-          VotingButtons
-        </h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">VotingButtons</h3>
         <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Touch-friendly voting interface for content quality rating. Large
-            44px+ touch targets for mobile accessibility.
+            Touch-friendly voting interface for content quality rating. Large 44px+ touch targets
+            for mobile accessibility.
           </p>
 
           <div className="space-y-6">
@@ -1324,9 +1254,7 @@ function FeatureComponentsSection() {
             <Separator />
 
             <div>
-              <p className="text-xs text-gray-500 mb-2">
-                Interactive (click to test)
-              </p>
+              <p className="text-xs text-gray-500 mb-2">Interactive (click to test)</p>
               <VotingButtons onVote={handleVote} isLoading={votingLoading} />
             </div>
           </div>
@@ -1342,13 +1270,11 @@ function FeatureComponentsSection() {
 
       {/* ContentCard */}
       <div className="mb-8">
-        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">
-          ContentCard
-        </h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">ContentCard</h3>
         <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Card component for displaying content records with metadata badges
-            showing generator, type, provider, model, and token usage.
+            Card component for displaying content records with metadata badges showing generator,
+            type, provider, model, and token usage.
           </p>
 
           <div className="max-w-md">
@@ -1360,12 +1286,12 @@ function FeatureComponentsSection() {
 
           <div className="mt-4 text-xs text-gray-500">
             <p>
-              <strong>Props:</strong> content: ContentRecord, onClick?: () =&gt;
-              void, className?: string
+              <strong>Props:</strong> content: ContentRecord, onClick?: () =&gt; void, className?:
+              string
             </p>
             <p className="mt-1">
-              <strong>Displays:</strong> generatorId, type badge (major/minor),
-              aiProvider, aiModel, tokensUsed, truncated content preview
+              <strong>Displays:</strong> generatorId, type badge (major/minor), aiProvider, aiModel,
+              tokensUsed, truncated content preview
             </p>
           </div>
         </div>

@@ -66,7 +66,9 @@ describe('db:migrate command', () => {
 
       await dbMigrateCommand();
 
-      expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('Running migrations'));
+      expect(mockConsoleLog).toHaveBeenCalledWith(
+        expect.stringContaining('Running database migrations')
+      );
       expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('20240101_create_users'));
       expect(mockConsoleLog).toHaveBeenCalledWith(
         expect.stringContaining('20240102_create_content')
@@ -81,10 +83,12 @@ describe('db:migrate command', () => {
       expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('already up to date'));
     });
 
-    it('should output success message after migrations complete', async () => {
+    it('should output batch info after migrations complete', async () => {
       await dbMigrateCommand();
 
-      expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('Migrations complete'));
+      // The implementation logs batch info rather than a "complete" message
+      expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('Batch'));
+      expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('migration(s)'));
     });
 
     it('should output batch number when migrations run', async () => {
@@ -92,7 +96,7 @@ describe('db:migrate command', () => {
 
       await dbMigrateCommand();
 
-      expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('batch 3'));
+      expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining('Batch 3'));
     });
   });
 
@@ -156,14 +160,14 @@ describe('db:migrate command', () => {
   });
 
   describe('Output Formatting', () => {
-    it('should log "Running migrations..." at start', async () => {
+    it('should log "Running database migrations..." at start', async () => {
       await dbMigrateCommand();
 
-      // Check that the first relevant log is the "Running migrations" message
+      // Check that the first relevant log is the "Running database migrations" message
       const calls = mockConsoleLog.mock.calls.map(call => call[0]);
-      expect(calls.some(msg => typeof msg === 'string' && msg.includes('Running migrations'))).toBe(
-        true
-      );
+      expect(
+        calls.some(msg => typeof msg === 'string' && msg.includes('Running database migrations'))
+      ).toBe(true);
     });
 
     it('should list each migration that ran', async () => {

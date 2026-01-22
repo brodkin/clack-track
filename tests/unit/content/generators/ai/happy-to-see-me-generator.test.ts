@@ -262,13 +262,9 @@ describe('HappyToSeeMeGenerator', () => {
       });
       mockModelTierSelector.getAlternate.mockReturnValue(null);
 
-      const generator = new HappyToSeeMeGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        {
-          openai: 'test-key',
-        }
-      ) as ProtectedHappyToSeeMeGenerator;
+      const generator = new HappyToSeeMeGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      }) as ProtectedHappyToSeeMeGenerator;
 
       // Verify the generator uses the correct prompt files via protected methods
       expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
@@ -434,8 +430,8 @@ describe('HappyToSeeMeGenerator', () => {
       expect(hasConceptualLocations).toBe(true);
 
       // Emotion vibes should be non-standard emotions/states
-      const nonStandardEmotions = emotionVibes.filter(vibe =>
-        !['happy', 'sad', 'angry', 'excited', 'scared'].some(basic => vibe.includes(basic))
+      const nonStandardEmotions = emotionVibes.filter(
+        vibe => !['happy', 'sad', 'angry', 'excited', 'scared'].some(basic => vibe.includes(basic))
       );
       expect(nonStandardEmotions.length).toBeGreaterThan(15); // Most should be non-standard
     });

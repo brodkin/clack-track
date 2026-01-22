@@ -262,13 +262,9 @@ describe('YoMommaGenerator', () => {
       });
       mockModelTierSelector.getAlternate.mockReturnValue(null);
 
-      const generator = new YoMommaGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        {
-          openai: 'test-key',
-        }
-      ) as ProtectedYoMommaGenerator;
+      const generator = new YoMommaGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      }) as ProtectedYoMommaGenerator;
 
       // Verify the generator uses the correct prompt files via protected methods
       expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
@@ -419,14 +415,28 @@ describe('YoMommaGenerator', () => {
       const toneVibes = YoMommaGenerator.TONE_VIBES;
 
       // Quality vibes should be abstract qualities, not specific adjectives
-      const qualityThematicWords = ['prowess', 'brilliance', 'mastery', 'spirit', 'genius', 'savviness'];
+      const qualityThematicWords = [
+        'prowess',
+        'brilliance',
+        'mastery',
+        'spirit',
+        'genius',
+        'savviness',
+      ];
       const hasQualityThematicContent = qualityVibes.some(vibe =>
         qualityThematicWords.some(word => vibe.includes(word))
       );
       expect(hasQualityThematicContent).toBe(true);
 
       // Action vibes should be conceptual categories, not literal actions
-      const actionConceptualWords = ['feats', 'achievements', 'mishaps', 'encounters', 'powers', 'legends'];
+      const actionConceptualWords = [
+        'feats',
+        'achievements',
+        'mishaps',
+        'encounters',
+        'powers',
+        'legends',
+      ];
       const hasConceptualActions = actionVibes.some(vibe =>
         actionConceptualWords.some(word => vibe.includes(word))
       );
@@ -437,8 +447,8 @@ describe('YoMommaGenerator', () => {
         ['burn', 'roast', 'shade', 'dig', 'mockery', 'ribbing'].some(word => vibe.includes(word))
       );
       const complimentTones = toneVibes.filter(vibe =>
-        ['hype', 'praise', 'flex', 'tribute', 'celebration', 'flattery', 'appreciation'].some(word =>
-          vibe.includes(word)
+        ['hype', 'praise', 'flex', 'tribute', 'celebration', 'flattery', 'appreciation'].some(
+          word => vibe.includes(word)
         )
       );
 
