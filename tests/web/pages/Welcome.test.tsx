@@ -17,6 +17,7 @@ jest.mock('@/web/frontend/services/apiClient', () => ({
   apiClient: {
     getLatestContent: jest.fn(),
     submitVote: jest.fn(),
+    getVestaboardConfig: jest.fn(),
   },
 }));
 
@@ -35,6 +36,8 @@ describe('Welcome Page', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default mock for config - returns black model
+    mockApiClient.getVestaboardConfig.mockResolvedValue({ model: 'black' });
   });
 
   describe('Loading State', () => {
@@ -386,6 +389,109 @@ describe('Welcome Page', () => {
         const preview = screen.getByRole('heading', { name: /latest content/i });
         // @ts-expect-error - jest-dom matchers
         expect(preview).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Vestaboard Config', () => {
+    it('should fetch Vestaboard config on mount', async () => {
+      mockApiClient.getLatestContent.mockResolvedValue({
+        success: true,
+        data: mockContent,
+      });
+
+      render(
+        <MemoryRouter>
+          <Welcome />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(mockApiClient.getVestaboardConfig).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('should pass black model to VestaboardPreview by default', async () => {
+      mockApiClient.getLatestContent.mockResolvedValue({
+        success: true,
+        data: mockContent,
+      });
+      mockApiClient.getVestaboardConfig.mockResolvedValue({ model: 'black' });
+
+      render(
+        <MemoryRouter>
+          <Welcome />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        // VestaboardPreview with black model has bg-[#0a0a0a] class
+        const vestaboard = screen.getByTestId('vestaboard');
+        // @ts-expect-error - jest-dom matchers
+        expect(vestaboard).toHaveClass('bg-[#0a0a0a]');
+      });
+    });
+
+    it('should pass white model to VestaboardPreview when configured', async () => {
+      mockApiClient.getLatestContent.mockResolvedValue({
+        success: true,
+        data: mockContent,
+      });
+      mockApiClient.getVestaboardConfig.mockResolvedValue({ model: 'white' });
+
+      render(
+        <MemoryRouter>
+          <Welcome />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        // VestaboardPreview with white model has bg-[#f5f5f5] class
+        const vestaboard = screen.getByTestId('vestaboard');
+        // @ts-expect-error - jest-dom matchers
+        expect(vestaboard).toHaveClass('bg-[#f5f5f5]');
+      });
+    });
+
+    it('should default to black model while config is loading', async () => {
+      mockApiClient.getLatestContent.mockResolvedValue({
+        success: true,
+        data: mockContent,
+      });
+      // Config never resolves - stays loading
+      mockApiClient.getVestaboardConfig.mockReturnValue(new Promise(() => {}));
+
+      render(
+        <MemoryRouter>
+          <Welcome />
+        </MemoryRouter>
+      );
+
+      // Wait for content to load (config still loading)
+      await waitFor(() => {
+        const vestaboard = screen.getByTestId('vestaboard');
+        // @ts-expect-error - jest-dom matchers
+        expect(vestaboard).toHaveClass('bg-[#0a0a0a]');
+      });
+    });
+
+    it('should default to black model if config fetch fails', async () => {
+      mockApiClient.getLatestContent.mockResolvedValue({
+        success: true,
+        data: mockContent,
+      });
+      mockApiClient.getVestaboardConfig.mockRejectedValue(new Error('Config failed'));
+
+      render(
+        <MemoryRouter>
+          <Welcome />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        const vestaboard = screen.getByTestId('vestaboard');
+        // @ts-expect-error - jest-dom matchers
+        expect(vestaboard).toHaveClass('bg-[#0a0a0a]');
       });
     });
   });

@@ -31,6 +31,7 @@ import type {
   VerifyRegistrationResponse,
   RemovePasskeyResponse,
   RenamePasskeyResponse,
+  VestaboardConfigResponse,
 } from './types.js';
 
 /**
@@ -280,5 +281,18 @@ export const apiClient = {
       }
     );
     return response as unknown as RenamePasskeyResponse;
+  },
+
+  /**
+   * Get Vestaboard configuration (model type)
+   */
+  async getVestaboardConfig(): Promise<VestaboardConfigResponse> {
+    const response = await fetchJSON<VestaboardConfigResponse>(
+      `${API_BASE_URL}/api/config/vestaboard`,
+      {
+        method: 'GET',
+      }
+    );
+    return response as unknown as VestaboardConfigResponse;
   },
 };

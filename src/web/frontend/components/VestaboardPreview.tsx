@@ -74,15 +74,24 @@ const CHAR_MAP: Record<number, string> = {
   66: '♪',
 };
 
+/**
+ * Vestaboard model type - determines the color scheme
+ * - 'black': Off-black board with near-black flaps and white/amber text
+ * - 'white': Off-white board with near-white flaps and dark text
+ */
+type VestaboardModel = 'black' | 'white';
+
 interface VestaboardPreviewProps {
   content: number[][];
   className?: string;
+  /** Vestaboard hardware model - affects color scheme. Defaults to 'black' */
+  model?: VestaboardModel;
 }
 
 /**
  * VestaboardPreview displays a 6x22 grid of characters with split-flap styling
  */
-export function VestaboardPreview({ content, className }: VestaboardPreviewProps) {
+export function VestaboardPreview({ content, className, model = 'black' }: VestaboardPreviewProps) {
   // Ensure we always have 6 rows
   const rows = Array.from({ length: 6 }, (_, rowIndex) => {
     const row = content[rowIndex] || [];
@@ -90,12 +99,21 @@ export function VestaboardPreview({ content, className }: VestaboardPreviewProps
     return Array.from({ length: 22 }, (_, colIndex) => row[colIndex] ?? 0);
   });
 
+  // Color schemes based on Vestaboard hardware model
+  // Black model: off-black board (#0a0a0a), near-black flaps (#1a1a1a), white text (#ffffff)
+  // White model: off-white board (#f5f5f5), near-white flaps (#e8e8e8), dark text (#1a1a1a)
+  const isWhiteModel = model === 'white';
+
   return (
     <div
       data-testid="vestaboard"
       role="region"
       aria-label="Vestaboard display showing current content"
-      className={cn('w-full max-w-4xl mx-auto p-4 bg-gray-900 rounded-lg shadow-2xl', className)}
+      className={cn(
+        'w-full max-w-4xl mx-auto p-4 rounded-lg shadow-2xl',
+        isWhiteModel ? 'bg-[#f5f5f5]' : 'bg-[#0a0a0a]',
+        className
+      )}
     >
       <div className="space-y-1">
         {rows.map((row, rowIndex) => (
@@ -112,7 +130,7 @@ export function VestaboardPreview({ content, className }: VestaboardPreviewProps
                 className={cn(
                   'flex items-center justify-center',
                   'w-6 h-8 sm:w-8 sm:h-10 md:w-10 md:h-12',
-                  'bg-black text-amber-400',
+                  isWhiteModel ? 'bg-[#e8e8e8] text-[#1a1a1a]' : 'bg-[#1a1a1a] text-[#ffffff]',
                   'font-mono font-bold text-xs sm:text-sm md:text-base',
                   'rounded shadow-inner',
                   'transition-all duration-200'

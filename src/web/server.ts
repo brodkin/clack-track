@@ -11,6 +11,7 @@ import { createContentRouter } from './routes/content.js';
 import { createLogsRouter } from './routes/logs.js';
 import { createVotingRouter } from './routes/voting.js';
 import { pushRouter } from './routes/push.js';
+import { createConfigRouter } from './routes/config.js';
 import type { WebDependencies } from './types.js';
 
 export interface WebServerConfig {
@@ -159,6 +160,10 @@ export class WebServer {
     // Voting routes - inject voteRepository dependency
     const votingRouter = createVotingRouter(this.dependencies);
     this.app.use('/api/vote', votingRouter);
+
+    // Config routes - no dependencies required
+    const configRouter = createConfigRouter();
+    this.app.use('/api/config', configRouter);
   }
 
   private registerSignalHandlers(): void {

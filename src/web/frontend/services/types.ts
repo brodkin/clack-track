@@ -191,6 +191,13 @@ export interface PushSubscriptionData {
 export type PushPermission = 'granted' | 'denied' | 'default';
 
 /**
+ * Configuration API Types
+ */
+export interface VestaboardConfigResponse {
+  model: 'black' | 'white';
+}
+
+/**
  * Error response types
  */
 export class ApiError extends Error {

@@ -14,6 +14,7 @@ import { textToCharacterCodes, emptyGrid } from '../lib/textToCharCodes';
 import type { ContentRecord } from '../../../storage/models/content.js';
 
 type VoteStatus = 'idle' | 'loading' | 'success' | 'error';
+type VestaboardModel = 'black' | 'white';
 
 export function Welcome() {
   const [content, setContent] = useState<ContentRecord | null>(null);
@@ -21,6 +22,7 @@ export function Welcome() {
   const [error, setError] = useState<string | null>(null);
   const [voteStatus, setVoteStatus] = useState<VoteStatus>('idle');
   const [voteError, setVoteError] = useState<string | null>(null);
+  const [vestaboardModel, setVestaboardModel] = useState<VestaboardModel>('black');
 
   const fetchContent = useCallback(async () => {
     setIsLoading(true);
@@ -43,6 +45,20 @@ export function Welcome() {
   useEffect(() => {
     fetchContent();
   }, [fetchContent]);
+
+  // Fetch Vestaboard config on mount
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const config = await apiClient.getVestaboardConfig();
+        setVestaboardModel(config.model);
+      } catch {
+        // Default to 'black' if config fetch fails
+        setVestaboardModel('black');
+      }
+    };
+    fetchConfig();
+  }, []);
 
   const handleVote = async (vote: 'good' | 'bad') => {
     if (!content) return;
@@ -114,7 +130,11 @@ export function Welcome() {
             Latest Content
           </h1>
           <div className="text-center py-16">
-            <VestaboardPreview content={emptyGrid()} className="mb-8 opacity-50" />
+            <VestaboardPreview
+              content={emptyGrid()}
+              className="mb-8 opacity-50"
+              model={vestaboardModel}
+            />
             <p className="text-gray-600 dark:text-gray-400">
               No content available yet. Generate some content to see it here!
             </p>
@@ -131,7 +151,7 @@ export function Welcome() {
           Latest Content
         </h1>
 
-        <VestaboardPreview content={characterCodes} className="mb-8" />
+        <VestaboardPreview content={characterCodes} className="mb-8" model={vestaboardModel} />
 
         <div className="text-center mb-6">
           <p className="text-sm text-gray-600 dark:text-gray-400">

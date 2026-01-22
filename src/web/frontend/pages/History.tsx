@@ -16,6 +16,7 @@ import type { ContentRecord } from '../../../storage/models/content.js';
 const PAGE_SIZE = 20;
 
 type VoteStatus = Record<number, 'idle' | 'loading' | 'success' | 'error'>;
+type VestaboardModel = 'black' | 'white';
 
 export function History() {
   const [contents, setContents] = useState<ContentRecord[]>([]);
@@ -25,6 +26,9 @@ export function History() {
   const [error, setError] = useState<string | null>(null);
   const [voteStatus, setVoteStatus] = useState<VoteStatus>({});
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  // Store model for future VestaboardPreview usage (e.g., expanded content view)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [vestaboardModel, setVestaboardModel] = useState<VestaboardModel>('black');
 
   const fetchHistory = useCallback(
     async (append = false) => {
@@ -65,6 +69,20 @@ export function History() {
   useEffect(() => {
     fetchHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch Vestaboard config on mount (for future VestaboardPreview usage)
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const config = await apiClient.getVestaboardConfig();
+        setVestaboardModel(config.model);
+      } catch {
+        // Default to 'black' if config fetch fails
+        setVestaboardModel('black');
+      }
+    };
+    fetchConfig();
   }, []);
 
   const handleVote = async (contentId: number, vote: 'good' | 'bad') => {

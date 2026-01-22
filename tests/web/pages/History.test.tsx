@@ -17,6 +17,7 @@ jest.mock('@/web/frontend/services/apiClient', () => ({
   apiClient: {
     getContentHistory: jest.fn(),
     submitVote: jest.fn(),
+    getVestaboardConfig: jest.fn(),
   },
 }));
 
@@ -43,6 +44,8 @@ describe('History Page', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default mock for config - returns black model
+    mockApiClient.getVestaboardConfig.mockResolvedValue({ model: 'black' });
   });
 
   describe('Loading State', () => {
@@ -585,6 +588,48 @@ describe('History Page', () => {
       await waitFor(() => {
         const typeBadges = screen.getAllByText(/major/i);
         expect(typeBadges.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe('Vestaboard Config', () => {
+    it('should fetch Vestaboard config on mount', async () => {
+      mockApiClient.getContentHistory.mockResolvedValue({
+        success: true,
+        data: mockContents,
+        pagination: { limit: 20, count: 5 },
+      });
+
+      render(
+        <MemoryRouter>
+          <History />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(mockApiClient.getVestaboardConfig).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('should handle config fetch failure gracefully', async () => {
+      mockApiClient.getContentHistory.mockResolvedValue({
+        success: true,
+        data: mockContents,
+        pagination: { limit: 20, count: 5 },
+      });
+      mockApiClient.getVestaboardConfig.mockRejectedValue(new Error('Config failed'));
+
+      render(
+        <MemoryRouter>
+          <History />
+        </MemoryRouter>
+      );
+
+      // Page should still render content even if config fails
+      await waitFor(() => {
+        const generatorText = screen.getByText(/generator-1/i);
+        // @ts-expect-error - jest-dom matchers
+        expect(generatorText).toBeInTheDocument();
       });
     });
   });
