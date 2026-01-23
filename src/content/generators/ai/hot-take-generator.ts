@@ -7,17 +7,17 @@
  * Features:
  * - Uses prompts/system/major-update-base.txt for system context
  * - Uses prompts/user/hot-take.txt for hot take content guidance
- * - Variety dimensions via HOT_TAKE_DOMAINS (50 topics) and HOT_TAKE_ANGLES (12 styles)
+ * - Variety dimensions via HOT_TAKE_SUBJECTS (192 broad topics) and HOT_TAKE_DEVICES (32 rhetorical devices)
  * - Optimized with LIGHT model tier for efficiency (simple opinions)
  * - Inherits retry logic and provider failover from base class
  *
  * Uses Template Method hooks:
- * - getTemplateVariables(): Selects random domain and angle for {{hotTakeDomain}}, {{hotTakeAngle}}
- * - getCustomMetadata(): Adds selectedDomain and selectedAngle to metadata for tracking
+ * - getTemplateVariables(): Selects random subject and device for {{hotTakeSubject}}, {{hotTakeDevice}}
+ * - getCustomMetadata(): Adds selectedSubject and selectedDevice to metadata for tracking
  *
- * Topics are intentionally trivial (food preferences, daily habits,
- * minor life choices) to keep takes playful and harmless. The tone
- * is confident and bold but never mean-spirited or actually controversial.
+ * Subjects are intentionally broad (dogs, coffee, mornings) to give the LLM
+ * creative freedom to develop unique hot takes. Rhetorical devices force
+ * structural variety in the output (not just tone variations).
  *
  * @example
  * ```typescript
@@ -32,9 +32,9 @@
  *   timezone: 'America/New_York'
  * });
  *
- * console.log(content.text); // "PINEAPPLE ON PIZZA\nIS NOT JUST ACCEPTABLE\nIT'S SUPERIOR"
- * console.log(content.metadata.selectedDomain); // "food preferences"
- * console.log(content.metadata.selectedAngle); // "contrarian reversal"
+ * console.log(content.text); // "THERE ARE TWO TYPES\nOF DOG PEOPLE AND\nTHE WRONG KIND"
+ * console.log(content.metadata.selectedSubject); // "dogs"
+ * console.log(content.metadata.selectedDevice); // "false dichotomy"
  * ```
  */
 
@@ -44,84 +44,271 @@ import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
 import { ModelTier, type GenerationContext } from '../../../types/content-generator.js';
 
 /**
- * Topic domains for hot takes - trivial, everyday categories for playful opinions.
- * 50 domains provide high variety across food, lifestyle, tech, social, and daily life.
+ * Broad subjects for hot takes - wide, open-ended topics that allow creative freedom.
+ * 192 subjects across 14 categories give the LLM room to develop unique opinions.
+ *
+ * Design principles:
+ * - Broad, not specific: "dogs" not "chihuahuas barking at mailmen"
+ * - Creative freedom: Each subject allows many possible angles
+ * - Not already hot takes: Avoid "pineapple on pizza" style topics
+ * - Mundane/everyday: Keep topics trivial and harmless
  */
-export const HOT_TAKE_DOMAINS: readonly string[] = [
-  // Food & Beverage (10)
-  'pizza toppings',
-  'breakfast cereals',
-  'coffee preparation',
-  'sandwich construction',
-  'condiment choices',
-  'snack preferences',
-  'cooking methods',
-  'ice cream flavors',
-  'beverage temperatures',
-  'food combinations',
-  // Daily Habits (10)
-  'morning routines',
-  'sleep schedules',
-  'shower timing',
-  'alarm clock behavior',
-  'commute preferences',
-  'desk organization',
-  'note-taking methods',
-  'calendar management',
-  'to-do list styles',
-  'break time activities',
-  // Technology (10)
-  'phone charging habits',
-  'notification settings',
-  'browser tab management',
-  'password strategies',
-  'emoji usage',
-  'texting styles',
-  'social media habits',
-  'streaming choices',
-  'app organization',
-  'device preferences',
-  // Social & Lifestyle (10)
-  'small talk topics',
-  'party arrival timing',
-  'gift giving customs',
-  'holiday traditions',
-  'birthday celebrations',
-  'greeting styles',
-  'seating preferences',
-  'waiting room behavior',
-  'elevator etiquette',
-  'queue management',
-  // Home & Personal (10)
-  'thermostat settings',
-  'towel folding methods',
-  'sock matching',
-  'plant care approaches',
-  'laundry sorting',
-  'dishwasher loading',
-  'bed making habits',
-  'closet organization',
-  'bathroom routines',
-  'kitchen cleanliness',
+export const HOT_TAKE_SUBJECTS: readonly string[] = [
+  // Animals (15)
+  'dogs',
+  'cats',
+  'birds',
+  'fish',
+  'reptiles',
+  'insects',
+  'horses',
+  'rabbits',
+  'hamsters',
+  'squirrels',
+  'pigeons',
+  'spiders',
+  'bees',
+  'dolphins',
+  'penguins',
+  // Food & Cooking (15)
+  'breakfast',
+  'sandwiches',
+  'salads',
+  'soup',
+  'pasta',
+  'rice',
+  'bread',
+  'cheese',
+  'fruit',
+  'vegetables',
+  'snacks',
+  'desserts',
+  'condiments',
+  'leftovers',
+  'meal prep',
+  // Beverages (12)
+  'coffee',
+  'tea',
+  'water',
+  'juice',
+  'soda',
+  'smoothies',
+  'hot chocolate',
+  'energy drinks',
+  'milk',
+  'lemonade',
+  'sparkling water',
+  'iced drinks',
+  // Hobbies & Leisure (18)
+  'gardening',
+  'reading',
+  'puzzles',
+  'board games',
+  'video games',
+  'knitting',
+  'cooking',
+  'baking',
+  'hiking',
+  'camping',
+  'fishing',
+  'photography',
+  'painting',
+  'crafting',
+  'collecting',
+  'journaling',
+  'birdwatching',
+  'stargazing',
+  // Life Stages & Milestones (12)
+  'childhood',
+  'teenage years',
+  'college',
+  'first jobs',
+  'moving out',
+  'weddings',
+  'parenthood',
+  'middle age',
+  'retirement',
+  'birthdays',
+  'anniversaries',
+  'graduations',
+  // Social Situations (15)
+  'small talk',
+  'parties',
+  'family gatherings',
+  'reunions',
+  'road trips',
+  'vacations',
+  'dinner parties',
+  'office meetings',
+  'elevators',
+  'waiting rooms',
+  'checkout lines',
+  'public transit',
+  'airports',
+  'restaurants',
+  'coffee shops',
+  // Professions & Work (12)
+  'teachers',
+  'doctors',
+  'lawyers',
+  'chefs',
+  'artists',
+  'athletes',
+  'musicians',
+  'writers',
+  'engineers',
+  'nurses',
+  'pilots',
+  'librarians',
+  // Home & Living (15)
+  'bedrooms',
+  'kitchens',
+  'bathrooms',
+  'living rooms',
+  'closets',
+  'garages',
+  'yards',
+  'apartments',
+  'furniture',
+  'decorating',
+  'cleaning',
+  'organizing',
+  'plants',
+  'pets',
+  'neighbors',
+  // Technology & Devices (12)
+  'smartphones',
+  'laptops',
+  'tablets',
+  'televisions',
+  'headphones',
+  'smart home',
+  'apps',
+  'passwords',
+  'notifications',
+  'updates',
+  'charging',
+  'wifi',
+  // Nature & Weather (15)
+  'rain',
+  'sunshine',
+  'snow',
+  'autumn leaves',
+  'spring flowers',
+  'summer heat',
+  'winter cold',
+  'beaches',
+  'mountains',
+  'forests',
+  'lakes',
+  'sunsets',
+  'clouds',
+  'wind',
+  'thunderstorms',
+  // Sports & Fitness (12)
+  'running',
+  'swimming',
+  'cycling',
+  'yoga',
+  'gyms',
+  'team sports',
+  'golf',
+  'tennis',
+  'skiing',
+  'surfing',
+  'walking',
+  'stretching',
+  // Entertainment (15)
+  'movies',
+  'television',
+  'podcasts',
+  'music',
+  'concerts',
+  'theater',
+  'comedy',
+  'documentaries',
+  'reality shows',
+  'game shows',
+  'streaming',
+  'sequels',
+  'remakes',
+  'trailers',
+  'awards shows',
+  // Daily Routines (12)
+  'mornings',
+  'evenings',
+  'commuting',
+  'lunch breaks',
+  'naps',
+  'weekends',
+  'mondays',
+  'fridays',
+  'holidays',
+  'alarm clocks',
+  'bedtime',
+  'showers',
+  // Fashion & Appearance (12)
+  'shoes',
+  'socks',
+  'hats',
+  'glasses',
+  'watches',
+  'jewelry',
+  'haircuts',
+  'beards',
+  'makeup',
+  'pajamas',
+  'uniforms',
+  'accessories',
 ] as const;
 
 /**
- * Opinion angles for hot takes - rhetorical styles for delivering the opinion.
- * 12 angles ensure varied tone and approach for each generated take.
+ * Rhetorical devices for hot takes - structural patterns that shape HOW the opinion is expressed.
+ * 32 devices across 4 categories force variety in sentence structure, not just tone.
+ *
+ * Design principles:
+ * - Structural variety: Each device forces a different output pattern
+ * - Not tone-based: Distinct from mere attitude variations
+ * - Output-shaping: The device determines HOW the take is structured
+ * - Clear differentiation: No overlap between devices
  */
-export const HOT_TAKE_ANGLES: readonly string[] = [
-  'contrarian reversal',
-  'passionate defense',
-  'reluctant confession',
-  'absolute certainty',
-  'gentle persuasion',
-  'bold declaration',
-  'surprised discovery',
-  'nostalgic reflection',
-  'scientific analysis',
-  'philosophical musing',
-  'practical wisdom',
-  'playful challenge',
+export const HOT_TAKE_DEVICES: readonly string[] = [
+  // Statement Types (8)
+  'universal truth',
+  'personal confession',
+  'bold prediction',
+  'unpopular opinion',
+  'hot take declaration',
+  'controversial ranking',
+  'definitive verdict',
+  'humble brag',
+  // Comparison & Contrast (8)
+  'false equivalence',
+  'surprising analogy',
+  'hierarchy reversal',
+  'generational divide',
+  'underdog defense',
+  'overrated callout',
+  'sleeper pick',
+  'category error',
+  // Temporal Framings (8)
+  'nostalgia rejection',
+  'future perfect',
+  'golden age myth',
+  'progress narrative',
+  'seasonal truth',
+  'lifecycle stage',
+  'before and after',
+  'right time claim',
+  // Logical Structures (8)
+  'if-then ultimatum',
+  'necessary condition',
+  'false dichotomy',
+  'reductio ad absurdum',
+  'appeal to nature',
+  'appeal to efficiency',
+  'cost-benefit analysis',
+  'exception proof',
 ] as const;
 
 /**
@@ -129,24 +316,24 @@ export const HOT_TAKE_ANGLES: readonly string[] = [
  *
  * Extends AIPromptGenerator with hot-take-specific prompts,
  * efficient LIGHT model tier selection, and variety dimensions
- * for domain and angle selection.
+ * for subject and device selection.
  *
  * Uses the getTemplateVariables hook to inject randomly selected
- * domain and angle into prompts, and getCustomMetadata to track
+ * subject and device into prompts, and getCustomMetadata to track
  * the selections in generation metadata.
  */
 export class HotTakeGenerator extends AIPromptGenerator {
   /**
-   * Stores the selected domain for metadata tracking.
+   * Stores the selected subject for metadata tracking.
    * Populated by getTemplateVariables() before each generation.
    */
-  protected selectedDomain: string = '';
+  protected selectedSubject: string = '';
 
   /**
-   * Stores the selected angle for metadata tracking.
+   * Stores the selected device for metadata tracking.
    * Populated by getTemplateVariables() before each generation.
    */
-  protected selectedAngle: string = '';
+  protected selectedDevice: string = '';
 
   /**
    * Creates a new HotTakeGenerator instance
@@ -189,34 +376,34 @@ export class HotTakeGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Hook: Selects random domain and angle for prompt injection.
+   * Hook: Selects random subject and device for prompt injection.
    *
    * Selections are stored in instance properties for metadata tracking.
    *
    * @param _context - Generation context (unused, but required by hook signature)
-   * @returns Template variables with hotTakeDomain and hotTakeAngle
+   * @returns Template variables with hotTakeSubject and hotTakeDevice
    */
   protected async getTemplateVariables(
     _context: GenerationContext
   ): Promise<Record<string, string>> {
-    this.selectedDomain = this.selectRandom(HOT_TAKE_DOMAINS);
-    this.selectedAngle = this.selectRandom(HOT_TAKE_ANGLES);
+    this.selectedSubject = this.selectRandom(HOT_TAKE_SUBJECTS);
+    this.selectedDevice = this.selectRandom(HOT_TAKE_DEVICES);
 
     return {
-      hotTakeDomain: this.selectedDomain,
-      hotTakeAngle: this.selectedAngle,
+      hotTakeSubject: this.selectedSubject,
+      hotTakeDevice: this.selectedDevice,
     };
   }
 
   /**
-   * Hook: Returns metadata with selected domain and angle for tracking.
+   * Hook: Returns metadata with selected subject and device for tracking.
    *
-   * @returns Metadata with selectedDomain and selectedAngle
+   * @returns Metadata with selectedSubject and selectedDevice
    */
   protected getCustomMetadata(): Record<string, unknown> {
     return {
-      selectedDomain: this.selectedDomain,
-      selectedAngle: this.selectedAngle,
+      selectedSubject: this.selectedSubject,
+      selectedDevice: this.selectedDevice,
     };
   }
 
