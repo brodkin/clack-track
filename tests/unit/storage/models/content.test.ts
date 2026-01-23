@@ -63,6 +63,10 @@ describe('ContentModel', () => {
         table.integer('validationAttempts').nullable().defaultTo(0);
         table.json('rejectionReasons').nullable();
 
+        // Output mode tracking for frame decoration
+        // 'text' = needs frame decoration, 'layout' = raw characterCodes (no frame)
+        table.string('outputMode', 20).nullable().defaultTo('text');
+
         // Indexes for common queries
         table.index('generatedAt', 'idx_generated_at');
         table.index('status', 'idx_status');
@@ -1012,6 +1016,172 @@ describe('ContentModel', () => {
       const failures = await contentModel.findFailures();
 
       expect(failures).toHaveLength(10);
+    });
+  });
+
+  // TESTS FOR outputMode FIELD (frame decoration tracking)
+  describe('outputMode field', () => {
+    test('should create content with outputMode "text" (default)', async () => {
+      const now = new Date();
+      const contentData = {
+        text: 'Test Content',
+        type: 'major' as const,
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        outputMode: 'text' as const,
+      };
+
+      const result = await contentModel.create(contentData);
+
+      expect(result.outputMode).toBe('text');
+    });
+
+    test('should create content with outputMode "layout"', async () => {
+      const now = new Date();
+      const contentData = {
+        text: 'Sleep Mode Art',
+        type: 'major' as const,
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        outputMode: 'layout' as const,
+      };
+
+      const result = await contentModel.create(contentData);
+
+      expect(result.outputMode).toBe('layout');
+    });
+
+    test('should default outputMode to "text" when not specified', async () => {
+      const now = new Date();
+      const contentData = {
+        text: 'Content without explicit outputMode',
+        type: 'major' as const,
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+      };
+
+      const result = await contentModel.create(contentData);
+
+      expect(result.outputMode).toBe('text');
+    });
+
+    test('should allow null outputMode for backwards compatibility', async () => {
+      const now = new Date();
+      const contentData = {
+        text: 'Legacy content',
+        type: 'major' as const,
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        outputMode: null,
+      };
+
+      const result = await contentModel.create(contentData);
+
+      // When null is explicitly passed, it should be stored as null
+      expect(result.outputMode).toBeNull();
+    });
+
+    test('should retrieve outputMode from findById', async () => {
+      const now = new Date();
+      const created = await contentModel.create({
+        text: 'Test Content',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        outputMode: 'layout',
+      });
+
+      const found = await contentModel.findById(created.id);
+
+      expect(found?.outputMode).toBe('layout');
+    });
+
+    test('should retrieve outputMode from findLatest', async () => {
+      const now = new Date();
+
+      await contentModel.create({
+        text: 'Text content',
+        type: 'major',
+        generatedAt: new Date(now.getTime()),
+        sentAt: null,
+        aiProvider: 'openai',
+        outputMode: 'text',
+      });
+
+      await contentModel.create({
+        text: 'Layout content',
+        type: 'major',
+        generatedAt: new Date(now.getTime() + 1000),
+        sentAt: null,
+        aiProvider: 'openai',
+        outputMode: 'layout',
+      });
+
+      const results = await contentModel.findLatest(10);
+
+      expect(results).toHaveLength(2);
+      // Latest first (layout)
+      expect(results[0].outputMode).toBe('layout');
+      expect(results[1].outputMode).toBe('text');
+    });
+
+    test('should retrieve outputMode from findLatestSent', async () => {
+      const now = new Date();
+
+      await contentModel.create({
+        text: 'Sent layout content',
+        type: 'major',
+        generatedAt: now,
+        sentAt: now,
+        aiProvider: 'openai',
+        outputMode: 'layout',
+      });
+
+      const result = await contentModel.findLatestSent();
+
+      expect(result?.outputMode).toBe('layout');
+    });
+
+    test('should preserve outputMode through create and retrieve cycle', async () => {
+      const now = new Date();
+
+      // Test text mode
+      const textContent = await contentModel.create({
+        text: 'Text mode content',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        outputMode: 'text',
+        generatorId: 'haiku',
+        generatorName: 'Haiku Generator',
+        priority: 2,
+      });
+
+      // Test layout mode
+      const layoutContent = await contentModel.create({
+        text: 'Layout mode content',
+        type: 'major',
+        generatedAt: new Date(now.getTime() + 1000),
+        sentAt: null,
+        aiProvider: 'openai',
+        outputMode: 'layout',
+        generatorId: 'sleep-mode',
+        generatorName: 'Sleep Mode Generator',
+        priority: 0,
+      });
+
+      // Verify via findById
+      const foundText = await contentModel.findById(textContent.id);
+      const foundLayout = await contentModel.findById(layoutContent.id);
+
+      expect(foundText?.outputMode).toBe('text');
+      expect(foundLayout?.outputMode).toBe('layout');
     });
   });
 });

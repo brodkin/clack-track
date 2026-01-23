@@ -46,6 +46,7 @@ describe('WebServer Database Integration Tests', () => {
         table.integer('tokensUsed').nullable();
         table.integer('validationAttempts').nullable().defaultTo(0);
         table.json('rejectionReasons').nullable();
+        table.string('outputMode', 20).nullable().defaultTo('text');
         table.index('generatedAt', 'idx_generated_at');
         table.index('status', 'idx_status');
         table.index('generatorId', 'idx_generator_id');

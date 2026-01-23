@@ -65,6 +65,10 @@ describe('ContentRepository', () => {
         table.integer('validationAttempts').nullable().defaultTo(0);
         table.json('rejectionReasons').nullable();
 
+        // Output mode tracking for frame decoration
+        // 'text' = needs frame decoration, 'layout' = raw characterCodes (no frame)
+        table.string('outputMode', 20).nullable().defaultTo('text');
+
         // Indexes for common queries
         table.index('generatedAt', 'idx_generated_at');
         table.index('status', 'idx_status');

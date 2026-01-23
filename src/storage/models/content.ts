@@ -34,6 +34,9 @@ export interface ContentRecord {
   // Validation attempt tracking for tool-based content generation
   validationAttempts?: number;
   rejectionReasons?: RejectionReason[];
+  // Output mode tracking for frame decoration
+  // 'text' = needs frame decoration, 'layout' = raw characterCodes (no frame)
+  outputMode?: 'text' | 'layout' | null;
 }
 
 /**
@@ -67,6 +70,7 @@ export class ContentModel {
     'tokensUsed',
     'validationAttempts',
     'rejectionReasons',
+    'outputMode',
   ];
 
   constructor(private knex: Knex) {}
@@ -98,6 +102,14 @@ export class ContentModel {
       ? JSON.stringify(content.rejectionReasons)
       : null;
 
+    // Determine outputMode: use provided value, null if explicitly null, or default to 'text'
+    const outputMode =
+      content.outputMode === null
+        ? null
+        : content.outputMode !== undefined
+          ? content.outputMode
+          : 'text';
+
     const [id] = await this.knex('content').insert({
       text: content.text,
       type: content.type,
@@ -119,6 +131,7 @@ export class ContentModel {
       tokensUsed: content.tokensUsed !== undefined ? content.tokensUsed : null,
       validationAttempts: content.validationAttempts !== undefined ? content.validationAttempts : 0,
       rejectionReasons: rejectionReasonsJson,
+      outputMode: outputMode,
     });
 
     if (!id) {
@@ -147,6 +160,7 @@ export class ContentModel {
       tokensUsed: content.tokensUsed,
       validationAttempts: content.validationAttempts ?? 0,
       rejectionReasons: content.rejectionReasons,
+      outputMode: outputMode,
     };
   }
 
@@ -313,6 +327,12 @@ export class ContentModel {
           ? (row.validationAttempts as number)
           : 0,
       rejectionReasons,
+      outputMode:
+        row.outputMode === null
+          ? null
+          : row.outputMode !== undefined
+            ? (row.outputMode as 'text' | 'layout')
+            : 'text',
     };
   }
 
