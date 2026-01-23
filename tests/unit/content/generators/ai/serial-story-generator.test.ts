@@ -359,6 +359,71 @@ describe('SerialStoryGenerator', () => {
       expect(EMOTIONAL_BEAT).toContain(variables.emotionalBeat);
     });
 
+    it('should return currentChapter: "1" for chapter 1', async () => {
+      mockContentRepository.findLatestByGenerator.mockResolvedValue([]);
+
+      const generator = new SerialStoryGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        mockContentRepository,
+        { openai: 'test-key' }
+      ) as ProtectedSerialStoryGenerator;
+
+      const variables = await generator.getTemplateVariables(mockContext);
+
+      expect(variables).toHaveProperty('currentChapter');
+      expect(variables.currentChapter).toBe('1');
+    });
+
+    it('should return currentChapter as string for continuation', async () => {
+      const previousChapters: ContentRecord[] = [
+        {
+          id: 3,
+          text: 'Chapter 3',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 1000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 3, continueStory: true, chapterSummary: 'Summary 3' },
+          generatorId: 'serial-story',
+        },
+        {
+          id: 2,
+          text: 'Chapter 2',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 2000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 2, continueStory: true, chapterSummary: 'Summary 2' },
+          generatorId: 'serial-story',
+        },
+        {
+          id: 1,
+          text: 'Chapter 1',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 3000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 1, continueStory: true, chapterSummary: 'Summary 1' },
+          generatorId: 'serial-story',
+        },
+      ];
+      mockContentRepository.findLatestByGenerator.mockResolvedValue(previousChapters);
+
+      const generator = new SerialStoryGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        mockContentRepository,
+        { openai: 'test-key' }
+      ) as ProtectedSerialStoryGenerator;
+
+      const variables = await generator.getTemplateVariables(mockContext);
+
+      expect(variables).toHaveProperty('currentChapter');
+      expect(variables.currentChapter).toBe('4');
+      expect(typeof variables.currentChapter).toBe('string');
+    });
+
     it('should return previousChapters and currentChapter for continuation', async () => {
       const previousChapter: ContentRecord = {
         id: 1,
