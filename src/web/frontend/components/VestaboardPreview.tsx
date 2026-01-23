@@ -76,12 +76,12 @@ const CHAR_MAP: Record<number, string> = {
  * Code 69 is model-dependent: white on black boards, black on white boards
  */
 const COLOR_TILE_MAP: Record<number, string> = {
-  63: '#ff0000', // red
-  64: '#ff8800', // orange
-  65: '#ffee00', // yellow
-  66: '#00ff00', // green
-  67: '#0044ff', // blue
-  68: '#9900ff', // violet
+  63: '#c23a3a', // red - desaturated for realistic print appearance
+  64: '#d4804a', // orange
+  65: '#d4c94a', // yellow
+  66: '#4aad4a', // green
+  67: '#4a6aad', // blue
+  68: '#8a4aad', // violet
   // 69 is handled separately based on model
 };
 

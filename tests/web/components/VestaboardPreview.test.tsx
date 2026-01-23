@@ -413,7 +413,7 @@ describe('VestaboardPreview Component', () => {
 
       const cell = screen.getByTestId('vestaboard-cell-0-0');
       // @ts-expect-error - jest-dom matchers
-      expect(cell).toHaveClass('bg-[#ff0000]');
+      expect(cell).toHaveClass('bg-[#c23a3a]');
       // Color tiles should NOT display text
       expect(cell.textContent?.trim()).toBe('');
     });
@@ -423,7 +423,7 @@ describe('VestaboardPreview Component', () => {
 
       const cell = screen.getByTestId('vestaboard-cell-0-1');
       // @ts-expect-error - jest-dom matchers
-      expect(cell).toHaveClass('bg-[#ff8800]');
+      expect(cell).toHaveClass('bg-[#d4804a]');
       expect(cell.textContent?.trim()).toBe('');
     });
 
@@ -432,7 +432,7 @@ describe('VestaboardPreview Component', () => {
 
       const cell = screen.getByTestId('vestaboard-cell-0-2');
       // @ts-expect-error - jest-dom matchers
-      expect(cell).toHaveClass('bg-[#ffee00]');
+      expect(cell).toHaveClass('bg-[#d4c94a]');
       expect(cell.textContent?.trim()).toBe('');
     });
 
@@ -441,7 +441,7 @@ describe('VestaboardPreview Component', () => {
 
       const cell = screen.getByTestId('vestaboard-cell-0-3');
       // @ts-expect-error - jest-dom matchers
-      expect(cell).toHaveClass('bg-[#00ff00]');
+      expect(cell).toHaveClass('bg-[#4aad4a]');
       expect(cell.textContent?.trim()).toBe('');
     });
 
@@ -450,7 +450,7 @@ describe('VestaboardPreview Component', () => {
 
       const cell = screen.getByTestId('vestaboard-cell-0-4');
       // @ts-expect-error - jest-dom matchers
-      expect(cell).toHaveClass('bg-[#0044ff]');
+      expect(cell).toHaveClass('bg-[#4a6aad]');
       expect(cell.textContent?.trim()).toBe('');
     });
 
@@ -459,7 +459,7 @@ describe('VestaboardPreview Component', () => {
 
       const cell = screen.getByTestId('vestaboard-cell-0-5');
       // @ts-expect-error - jest-dom matchers
-      expect(cell).toHaveClass('bg-[#9900ff]');
+      expect(cell).toHaveClass('bg-[#8a4aad]');
       expect(cell.textContent?.trim()).toBe('');
     });
 
@@ -497,12 +497,12 @@ describe('VestaboardPreview Component', () => {
 
       // Verify each color tile has the expected background color class
       const expectedColors = [
-        'bg-[#ff0000]', // 63 = red
-        'bg-[#ff8800]', // 64 = orange
-        'bg-[#ffee00]', // 65 = yellow
-        'bg-[#00ff00]', // 66 = green
-        'bg-[#0044ff]', // 67 = blue
-        'bg-[#9900ff]', // 68 = violet
+        'bg-[#c23a3a]', // 63 = red
+        'bg-[#d4804a]', // 64 = orange
+        'bg-[#d4c94a]', // 65 = yellow
+        'bg-[#4aad4a]', // 66 = green
+        'bg-[#4a6aad]', // 67 = blue
+        'bg-[#8a4aad]', // 68 = violet
         'bg-[#ffffff]', // 69 = white (on default black model)
       ];
 
