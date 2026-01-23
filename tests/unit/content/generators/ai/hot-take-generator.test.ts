@@ -6,9 +6,9 @@
  * - Uses LIGHT model tier for efficiency
  * - Validates prompt files exist
  * - Returns correct system and user prompt file names
- * - HOT_TAKE_DOMAINS array (50 items) for topic categories
- * - HOT_TAKE_ANGLES array (12 items) for opinion styles
- * - getTemplateVariables() returning { hotTakeDomain, hotTakeAngle }
+ * - HOT_TAKE_SUBJECTS array (192 items) for broad topics
+ * - HOT_TAKE_DEVICES array (32 items) for rhetorical structures
+ * - getTemplateVariables() returning { hotTakeSubject, hotTakeDevice }
  * - getCustomMetadata() returning selection tracking
  * - Private selectRandom<T>() helper method
  * - Private instance variables for storing selections
@@ -16,8 +16,8 @@
 
 import {
   HotTakeGenerator,
-  HOT_TAKE_DOMAINS,
-  HOT_TAKE_ANGLES,
+  HOT_TAKE_SUBJECTS,
+  HOT_TAKE_DEVICES,
 } from '@/content/generators/ai/hot-take-generator';
 import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector';
@@ -31,8 +31,8 @@ type ProtectedHotTakeGenerator = HotTakeGenerator & {
   getUserPromptFile(): string;
   getTemplateVariables(context: GenerationContext): Promise<Record<string, string>>;
   getCustomMetadata(): Record<string, unknown>;
-  selectedDomain: string;
-  selectedAngle: string;
+  selectedSubject: string;
+  selectedDevice: string;
   modelTier: ModelTier;
 };
 
@@ -49,9 +49,9 @@ describe('HotTakeGenerator', () => {
   /**
    * Sample AI-generated hot take content.
    */
-  const mockAIContent = `CEREAL IS SOUP
-AND I WILL DIE ON
-THIS DELICIOUS HILL`;
+  const mockAIContent = `THERE ARE TWO TYPES
+OF DOG PEOPLE AND
+THE WRONG KIND`;
 
   beforeEach(() => {
     // Mock PromptLoader
@@ -181,93 +181,101 @@ THIS DELICIOUS HILL`;
   });
 
   describe('variety arrays', () => {
-    it('should have HOT_TAKE_DOMAINS array with 50 items', () => {
-      expect(HOT_TAKE_DOMAINS).toBeDefined();
-      expect(Array.isArray(HOT_TAKE_DOMAINS)).toBe(true);
-      expect(HOT_TAKE_DOMAINS).toHaveLength(50);
+    it('should have HOT_TAKE_SUBJECTS array with 192 items', () => {
+      expect(HOT_TAKE_SUBJECTS).toBeDefined();
+      expect(Array.isArray(HOT_TAKE_SUBJECTS)).toBe(true);
+      expect(HOT_TAKE_SUBJECTS).toHaveLength(192);
     });
 
-    it('should have HOT_TAKE_ANGLES array with 12 items', () => {
-      expect(HOT_TAKE_ANGLES).toBeDefined();
-      expect(Array.isArray(HOT_TAKE_ANGLES)).toBe(true);
-      expect(HOT_TAKE_ANGLES).toHaveLength(12);
+    it('should have HOT_TAKE_DEVICES array with 32 items', () => {
+      expect(HOT_TAKE_DEVICES).toBeDefined();
+      expect(Array.isArray(HOT_TAKE_DEVICES)).toBe(true);
+      expect(HOT_TAKE_DEVICES).toHaveLength(32);
     });
 
-    it('should have unique domains in HOT_TAKE_DOMAINS', () => {
-      const uniqueDomains = new Set(HOT_TAKE_DOMAINS);
-      expect(uniqueDomains.size).toBe(HOT_TAKE_DOMAINS.length);
+    it('should have unique subjects in HOT_TAKE_SUBJECTS', () => {
+      const uniqueSubjects = new Set(HOT_TAKE_SUBJECTS);
+      expect(uniqueSubjects.size).toBe(HOT_TAKE_SUBJECTS.length);
     });
 
-    it('should have unique angles in HOT_TAKE_ANGLES', () => {
-      const uniqueAngles = new Set(HOT_TAKE_ANGLES);
-      expect(uniqueAngles.size).toBe(HOT_TAKE_ANGLES.length);
+    it('should have unique devices in HOT_TAKE_DEVICES', () => {
+      const uniqueDevices = new Set(HOT_TAKE_DEVICES);
+      expect(uniqueDevices.size).toBe(HOT_TAKE_DEVICES.length);
     });
 
-    it('should have non-empty string values in domains', () => {
-      HOT_TAKE_DOMAINS.forEach((domain: string) => {
-        expect(typeof domain).toBe('string');
-        expect(domain.length).toBeGreaterThan(0);
+    it('should have non-empty string values in subjects', () => {
+      HOT_TAKE_SUBJECTS.forEach((subject: string) => {
+        expect(typeof subject).toBe('string');
+        expect(subject.length).toBeGreaterThan(0);
       });
     });
 
-    it('should have non-empty string values in angles', () => {
-      HOT_TAKE_ANGLES.forEach((angle: string) => {
-        expect(typeof angle).toBe('string');
-        expect(angle.length).toBeGreaterThan(0);
+    it('should have non-empty string values in devices', () => {
+      HOT_TAKE_DEVICES.forEach((device: string) => {
+        expect(typeof device).toBe('string');
+        expect(device.length).toBeGreaterThan(0);
       });
+    });
+
+    it('should have at least 150 subjects for novelty', () => {
+      expect(HOT_TAKE_SUBJECTS.length).toBeGreaterThanOrEqual(150);
+    });
+
+    it('should have at least 30 devices for structural variety', () => {
+      expect(HOT_TAKE_DEVICES.length).toBeGreaterThanOrEqual(30);
     });
   });
 
   describe('getTemplateVariables()', () => {
-    it('should return hotTakeDomain and hotTakeAngle', async () => {
+    it('should return hotTakeSubject and hotTakeDevice', async () => {
       const generator = new HotTakeGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedHotTakeGenerator;
 
       const templateVars = await generator.getTemplateVariables(mockContext);
 
-      expect(templateVars.hotTakeDomain).toBeDefined();
-      expect(templateVars.hotTakeAngle).toBeDefined();
+      expect(templateVars.hotTakeSubject).toBeDefined();
+      expect(templateVars.hotTakeDevice).toBeDefined();
     });
 
-    it('should return domain from HOT_TAKE_DOMAINS array', async () => {
+    it('should return subject from HOT_TAKE_SUBJECTS array', async () => {
       const generator = new HotTakeGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedHotTakeGenerator;
 
       const templateVars = await generator.getTemplateVariables(mockContext);
 
-      expect(HOT_TAKE_DOMAINS).toContain(templateVars.hotTakeDomain);
+      expect(HOT_TAKE_SUBJECTS).toContain(templateVars.hotTakeSubject);
     });
 
-    it('should return angle from HOT_TAKE_ANGLES array', async () => {
+    it('should return device from HOT_TAKE_DEVICES array', async () => {
       const generator = new HotTakeGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedHotTakeGenerator;
 
       const templateVars = await generator.getTemplateVariables(mockContext);
 
-      expect(HOT_TAKE_ANGLES).toContain(templateVars.hotTakeAngle);
+      expect(HOT_TAKE_DEVICES).toContain(templateVars.hotTakeDevice);
     });
 
-    it('should store selected domain in instance property', async () => {
+    it('should store selected subject in instance property', async () => {
       const generator = new HotTakeGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedHotTakeGenerator;
 
       const templateVars = await generator.getTemplateVariables(mockContext);
 
-      expect(generator.selectedDomain).toBe(templateVars.hotTakeDomain);
+      expect(generator.selectedSubject).toBe(templateVars.hotTakeSubject);
     });
 
-    it('should store selected angle in instance property', async () => {
+    it('should store selected device in instance property', async () => {
       const generator = new HotTakeGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedHotTakeGenerator;
 
       const templateVars = await generator.getTemplateVariables(mockContext);
 
-      expect(generator.selectedAngle).toBe(templateVars.hotTakeAngle);
+      expect(generator.selectedDevice).toBe(templateVars.hotTakeDevice);
     });
 
     it('should generate different selections on multiple calls', async () => {
@@ -276,24 +284,24 @@ THIS DELICIOUS HILL`;
       }) as ProtectedHotTakeGenerator;
 
       // Generate multiple times and collect results
-      const domainResults = new Set<string>();
-      const angleResults = new Set<string>();
+      const subjectResults = new Set<string>();
+      const deviceResults = new Set<string>();
 
       for (let i = 0; i < 20; i++) {
         const templateVars = await generator.getTemplateVariables(mockContext);
-        domainResults.add(templateVars.hotTakeDomain);
-        angleResults.add(templateVars.hotTakeAngle);
+        subjectResults.add(templateVars.hotTakeSubject);
+        deviceResults.add(templateVars.hotTakeDevice);
       }
 
-      // With random selection from 50 domains and 12 angles,
+      // With random selection from 192 subjects and 32 devices,
       // we should get at least 2 different values for each
-      expect(domainResults.size).toBeGreaterThan(1);
-      expect(angleResults.size).toBeGreaterThan(1);
+      expect(subjectResults.size).toBeGreaterThan(1);
+      expect(deviceResults.size).toBeGreaterThan(1);
     });
   });
 
   describe('getCustomMetadata()', () => {
-    it('should return selectedDomain in metadata', async () => {
+    it('should return selectedSubject in metadata', async () => {
       const generator = new HotTakeGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedHotTakeGenerator;
@@ -302,11 +310,11 @@ THIS DELICIOUS HILL`;
       await generator.getTemplateVariables(mockContext);
       const metadata = generator.getCustomMetadata();
 
-      expect(metadata.selectedDomain).toBeDefined();
-      expect(typeof metadata.selectedDomain).toBe('string');
+      expect(metadata.selectedSubject).toBeDefined();
+      expect(typeof metadata.selectedSubject).toBe('string');
     });
 
-    it('should return selectedAngle in metadata', async () => {
+    it('should return selectedDevice in metadata', async () => {
       const generator = new HotTakeGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedHotTakeGenerator;
@@ -315,8 +323,8 @@ THIS DELICIOUS HILL`;
       await generator.getTemplateVariables(mockContext);
       const metadata = generator.getCustomMetadata();
 
-      expect(metadata.selectedAngle).toBeDefined();
-      expect(typeof metadata.selectedAngle).toBe('string');
+      expect(metadata.selectedDevice).toBeDefined();
+      expect(typeof metadata.selectedDevice).toBe('string');
     });
 
     it('should match instance properties', async () => {
@@ -327,8 +335,8 @@ THIS DELICIOUS HILL`;
       await generator.getTemplateVariables(mockContext);
       const metadata = generator.getCustomMetadata();
 
-      expect(metadata.selectedDomain).toBe(generator.selectedDomain);
-      expect(metadata.selectedAngle).toBe(generator.selectedAngle);
+      expect(metadata.selectedSubject).toBe(generator.selectedSubject);
+      expect(metadata.selectedDevice).toBe(generator.selectedDevice);
     });
   });
 
@@ -361,14 +369,14 @@ THIS DELICIOUS HILL`;
       expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
     });
 
-    it('should pass hotTakeDomain and hotTakeAngle to PromptLoader template variables', async () => {
+    it('should pass hotTakeSubject and hotTakeDevice to PromptLoader template variables', async () => {
       const generator = new HotTakeGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
       await generator.generate(mockContext);
 
-      // Verify loadPromptWithVariables was called with hotTakeDomain and hotTakeAngle
+      // Verify loadPromptWithVariables was called with hotTakeSubject and hotTakeDevice
       expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalled();
 
       // Find the call for the user prompt (hot-take.txt)
@@ -378,19 +386,19 @@ THIS DELICIOUS HILL`;
 
       expect(userPromptCall).toBeDefined();
       const templateVars = userPromptCall?.[2] as Record<string, string>;
-      expect(templateVars.hotTakeDomain).toBeDefined();
-      expect(templateVars.hotTakeAngle).toBeDefined();
+      expect(templateVars.hotTakeSubject).toBeDefined();
+      expect(templateVars.hotTakeDevice).toBeDefined();
     });
 
-    it('should include selectedDomain and selectedAngle in result metadata', async () => {
+    it('should include selectedSubject and selectedDevice in result metadata', async () => {
       const generator = new HotTakeGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
       const result = await generator.generate(mockContext);
 
-      expect(result.metadata?.selectedDomain).toBeDefined();
-      expect(result.metadata?.selectedAngle).toBeDefined();
+      expect(result.metadata?.selectedSubject).toBeDefined();
+      expect(result.metadata?.selectedDevice).toBeDefined();
     });
 
     it('should generate content with expected GeneratedContent structure', async () => {
