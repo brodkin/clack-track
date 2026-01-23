@@ -68,11 +68,40 @@ const CHAR_MAP: Record<number, string> = {
   59: '/',
   60: '?',
   62: '°',
-  63: '°',
-  64: '♥',
-  65: '★',
-  66: '♪',
 };
+
+/**
+ * Color tile codes (63-69) map to background colors
+ * These are solid colored tiles on the physical Vestaboard
+ * Code 69 is model-dependent: white on black boards, black on white boards
+ */
+const COLOR_TILE_MAP: Record<number, string> = {
+  63: '#ff0000', // red
+  64: '#ff8800', // orange
+  65: '#ffee00', // yellow
+  66: '#00ff00', // green
+  67: '#0044ff', // blue
+  68: '#9900ff', // violet
+  // 69 is handled separately based on model
+};
+
+/**
+ * Check if a character code is a color tile (63-69)
+ */
+function isColorTile(code: number): boolean {
+  return code >= 63 && code <= 69;
+}
+
+/**
+ * Get the background color for a color tile code
+ * Code 69 returns white for black model, black for white model
+ */
+function getColorTileBackground(code: number, model: VestaboardModel): string | null {
+  if (code === 69) {
+    return model === 'white' ? '#000000' : '#ffffff';
+  }
+  return COLOR_TILE_MAP[code] || null;
+}
 
 /**
  * Vestaboard model type - determines the color scheme
@@ -122,23 +151,35 @@ export function VestaboardPreview({ content, className, model = 'black' }: Vesta
             data-testid={`vestaboard-row-${rowIndex}`}
             className="flex gap-1 justify-center"
           >
-            {row.map((charCode, colIndex) => (
-              <div
-                key={`${rowIndex}-${colIndex}`}
-                data-testid={`vestaboard-cell-${rowIndex}-${colIndex}`}
-                data-char-code={charCode}
-                className={cn(
-                  'flex items-center justify-center',
-                  'w-6 h-8 sm:w-8 sm:h-10 md:w-10 md:h-12',
-                  isWhiteModel ? 'bg-[#e8e8e8] text-[#1a1a1a]' : 'bg-[#1a1a1a] text-[#ffffff]',
-                  'font-mono font-bold text-xs sm:text-sm md:text-base',
-                  'rounded shadow-inner',
-                  'transition-all duration-200'
-                )}
-              >
-                {CHAR_MAP[charCode] || ' '}
-              </div>
-            ))}
+            {row.map((charCode, colIndex) => {
+              const colorTileBg = isColorTile(charCode)
+                ? getColorTileBackground(charCode, model)
+                : null;
+
+              return (
+                <div
+                  key={`${rowIndex}-${colIndex}`}
+                  data-testid={`vestaboard-cell-${rowIndex}-${colIndex}`}
+                  data-char-code={charCode}
+                  className={cn(
+                    'flex items-center justify-center',
+                    'w-6 h-8 sm:w-8 sm:h-10 md:w-10 md:h-12',
+                    // Use color tile background if applicable, otherwise default cell styling
+                    colorTileBg
+                      ? `bg-[${colorTileBg}]`
+                      : isWhiteModel
+                        ? 'bg-[#e8e8e8] text-[#1a1a1a]'
+                        : 'bg-[#1a1a1a] text-[#ffffff]',
+                    'font-mono font-bold text-xs sm:text-sm md:text-base',
+                    'rounded shadow-inner',
+                    'transition-all duration-200'
+                  )}
+                >
+                  {/* Color tiles display no text, regular cells show character */}
+                  {colorTileBg ? '' : CHAR_MAP[charCode] || ' '}
+                </div>
+              );
+            })}
           </div>
         ))}
       </div>
