@@ -52,7 +52,7 @@ async function main() {
     return;
   }
 
-  // Bootstrap to get knex, repositories, and orchestrator
+  // Bootstrap to get knex, repositories, orchestrator, and frameDecorator
   const {
     knex,
     contentRepository,
@@ -61,6 +61,7 @@ async function main() {
     scheduler,
     eventHandler,
     orchestrator,
+    frameDecorator,
   } = await bootstrap();
 
   // Create WebServer with dependencies
@@ -71,7 +72,7 @@ async function main() {
       corsEnabled: config.web.corsEnabled,
       staticPath: config.web.staticPath,
     },
-    { contentRepository, voteRepository, logModel }
+    { contentRepository, voteRepository, logModel, frameDecorator }
   );
 
   try {

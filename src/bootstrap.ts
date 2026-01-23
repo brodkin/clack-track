@@ -88,6 +88,8 @@ export interface BootstrapResult {
   triggerConfigLoader: TriggerConfigLoader | null;
   /** Circuit breaker service for system control (undefined if database not configured) */
   circuitBreaker: CircuitBreakerService | undefined;
+  /** Frame decorator for applying time/weather frame to content */
+  frameDecorator: FrameDecorator;
 }
 
 /**
@@ -498,5 +500,6 @@ export async function bootstrap(): Promise<BootstrapResult> {
     logModel,
     triggerConfigLoader,
     circuitBreaker: circuitBreakerService,
+    frameDecorator,
   };
 }
