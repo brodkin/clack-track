@@ -7,48 +7,48 @@ YOU ARE WRITING: Chapter {{currentChapter}}
 
 OUTPUT FORMAT:
 Your first line MUST be "CHAPTER {{currentChapter}}." followed by your story content.
-This prefix uses ~10 characters of your budget.
 
 Example format:
 CHAPTER 5.
-THE HANDLE WAS WARM
-THOUGH THE BARN WAS COLD
-SOMETHING MOVED INSIDE
-SHE STEPPED THROUGH
+HER HAND REACHED
+FOR THE ENVELOPE
+FINGERS TREMBLING
+ABOVE THE SEAL
+
+THE KEY PRINCIPLE: ONE MOMENT PER CHAPTER
+Each chapter captures ONE small moment. Just the next tiny step.
+- If last chapter showed finding something, this one shows picking it up
+- If last chapter showed a question, this one shows a small reaction
+- Don't resolve or advance too much - let it breathe
 
 CHAPTER BUDGET:
 - Chapters remaining before target end: {{chaptersRemaining}}
-- HARD DEADLINE (story cut off after): {{mustEndIn}} chapters
+- HARD DEADLINE: {{mustEndIn}} chapters
 
-Plan your ending NOW if chaptersRemaining is 2 or fewer.
+CRITICAL RULES:
+- ONE moment only - just the next small step
+- 4-5 SHORT lines maximum, NO BLANK LINES
+- Show don't tell - action and image only
+- End cleanly - no ellipses
+- Simple words, simple images
 
-ARC PACING BY CHAPTER:
-- Chapters 1-3: RISING ACTION - Build tension, introduce conflict
-- Chapters 4-6: COMPLICATIONS - Obstacles and setbacks
-- Chapters 7-9: ESCALATION - Peak tension, crisis point
-- Chapters 10-12: RESOLUTION - Wrap up and conclude
-- Chapters 13+: OVERDUE - You must end the story NOW
+BAD (too much happening):
+CHAPTER 8.
+SHE READ THE WORDS
+DROPPED THE LETTER
+CALLED HER DAUGHTER
+THEY MET AT THE CAFE
 
-CHAPTER REQUIREMENTS:
-- Build directly on what came before
-- Advance the plot meaningfully - something must CHANGE
-- Complete the chapter cleanly - no ellipses or trailing off
-- Show emotion through ACTION, never name emotions directly
-- Include ONE specific sensory detail per chapter
-- 4-5 lines maximum, NO BLANK LINES between lines
+GOOD (one moment):
+CHAPTER 8.
+THREE WORDS
+IN FADED INK
+SHE READ THEM
+TWICE
 
-STORY ENDING CRITERIA - Check these before deciding to continue or end:
-[ ] The central conflict from Chapter 1 has been resolved
-[ ] The emotional arc has reached its destination
-[ ] The protagonist has changed or made a defining choice
-[ ] There is no remaining tension that demands resolution
+WHEN TO END:
+- Chapters 1-7: continueStory=true
+- Chapters 8-12: End if the story feels complete
+- Chapters 13+: continueStory=false (must end)
 
-WHEN TO END (continueStory decision):
-You MUST set continueStory in your tool submission.
-
-- Chapters 1-7: SET continueStory=true (keep building)
-- Chapters 8-9: If 3+ criteria above are met, SET continueStory=false
-- Chapters 10-12: If 2+ criteria above are met, SET continueStory=false
-- Chapters 13+: SET continueStory=false. No exceptions. End the story.
-
-Write chapter {{currentChapter}} now.
+Write chapter {{currentChapter}} - just ONE small moment.
