@@ -28,7 +28,20 @@ export interface ApiResponse<T> {
  * - /api/content/latest returns { success: true, data: ContentRecord | null }
  * - /api/content/history returns { success: true, data: ContentRecord[], pagination: {...} }
  */
-export type LatestContentResponse = ContentRecord | null;
+
+/**
+ * Extended ContentRecord with optional characterCodes from frame decoration
+ *
+ * The /api/content/latest endpoint adds characterCodes to the response:
+ * - For outputMode='text' or null (legacy): Generated via frame decoration
+ * - For outputMode='layout': Extracted from metadata.characterCodes
+ */
+export interface ContentWithCharacterCodes extends ContentRecord {
+  /** 6x22 character codes grid for Vestaboard display */
+  characterCodes?: number[][];
+}
+
+export type LatestContentResponse = ContentWithCharacterCodes | null;
 
 export interface ContentHistoryParams {
   limit?: number;

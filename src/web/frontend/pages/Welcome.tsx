@@ -3,6 +3,10 @@
  *
  * Displays latest Vestaboard content with voting functionality.
  * Fetches content from API and allows users to vote on quality.
+ *
+ * Character codes handling:
+ * - Uses pre-framed characterCodes from API when available
+ * - Falls back to textToCharacterCodes() for legacy data without characterCodes
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -11,13 +15,52 @@ import { VestaboardPreview } from '../components/VestaboardPreview';
 import { VotingButtons } from '../components/VotingButtons';
 import { apiClient } from '../services/apiClient';
 import { textToCharacterCodes, emptyGrid } from '../lib/textToCharCodes';
-import type { ContentRecord } from '../../../storage/models/content.js';
+import type { ContentWithCharacterCodes } from '../services/types.js';
 
 type VoteStatus = 'idle' | 'loading' | 'success' | 'error';
 type VestaboardModel = 'black' | 'white';
 
+/**
+ * Validate that characterCodes is a valid 2D array
+ * @param codes - The characterCodes to validate
+ * @returns true if codes is a valid number[][] array
+ */
+function isValidCharacterCodes(codes: unknown): codes is number[][] {
+  if (!Array.isArray(codes)) return false;
+  if (codes.length === 0) return false;
+  // Check that all elements are arrays (2D structure)
+  return codes.every(row => Array.isArray(row));
+}
+
+/**
+ * Get character codes for display, with fallback logic
+ *
+ * Priority:
+ * 1. Use API-provided characterCodes if valid (pre-framed by server)
+ * 2. Fall back to textToCharacterCodes() for legacy data
+ * 3. Use emptyGrid() if no content
+ */
+function getDisplayCharacterCodes(content: ContentWithCharacterCodes | null): number[][] {
+  if (!content) {
+    return emptyGrid();
+  }
+
+  // Use API's characterCodes if valid
+  if (isValidCharacterCodes(content.characterCodes)) {
+    return content.characterCodes;
+  }
+
+  // Fall back to text conversion for legacy data
+  if (content.text) {
+    return textToCharacterCodes(content.text);
+  }
+
+  // Empty content
+  return emptyGrid();
+}
+
 export function Welcome() {
-  const [content, setContent] = useState<ContentRecord | null>(null);
+  const [content, setContent] = useState<ContentWithCharacterCodes | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [voteStatus, setVoteStatus] = useState<VoteStatus>('idle');
@@ -80,8 +123,8 @@ export function Welcome() {
     }
   };
 
-  // Convert content text to character codes for display
-  const characterCodes = content?.text ? textToCharacterCodes(content.text) : emptyGrid();
+  // Get character codes for display (API-provided or fallback conversion)
+  const characterCodes = getDisplayCharacterCodes(content);
 
   // Loading state
   if (isLoading) {
