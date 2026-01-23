@@ -21,6 +21,7 @@ jest.mock('@/web/frontend/services/apiClient', () => ({
     registerPasskeyVerify: jest.fn(),
     removePasskey: jest.fn(),
     renamePasskey: jest.fn(),
+    getVestaboardConfig: jest.fn(),
   },
 }));
 
@@ -65,6 +66,9 @@ describe('App Component', () => {
       data: [],
       pagination: { count: 0 },
     });
+
+    // Mock Vestaboard config
+    mockApiClient.getVestaboardConfig.mockResolvedValue({ model: 'black' });
   });
   it('renders Welcome page on default route', async () => {
     render(
