@@ -352,6 +352,7 @@ export class ContentOrchestrator {
       primaryProvider: (content.metadata?.primaryProvider as string) || undefined,
       primaryError: (content.metadata?.primaryError as string) || undefined,
       metadata: content.metadata ? content.metadata : undefined,
+      outputMode: content.outputMode,
     });
   }
 
@@ -390,6 +391,7 @@ export class ContentOrchestrator {
       primaryProvider: (content?.metadata?.primaryProvider as string) || undefined,
       primaryError: (content?.metadata?.primaryError as string) || undefined,
       metadata: content?.metadata || undefined,
+      outputMode: content?.outputMode,
     });
   }
 

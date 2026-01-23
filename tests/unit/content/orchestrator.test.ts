@@ -1081,6 +1081,242 @@ describe('ContentOrchestrator', () => {
       });
     });
 
+    describe('OutputMode Persistence', () => {
+      it('should save outputMode "text" when content uses text mode', async () => {
+        // Arrange
+        const context: GenerationContext = {
+          updateType: 'major',
+          timestamp: new Date('2025-01-15T10:30:00Z'),
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn(),
+          validate: jest.fn().mockReturnValue({ valid: true }),
+        };
+
+        const registeredGenerator: RegisteredGenerator = {
+          registration: {
+            id: 'text-gen',
+            name: 'Text Generator',
+            priority: 2,
+            modelTier: ModelTier.LIGHT,
+            applyFrame: true,
+          },
+          generator: mockGenerator,
+        };
+
+        const generatedContent: GeneratedContent = {
+          text: 'TEXT MODE CONTENT',
+          outputMode: 'text',
+          metadata: {
+            provider: 'openai',
+            model: 'gpt-4.1-nano',
+          },
+        };
+
+        mockSelector.select.mockReturnValue(registeredGenerator);
+        (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+        mockDecorator.decorate.mockResolvedValue({
+          layout: [[1, 2, 3]],
+          warnings: [],
+        });
+
+        // Act
+        await orchestrator.generateAndSend(context);
+
+        // Wait for fire-and-forget promise
+        await new Promise(resolve => setImmediate(resolve));
+
+        // Assert - outputMode should be included in saveContent call
+        expect(mockContentRepository.saveContent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            text: 'TEXT MODE CONTENT',
+            status: 'success',
+            outputMode: 'text',
+          })
+        );
+      });
+
+      it('should save outputMode "layout" when content uses layout mode', async () => {
+        // Arrange
+        const context: GenerationContext = {
+          updateType: 'major',
+          timestamp: new Date('2025-01-15T10:30:00Z'),
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn(),
+          validate: jest.fn().mockReturnValue({ valid: true }),
+        };
+
+        const registeredGenerator: RegisteredGenerator = {
+          registration: {
+            id: 'layout-gen',
+            name: 'Layout Generator',
+            priority: 2,
+            modelTier: ModelTier.LIGHT,
+            applyFrame: false,
+          },
+          generator: mockGenerator,
+        };
+
+        const preFormattedCharacterCodes = Array(6)
+          .fill(null)
+          .map(() => Array(22).fill(0));
+
+        const generatedContent: GeneratedContent = {
+          text: '',
+          outputMode: 'layout',
+          layout: {
+            rows: ['ROW ONE', 'ROW TWO', 'ROW THREE', 'ROW FOUR', 'ROW FIVE', 'ROW SIX'],
+            characterCodes: preFormattedCharacterCodes,
+          },
+          metadata: {
+            provider: 'openai',
+            model: 'gpt-4.1-nano',
+          },
+        };
+
+        mockSelector.select.mockReturnValue(registeredGenerator);
+        (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+
+        // Act
+        await orchestrator.generateAndSend(context);
+
+        // Wait for fire-and-forget promise
+        await new Promise(resolve => setImmediate(resolve));
+
+        // Assert - outputMode should be 'layout'
+        expect(mockContentRepository.saveContent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'success',
+            outputMode: 'layout',
+          })
+        );
+      });
+
+      it('should save outputMode on failed generation when content is available', async () => {
+        // Arrange
+        const context: GenerationContext = {
+          updateType: 'major',
+          timestamp: new Date('2025-01-15T10:30:00Z'),
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn(),
+          validate: jest.fn().mockReturnValue({ valid: true }),
+        };
+
+        const registeredGenerator: RegisteredGenerator = {
+          registration: {
+            id: 'failing-gen',
+            name: 'Failing Generator',
+            priority: 2,
+            modelTier: ModelTier.LIGHT,
+            applyFrame: true,
+          },
+          generator: mockGenerator,
+        };
+
+        // Content that fails validation
+        const generatedContent: GeneratedContent = {
+          text: 'INVALID CONTENT',
+          outputMode: 'text',
+          metadata: {
+            provider: 'openai',
+            model: 'gpt-4.1-nano',
+          },
+        };
+
+        mockSelector.select.mockReturnValue(registeredGenerator);
+        (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+
+        // Mock validation to throw error
+        mockValidateGeneratorOutput.mockImplementation(() => {
+          throw new ContentValidationError('Content validation failed');
+        });
+
+        const fallbackContent: GeneratedContent = {
+          text: 'Static fallback content',
+          outputMode: 'text',
+        };
+
+        mockFallbackGenerator.generate.mockResolvedValue(fallbackContent);
+        mockDecorator.decorate.mockResolvedValue({
+          layout: [[1, 2, 3]],
+          warnings: [],
+        });
+
+        // Act
+        await orchestrator.generateAndSend(context);
+
+        // Wait for fire-and-forget promise
+        await new Promise(resolve => setImmediate(resolve));
+
+        // Assert - outputMode should be saved even on failure
+        expect(mockContentRepository.saveContent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'failed',
+            outputMode: 'text',
+          })
+        );
+      });
+
+      it('should save undefined outputMode when content has no outputMode (provider failure)', async () => {
+        // Arrange
+        const context: GenerationContext = {
+          updateType: 'major',
+          timestamp: new Date('2025-01-15T10:30:00Z'),
+        };
+
+        const mockGenerator: ContentGenerator = {
+          generate: jest.fn(),
+          validate: jest.fn().mockReturnValue({ valid: true }),
+        };
+
+        const registeredGenerator: RegisteredGenerator = {
+          registration: {
+            id: 'error-gen',
+            name: 'Error Generator',
+            priority: 2,
+            modelTier: ModelTier.MEDIUM,
+            applyFrame: true,
+          },
+          generator: mockGenerator,
+        };
+
+        // Provider fails before generating any content
+        const rateLimitError = new RateLimitError('Rate limit exceeded');
+
+        const fallbackContent: GeneratedContent = {
+          text: 'Static fallback content',
+          outputMode: 'text',
+        };
+
+        mockSelector.select.mockReturnValue(registeredGenerator);
+        (generateWithRetry as jest.Mock).mockRejectedValue(rateLimitError);
+        mockFallbackGenerator.generate.mockResolvedValue(fallbackContent);
+        mockDecorator.decorate.mockResolvedValue({
+          layout: [[1, 2, 3]],
+          warnings: [],
+        });
+
+        // Act
+        await orchestrator.generateAndSend(context);
+
+        // Wait for fire-and-forget promise
+        await new Promise(resolve => setImmediate(resolve));
+
+        // Assert - outputMode should be undefined when no content was generated
+        expect(mockContentRepository.saveContent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            status: 'failed',
+            outputMode: undefined,
+          })
+        );
+      });
+    });
+
     describe('Fire-and-Forget Pattern', () => {
       it('should not throw error if database save fails on success path', async () => {
         // Arrange
