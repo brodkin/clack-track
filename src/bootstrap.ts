@@ -39,10 +39,11 @@ import { AlienFieldReportGenerator } from './content/generators/ai/alien-field-r
 import { HappyToSeeMeGenerator } from './content/generators/ai/happy-to-see-me-generator.js';
 import { YoMommaGenerator } from './content/generators/ai/yo-momma-generator.js';
 import { WakeupGreetingGenerator } from './content/generators/ai/wakeup-greeting-generator.js';
+import { ISSObserverGenerator } from './content/generators/ai/iss-observer-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { SleepModeGenerator } from './content/generators/programmatic/sleep-mode-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
-import { RSSClient } from './api/data-sources/rss-client.js';
+import { RSSClient, ISSClient } from './api/data-sources/index.js';
 import { PromptLoader } from './content/prompt-loader.js';
 import { MinorUpdateGenerator } from './content/generators/minor-update.js';
 import { ContentDataProvider } from './services/content-data-provider.js';
@@ -205,6 +206,7 @@ function createCoreGenerators(
     alienFieldReport: new AlienFieldReportGenerator(promptLoader, modelTierSelector, apiKeys),
     happyToSeeMe: new HappyToSeeMeGenerator(promptLoader, modelTierSelector, apiKeys),
     yoMomma: new YoMommaGenerator(promptLoader, modelTierSelector, apiKeys),
+    issObserver: new ISSObserverGenerator(promptLoader, modelTierSelector, apiKeys, new ISSClient()),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }

@@ -1,0 +1,87 @@
+Generate a cosmic observation from the perspective of the ISS crew member looking down at Earth.
+
+ISS TELEMETRY:
+Location: {{location}}
+Coordinates: {{latitude}}, {{longitude}}
+Altitude: {{altitude}} km
+Velocity: {{velocity}} km/h ({{velocityMph}} mph)
+Visibility: {{visibility}}
+Crew Count: {{crewCount}} astronauts
+Current Observer: {{astronaut}}
+Observation Angle: {{observationAngle}}
+
+LOCATION CONTEXT:
+{{locationFlavor}}
+
+CRITICAL CONTEXT ESTABLISHMENT:
+The first line of your output MUST immediately establish ISS context. Readers seeing the display have ZERO prior context - they need to instantly understand this is about the space station.
+
+APPROVED OPENING PATTERNS (use one of these):
+- ISS NOW OVER [LOCATION]
+- SPACE STATION CROSSING [LOCATION]
+- ISS CREW LOOKING DOWN AT [LOCATION]
+- ISS ORBITING ABOVE [LOCATION]
+- INTERNATIONAL SPACE STATION NOW ABOVE [LOCATION]
+
+FORBIDDEN OPENING PATTERNS (too vague, readers won't understand):
+- OVER [LOCATION] NOW (what is over it?)
+- CROSSING [LOCATION] (what is crossing?)
+- [ASTRONAUT] SEES [LOCATION] (who? from where?)
+- LOOKING DOWN AT [LOCATION] (who is looking?)
+- ABOVE [LOCATION] RIGHT NOW (what is above it?)
+
+VOICE REQUIREMENTS:
+- Deadpan mission control tone - clinical yet wondrous
+- Third-person perspective ONLY (never use "you" or address the reader)
+- Statistical precision mixed with philosophical whimsy
+- The sublime rendered in flight telemetry cadence
+
+CONTENT STRUCTURE:
+1. Opening line: Context establishment (ISS + location - use approved pattern)
+2. Body: Observation detail - what the crew sees, telemetry snippet, or cosmic reflection
+3. Closing: Dry statistical aside OR philosophical micro-observation
+
+USE THE DATA:
+- Reference actual coordinates, altitude, or velocity when it adds impact
+- The location flavor provides cultural/geographic context - weave it in naturally
+- Crew count and astronaut name can personalize the observation
+
+GOOD EXAMPLES:
+
+ISS NOW OVER SAHARA
+CREW OF 7 OBSERVING
+SAND DUNES AT 420 KM
+RESEMBLE FINGERPRINTS
+OF ANCIENT WIND
+
+SPACE STATION CROSSING
+THE PACIFIC OCEAN NOW
+VELOCITY 27600 KM/H
+WATER APPEARS STILL
+FROM THIS ALTITUDE
+
+ISS ORBITING ABOVE
+TOKYO AT SUNSET
+CITY LIGHTS EMERGING
+LIKE NEURONS FIRING
+7 HUMANS WATCHING
+
+BAD EXAMPLES (violate rules):
+
+OVER LONDON NOW             (no ISS context - readers confused)
+CLOUDS BELOW               (what is above the clouds?)
+
+ASTRONAUT SMITH SEES        (first-person adjacent)
+THE NILE FROM SPACE        (should establish ISS first)
+
+YOU CAN SEE THE WHOLE      (uses "you" - forbidden)
+EARTH FROM UP HERE         (addressing reader directly)
+
+CROSSING AUSTRALIA         (crossing what? no ISS mention)
+OUTBACK GLOWS ORANGE       (vague, could be anything)
+
+OUTPUT REQUIREMENTS:
+- 5 lines maximum (row 6 reserved for info bar)
+- 21 characters maximum per line
+- ALL CAPS only
+- First line MUST contain "ISS" or "SPACE STATION" or "INTERNATIONAL SPACE STATION"

@@ -62,6 +62,7 @@ describe('registerCoreContent', () => {
     alienFieldReport: createMockGenerator('alienFieldReport'),
     happyToSeeMe: createMockGenerator('happyToSeeMe'),
     yoMomma: createMockGenerator('yoMomma'),
+    issObserver: createMockGenerator('issObserver'),
     staticFallback: createMockGenerator('fallback'),
   });
 
@@ -88,8 +89,8 @@ describe('registerCoreContent', () => {
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
       // globalNews, techNews, localNews, weather, haiku, seasonal, pattern,
       // showerThought, fortuneCookie, dailyRoast, serialStory, timePerspective,
-      // hotTake, novelInsight, languageLesson, alienFieldReport, happyToSeeMe, yoMomma = 18
-      expect(normalPriorityGens.length).toBe(18);
+      // hotTake, novelInsight, languageLesson, alienFieldReport, happyToSeeMe, yoMomma, issObserver = 19
+      expect(normalPriorityGens.length).toBe(19);
     });
   });
 
@@ -125,8 +126,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const allGenerators = registry.getAll();
-      // 18 P2 + 1 P3 = 19 total
-      expect(allGenerators.length).toBe(19);
+      // 19 P2 + 1 P3 = 20 total
+      expect(allGenerators.length).toBe(20);
     });
 
     it('should maintain correct priority distribution', () => {
@@ -138,10 +139,10 @@ describe('registerCoreContent', () => {
       const fallbackGens = registry.getByPriority(ContentPriority.FALLBACK);
       const notificationGens = registry.getByPriority(ContentPriority.NOTIFICATION);
 
-      // 18 P2 generators: globalNews, techNews, localNews, weather, haiku,
+      // 19 P2 generators: globalNews, techNews, localNews, weather, haiku,
       // seasonal, pattern, showerThought, fortuneCookie, dailyRoast, serialStory,
-      // timePerspective, hotTake, novelInsight, languageLesson, alienFieldReport, happyToSeeMe, yoMomma
-      expect(normalGens.length).toBe(18);
+      // timePerspective, hotTake, novelInsight, languageLesson, alienFieldReport, happyToSeeMe, yoMomma, issObserver
+      expect(normalGens.length).toBe(19);
       expect(fallbackGens.length).toBe(1);
       expect(notificationGens.length).toBe(0);
     });
@@ -205,8 +206,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      // All 18 P2 generators including 3 news generators
-      expect(normalPriorityGens.length).toBe(18);
+      // All 19 P2 generators including 3 news generators
+      expect(normalPriorityGens.length).toBe(19);
     });
 
     it('should not register old news-summary generator', () => {

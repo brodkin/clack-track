@@ -29,6 +29,7 @@ import { ContentRegistry } from './content-registry.js';
  * @property {ContentGenerator} novelInsight - Novel insight generator (P2, MEDIUM)
  * @property {ContentGenerator} languageLesson - Language lesson generator (P2, LIGHT)
  * @property {ContentGenerator} alienFieldReport - Alien field report generator (P2, LIGHT)
+ * @property {ContentGenerator} issObserver - ISS observer generator (P2, LIGHT)
  *
  * @example
  * ```typescript
@@ -47,6 +48,7 @@ import { ContentRegistry } from './content-registry.js';
  *   novelInsight: new NovelInsightGenerator(),
  *   languageLesson: new LanguageLessonGenerator(),
  *   alienFieldReport: new AlienFieldReportGenerator(),
+ *   issObserver: new ISSObserverGenerator(),
  *   staticFallback: new StaticFallbackGenerator()
  * };
  * ```
@@ -88,6 +90,8 @@ export interface CoreGenerators {
   happyToSeeMe: ContentGenerator;
   /** Yo momma generator (P2, LIGHT, AI-powered) */
   yoMomma: ContentGenerator;
+  /** ISS observer generator (P2, LIGHT, AI-powered) */
+  issObserver: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -110,6 +114,7 @@ export interface CoreGenerators {
  *   - novel-insight: Fresh perspectives (MEDIUM, AI)
  *   - language-lesson: Duolingo-style micro-lessons (LIGHT, AI)
  *   - alien-field-report: Alien anthropologist observations (LIGHT, AI)
+ *   - iss-observer: ISS crew observation content (LIGHT, AI)
  * - **P3 Generator (FALLBACK priority)**:
  *   - static-fallback: Static message when AI fails (LIGHT)
  *
@@ -337,6 +342,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.yoMomma
+  );
+
+  registry.register(
+    {
+      id: 'iss-observer',
+      name: 'ISS Observer',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.issObserver
   );
 
   // Register P3 fallback generator (FALLBACK priority)
