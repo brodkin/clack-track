@@ -4,18 +4,12 @@ networks:
 
 services:
   node-dev:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: mcr.microsoft.com/devcontainers/typescript-node:20-bookworm
     volumes:
       - ..:/workspace:cached
-      # Persistent Claude Code home directory (user settings, credentials, history)
-      - claude-home-clack-track:/home/vscode/.claude
-      # Persistent command history and config volumes
-      - command-history-clack-track:/home/vscode/history
-      - claude-config-clack-track:/home/vscode/.config/claude-code
+      # Single user volume (Claude settings, history, config all persist)
+      - clack-track-userdata:/home/vscode
       # Beads database volume (ext4 mount to support Unix sockets)
-      # Fixes chmod issues on fakeowner filesystem
       - beads-db-clack-track:/workspace/.beads
     command: ['sleep', 'infinity']
     environment:
@@ -47,13 +41,9 @@ services:
       - clack-network
 
 volumes:
-  # Persistent Claude Code home directory
-  claude-home-clack-track:
-  # Persistent command history volume
-  command-history-clack-track:
-  # Persistent Claude Code configuration volume
-  claude-config-clack-track:
-  # Persistent beads database volume (ext4 for Unix socket support)
+  # Single user data volume (Claude settings, history, config)
+  clack-track-userdata:
+  # Beads database volume (ext4 for Unix socket support)
   beads-db-clack-track:
   # MySQL database volume
   mysql-data:

@@ -5,15 +5,15 @@
   "workspaceFolder": "/workspace",
   "remoteUser": "vscode",
   "containerEnv": {
-    "NODE_OPTIONS": "--max-old-space-size=6144"
-  },
-  "build": {
-    "args": {
-      "INVALIDATE_CACHE": "${localEnv:USER}${localEnv:USERNAME}"
-    }
+    "NODE_OPTIONS": "--max-old-space-size=6144",
+    "BEADS_SYNC_BRANCH": "beads-sync"
   },
   "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {}
+    "ghcr.io/devcontainers/features/common-utils:2": {},
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.12"
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
   },
   "forwardPorts": [3000, 3306, 4000],
   "portsAttributes": {
@@ -30,7 +30,9 @@
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "/bin/bash .devcontainer/post-create.sh",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "updateContentCommand": "bash .devcontainer/update-content.sh",
+  "postStartCommand": "bd daemon start --auto-commit --auto-push --interval 5m 2>/dev/null || true",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -58,9 +60,7 @@
         "terminal.integrated.env.linux": {
           "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
           "CLAUDE_CODE_API_KEY": "${localEnv:CLAUDE_CODE_API_KEY:${localEnv:ANTHROPIC_API_KEY}}",
-          "ANTHROPIC_MODEL": "${localEnv:ANTHROPIC_MODEL}",
-          "PATH": "/home/vscode/go/bin:/home/vscode/.local/bin:/home/vscode/.dotnet/tools:/home/vscode/.npm-global/bin:/usr/local/bin:/usr/bin:/bin:/workspace/node_modules/.bin:${env:PATH}",
-          "NPM_CONFIG_PREFIX": "/home/vscode/.npm-global"
+          "ANTHROPIC_MODEL": "${localEnv:ANTHROPIC_MODEL}"
         },
         "terminal.integrated.fontSize": 14,
         "terminal.integrated.scrollback": 10000,
