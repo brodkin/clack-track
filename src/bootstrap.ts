@@ -206,7 +206,12 @@ function createCoreGenerators(
     alienFieldReport: new AlienFieldReportGenerator(promptLoader, modelTierSelector, apiKeys),
     happyToSeeMe: new HappyToSeeMeGenerator(promptLoader, modelTierSelector, apiKeys),
     yoMomma: new YoMommaGenerator(promptLoader, modelTierSelector, apiKeys),
-    issObserver: new ISSObserverGenerator(promptLoader, modelTierSelector, apiKeys, new ISSClient()),
+    issObserver: new ISSObserverGenerator(
+      promptLoader,
+      modelTierSelector,
+      apiKeys,
+      new ISSClient()
+    ),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }

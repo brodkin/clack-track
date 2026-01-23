@@ -5,6 +5,17 @@ STORY SO FAR:
 
 YOU ARE WRITING: Chapter {{currentChapter}}
 
+OUTPUT FORMAT:
+Your first line MUST be "CHAPTER {{currentChapter}}." followed by your story content.
+This prefix uses ~10 characters of your budget.
+
+Example format:
+CHAPTER 5.
+THE HANDLE WAS WARM
+THOUGH THE BARN WAS COLD
+SOMETHING MOVED INSIDE
+SHE STEPPED THROUGH
+
 CHAPTER BUDGET:
 - Chapters remaining before target end: {{chaptersRemaining}}
 - HARD DEADLINE (story cut off after): {{mustEndIn}} chapters

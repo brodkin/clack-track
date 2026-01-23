@@ -3,6 +3,17 @@ Write the opening chapter of a serialized micro-story.
 SCENARIO: {{scenario}}
 EMOTIONAL BEAT: {{emotionalBeat}}
 
+OUTPUT FORMAT:
+Your first line MUST be "CHAPTER {{currentChapter}}." followed by your story content.
+This prefix uses ~10 characters of your budget.
+
+Example format:
+CHAPTER 1.
+THE DOOR APPEARED
+IN THE OLD BARN
+WHERE NOTHING HAD BEEN
+SHE REACHED FOR THE HANDLE
+
 SERIAL STORY STRUCTURE:
 This is Chapter 1 of an 8-12 chapter arc. Your job is to hook the reader.
 

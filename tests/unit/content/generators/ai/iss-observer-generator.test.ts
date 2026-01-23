@@ -386,9 +386,7 @@ describe('ISSObserverGenerator', () => {
       const userPromptCall = calls[1];
       const templateVars = userPromptCall[2] as Record<string, unknown>;
 
-      const issCrewNames = mockCrew.people
-        .filter(p => p.craft === 'ISS')
-        .map(p => p.name);
+      const issCrewNames = mockCrew.people.filter(p => p.craft === 'ISS').map(p => p.name);
 
       expect(templateVars.astronaut).toBeDefined();
       expect(issCrewNames).toContain(templateVars.astronaut);

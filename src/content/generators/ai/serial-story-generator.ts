@@ -372,6 +372,7 @@ export class SerialStoryGenerator extends AIPromptGenerator {
       return {
         scenario: this.selectedScenario,
         emotionalBeat: this.selectedEmotionalBeat,
+        currentChapter: String(state.currentChapter),
       };
     }
 
