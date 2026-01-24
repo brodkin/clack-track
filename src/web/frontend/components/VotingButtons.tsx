@@ -2,11 +2,15 @@
  * VotingButtons Component
  *
  * Touch-friendly voting interface for content rating (good/bad)
+ * Includes confetti celebration and haptic feedback for enhanced UX
  */
 
+import { useState } from 'react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '../lib/utils';
+import { Confetti } from './Confetti';
+import { triggerHaptic, triggerSuccessHaptic } from '../lib/animations';
 
 interface VotingButtonsProps {
   onVote: (vote: 'good' | 'bad') => void;
@@ -16,12 +20,29 @@ interface VotingButtonsProps {
 
 /**
  * VotingButtons provides large, touch-friendly buttons for content voting
+ * with celebratory confetti and haptic feedback
  */
 export function VotingButtons({ onVote, isLoading = false, className }: VotingButtonsProps) {
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  /**
+   * Handle vote with appropriate feedback animation
+   */
+  const handleVote = (vote: 'good' | 'bad') => {
+    if (vote === 'good') {
+      setShowConfetti(true);
+      triggerSuccessHaptic();
+    } else {
+      triggerHaptic('medium');
+    }
+    onVote(vote);
+  };
+
   return (
     <div className={cn('flex gap-4 justify-center', className)}>
+      <Confetti active={showConfetti} onComplete={() => setShowConfetti(false)} />
       <Button
-        onClick={() => onVote('good')}
+        onClick={() => handleVote('good')}
         disabled={isLoading}
         size="lg"
         variant="outline"
@@ -40,7 +61,7 @@ export function VotingButtons({ onVote, isLoading = false, className }: VotingBu
       </Button>
 
       <Button
-        onClick={() => onVote('bad')}
+        onClick={() => handleVote('bad')}
         disabled={isLoading}
         size="lg"
         variant="outline"
