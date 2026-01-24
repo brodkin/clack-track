@@ -183,9 +183,7 @@ export class ISSObserverGenerator extends AIPromptGenerator {
    */
   private selectRandomISSAstronaut(crew: SpaceCrew): string {
     // Filter to only ISS crew members
-    const issCrewMembers = crew.people.filter(
-      person => person.craft.toLowerCase() === 'iss'
-    );
+    const issCrewMembers = crew.people.filter(person => person.craft.toLowerCase() === 'iss');
 
     if (issCrewMembers.length === 0) {
       return FALLBACK_VALUES.astronaut;

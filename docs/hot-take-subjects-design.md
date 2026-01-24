@@ -10,6 +10,7 @@
 ## Categories and Subjects (156 total)
 
 ### Animals (15)
+
 - dogs
 - cats
 - birds
@@ -27,6 +28,7 @@
 - penguins
 
 ### Food & Cooking (15)
+
 - breakfast
 - sandwiches
 - salads
@@ -44,6 +46,7 @@
 - meal prep
 
 ### Beverages (12)
+
 - coffee
 - tea
 - water
@@ -58,6 +61,7 @@
 - iced drinks
 
 ### Hobbies & Leisure (18)
+
 - gardening
 - reading
 - puzzles
@@ -78,6 +82,7 @@
 - stargazing
 
 ### Life Stages & Milestones (12)
+
 - childhood
 - teenage years
 - college
@@ -92,6 +97,7 @@
 - graduations
 
 ### Social Situations (15)
+
 - small talk
 - parties
 - family gatherings
@@ -109,6 +115,7 @@
 - coffee shops
 
 ### Professions & Work (12)
+
 - teachers
 - doctors
 - lawyers
@@ -123,6 +130,7 @@
 - librarians
 
 ### Home & Living (15)
+
 - bedrooms
 - kitchens
 - bathrooms
@@ -140,6 +148,7 @@
 - neighbors
 
 ### Technology & Devices (12)
+
 - smartphones
 - laptops
 - tablets
@@ -154,6 +163,7 @@
 - wifi
 
 ### Nature & Weather (15)
+
 - rain
 - sunshine
 - snow
@@ -171,6 +181,7 @@
 - thunderstorms
 
 ### Sports & Fitness (12)
+
 - running
 - swimming
 - cycling
@@ -185,6 +196,7 @@
 - stretching
 
 ### Entertainment (15)
+
 - movies
 - television
 - podcasts
@@ -202,6 +214,7 @@
 - awards shows
 
 ### Daily Routines (12)
+
 - mornings
 - evenings
 - commuting
@@ -216,6 +229,7 @@
 - showers
 
 ### Fashion & Appearance (12)
+
 - shoes
 - socks
 - hats
@@ -236,6 +250,7 @@
 - **Average per category**: 11.1
 
 All subjects are:
+
 - Broad enough for multiple interpretations
 - Not themselves recognizable hot takes
 - Mundane and harmless topics
