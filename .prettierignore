@@ -5,6 +5,8 @@ yarn.lock
 
 # Build outputs
 dist
+dev-dist
+public
 build
 .next
 out

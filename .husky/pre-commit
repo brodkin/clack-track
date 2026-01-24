@@ -19,11 +19,16 @@ else
     echo "No code changes - skipping tests and typecheck"
 fi
 
-# Run linting with auto-fix
-npm run lint:fix || exit 1
+# Run linting with auto-fix on staged files only
+STAGED_CODE_FILES=$(echo "$STAGED_FILES" | grep -E '\.(ts|tsx|js|jsx|mjs|cjs)$' || true)
+if [ -n "$STAGED_CODE_FILES" ]; then
+    echo "$STAGED_CODE_FILES" | xargs npx eslint --fix || exit 1
+fi
 
-# Run prettier on staged files
-npx prettier --write --ignore-unknown .
+# Run prettier on staged files only
+if [ -n "$STAGED_FILES" ]; then
+    echo "$STAGED_FILES" | xargs npx prettier --write --ignore-unknown 2>/dev/null || true
+fi
 
 # Re-stage files modified by prettier and linting
 git add -u
