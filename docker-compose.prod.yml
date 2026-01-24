@@ -22,6 +22,7 @@ services:
       - TZ=${TZ:-America/Los_Angeles}
       - WEB_SERVER_ENABLED=${WEB_SERVER_ENABLED:-true}
       - WEB_SERVER_PORT=3000
+      - WEB_STATIC_PATH=./dist/public
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
