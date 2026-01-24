@@ -42,44 +42,64 @@ Object.defineProperty(globalThis, 'PublicKeyCredential', {
 });
 
 describe('Navigation Component', () => {
-  describe('Admin Link', () => {
-    it('displays Admin link in desktop navigation', () => {
+  describe('Desktop Navigation', () => {
+    it('renders navigation links on desktop', () => {
       render(
         <MemoryRouter>
           <Navigation />
         </MemoryRouter>
       );
 
-      // Admin link should be visible in the desktop navigation
-      const adminLinks = screen.getAllByRole('link', { name: /admin/i });
-      // @ts-expect-error - jest-dom matchers
-      expect(adminLinks.length).toBeGreaterThan(0);
+      // Core navigation links should be present
+      expect(screen.getByRole('link', { name: /home/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /flipside/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /account/i })).toBeInTheDocument();
     });
 
-    it('displays Admin link in mobile navigation menu', () => {
+    it('renders brand link to home', () => {
       render(
         <MemoryRouter>
           <Navigation />
         </MemoryRouter>
       );
 
-      // Admin link should appear at least once (mobile and/or desktop)
-      const adminLinks = screen.getAllByRole('link', { name: /admin/i });
-      // @ts-expect-error - jest-dom matchers
-      expect(adminLinks.length).toBeGreaterThan(0);
+      const brandLink = screen.getByRole('link', { name: /clack track/i });
+      expect(brandLink).toHaveAttribute('href', '/');
     });
 
-    it('Admin link navigates to /admin', () => {
+    it('does not include Admin link (moved to Account page)', () => {
       render(
         <MemoryRouter>
           <Navigation />
         </MemoryRouter>
       );
 
-      // Find admin link and verify href
-      const adminLinks = screen.getAllByRole('link', { name: /admin/i });
-      const adminLink = adminLinks[0];
-      expect(adminLink).toHaveAttribute('href', '/admin');
+      // Admin link should NOT be in Navigation anymore
+      const adminLinks = screen.queryAllByRole('link', { name: /admin/i });
+      expect(adminLinks.length).toBe(0);
+    });
+
+    it('includes Style Guide link in development mode', () => {
+      render(
+        <MemoryRouter>
+          <Navigation />
+        </MemoryRouter>
+      );
+
+      // Style Guide should be present in test/dev mode
+      expect(screen.getByRole('link', { name: /style guide/i })).toBeInTheDocument();
+    });
+
+    it('navigation links have correct href attributes', () => {
+      render(
+        <MemoryRouter>
+          <Navigation />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByRole('link', { name: /^home$/i })).toHaveAttribute('href', '/');
+      expect(screen.getByRole('link', { name: /flipside/i })).toHaveAttribute('href', '/flipside');
+      expect(screen.getByRole('link', { name: /account/i })).toHaveAttribute('href', '/account');
     });
   });
 });

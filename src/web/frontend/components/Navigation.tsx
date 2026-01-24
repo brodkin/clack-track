@@ -1,21 +1,11 @@
 /**
  * Navigation Component
  *
- * Responsive navigation with mobile hamburger menu and desktop nav bar
+ * Desktop-only horizontal navigation bar with glass effect.
+ * Mobile navigation is handled by BottomTabBar component.
  */
 
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Menu } from 'lucide-react';
-import { Button } from './ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from './ui/sheet';
+import { NavLink } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
 interface NavigationProps {
@@ -27,75 +17,58 @@ interface NavigationProps {
 const isDev = process.env.NODE_ENV !== 'production';
 
 const navLinks = [
-  { to: '/', label: 'Welcome' },
-  { to: '/flipside', label: 'The Flip Side' },
+  { to: '/', label: 'Home' },
+  { to: '/flipside', label: 'Flipside' },
   { to: '/account', label: 'Account' },
-  { to: '/login', label: 'Login' },
-  { to: '/admin', label: 'Admin' },
   // Style Guide only visible in development (and test environments)
   ...(isDev ? [{ to: '/style-guide', label: 'Style Guide' }] : []),
 ];
 
 /**
- * Navigation provides mobile hamburger menu and desktop horizontal nav
+ * Navigation provides desktop-only horizontal nav bar with glass effect.
+ * Hidden on mobile (below md breakpoint) - BottomTabBar handles mobile navigation.
  */
 export function Navigation({ className }: NavigationProps) {
-  const [open, setOpen] = useState(false);
-
   return (
-    <nav className={cn('bg-gray-800 text-white shadow-lg', className)}>
+    <nav
+      className={cn(
+        // Hidden on mobile, flex on desktop
+        'hidden md:flex',
+        // Glass effect styling
+        'bg-gray-900/80 backdrop-blur-md',
+        'border-b border-white/10',
+        'text-white shadow-lg',
+        className
+      )}
+    >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo/Brand */}
-          <Link to="/" className="text-xl font-bold hover:text-gray-300 transition-colors">
+          <NavLink to="/" className="text-xl font-bold hover:text-gray-300 transition-colors">
             Clack Track
-          </Link>
+          </NavLink>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex gap-6">
+          {/* Desktop Navigation Links */}
+          <div className="flex gap-6">
             {navLinks.map(link => (
-              <Link
+              <NavLink
                 key={link.to}
                 to={link.to}
-                className="hover:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
+                end={link.to === '/'}
+                className={({ isActive }) =>
+                  cn(
+                    'px-3 py-2 rounded-md transition-colors',
+                    'hover:bg-white/10',
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500',
+                    isActive
+                      ? 'text-white font-medium bg-white/10'
+                      : 'text-gray-300 hover:text-white'
+                  )
+                }
               >
                 {link.label}
-              </Link>
+              </NavLink>
             ))}
-          </div>
-
-          {/* Mobile Hamburger */}
-          <div className="md:hidden">
-            <Sheet open={open} onOpenChange={setOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white hover:text-gray-300"
-                  aria-label="Open menu"
-                >
-                  <Menu className="h-6 w-6" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-64">
-                <SheetHeader>
-                  <SheetTitle>Navigation</SheetTitle>
-                  <SheetDescription>Browse Clack Track</SheetDescription>
-                </SheetHeader>
-                <div className="flex flex-col gap-4 mt-6">
-                  {navLinks.map(link => (
-                    <Link
-                      key={link.to}
-                      to={link.to}
-                      onClick={() => setOpen(false)}
-                      className="text-lg hover:text-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </div>
-              </SheetContent>
-            </Sheet>
           </div>
         </div>
       </div>

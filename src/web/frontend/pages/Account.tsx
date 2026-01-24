@@ -4,15 +4,19 @@
  * User account management with profile info and passkey management.
  * Protected route - redirects to /login if not authenticated.
  *
+ * Admin section: Shows circuit breaker controls for admin users.
+ * Admin access is determined by successful fetch of /api/circuits endpoint.
+ *
  * Architecture:
  * - Single Responsibility: Manages only account UI and passkey operations
  * - Dependency Inversion: Uses AuthContext and apiClient abstractions
  * - Open/Closed: Extensible via additional account features
  */
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { PageLayout } from '../components/PageLayout.js';
+import { CircuitBreakerCard, type Circuit } from '../components/CircuitBreakerCard.js';
 import {
   Card,
   CardHeader,
@@ -34,6 +38,10 @@ import {
   Edit,
   LogOut,
   AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Settings,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { apiClient } from '../services/apiClient.js';
@@ -61,6 +69,13 @@ export function Account() {
   const [showRenameDialog, setShowRenameDialog] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
 
+  // Admin section state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [circuits, setCircuits] = useState<Circuit[]>([]);
+  const [adminExpanded, setAdminExpanded] = useState(true);
+  const [loadingCircuitId, setLoadingCircuitId] = useState<string | null>(null);
+  const [adminError, setAdminError] = useState<string | null>(null);
+
   /**
    * Redirect to login if not authenticated
    */
@@ -71,13 +86,29 @@ export function Account() {
   }, [isAuthenticated, authLoading, navigate]);
 
   /**
-   * Load profile and passkeys on mount
+   * Fetch circuits from API to check admin access
+   * Admin access is determined by successful API response
    */
-  useEffect(() => {
-    if (isAuthenticated && !authLoading) {
-      loadAccountData();
+  const fetchCircuits = useCallback(async () => {
+    setAdminError(null);
+
+    try {
+      const response = await apiClient.getCircuits();
+      if (response.data) {
+        setCircuits(response.data as Circuit[]);
+        setIsAdmin(true);
+      }
+    } catch (err) {
+      const error = err as Error;
+      // 401 means user is not admin - not an error to display
+      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+        setIsAdmin(false);
+      } else {
+        // Other errors - user may be admin but something went wrong
+        setAdminError(error.message || 'Failed to load admin data');
+      }
     }
-  }, [isAuthenticated, authLoading]);
+  }, []);
 
   /**
    * Load profile and passkeys data
@@ -99,6 +130,58 @@ export function Account() {
       setError(error.message || 'Failed to load account data');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  /**
+   * Load profile, passkeys, and check admin access on mount
+   */
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      loadAccountData();
+      fetchCircuits();
+    }
+  }, [isAuthenticated, authLoading, fetchCircuits]);
+
+  /**
+   * Handle circuit toggle action
+   */
+  const handleCircuitToggle = async (id: string, enable: boolean): Promise<void> => {
+    setLoadingCircuitId(id);
+    setAdminError(null);
+
+    try {
+      if (enable) {
+        await apiClient.enableCircuit(id);
+      } else {
+        await apiClient.disableCircuit(id);
+      }
+      // Refetch circuits to get updated state
+      await fetchCircuits();
+    } catch (err) {
+      const error = err as Error;
+      setAdminError(error.message || 'Failed to toggle circuit');
+    } finally {
+      setLoadingCircuitId(null);
+    }
+  };
+
+  /**
+   * Handle circuit reset action for provider circuits
+   */
+  const handleCircuitReset = async (id: string): Promise<void> => {
+    setLoadingCircuitId(id);
+    setAdminError(null);
+
+    try {
+      await apiClient.resetCircuit(id);
+      // Refetch circuits to get updated state
+      await fetchCircuits();
+    } catch (err) {
+      const error = err as Error;
+      setAdminError(error.message || 'Failed to reset circuit');
+    } finally {
+      setLoadingCircuitId(null);
     }
   };
 
@@ -393,6 +476,117 @@ export function Account() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Admin Section - Only visible to admin users */}
+        {isAdmin && (
+          <Card className="mt-6 border-amber-500/50 dark:border-amber-500/30">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-amber-500 text-white hover:bg-amber-500">
+                    <Settings className="h-3 w-3 mr-1" />
+                    Admin
+                  </Badge>
+                  <CardTitle>System Administration</CardTitle>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAdminExpanded(!adminExpanded)}
+                  aria-expanded={adminExpanded}
+                  aria-controls="admin-section-content"
+                >
+                  {adminExpanded ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">
+                    {adminExpanded ? 'Collapse' : 'Expand'} admin section
+                  </span>
+                </Button>
+              </div>
+              <CardDescription>Manage circuit breakers and system controls</CardDescription>
+            </CardHeader>
+
+            {adminExpanded && (
+              <CardContent id="admin-section-content">
+                {/* Admin Error Message */}
+                {adminError && (
+                  <div
+                    className="flex items-start gap-2 p-3 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 mb-4"
+                    role="alert"
+                  >
+                    <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-800 dark:text-red-200">{adminError}</p>
+                  </div>
+                )}
+
+                {/* Circuit Breakers */}
+                {circuits.length > 0 ? (
+                  <div className="space-y-4">
+                    {/* System Controls */}
+                    {circuits.filter(c => c.type === 'manual').length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          System Controls
+                        </h3>
+                        <div className="grid gap-3">
+                          {circuits
+                            .filter(c => c.type === 'manual')
+                            .map(circuit => (
+                              <CircuitBreakerCard
+                                key={circuit.id}
+                                circuit={circuit}
+                                onToggle={handleCircuitToggle}
+                                isLoading={loadingCircuitId === circuit.id}
+                              />
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Provider Circuits */}
+                    {circuits.filter(c => c.type === 'provider').length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Provider Circuits
+                        </h3>
+                        <div className="grid gap-3">
+                          {circuits
+                            .filter(c => c.type === 'provider')
+                            .map(circuit => (
+                              <CircuitBreakerCard
+                                key={circuit.id}
+                                circuit={circuit}
+                                onToggle={handleCircuitToggle}
+                                onReset={handleCircuitReset}
+                                isLoading={loadingCircuitId === circuit.id}
+                              />
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    No circuit breakers configured.
+                  </p>
+                )}
+
+                {/* Link to full Admin page */}
+                <Separator className="my-4" />
+                <Link
+                  to="/admin"
+                  className="inline-flex items-center text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+                >
+                  View full admin dashboard
+                  <ExternalLink className="h-3 w-3 ml-1" />
+                </Link>
+              </CardContent>
+            )}
+          </Card>
+        )}
       </div>
     </PageLayout>
   );

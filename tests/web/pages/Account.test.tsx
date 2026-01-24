@@ -28,6 +28,11 @@ jest.mock('@/web/frontend/services/apiClient', () => ({
     registerPasskeyVerify: jest.fn(),
     removePasskey: jest.fn(),
     renamePasskey: jest.fn(),
+    // Admin/Circuit breaker methods
+    getCircuits: jest.fn(),
+    enableCircuit: jest.fn(),
+    disableCircuit: jest.fn(),
+    resetCircuit: jest.fn(),
   },
 }));
 
@@ -338,6 +343,299 @@ describe('Account Page', () => {
         await waitFor(() => {
           expect(mockApiClient.logout).toHaveBeenCalled();
         });
+      });
+    });
+  });
+
+  describe('Admin Section', () => {
+    const mockCircuits = [
+      {
+        id: 'MASTER',
+        name: 'Master Switch',
+        description: 'Main system control',
+        type: 'manual' as const,
+        state: 'on' as const,
+      },
+      {
+        id: 'SLEEP_MODE',
+        name: 'Sleep Mode',
+        description: 'Display sleep art',
+        type: 'manual' as const,
+        state: 'off' as const,
+      },
+      {
+        id: 'openai',
+        name: 'OpenAI',
+        description: 'AI provider',
+        type: 'provider' as const,
+        state: 'on' as const,
+        failureCount: 0,
+        failureThreshold: 5,
+      },
+    ];
+
+    it('should not show admin section for non-admin users', async () => {
+      // Mock 401 unauthorized for circuits endpoint
+      mockApiClient.getCircuits.mockRejectedValue(new Error('API Error (401): Unauthorized'));
+
+      renderAccountPage();
+
+      await waitFor(() => {
+        // Profile should load
+        // @ts-expect-error - jest-dom matchers
+        expect(screen.getByText('Demo User')).toBeInTheDocument();
+      });
+
+      // Admin section should not be visible
+      expect(screen.queryByText(/system administration/i)).toBeNull();
+      expect(screen.queryByText(/admin/i, { selector: 'span' })).toBeNull();
+    });
+
+    it('should show admin section for admin users', async () => {
+      // Mock successful circuits fetch (user is admin)
+      mockApiClient.getCircuits.mockResolvedValue({
+        success: true,
+        data: mockCircuits,
+      });
+
+      renderAccountPage();
+
+      await waitFor(() => {
+        // Admin section should be visible
+        // @ts-expect-error - jest-dom matchers
+        expect(screen.getByText(/system administration/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should display admin badge with Settings icon', async () => {
+      mockApiClient.getCircuits.mockResolvedValue({
+        success: true,
+        data: mockCircuits,
+      });
+
+      renderAccountPage();
+
+      await waitFor(() => {
+        const adminBadge = screen.getByText('Admin');
+        // @ts-expect-error - jest-dom matchers
+        expect(adminBadge).toBeInTheDocument();
+        // The badge container should have amber styling
+        // @ts-expect-error - jest-dom matchers
+        expect(adminBadge).toHaveClass('bg-amber-500');
+      });
+    });
+
+    it('should display circuit breakers grouped by type', async () => {
+      mockApiClient.getCircuits.mockResolvedValue({
+        success: true,
+        data: mockCircuits,
+      });
+
+      renderAccountPage();
+
+      await waitFor(() => {
+        // System Controls section - use getAllByText to handle possible duplicates
+        const systemControlsLabels = screen.getAllByText('System Controls');
+        expect(systemControlsLabels.length).toBeGreaterThan(0);
+        // @ts-expect-error - jest-dom matchers
+        expect(
+          screen.getByRole('heading', { name: 'Master Switch', level: 3 })
+        ).toBeInTheDocument();
+        // @ts-expect-error - jest-dom matchers
+        expect(screen.getByRole('heading', { name: 'Sleep Mode', level: 3 })).toBeInTheDocument();
+
+        // Provider Circuits section
+        const providerCircuitsLabels = screen.getAllByText('Provider Circuits');
+        expect(providerCircuitsLabels.length).toBeGreaterThan(0);
+        // @ts-expect-error - jest-dom matchers
+        expect(screen.getByRole('heading', { name: 'OpenAI', level: 3 })).toBeInTheDocument();
+      });
+    });
+
+    it('should toggle admin section visibility when collapse button clicked', async () => {
+      mockApiClient.getCircuits.mockResolvedValue({
+        success: true,
+        data: mockCircuits,
+      });
+
+      renderAccountPage();
+
+      await waitFor(() => {
+        // @ts-expect-error - jest-dom matchers
+        expect(screen.getByText(/system administration/i)).toBeInTheDocument();
+      });
+
+      // Initially expanded - content should be visible
+      // @ts-expect-error - jest-dom matchers
+      expect(screen.getByRole('heading', { name: 'Master Switch', level: 3 })).toBeInTheDocument();
+
+      // Click collapse button
+      const collapseButton = screen.getByRole('button', { name: /collapse admin section/i });
+      fireEvent.click(collapseButton);
+
+      // Content should be hidden - use queryByRole to check for absence
+      expect(screen.queryByRole('heading', { name: 'Master Switch', level: 3 })).toBeNull();
+
+      // Click expand button
+      const expandButton = screen.getByRole('button', { name: /expand admin section/i });
+      fireEvent.click(expandButton);
+
+      // Content should be visible again
+      await waitFor(() => {
+        // @ts-expect-error - jest-dom matchers
+        expect(
+          screen.getByRole('heading', { name: 'Master Switch', level: 3 })
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('should show link to full admin dashboard', async () => {
+      mockApiClient.getCircuits.mockResolvedValue({
+        success: true,
+        data: mockCircuits,
+      });
+
+      renderAccountPage();
+
+      await waitFor(() => {
+        const link = screen.getByRole('link', { name: /view full admin dashboard/i });
+        // @ts-expect-error - jest-dom matchers
+        expect(link).toBeInTheDocument();
+        // @ts-expect-error - jest-dom matchers
+        expect(link).toHaveAttribute('href', '/admin');
+      });
+    });
+
+    it('should call enableCircuit when toggling circuit on', async () => {
+      mockApiClient.getCircuits.mockResolvedValue({
+        success: true,
+        data: [
+          {
+            id: 'SLEEP_MODE',
+            name: 'Sleep Mode',
+            type: 'manual' as const,
+            state: 'off' as const,
+          },
+        ],
+      });
+      mockApiClient.enableCircuit.mockResolvedValue({ success: true });
+
+      renderAccountPage();
+
+      await waitFor(() => {
+        // @ts-expect-error - jest-dom matchers
+        expect(screen.getByRole('heading', { name: 'Sleep Mode', level: 3 })).toBeInTheDocument();
+      });
+
+      // Find and click the toggle switch
+      const toggle = screen.getByRole('switch', { name: /toggle sleep mode/i });
+      fireEvent.click(toggle);
+
+      await waitFor(() => {
+        expect(mockApiClient.enableCircuit).toHaveBeenCalledWith('SLEEP_MODE');
+      });
+    });
+
+    it('should call disableCircuit when toggling circuit off', async () => {
+      mockApiClient.getCircuits.mockResolvedValue({
+        success: true,
+        data: [
+          {
+            id: 'MASTER',
+            name: 'Master Switch',
+            type: 'manual' as const,
+            state: 'on' as const,
+          },
+        ],
+      });
+      mockApiClient.disableCircuit.mockResolvedValue({ success: true });
+
+      renderAccountPage();
+
+      await waitFor(() => {
+        // @ts-expect-error - jest-dom matchers
+        expect(
+          screen.getByRole('heading', { name: 'Master Switch', level: 3 })
+        ).toBeInTheDocument();
+      });
+
+      // Find and click the toggle switch
+      const toggle = screen.getByRole('switch', { name: /toggle master switch/i });
+      fireEvent.click(toggle);
+
+      await waitFor(() => {
+        expect(mockApiClient.disableCircuit).toHaveBeenCalledWith('MASTER');
+      });
+    });
+
+    it('should show reset button for provider circuits', async () => {
+      mockApiClient.getCircuits.mockResolvedValue({
+        success: true,
+        data: [
+          {
+            id: 'openai',
+            name: 'OpenAI',
+            type: 'provider' as const,
+            state: 'half_open' as const,
+            failureCount: 3,
+            failureThreshold: 5,
+          },
+        ],
+      });
+
+      renderAccountPage();
+
+      await waitFor(() => {
+        const resetButton = screen.getByRole('button', { name: /reset/i });
+        // @ts-expect-error - jest-dom matchers
+        expect(resetButton).toBeInTheDocument();
+      });
+    });
+
+    it('should display error message when circuit operation fails', async () => {
+      mockApiClient.getCircuits.mockResolvedValue({
+        success: true,
+        data: mockCircuits,
+      });
+      mockApiClient.enableCircuit.mockRejectedValue(new Error('Failed to enable circuit'));
+
+      renderAccountPage();
+
+      await waitFor(() => {
+        // @ts-expect-error - jest-dom matchers
+        expect(screen.getByRole('heading', { name: 'Sleep Mode', level: 3 })).toBeInTheDocument();
+      });
+
+      // Click toggle to trigger error
+      const toggle = screen.getByRole('switch', { name: /toggle sleep mode/i });
+      fireEvent.click(toggle);
+
+      await waitFor(() => {
+        // @ts-expect-error - jest-dom matchers
+        expect(screen.getByText(/failed to enable circuit/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should not display admin section when circuits array is empty but user is admin', async () => {
+      mockApiClient.getCircuits.mockResolvedValue({
+        success: true,
+        data: [],
+      });
+
+      renderAccountPage();
+
+      await waitFor(() => {
+        // Profile should load
+        // @ts-expect-error - jest-dom matchers
+        expect(screen.getByText('Demo User')).toBeInTheDocument();
+      });
+
+      // Admin section should still be visible but with no circuits message
+      await waitFor(() => {
+        // @ts-expect-error - jest-dom matchers
+        expect(screen.getByText(/system administration/i)).toBeInTheDocument();
+        // @ts-expect-error - jest-dom matchers
+        expect(screen.getByText(/no circuit breakers configured/i)).toBeInTheDocument();
       });
     });
   });
