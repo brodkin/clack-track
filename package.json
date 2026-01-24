@@ -5,9 +5,8 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev": "concurrently \"npm run dev:server\" \"vite\"",
     "dev:server": "nodemon",
-    "dev:client": "vite",
     "build": "npm run build:server && npm run build:client",
     "build:server": "tsc",
     "build:client": "vite build",

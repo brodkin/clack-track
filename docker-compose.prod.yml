@@ -28,7 +28,15 @@ services:
       - VAPID_SUBJECT=${VAPID_SUBJECT:-}
     networks:
       - clack-network
+      - traefik_traefik
     deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik_traefik
+        - traefik.http.routers.clack-track.rule=Host(`clack.rybro.io`)
+        - traefik.http.routers.clack-track.tls.certResolver=myresolver
+        - traefik.http.routers.clack-track.tls.domains[0].main=*.rybro.io
+        - traefik.http.services.clack-track-service.loadbalancer.server.port=3000
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -66,6 +74,8 @@ networks:
   clack-network:
     driver: overlay
     attachable: true
+  traefik_traefik:
+    external: true
 
 volumes:
   mysql_data:
