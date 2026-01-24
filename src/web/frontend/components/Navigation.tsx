@@ -31,6 +31,7 @@ const navLinks = [
   { to: '/flipside', label: 'The Flip Side' },
   { to: '/account', label: 'Account' },
   { to: '/login', label: 'Login' },
+  { to: '/admin', label: 'Admin' },
   // Style Guide only visible in development (and test environments)
   ...(isDev ? [{ to: '/style-guide', label: 'Style Guide' }] : []),
 ];

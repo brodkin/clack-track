@@ -5,6 +5,7 @@ import type { ContentRepository } from '../storage/repositories/content-repo.js'
 import type { VoteRepository } from '../storage/repositories/vote-repo.js';
 import type { LogModel } from '../storage/models/log.js';
 import type { FrameDecorator } from '../content/frame/frame-decorator.js';
+import type { CircuitBreakerService } from '../services/circuit-breaker-service.js';
 
 export interface Request {
   params: Record<string, string>;
@@ -34,4 +35,6 @@ export interface WebDependencies {
   logModel?: LogModel;
   /** Frame decorator for applying time/weather frame to content */
   frameDecorator?: FrameDecorator;
+  /** Service for circuit breaker state management */
+  circuitBreakerService?: CircuitBreakerService;
 }

@@ -12,6 +12,7 @@ import { createLogsRouter } from './routes/logs.js';
 import { createVotingRouter } from './routes/voting.js';
 import { pushRouter } from './routes/push.js';
 import { createConfigRouter } from './routes/config.js';
+import { createCircuitRouter } from './routes/circuit.js';
 import type { WebDependencies } from './types.js';
 
 export interface WebServerConfig {
@@ -164,6 +165,10 @@ export class WebServer {
     // Config routes - no dependencies required
     const configRouter = createConfigRouter();
     this.app.use('/api/config', configRouter);
+
+    // Circuit breaker routes - inject circuitBreakerService dependency
+    const circuitRouter = createCircuitRouter(this.dependencies);
+    this.app.use('/api/circuits', circuitRouter);
   }
 
   private registerSignalHandlers(): void {

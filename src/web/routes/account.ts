@@ -120,8 +120,12 @@ const EXPECTED_ORIGIN = process.env.WEBAUTHN_ORIGIN || `http://${RP_ID}:5173`;
 /**
  * requireAuth middleware
  * Validates session and returns 401 if not authenticated
+ *
+ * @param req - Express request object
+ * @param res - Express response object
+ * @param next - Express next function
  */
-async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const sessionId = getSessionId(req);
 

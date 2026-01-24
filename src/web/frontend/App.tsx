@@ -9,6 +9,7 @@ const History = lazy(() => import('./pages/History'));
 const Account = lazy(() => import('./pages/Account'));
 const Login = lazy(() => import('./pages/Login'));
 const StyleGuide = lazy(() => import('./pages/StyleGuide'));
+const Admin = lazy(() => import('./pages/Admin'));
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/account" element={<Account />} />
           <Route path="/login" element={<Login />} />
           <Route path="/style-guide" element={<StyleGuide />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
       </Suspense>
     </AuthProvider>
