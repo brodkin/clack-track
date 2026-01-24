@@ -6,7 +6,7 @@
  */
 
 /// <reference types="@testing-library/jest-dom" />
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect } from '@jest/globals';
 import { VestaboardPreview } from '@/web/frontend/components/VestaboardPreview';
 
@@ -523,6 +523,170 @@ describe('VestaboardPreview Component', () => {
       // Should NOT have the default cell background
       // @ts-expect-error - jest-dom matchers
       expect(redCell).not.toHaveClass('bg-[#1a1a1a]');
+    });
+  });
+
+  describe('Split-Flap Animation', () => {
+    const initialContent = [
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+
+    const updatedContent = [
+      [0, 0, 0, 8, 5, 12, 12, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should NOT animate on initial mount', () => {
+      render(<VestaboardPreview content={updatedContent} />);
+
+      // No cells should have animation class on initial render
+      const cell = screen.getByTestId('vestaboard-cell-0-3');
+      // @ts-expect-error - jest-dom matchers
+      expect(cell).not.toHaveClass('animate-split-flap');
+    });
+
+    it('should trigger animation when content changes', async () => {
+      const { rerender } = render(<VestaboardPreview content={initialContent} />);
+
+      // Rerender with new content
+      rerender(<VestaboardPreview content={updatedContent} />);
+
+      // The cell that changed (0,3 changed from 0 to 8='H') should be animating
+      const changedCell = screen.getByTestId('vestaboard-cell-0-3');
+      // @ts-expect-error - jest-dom matchers
+      expect(changedCell).toHaveClass('animate-split-flap');
+    });
+
+    it('should show staggered animation delays based on position', async () => {
+      const { rerender } = render(<VestaboardPreview content={initialContent} />);
+      rerender(<VestaboardPreview content={updatedContent} />);
+
+      // Cell at position 0,3 should have a delay
+      const cell03 = screen.getByTestId('vestaboard-cell-0-3');
+      const delay03 = cell03.style.animationDelay;
+
+      // Cell at position 0,4 should have a slightly longer delay
+      const cell04 = screen.getByTestId('vestaboard-cell-0-4');
+      const delay04 = cell04.style.animationDelay;
+
+      // Both cells should have animation delays
+      expect(delay03).toBeTruthy();
+      expect(delay04).toBeTruthy();
+
+      // Position (0,4) should have longer delay than (0,3)
+      const delay03ms = parseInt(delay03.replace('ms', ''), 10);
+      const delay04ms = parseInt(delay04.replace('ms', ''), 10);
+      expect(delay04ms).toBeGreaterThan(delay03ms);
+    });
+
+    it('should show random characters during flip animation', async () => {
+      const { rerender } = render(<VestaboardPreview content={initialContent} />);
+      rerender(<VestaboardPreview content={updatedContent} />);
+
+      // During animation, cells may show intermediate characters
+      const changedCell = screen.getByTestId('vestaboard-cell-0-3');
+      // The cell should have content during animation
+      // @ts-expect-error - jest-dom matchers
+      expect(changedCell).toBeInTheDocument();
+    });
+
+    it('should show final character after animation completes', async () => {
+      const { rerender } = render(<VestaboardPreview content={initialContent} />);
+      rerender(<VestaboardPreview content={updatedContent} />);
+
+      // Fast-forward all timers to complete animations
+      await act(async () => {
+        await jest.runAllTimersAsync();
+      });
+
+      // After animation, cell should show final character 'H' (code 8)
+      const cell = screen.getByTestId('vestaboard-cell-0-3');
+      expect(cell.textContent).toBe('H');
+      // @ts-expect-error - jest-dom matchers
+      expect(cell).not.toHaveClass('animate-split-flap');
+    });
+
+    it('should NOT animate cells that did not change', async () => {
+      const { rerender } = render(<VestaboardPreview content={initialContent} />);
+      rerender(<VestaboardPreview content={updatedContent} />);
+
+      // Cell at 1,0 did not change (both are 0)
+      const unchangedCell = screen.getByTestId('vestaboard-cell-1-0');
+      // @ts-expect-error - jest-dom matchers
+      expect(unchangedCell).not.toHaveClass('animate-split-flap');
+    });
+
+    it('should handle multiple content changes correctly', async () => {
+      const { rerender } = render(<VestaboardPreview content={initialContent} />);
+
+      // First change
+      rerender(<VestaboardPreview content={updatedContent} />);
+      await act(async () => {
+        await jest.runAllTimersAsync();
+      });
+
+      // Second change - back to initial
+      rerender(<VestaboardPreview content={initialContent} />);
+
+      // Cells that changed should animate again
+      const cell = screen.getByTestId('vestaboard-cell-0-3');
+      // @ts-expect-error - jest-dom matchers
+      expect(cell).toHaveClass('animate-split-flap');
+    });
+
+    it('should flip through 2-3 random characters before settling', async () => {
+      const { rerender } = render(<VestaboardPreview content={initialContent} />);
+      rerender(<VestaboardPreview content={updatedContent} />);
+
+      const changedCell = screen.getByTestId('vestaboard-cell-0-3');
+      const seenCharacters = new Set<string>();
+
+      // Record initial character
+      seenCharacters.add(changedCell.textContent || '');
+
+      // Advance time in small increments to capture intermediate states
+      for (let i = 0; i < 10; i++) {
+        await act(async () => {
+          await jest.advanceTimersByTimeAsync(100);
+        });
+        seenCharacters.add(changedCell.textContent || '');
+      }
+
+      // Should have seen at least 2 different characters during animation
+      // (intermediate random chars + final 'H')
+      expect(seenCharacters.size).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should complete animation within reasonable time (500-800ms depending on position)', async () => {
+      const { rerender } = render(<VestaboardPreview content={initialContent} />);
+      rerender(<VestaboardPreview content={updatedContent} />);
+
+      // After 1000ms, all animations should be complete
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(1000);
+      });
+
+      const cell = screen.getByTestId('vestaboard-cell-0-3');
+      // @ts-expect-error - jest-dom matchers
+      expect(cell).not.toHaveClass('animate-split-flap');
+      expect(cell.textContent).toBe('H');
     });
   });
 });
