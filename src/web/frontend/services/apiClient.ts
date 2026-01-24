@@ -32,6 +32,8 @@ import type {
   RemovePasskeyResponse,
   RenamePasskeyResponse,
   VestaboardConfigResponse,
+  CircuitsResponse,
+  CircuitActionResponse,
 } from './types.js';
 
 /**
@@ -294,5 +296,53 @@ export const apiClient = {
       }
     );
     return response as unknown as VestaboardConfigResponse;
+  },
+
+  /**
+   * Get all circuit breakers
+   */
+  async getCircuits(): Promise<ApiResponse<CircuitsResponse>> {
+    return fetchJSON<CircuitsResponse>(`${API_BASE_URL}/api/circuits`, {
+      method: 'GET',
+    });
+  },
+
+  /**
+   * Enable a circuit breaker
+   */
+  async enableCircuit(id: string): Promise<CircuitActionResponse> {
+    const response = await fetchJSON<CircuitActionResponse>(
+      `${API_BASE_URL}/api/circuits/${id}/on`,
+      {
+        method: 'POST',
+      }
+    );
+    return response as unknown as CircuitActionResponse;
+  },
+
+  /**
+   * Disable a circuit breaker
+   */
+  async disableCircuit(id: string): Promise<CircuitActionResponse> {
+    const response = await fetchJSON<CircuitActionResponse>(
+      `${API_BASE_URL}/api/circuits/${id}/off`,
+      {
+        method: 'POST',
+      }
+    );
+    return response as unknown as CircuitActionResponse;
+  },
+
+  /**
+   * Reset a provider circuit breaker
+   */
+  async resetCircuit(id: string): Promise<CircuitActionResponse> {
+    const response = await fetchJSON<CircuitActionResponse>(
+      `${API_BASE_URL}/api/circuits/${id}/reset`,
+      {
+        method: 'POST',
+      }
+    );
+    return response as unknown as CircuitActionResponse;
   },
 };

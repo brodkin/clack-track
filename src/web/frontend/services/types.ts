@@ -211,6 +211,26 @@ export interface VestaboardConfigResponse {
 }
 
 /**
+ * Circuit Breaker API Types
+ */
+export interface CircuitData {
+  id: string;
+  name: string;
+  description?: string;
+  type: 'manual' | 'provider';
+  state: 'on' | 'off' | 'half_open';
+  failureCount?: number;
+  failureThreshold?: number;
+}
+
+export type CircuitsResponse = CircuitData[];
+
+export interface CircuitActionResponse {
+  success: boolean;
+  message?: string;
+}
+
+/**
  * Error response types
  */
 export class ApiError extends Error {
