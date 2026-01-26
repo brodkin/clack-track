@@ -126,6 +126,22 @@ describe('HomeAssistantClient - Connection Management', () => {
 
       expect(client.isConnected()).toBe(false);
     });
+
+    it('should register disconnected event listener for automatic reconnection', async () => {
+      await client.connect();
+
+      // Verify addEventListener was called with 'disconnected' event
+      expect(mockConnection.addEventListener).toHaveBeenCalledWith(
+        'disconnected',
+        expect.any(Function)
+      );
+
+      // Also verify 'reconnect-error' listener is registered
+      expect(mockConnection.addEventListener).toHaveBeenCalledWith(
+        'reconnect-error',
+        expect.any(Function)
+      );
+    });
   });
 
   describe('disconnect()', () => {

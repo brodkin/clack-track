@@ -8,8 +8,10 @@
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, it, expect, jest } from '@jest/globals';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { StyleGuide } from '@/web/frontend/pages/StyleGuide';
+import { AuthProvider } from '@/web/frontend/context/AuthContext';
+import { apiClient } from '@/web/frontend/services/apiClient';
 import { toast } from 'sonner';
 
 // Mock sonner toast
@@ -22,6 +24,20 @@ jest.mock('sonner', () => ({
   }),
 }));
 
+// Mock the apiClient module (required for AuthProvider)
+jest.mock('@/web/frontend/services/apiClient', () => ({
+  apiClient: {
+    checkSession: jest.fn(),
+  },
+}));
+
+// Mock @simplewebauthn/browser (required by AuthProvider)
+jest.mock('@simplewebauthn/browser', () => ({
+  startAuthentication: jest.fn(),
+}));
+
+const mockApiClient = apiClient as jest.Mocked<typeof apiClient>;
+
 // Cast toast to mocked type for test assertions
 const mockedToast = toast as jest.MockedFunction<typeof toast> & {
   success: jest.MockedFunction<typeof toast.success>;
@@ -31,10 +47,21 @@ const mockedToast = toast as jest.MockedFunction<typeof toast> & {
 };
 
 describe('StyleGuide Page', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Default auth mock - unauthenticated is fine for StyleGuide page (public)
+    mockApiClient.checkSession.mockResolvedValue({
+      authenticated: false,
+      user: null,
+    });
+  });
+
   const renderStyleGuide = () => {
     return render(
       <MemoryRouter>
-        <StyleGuide />
+        <AuthProvider>
+          <StyleGuide />
+        </AuthProvider>
       </MemoryRouter>
     );
   };
@@ -43,10 +70,15 @@ describe('StyleGuide Page', () => {
     it('should render with PageLayout wrapper', () => {
       renderStyleGuide();
 
-      // PageLayout includes Navigation with hamburger button (labeled "Open menu")
-      const hamburgerButton = screen.getByRole('button', { name: /open menu/i });
+      // PageLayout includes FloatingLogo - verify it's rendered
+      const logo = screen.getByTestId('floating-logo');
       // @ts-expect-error - jest-dom matchers
-      expect(hamburgerButton).toBeInTheDocument();
+      expect(logo).toBeInTheDocument();
+
+      // Verify logo text exists as heading
+      const logoHeading = screen.getByRole('heading', { name: /clack track/i });
+      // @ts-expect-error - jest-dom matchers
+      expect(logoHeading).toBeInTheDocument();
     });
 
     it('should display the page title', () => {
@@ -359,7 +391,9 @@ describe('StyleGuide Page', () => {
     it('should be accessible at /style-guide route', () => {
       render(
         <MemoryRouter initialEntries={['/style-guide']}>
-          <StyleGuide />
+          <AuthProvider>
+            <StyleGuide />
+          </AuthProvider>
         </MemoryRouter>
       );
 

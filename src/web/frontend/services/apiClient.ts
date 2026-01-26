@@ -32,6 +32,12 @@ import type {
   RemovePasskeyResponse,
   RenamePasskeyResponse,
   VestaboardConfigResponse,
+  CircuitsResponse,
+  CircuitActionResponse,
+  GenerateInviteResponse,
+  ValidateRegistrationTokenResponse,
+  CompleteRegistrationRequest,
+  CompleteRegistrationResponse,
 } from './types.js';
 
 /**
@@ -294,5 +300,108 @@ export const apiClient = {
       }
     );
     return response as unknown as VestaboardConfigResponse;
+  },
+
+  /**
+   * Get all circuit breakers
+   */
+  async getCircuits(): Promise<ApiResponse<CircuitsResponse>> {
+    return fetchJSON<CircuitsResponse>(`${API_BASE_URL}/api/circuits`, {
+      method: 'GET',
+    });
+  },
+
+  /**
+   * Enable a circuit breaker
+   */
+  async enableCircuit(id: string): Promise<CircuitActionResponse> {
+    const response = await fetchJSON<CircuitActionResponse>(
+      `${API_BASE_URL}/api/circuits/${id}/on`,
+      {
+        method: 'POST',
+      }
+    );
+    return response as unknown as CircuitActionResponse;
+  },
+
+  /**
+   * Disable a circuit breaker
+   */
+  async disableCircuit(id: string): Promise<CircuitActionResponse> {
+    const response = await fetchJSON<CircuitActionResponse>(
+      `${API_BASE_URL}/api/circuits/${id}/off`,
+      {
+        method: 'POST',
+      }
+    );
+    return response as unknown as CircuitActionResponse;
+  },
+
+  /**
+   * Reset a provider circuit breaker
+   */
+  async resetCircuit(id: string): Promise<CircuitActionResponse> {
+    const response = await fetchJSON<CircuitActionResponse>(
+      `${API_BASE_URL}/api/circuits/${id}/reset`,
+      {
+        method: 'POST',
+      }
+    );
+    return response as unknown as CircuitActionResponse;
+  },
+
+  /**
+   * Generate a magic link invite for user registration
+   * Requires authentication - only accessible to admin users
+   */
+  async generateInvite(email: string): Promise<GenerateInviteResponse> {
+    const response = await fetchJSON<GenerateInviteResponse>(`${API_BASE_URL}/api/admin/invite`, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    return response as unknown as GenerateInviteResponse;
+  },
+
+  /**
+   * Validate a registration token (magic link)
+   * Returns the email associated with the token if valid
+   */
+  async validateRegistrationToken(token: string): Promise<ValidateRegistrationTokenResponse> {
+    const response = await fetchJSON<ValidateRegistrationTokenResponse>(
+      `${API_BASE_URL}/api/auth/register/validate?token=${encodeURIComponent(token)}`,
+      {
+        method: 'GET',
+      }
+    );
+    return response as unknown as ValidateRegistrationTokenResponse;
+  },
+
+  /**
+   * Get registration options for passkey creation during signup
+   */
+  async getRegistrationOptions(token: string): Promise<RegistrationOptions> {
+    const response = await fetchJSON<RegistrationOptions>(
+      `${API_BASE_URL}/api/auth/register/options?token=${encodeURIComponent(token)}`,
+      {
+        method: 'GET',
+      }
+    );
+    return response as unknown as RegistrationOptions;
+  },
+
+  /**
+   * Complete user registration with passkey
+   */
+  async completeRegistration(
+    request: CompleteRegistrationRequest
+  ): Promise<CompleteRegistrationResponse> {
+    const response = await fetchJSON<CompleteRegistrationResponse>(
+      `${API_BASE_URL}/api/auth/register`,
+      {
+        method: 'POST',
+        body: JSON.stringify(request),
+      }
+    );
+    return response as unknown as CompleteRegistrationResponse;
   },
 };

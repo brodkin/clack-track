@@ -36,6 +36,7 @@ async function main() {
       'circuit:off',
       'circuit:reset',
       'circuit:watch',
+      'auth:invite',
     ].includes(command)
   ) {
     await runCLI(args);
@@ -62,6 +63,10 @@ async function main() {
     eventHandler,
     orchestrator,
     frameDecorator,
+    sessionRepository,
+    userRepository,
+    credentialRepository,
+    magicLinkRepository,
   } = await bootstrap();
 
   // Create WebServer with dependencies
@@ -72,7 +77,16 @@ async function main() {
       corsEnabled: config.web.corsEnabled,
       staticPath: config.web.staticPath,
     },
-    { contentRepository, voteRepository, logModel, frameDecorator }
+    {
+      contentRepository,
+      voteRepository,
+      logModel,
+      frameDecorator,
+      sessionRepository,
+      userRepository,
+      credentialRepository,
+      magicLinkRepository,
+    }
   );
 
   try {

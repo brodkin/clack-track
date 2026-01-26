@@ -266,6 +266,7 @@ export interface FailoverMetadata {
  * @property {string} [systemPrompt] - System prompt sent to the AI provider
  * @property {string} [userPrompt] - User prompt sent to the AI provider
  * @property {FailoverMetadata} [failover] - Detailed failover retry metadata
+ * @property {string} [moreInfoUrl] - URL to more information about the content (e.g., source article link)
  *
  * @example
  * ```typescript
@@ -308,6 +309,8 @@ export interface GenerationMetadata {
   userPrompt?: string;
   /** Detailed failover retry metadata */
   failover?: FailoverMetadata;
+  /** URL to more information about the content (e.g., source article link) */
+  moreInfoUrl?: string;
   /** Additional metadata fields */
   [key: string]: unknown;
 }

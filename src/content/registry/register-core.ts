@@ -94,6 +94,8 @@ export interface CoreGenerators {
   issObserver: ContentGenerator;
   /** One-star review generator (P2, LIGHT, AI-powered) */
   oneStarReview: ContentGenerator;
+  /** Houseboy vent generator (P2, LIGHT, AI-powered) */
+  houseboyVent: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -366,6 +368,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.oneStarReview
+  );
+
+  registry.register(
+    {
+      id: 'houseboy-vent',
+      name: 'Houseboy Vent Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.houseboyVent
   );
 
   // Register P3 fallback generator (FALLBACK priority)

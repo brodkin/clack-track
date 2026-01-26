@@ -190,6 +190,34 @@ describe('ContentModel', () => {
 
       expect(result.metadata).toEqual(metadata);
     });
+
+    test('should serialize and deserialize moreInfoUrl in metadata', async () => {
+      const now = new Date();
+      const metadata = {
+        model: 'gpt-4',
+        tier: 'heavy',
+        provider: 'openai',
+        tokensUsed: 250,
+        moreInfoUrl: 'https://example.com/news/article-123',
+      };
+
+      const result = await contentModel.create({
+        text: 'News Content',
+        type: 'major',
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        metadata,
+      });
+
+      // Verify moreInfoUrl survives serialization
+      expect(result.metadata).toEqual(metadata);
+      expect(result.metadata?.moreInfoUrl).toBe('https://example.com/news/article-123');
+
+      // Verify deserialization by fetching from database
+      const retrieved = await contentModel.findById(result.id);
+      expect(retrieved?.metadata?.moreInfoUrl).toBe('https://example.com/news/article-123');
+    });
   });
 
   describe('findById', () => {

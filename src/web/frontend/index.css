@@ -18,6 +18,11 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Custom Font Variables */
+  --font-brush: 'Pacifico', cursive;
+  --font-display: 'Bebas Neue', sans-serif;
+
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -77,6 +82,8 @@ h1 {
 }
 
 @theme inline {
+  --font-family-brush: var(--font-brush);
+  --font-family-display: var(--font-display);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -155,4 +162,95 @@ h1 {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ============================================
+   Custom Font Utility Classes
+   ============================================ */
+.font-brush {
+  font-family: var(--font-brush);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* ============================================
+   Navigation Redesign Animations
+   ============================================ */
+
+/* Split-flap flip animation - 3D rotation for character reveal */
+@keyframes split-flap-flip {
+  0% {
+    transform: rotateX(-90deg);
+    opacity: 0;
+  }
+  100% {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+}
+
+/* Tab bounce animation - subtle scale bounce for active tab */
+@keyframes tab-bounce {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Confetti fall animation - falling particles with rotation */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-100%) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* ============================================
+   Animation Utility Classes
+   ============================================ */
+
+/* Split-flap animation class */
+.animate-split-flap {
+  animation: split-flap-flip 300ms ease-out forwards;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+/* Tab bounce animation class */
+.animate-tab-bounce {
+  animation: tab-bounce 200ms ease-out;
+}
+
+/* ============================================
+   Glass Morphism & Device Safety
+   ============================================ */
+
+/* Glass effect with backdrop blur */
+.glass-effect {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Dark mode glass effect */
+.dark .glass-effect {
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Safe area padding for notched devices (iPhone X+, etc.) */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }

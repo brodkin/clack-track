@@ -24,6 +24,7 @@ export interface AuthContextValue {
   isLoading: boolean;
   login: () => Promise<void>;
   logout: () => Promise<void>;
+  refreshAuth: () => Promise<void>;
 }
 
 /**
@@ -49,24 +50,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   /**
+   * Refresh authentication state from server
+   * Called on mount and after registration/login to sync state
+   */
+  const refreshAuth = async (): Promise<void> => {
+    try {
+      const session = await apiClient.checkSession();
+      setIsAuthenticated(session.authenticated);
+      setUser(session.user);
+    } catch (error) {
+      console.error('Failed to check session:', error);
+      setIsAuthenticated(false);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
    * Check session on mount
    */
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const session = await apiClient.checkSession();
-        setIsAuthenticated(session.authenticated);
-        setUser(session.user);
-      } catch (error) {
-        console.error('Failed to check session:', error);
-        setIsAuthenticated(false);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkSession();
+    refreshAuth();
   }, []);
 
   /**
@@ -141,6 +146,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     login,
     logout,
+    refreshAuth,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -50,12 +50,18 @@ module.exports = {
   restoreMocks: true,
 
   // Multi-environment project configuration
+  // IMPORTANT: modulePathIgnorePatterns must be repeated in each project because
+  // Jest does NOT inherit global config options in multi-project mode.
+  // Without this, jest-haste-map scans ./trees/ and emits duplicate mock warnings.
+  // See: https://github.com/jestjs/jest/issues/6801
   projects: [
     {
       displayName: 'unit',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/unit/**/*.test.ts'],
       testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
+      // Exclude worktrees from haste-map crawl to prevent duplicate mock warnings
+      modulePathIgnorePatterns: ['<rootDir>/trees'],
       transform: {
         '^.+\\.ts$': [
           'ts-jest',
@@ -83,6 +89,8 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/integration/**/*.test.ts'],
       testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
+      // Exclude worktrees from haste-map crawl to prevent duplicate mock warnings
+      modulePathIgnorePatterns: ['<rootDir>/trees'],
       extensionsToTreatAsEsm: ['.ts'],
       transform: {
         '^.+\\.ts$': [
@@ -111,6 +119,8 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: ['<rootDir>/tests/e2e/**/*.test.ts'],
       testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
+      // Exclude worktrees from haste-map crawl to prevent duplicate mock warnings
+      modulePathIgnorePatterns: ['<rootDir>/trees'],
       testTimeout: 60000, // E2E tests may take longer
       extensionsToTreatAsEsm: ['.ts'],
       transform: {
@@ -140,6 +150,8 @@ module.exports = {
       testEnvironment: 'jsdom', // Web UI tests need DOM
       testMatch: ['<rootDir>/tests/web/**/*.test.ts', '<rootDir>/tests/web/**/*.test.tsx'],
       testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
+      // Exclude worktrees from haste-map crawl to prevent duplicate mock warnings
+      modulePathIgnorePatterns: ['<rootDir>/trees'],
       extensionsToTreatAsEsm: ['.ts', '.tsx'],
       moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
       moduleNameMapper: {
@@ -200,4 +212,26 @@ module.exports = {
   // CI improvements (clack-zhvj)
   maxWorkers: process.env.CI ? 4 : '50%', // Use 4 workers in CI, 50% of cores locally
   verbose: true, // Better error output
+
+  // Roots configuration - explicitly tell Jest where to look for files
+  // This prevents jest-haste-map from scanning worktrees in ./trees/
+  roots: ['<rootDir>/src', '<rootDir>/tests', '<rootDir>/prompts'],
+
+  // Module path ignore patterns - prevents jest-haste-map from scanning worktrees
+  // These are regex patterns matched against absolute file paths
+  // NOTE: This global setting is NOT inherited by projects in multi-project mode.
+  // Each project must include modulePathIgnorePatterns explicitly.
+  // Kept here for documentation and single-project compatibility.
+  modulePathIgnorePatterns: ['<rootDir>/trees'],
+
+  // Watch ignore patterns - exclude worktrees from watch mode
+  watchPathIgnorePatterns: ['<rootDir>/trees'],
+
+  // Haste configuration - customize module discovery
+  haste: {
+    // Don't throw on duplicate modules - just use the first one found
+    // This is a safety net in case modulePathIgnorePatterns fails to exclude worktrees.
+    // With proper modulePathIgnorePatterns in each project, duplicates shouldn't occur.
+    throwOnModuleCollision: false,
+  },
 };

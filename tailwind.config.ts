@@ -19,6 +19,8 @@ const config: Config = {
           'Courier New',
           'monospace',
         ],
+        brush: ['Pacifico', 'cursive'],
+        display: ['Bebas Neue', 'sans-serif'],
       },
     },
   },

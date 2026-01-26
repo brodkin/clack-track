@@ -5,6 +5,8 @@ import helmet from 'helmet';
 import { Server } from 'http';
 import { log } from '../utils/logger.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
+import { createSessionMiddleware } from './middleware/session.js';
+import { createAuthBypassMiddleware, isAuthBypassEnabled } from './middleware/auth-bypass.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createAccountRouter } from './routes/account.js';
 import { createContentRouter } from './routes/content.js';
@@ -12,6 +14,9 @@ import { createLogsRouter } from './routes/logs.js';
 import { createVotingRouter } from './routes/voting.js';
 import { pushRouter } from './routes/push.js';
 import { createConfigRouter } from './routes/config.js';
+import { createCircuitRouter } from './routes/circuit.js';
+import { createAdminRouter } from './routes/admin.js';
+import { MagicLinkService } from '../auth/magic-link-service.js';
 import type { WebDependencies } from './types.js';
 
 export interface WebServerConfig {
@@ -133,17 +138,50 @@ export class WebServer {
     // JSON body parsing
     this.app.use(express.json());
 
+    // Session middleware (cookie parsing)
+    if (this.dependencies.sessionRepository && this.dependencies.userRepository) {
+      const sessionMiddleware = createSessionMiddleware(
+        this.dependencies.sessionRepository,
+        this.dependencies.userRepository
+      );
+      this.app.use(sessionMiddleware);
+
+      // Auth bypass middleware for Playwright testing (only in non-production)
+      // Must be applied after session middleware and before routes
+      if (isAuthBypassEnabled()) {
+        log('Auth bypass middleware enabled (development mode)');
+        const authBypassMiddleware = createAuthBypassMiddleware(
+          this.dependencies.sessionRepository,
+          this.dependencies.userRepository
+        );
+        this.app.use(authBypassMiddleware);
+      }
+    }
+
     // Register API routes
     this.setupRoutes();
   }
 
   private setupRoutes(): void {
-    // Authentication routes
-    const authRouter = createAuthRouter();
+    // Authentication routes - inject auth dependencies
+    const magicLinkService = this.dependencies.magicLinkRepository
+      ? new MagicLinkService(this.dependencies.magicLinkRepository)
+      : undefined;
+
+    const authRouter = createAuthRouter({
+      credentialRepository: this.dependencies.credentialRepository,
+      userRepository: this.dependencies.userRepository,
+      sessionRepository: this.dependencies.sessionRepository,
+      magicLinkService,
+    });
     this.app.use('/api/auth', authRouter);
 
     // Account management routes
-    const accountRouter = createAccountRouter();
+    const accountRouter = createAccountRouter({
+      sessionRepository: this.dependencies.sessionRepository,
+      userRepository: this.dependencies.userRepository,
+      credentialRepository: this.dependencies.credentialRepository,
+    });
     this.app.use('/api/account', accountRouter);
 
     // Push notification routes
@@ -164,6 +202,24 @@ export class WebServer {
     // Config routes - no dependencies required
     const configRouter = createConfigRouter();
     this.app.use('/api/config', configRouter);
+
+    // Circuit breaker routes - inject circuitBreakerService dependency
+    const circuitRouter = createCircuitRouter(this.dependencies);
+    this.app.use('/api/circuits', circuitRouter);
+
+    // Admin routes - requires all auth dependencies
+    if (
+      this.dependencies.sessionRepository &&
+      this.dependencies.userRepository &&
+      this.dependencies.magicLinkRepository
+    ) {
+      const adminRouter = createAdminRouter({
+        sessionRepository: this.dependencies.sessionRepository,
+        userRepository: this.dependencies.userRepository,
+        magicLinkRepository: this.dependencies.magicLinkRepository,
+      });
+      this.app.use('/api/admin', adminRouter);
+    }
   }
 
   private registerSignalHandlers(): void {

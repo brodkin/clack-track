@@ -11,6 +11,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { Welcome } from '@/web/frontend/pages/Welcome';
+import { AuthProvider } from '@/web/frontend/context/AuthContext';
 import { apiClient } from '@/web/frontend/services/apiClient';
 import { textToCharacterCodes, emptyGrid } from '@/web/frontend/lib/textToCharCodes';
 
@@ -20,7 +21,13 @@ jest.mock('@/web/frontend/services/apiClient', () => ({
     getLatestContent: jest.fn(),
     submitVote: jest.fn(),
     getVestaboardConfig: jest.fn(),
+    checkSession: jest.fn(),
   },
+}));
+
+// Mock @simplewebauthn/browser (required by AuthProvider)
+jest.mock('@simplewebauthn/browser', () => ({
+  startAuthentication: jest.fn(),
 }));
 
 // Mock textToCharacterCodes to track when it's called
@@ -66,7 +73,23 @@ describe('Welcome Page', () => {
     jest.clearAllMocks();
     // Default config response
     mockApiClient.getVestaboardConfig.mockResolvedValue({ model: 'black' });
+    // Default auth mock - unauthenticated is fine for Welcome page (public)
+    mockApiClient.checkSession.mockResolvedValue({
+      authenticated: false,
+      user: null,
+    });
   });
+
+  /**
+   * Helper to render with AuthProvider context
+   */
+  const renderWithAuth = (ui: React.ReactElement) => {
+    return render(
+      <MemoryRouter>
+        <AuthProvider>{ui}</AuthProvider>
+      </MemoryRouter>
+    );
+  };
 
   describe('when API returns characterCodes', () => {
     it('should use characterCodes from API response directly', async () => {
@@ -86,11 +109,7 @@ describe('Welcome Page', () => {
       });
 
       // Act
-      render(
-        <MemoryRouter>
-          <Welcome />
-        </MemoryRouter>
-      );
+      renderWithAuth(<Welcome />);
 
       // Assert: Wait for loading to complete
       await waitFor(() => {
@@ -127,11 +146,7 @@ describe('Welcome Page', () => {
       });
 
       // Act
-      render(
-        <MemoryRouter>
-          <Welcome />
-        </MemoryRouter>
-      );
+      renderWithAuth(<Welcome />);
 
       // Assert
       await waitFor(() => {
@@ -167,11 +182,7 @@ describe('Welcome Page', () => {
       });
 
       // Act
-      render(
-        <MemoryRouter>
-          <Welcome />
-        </MemoryRouter>
-      );
+      renderWithAuth(<Welcome />);
 
       // Assert: Wait for content to load
       await waitFor(() => {
@@ -203,11 +214,7 @@ describe('Welcome Page', () => {
       });
 
       // Act
-      render(
-        <MemoryRouter>
-          <Welcome />
-        </MemoryRouter>
-      );
+      renderWithAuth(<Welcome />);
 
       // Assert
       await waitFor(() => {
@@ -238,11 +245,7 @@ describe('Welcome Page', () => {
       });
 
       // Act
-      render(
-        <MemoryRouter>
-          <Welcome />
-        </MemoryRouter>
-      );
+      renderWithAuth(<Welcome />);
 
       // Assert
       await waitFor(() => {
@@ -271,11 +274,7 @@ describe('Welcome Page', () => {
       });
 
       // Act
-      render(
-        <MemoryRouter>
-          <Welcome />
-        </MemoryRouter>
-      );
+      renderWithAuth(<Welcome />);
 
       // Assert
       await waitFor(() => {
@@ -299,11 +298,7 @@ describe('Welcome Page', () => {
       });
 
       // Act
-      render(
-        <MemoryRouter>
-          <Welcome />
-        </MemoryRouter>
-      );
+      renderWithAuth(<Welcome />);
 
       // Assert - use regex for partial match since component has longer text
       await waitFor(() => {
@@ -324,11 +319,7 @@ describe('Welcome Page', () => {
       );
 
       // Act
-      render(
-        <MemoryRouter>
-          <Welcome />
-        </MemoryRouter>
-      );
+      renderWithAuth(<Welcome />);
 
       // Assert: Loading state shown initially
       // @ts-expect-error - jest-dom matchers
@@ -340,11 +331,7 @@ describe('Welcome Page', () => {
       mockApiClient.getLatestContent.mockRejectedValue(new Error('Network error'));
 
       // Act
-      render(
-        <MemoryRouter>
-          <Welcome />
-        </MemoryRouter>
-      );
+      renderWithAuth(<Welcome />);
 
       // Assert
       await waitFor(() => {
@@ -376,11 +363,7 @@ describe('Welcome Page', () => {
       });
 
       // Act
-      render(
-        <MemoryRouter>
-          <Welcome />
-        </MemoryRouter>
-      );
+      renderWithAuth(<Welcome />);
 
       // Assert
       await waitFor(() => {
@@ -414,11 +397,7 @@ describe('Welcome Page', () => {
       });
 
       // Act
-      render(
-        <MemoryRouter>
-          <Welcome />
-        </MemoryRouter>
-      );
+      renderWithAuth(<Welcome />);
 
       // Assert: Should still render (VestaboardPreview handles padding)
       await waitFor(() => {
@@ -429,6 +408,148 @@ describe('Welcome Page', () => {
       // VestaboardPreview normalizes the grid, so it should still work
       // The characterCodes are technically valid (2D array) so they should be used
       // VestaboardPreview will pad to 6x22
+    });
+  });
+
+  describe('MoreInfoButton integration', () => {
+    it('should render MoreInfoButton when content has moreInfoUrl', async () => {
+      // Arrange: Content with moreInfoUrl in metadata
+      mockApiClient.getLatestContent.mockResolvedValue({
+        success: true,
+        data: {
+          id: 8,
+          text: 'NEWS CONTENT',
+          type: 'major',
+          generatedAt: new Date(),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          generatorId: 'news-generator',
+          characterCodes: sampleCharacterCodes,
+          metadata: {
+            moreInfoUrl: 'https://example.com/article',
+          },
+        },
+      });
+
+      // Act
+      renderWithAuth(<Welcome />);
+
+      // Assert: Wait for content to load
+      await waitFor(() => {
+        expect(screen.queryByText('Loading content...')).not.toBeInTheDocument();
+      });
+
+      // MoreInfoButton should be rendered
+      const button = screen.getByRole('link', { name: /more info/i });
+      // @ts-expect-error - jest-dom matchers
+      expect(button).toBeInTheDocument();
+      // @ts-expect-error - jest-dom matchers
+      expect(button).toHaveAttribute('href', 'https://example.com/article');
+    });
+
+    it('should not render MoreInfoButton when moreInfoUrl is missing', async () => {
+      // Arrange: Content without moreInfoUrl
+      mockApiClient.getLatestContent.mockResolvedValue({
+        success: true,
+        data: {
+          id: 9,
+          text: 'QUOTE CONTENT',
+          type: 'major',
+          generatedAt: new Date(),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          generatorId: 'quote-generator',
+          characterCodes: sampleCharacterCodes,
+          metadata: {
+            // No moreInfoUrl
+          },
+        },
+      });
+
+      // Act
+      renderWithAuth(<Welcome />);
+
+      // Assert: Wait for content to load
+      await waitFor(() => {
+        expect(screen.queryByText('Loading content...')).not.toBeInTheDocument();
+      });
+
+      // MoreInfoButton should NOT be rendered
+      const button = screen.queryByRole('link', { name: /more info/i });
+      expect(button).toBeNull();
+    });
+
+    it('should not render MoreInfoButton when metadata is undefined', async () => {
+      // Arrange: Content without metadata
+      mockApiClient.getLatestContent.mockResolvedValue({
+        success: true,
+        data: {
+          id: 10,
+          text: 'SIMPLE CONTENT',
+          type: 'major',
+          generatedAt: new Date(),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          generatorId: 'simple-generator',
+          characterCodes: sampleCharacterCodes,
+          // No metadata field
+        },
+      });
+
+      // Act
+      renderWithAuth(<Welcome />);
+
+      // Assert: Wait for content to load
+      await waitFor(() => {
+        expect(screen.queryByText('Loading content...')).not.toBeInTheDocument();
+      });
+
+      // MoreInfoButton should NOT be rendered
+      const button = screen.queryByRole('link', { name: /more info/i });
+      expect(button).toBeNull();
+    });
+
+    it('should render MoreInfoButton below VestaboardPreview', async () => {
+      // Arrange: Content with moreInfoUrl
+      mockApiClient.getLatestContent.mockResolvedValue({
+        success: true,
+        data: {
+          id: 11,
+          text: 'NEWS CONTENT',
+          type: 'major',
+          generatedAt: new Date(),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          generatorId: 'news-generator',
+          characterCodes: sampleCharacterCodes,
+          metadata: {
+            moreInfoUrl: 'https://example.com/news',
+          },
+        },
+      });
+
+      // Act
+      const { container } = renderWithAuth(<Welcome />);
+
+      // Assert: Wait for content to load
+      await waitFor(() => {
+        expect(screen.queryByText('Loading content...')).not.toBeInTheDocument();
+      });
+
+      // Check that MoreInfoButton appears after VestaboardPreview in DOM order
+      const vestaboard = screen.getByTestId('vestaboard');
+      const button = screen.getByRole('link', { name: /more info/i });
+
+      // Both should exist
+      // @ts-expect-error - jest-dom matchers
+      expect(vestaboard).toBeInTheDocument();
+      // @ts-expect-error - jest-dom matchers
+      expect(button).toBeInTheDocument();
+
+      // Compare positions in DOM (button should come after vestaboard)
+      const vestaboardPos = Array.from(container.querySelectorAll('*')).indexOf(vestaboard);
+      const buttonPos = Array.from(container.querySelectorAll('*')).indexOf(button);
+      expect(buttonPos).toBeGreaterThan(vestaboardPos);
     });
   });
 });

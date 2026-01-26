@@ -2,9 +2,12 @@
  * VestaboardPreview Component
  *
  * Displays Vestaboard content in a 6x22 character grid with split-flap aesthetic
+ * Includes split-flap animation when content changes
  */
 
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from '../lib/utils';
+import { getSplitFlapDelay, getRandomFlipChar } from '../lib/animations';
 
 /**
  * Character code to display character mapping
@@ -118,19 +121,149 @@ interface VestaboardPreviewProps {
 }
 
 /**
+ * Cell animation state for split-flap effect
+ */
+interface CellAnimationState {
+  isAnimating: boolean;
+  displayChar: string;
+  flipCount: number;
+}
+
+/**
+ * Base flip duration in milliseconds per intermediate character
+ */
+const FLIP_DURATION = 100;
+
+/**
+ * Number of intermediate characters to show during flip
+ */
+const FLIP_COUNT = 3;
+
+/**
+ * Create initial animation state for all cells (no animation)
+ */
+function createInitialAnimationState(): CellAnimationState[][] {
+  return Array.from({ length: 6 }, () =>
+    Array.from({ length: 22 }, () => ({
+      isAnimating: false,
+      displayChar: '',
+      flipCount: 0,
+    }))
+  );
+}
+
+/**
  * VestaboardPreview displays a 6x22 grid of characters with split-flap styling
+ * Animates cells with split-flap effect when content changes
  */
 export function VestaboardPreview({ content, className, model = 'black' }: VestaboardPreviewProps) {
-  // Ensure we always have 6 rows
-  const rows = Array.from({ length: 6 }, (_, rowIndex) => {
-    const row = content[rowIndex] || [];
-    // Ensure each row has 22 cells
-    return Array.from({ length: 22 }, (_, colIndex) => row[colIndex] ?? 0);
-  });
+  // Track previous content to detect changes
+  const previousContentRef = useRef<number[][] | null>(null);
+  const isFirstRenderRef = useRef(true);
+
+  // Animation state for each cell
+  const [animationState, setAnimationState] = useState<CellAnimationState[][]>(
+    createInitialAnimationState
+  );
+
+  // Ensure we always have 6 rows with 22 cells each (memoized to prevent unnecessary updates)
+  const rows = useMemo(() => {
+    return Array.from({ length: 6 }, (_, rowIndex) => {
+      const row = content[rowIndex] || [];
+      return Array.from({ length: 22 }, (_, colIndex) => row[colIndex] ?? 0);
+    });
+  }, [content]);
+
+  // Handle content changes and trigger animations
+  useEffect(() => {
+    // Skip animation on first render
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      previousContentRef.current = rows.map(row => [...row]);
+      return;
+    }
+
+    const previousContent = previousContentRef.current;
+    if (!previousContent) {
+      previousContentRef.current = rows.map(row => [...row]);
+      return;
+    }
+
+    // Find cells that changed
+    const changedCells: Array<{ row: number; col: number; newCode: number }> = [];
+    for (let row = 0; row < 6; row++) {
+      for (let col = 0; col < 22; col++) {
+        const prevCode = previousContent[row]?.[col] ?? 0;
+        const newCode = rows[row][col];
+        if (prevCode !== newCode) {
+          changedCells.push({ row, col, newCode });
+        }
+      }
+    }
+
+    // No changes, nothing to animate
+    if (changedCells.length === 0) {
+      return;
+    }
+
+    // Store active timers for cleanup
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    // Start animations for changed cells
+    setAnimationState(prev => {
+      const newState = prev.map(row => row.map(cell => ({ ...cell })));
+      for (const { row, col } of changedCells) {
+        newState[row][col] = {
+          isAnimating: true,
+          displayChar: getRandomFlipChar(),
+          flipCount: 0,
+        };
+      }
+      return newState;
+    });
+
+    // Schedule flip animations for each changed cell
+    for (const { row, col } of changedCells) {
+      const delay = getSplitFlapDelay(row, col);
+
+      // Schedule intermediate flips
+      for (let flip = 1; flip <= FLIP_COUNT; flip++) {
+        const flipDelay = delay + flip * FLIP_DURATION;
+        const timer = setTimeout(() => {
+          setAnimationState(prev => {
+            const newState = prev.map(r => r.map(c => ({ ...c })));
+            if (flip < FLIP_COUNT) {
+              // Show random character during intermediate flips
+              newState[row][col] = {
+                isAnimating: true,
+                displayChar: getRandomFlipChar(),
+                flipCount: flip,
+              };
+            } else {
+              // Final flip - show actual character and end animation
+              newState[row][col] = {
+                isAnimating: false,
+                displayChar: '',
+                flipCount: 0,
+              };
+            }
+            return newState;
+          });
+        }, flipDelay);
+        timers.push(timer);
+      }
+    }
+
+    // Update previous content reference
+    previousContentRef.current = rows.map(row => [...row]);
+
+    // Cleanup timers on unmount or content change
+    return () => {
+      timers.forEach(timer => clearTimeout(timer));
+    };
+  }, [rows]); // Trigger on content change (rows is memoized from content)
 
   // Color schemes based on Vestaboard hardware model
-  // Black model: off-black board (#0a0a0a), near-black flaps (#1a1a1a), white text (#ffffff)
-  // White model: off-white board (#f5f5f5), near-white flaps (#e8e8e8), dark text (#1a1a1a)
   const isWhiteModel = model === 'white';
 
   return (
@@ -156,6 +289,25 @@ export function VestaboardPreview({ content, className, model = 'black' }: Vesta
                 ? getColorTileBackground(charCode, model)
                 : null;
 
+              const cellAnimation = animationState[rowIndex]?.[colIndex];
+              const isAnimating = cellAnimation?.isAnimating ?? false;
+              const displayChar = cellAnimation?.displayChar ?? '';
+
+              // Determine what character to show
+              let charToShow: string;
+              if (colorTileBg) {
+                charToShow = ''; // Color tiles never show characters
+              } else if (isAnimating && displayChar) {
+                charToShow = displayChar; // Show random flip character
+              } else {
+                charToShow = CHAR_MAP[charCode] || ' '; // Show final character
+              }
+
+              // Calculate animation delay for staggered effect
+              const animationDelay = isAnimating
+                ? `${getSplitFlapDelay(rowIndex, colIndex)}ms`
+                : '';
+
               return (
                 <div
                   key={`${rowIndex}-${colIndex}`}
@@ -172,11 +324,15 @@ export function VestaboardPreview({ content, className, model = 'black' }: Vesta
                         : 'bg-[#1a1a1a] text-[#ffffff]',
                     'font-mono font-bold text-xs sm:text-sm md:text-base',
                     'rounded shadow-inner',
-                    'transition-all duration-200'
+                    'transition-all duration-200',
+                    // Apply split-flap animation class when animating
+                    isAnimating && 'animate-split-flap'
                   )}
+                  style={{
+                    animationDelay: animationDelay,
+                  }}
                 >
-                  {/* Color tiles display no text, regular cells show character */}
-                  {colorTileBg ? '' : CHAR_MAP[charCode] || ' '}
+                  {charToShow}
                 </div>
               );
             })}
