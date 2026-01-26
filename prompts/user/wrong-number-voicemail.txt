@@ -25,8 +25,19 @@ VOICEMAIL CONVENTIONS:
 - ALWAYS open with caller identifying themselves to recipient by name
 - References names, places, events the listener "should" know
 - Often has one cryptic or alarming detail left completely unexplained
-- Can end abruptly, trail off, or get cut off mid-sentence
 - Implies shared history ("again", "like last time", "you know how")
+- When space allows, end with a voicemail closing (see examples below)
+- Can also end abruptly, trail off, or get cut off mid-sentence
+
+OPTIONAL VOICEMAIL CLOSINGS (use when space permits):
+- "CALL ME BACK"
+- "CALL ME"
+- "GIMME A RING"
+- "LET ME KNOW"
+- "GET BACK TO ME"
+- "WE NEED TO TALK"
+- "ITS URGENT"
+- "THANKS BYE"
 
 WHAT MAKES IT FUNNY:
 - The gap between casual delivery and alarming content
