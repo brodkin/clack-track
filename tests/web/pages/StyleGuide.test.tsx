@@ -70,10 +70,11 @@ describe('StyleGuide Page', () => {
     it('should render with PageLayout wrapper', () => {
       renderStyleGuide();
 
-      // PageLayout includes Navigation with hamburger button (labeled "Open menu")
-      const hamburgerButton = screen.getByRole('button', { name: /open menu/i });
+      // PageLayout includes Navigation - verify it's rendered by checking for nav brand
+      // Note: Navigation is desktop-only (hidden on mobile), using BottomTabBar for mobile
+      const brandLink = screen.getByRole('link', { name: /clack track/i });
       // @ts-expect-error - jest-dom matchers
-      expect(hamburgerButton).toBeInTheDocument();
+      expect(brandLink).toBeInTheDocument();
     });
 
     it('should display the page title', () => {

@@ -1,33 +1,18 @@
 /**
  * Navigation Component
  *
- * Responsive navigation with mobile hamburger menu and desktop nav bar.
- * Conditionally shows/hides links based on authentication state.
+ * Desktop-only horizontal navigation bar with glass effect.
+ * Mobile navigation is handled by BottomTabBar component.
  *
  * Features:
- * - Hides /admin and /account when not authenticated
- * - Shows /login when not authenticated
- * - Shows logout button and hides /login when authenticated
- * - Works in both mobile (Sheet) and desktop navigation
- * - No layout shift when auth state changes (consistent wrapper structure)
- *
- * Architecture:
- * - Single Responsibility: Navigation and auth-aware link visibility
- * - Dependency Inversion: Depends on AuthContext abstraction
+ * - Desktop only (hidden on mobile via md:hidden)
+ * - Auth-aware: hides protected links when not authenticated
+ * - Shows logout button when authenticated
  */
 
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, LogOut } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import { Button } from './ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from './ui/sheet';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext.js';
 
@@ -38,7 +23,7 @@ interface NavigationProps {
 /**
  * Navigation link configuration
  */
-interface NavLink {
+interface NavLinkConfig {
   to: string;
   label: string;
   /** If true, only show when authenticated */
@@ -55,12 +40,12 @@ const isDev = process.env.NODE_ENV !== 'production';
  * Navigation links configuration
  * Public links are always visible, protected links depend on auth state
  */
-const navLinks: NavLink[] = [
-  { to: '/', label: 'Welcome' },
-  { to: '/flipside', label: 'The Flip Side' },
+const navLinks: NavLinkConfig[] = [
+  { to: '/', label: 'Home' },
+  { to: '/flipside', label: 'Flipside' },
   { to: '/account', label: 'Account', requiresAuth: true },
-  { to: '/login', label: 'Login', hideWhenAuthenticated: true },
   { to: '/admin', label: 'Admin', requiresAuth: true },
+  { to: '/login', label: 'Login', hideWhenAuthenticated: true },
   // Style Guide only visible in development (and test environments)
   ...(isDev ? [{ to: '/style-guide', label: 'Style Guide' }] : []),
 ];
@@ -68,7 +53,7 @@ const navLinks: NavLink[] = [
 /**
  * Filter navigation links based on authentication state
  */
-function getVisibleLinks(links: NavLink[], isAuthenticated: boolean): NavLink[] {
+function getVisibleLinks(links: NavLinkConfig[], isAuthenticated: boolean): NavLinkConfig[] {
   return links.filter(link => {
     // Hide links that require auth when not authenticated
     if (link.requiresAuth && !isAuthenticated) {
@@ -83,11 +68,10 @@ function getVisibleLinks(links: NavLink[], isAuthenticated: boolean): NavLink[] 
 }
 
 /**
- * Navigation provides mobile hamburger menu and desktop horizontal nav
- * with auth-aware link visibility
+ * Navigation provides desktop-only horizontal nav bar with glass effect.
+ * Hidden on mobile (below md breakpoint) - BottomTabBar handles mobile navigation.
  */
 export function Navigation({ className }: NavigationProps) {
-  const [open, setOpen] = useState(false);
   const { isAuthenticated, logout, isLoading } = useAuth();
 
   // Filter links based on auth state
@@ -98,28 +82,47 @@ export function Navigation({ className }: NavigationProps) {
    */
   const handleLogout = async () => {
     await logout();
-    setOpen(false); // Close mobile menu if open
   };
 
   return (
-    <nav className={cn('bg-gray-800 text-white shadow-lg', className)}>
+    <nav
+      className={cn(
+        // Hidden on mobile, flex on desktop
+        'hidden md:flex',
+        // Glass effect styling
+        'bg-gray-900/80 backdrop-blur-md',
+        'border-b border-white/10',
+        'text-white shadow-lg',
+        className
+      )}
+    >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo/Brand */}
-          <Link to="/" className="text-xl font-bold hover:text-gray-300 transition-colors">
+          <NavLink to="/" className="text-xl font-bold hover:text-gray-300 transition-colors">
             Clack Track
-          </Link>
+          </NavLink>
 
-          {/* Desktop Navigation */}
-          <div data-testid="desktop-nav" className="hidden md:flex gap-6 items-center">
+          {/* Desktop Navigation Links */}
+          <div data-testid="desktop-nav" className="flex gap-6 items-center">
             {visibleLinks.map(link => (
-              <Link
+              <NavLink
                 key={link.to}
                 to={link.to}
-                className="hover:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
+                end={link.to === '/'}
+                className={({ isActive }) =>
+                  cn(
+                    'px-3 py-2 rounded-md transition-colors',
+                    'hover:bg-white/10',
+                    'focus:outline-none focus:ring-2 focus:ring-blue-500',
+                    isActive
+                      ? 'text-white font-medium bg-white/10'
+                      : 'text-gray-300 hover:text-white'
+                  )
+                }
               >
                 {link.label}
-              </Link>
+              </NavLink>
             ))}
             {/* Logout button - only show when authenticated */}
             {isAuthenticated && !isLoading && (
@@ -134,51 +137,6 @@ export function Navigation({ className }: NavigationProps) {
                 Logout
               </Button>
             )}
-          </div>
-
-          {/* Mobile Hamburger */}
-          <div className="md:hidden">
-            <Sheet open={open} onOpenChange={setOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white hover:text-gray-300"
-                  aria-label="Open menu"
-                >
-                  <Menu className="h-6 w-6" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-64">
-                <SheetHeader>
-                  <SheetTitle>Navigation</SheetTitle>
-                  <SheetDescription>Browse Clack Track</SheetDescription>
-                </SheetHeader>
-                <div data-testid="mobile-nav" className="flex flex-col gap-4 mt-6">
-                  {visibleLinks.map(link => (
-                    <Link
-                      key={link.to}
-                      to={link.to}
-                      onClick={() => setOpen(false)}
-                      className="text-lg hover:text-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                  {/* Logout button - only show when authenticated */}
-                  {isAuthenticated && !isLoading && (
-                    <Button
-                      variant="ghost"
-                      onClick={handleLogout}
-                      className="justify-start text-lg hover:text-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Logout
-                    </Button>
-                  )}
-                </div>
-              </SheetContent>
-            </Sheet>
           </div>
         </div>
       </div>

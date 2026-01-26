@@ -1248,7 +1248,7 @@ describe('Frontend Auth Components Integration', () => {
         });
       });
 
-      it('should always show Welcome link', async () => {
+      it('should always show Home link', async () => {
         render(
           <MemoryRouter>
             <AuthProvider>
@@ -1258,12 +1258,12 @@ describe('Frontend Auth Components Integration', () => {
         );
 
         await waitFor(() => {
-          const welcomeLinks = screen.getAllByRole('link', { name: /welcome/i });
-          expect(welcomeLinks.length).toBeGreaterThan(0);
+          const homeLinks = screen.getAllByRole('link', { name: /^home$/i });
+          expect(homeLinks.length).toBeGreaterThan(0);
         });
       });
 
-      it('should always show The Flip Side link', async () => {
+      it('should always show Flipside link', async () => {
         render(
           <MemoryRouter>
             <AuthProvider>
@@ -1273,7 +1273,7 @@ describe('Frontend Auth Components Integration', () => {
         );
 
         await waitFor(() => {
-          const flipSideLinks = screen.getAllByRole('link', { name: /the flip side/i });
+          const flipSideLinks = screen.getAllByRole('link', { name: /flipside/i });
           expect(flipSideLinks.length).toBeGreaterThan(0);
         });
       });
@@ -1294,7 +1294,7 @@ describe('Frontend Auth Components Integration', () => {
         });
       });
 
-      it('should have mobile menu button for responsive design', async () => {
+      it('should be desktop-only (mobile uses BottomTabBar)', async () => {
         render(
           <MemoryRouter>
             <AuthProvider>
@@ -1303,9 +1303,11 @@ describe('Frontend Auth Components Integration', () => {
           </MemoryRouter>
         );
 
-        const menuButton = screen.getByRole('button', { name: /open menu/i });
-        // @ts-expect-error - jest-dom matchers
-        expect(menuButton).toBeInTheDocument();
+        // Navigation is desktop-only - uses hidden md:flex classes
+        // Mobile navigation is handled by BottomTabBar component
+        const nav = document.querySelector('nav');
+        expect(nav).toHaveClass('hidden');
+        expect(nav).toHaveClass('md:flex');
       });
 
       it('should show Clack Track brand link', async () => {

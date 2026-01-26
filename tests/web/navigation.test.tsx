@@ -61,15 +61,15 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
 describe('Navigation Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Mock authenticated state for these tests that expect Admin link
+    // Mock authenticated state for these tests
     mockApiClient.checkSession.mockResolvedValue({
       authenticated: true,
       user: { name: 'Test User' },
     });
   });
 
-  describe('Admin Link', () => {
-    it('displays Admin link in desktop navigation when authenticated', async () => {
+  describe('Desktop Navigation (hidden on mobile, BottomTabBar handles mobile)', () => {
+    it('renders navigation links on desktop when authenticated', async () => {
       render(
         <TestWrapper>
           <Navigation />
@@ -78,40 +78,115 @@ describe('Navigation Component', () => {
 
       // Wait for auth state to resolve
       await waitFor(() => {
-        const desktopNav = screen.getByTestId('desktop-nav');
-        const adminLink = desktopNav.querySelector('a[href="/admin"]');
-        expect(adminLink).toBeInTheDocument();
+        // Core navigation links should be present
+        expect(screen.getByRole('link', { name: /home/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /flipside/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /account/i })).toBeInTheDocument();
       });
     });
 
-    it('displays Admin link in mobile navigation menu when authenticated', async () => {
+    it('renders brand link to home', async () => {
       render(
         <TestWrapper>
           <Navigation />
         </TestWrapper>
       );
 
-      // Wait for auth state to resolve
       await waitFor(() => {
-        const desktopNav = screen.getByTestId('desktop-nav');
-        const adminLink = desktopNav.querySelector('a[href="/admin"]');
-        expect(adminLink).toBeInTheDocument();
+        const brandLink = screen.getByRole('link', { name: /clack track/i });
+        expect(brandLink).toHaveAttribute('href', '/');
       });
     });
 
-    it('Admin link navigates to /admin', async () => {
+    it('hides login link when authenticated', async () => {
       render(
         <TestWrapper>
           <Navigation />
         </TestWrapper>
       );
 
-      // Wait for auth state to resolve
       await waitFor(() => {
-        const desktopNav = screen.getByTestId('desktop-nav');
-        const adminLink = desktopNav.querySelector('a[href="/admin"]');
-        expect(adminLink).toBeInTheDocument();
-        expect(adminLink).toHaveAttribute('href', '/admin');
+        // Login link should NOT be visible when authenticated
+        const loginLinks = screen.queryAllByRole('link', { name: /^login$/i });
+        expect(loginLinks.length).toBe(0);
+      });
+    });
+
+    it('shows login link when not authenticated', async () => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: false,
+        user: null,
+      });
+
+      render(
+        <TestWrapper>
+          <Navigation />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: /^login$/i })).toBeInTheDocument();
+      });
+    });
+
+    it('hides account link when not authenticated', async () => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: false,
+        user: null,
+      });
+
+      render(
+        <TestWrapper>
+          <Navigation />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        // Account link should NOT be visible when not authenticated
+        const accountLinks = screen.queryAllByRole('link', { name: /account/i });
+        expect(accountLinks.length).toBe(0);
+      });
+    });
+
+    it('includes Style Guide link in development mode', async () => {
+      render(
+        <TestWrapper>
+          <Navigation />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        // Style Guide should be present in test/dev mode
+        expect(screen.getByRole('link', { name: /style guide/i })).toBeInTheDocument();
+      });
+    });
+
+    it('navigation links have correct href attributes when authenticated', async () => {
+      render(
+        <TestWrapper>
+          <Navigation />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: /^home$/i })).toHaveAttribute('href', '/');
+        expect(screen.getByRole('link', { name: /flipside/i })).toHaveAttribute(
+          'href',
+          '/flipside'
+        );
+        expect(screen.getByRole('link', { name: /account/i })).toHaveAttribute('href', '/account');
+      });
+    });
+
+    it('shows logout button when authenticated', async () => {
+      render(
+        <TestWrapper>
+          <Navigation />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
       });
     });
   });

@@ -2,10 +2,10 @@
  * Navigation Component Tests (TDD)
  *
  * Testing auth-aware conditional link visibility:
- * - Hides /admin and /account when not authenticated
+ * - Hides /account when not authenticated
  * - Shows /login when not authenticated
  * - Hides /login and shows logout when authenticated
- * - Works in both mobile (Sheet) and desktop navigation
+ * - Desktop-only navigation (BottomTabBar handles mobile)
  * - No layout shift when auth state changes
  *
  * @jest-environment jsdom
@@ -51,19 +51,6 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
       });
     });
 
-    it('should hide Admin link in desktop navigation when not authenticated', async () => {
-      render(
-        <TestWrapper>
-          <Navigation />
-        </TestWrapper>
-      );
-
-      await waitFor(() => {
-        // Admin link should not be visible
-        expect(screen.queryByRole('link', { name: /^admin$/i })).not.toBeInTheDocument();
-      });
-    });
-
     it('should hide Account link in desktop navigation when not authenticated', async () => {
       render(
         <TestWrapper>
@@ -74,6 +61,19 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
       await waitFor(() => {
         // Account link should not be visible
         expect(screen.queryByRole('link', { name: /^account$/i })).not.toBeInTheDocument();
+      });
+    });
+
+    it('should hide Admin link in desktop navigation when not authenticated', async () => {
+      render(
+        <TestWrapper>
+          <Navigation />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        // Admin link should not be visible
+        expect(screen.queryByRole('link', { name: /^admin$/i })).not.toBeInTheDocument();
       });
     });
 
@@ -104,7 +104,7 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
       });
     });
 
-    it('should show public links (Welcome, The Flip Side) when not authenticated', async () => {
+    it('should show public links (Home, Flipside) when not authenticated', async () => {
       render(
         <TestWrapper>
           <Navigation />
@@ -113,8 +113,8 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
 
       await waitFor(() => {
         // Public links should always be visible
-        expect(screen.getByRole('link', { name: /welcome/i })).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: /the flip side/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /^home$/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /flipside/i })).toBeInTheDocument();
       });
     });
   });
@@ -124,20 +124,6 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
       (apiClient.apiClient.checkSession as jest.Mock).mockResolvedValue({
         authenticated: true,
         user: { name: 'Test User' },
-      });
-    });
-
-    it('should show Admin link in desktop navigation when authenticated', async () => {
-      render(
-        <TestWrapper>
-          <Navigation />
-        </TestWrapper>
-      );
-
-      await waitFor(() => {
-        const desktopNav = screen.getByTestId('desktop-nav');
-        const adminLink = desktopNav.querySelector('a[href="/admin"]');
-        expect(adminLink).toBeInTheDocument();
       });
     });
 
@@ -152,6 +138,20 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
         const desktopNav = screen.getByTestId('desktop-nav');
         const accountLink = desktopNav.querySelector('a[href="/account"]');
         expect(accountLink).toBeInTheDocument();
+      });
+    });
+
+    it('should show Admin link in desktop navigation when authenticated', async () => {
+      render(
+        <TestWrapper>
+          <Navigation />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        const desktopNav = screen.getByTestId('desktop-nav');
+        const adminLink = desktopNav.querySelector('a[href="/admin"]');
+        expect(adminLink).toBeInTheDocument();
       });
     });
 
@@ -181,7 +181,7 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
       });
     });
 
-    it('should show public links (Welcome, The Flip Side) when authenticated', async () => {
+    it('should show public links (Home, Flipside) when authenticated', async () => {
       render(
         <TestWrapper>
           <Navigation />
@@ -189,13 +189,13 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByRole('link', { name: /welcome/i })).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: /the flip side/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /^home$/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /flipside/i })).toBeInTheDocument();
       });
     });
   });
 
-  describe('Mobile Navigation (Sheet)', () => {
+  describe('Desktop-Only Navigation', () => {
     beforeEach(() => {
       (apiClient.apiClient.checkSession as jest.Mock).mockResolvedValue({
         authenticated: false,
@@ -203,140 +203,30 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
       });
     });
 
-    it('should hide Admin link in mobile menu when not authenticated', async () => {
+    it('should be desktop-only (mobile handled by BottomTabBar)', async () => {
+      const { container } = render(
+        <TestWrapper>
+          <Navigation />
+        </TestWrapper>
+      );
+
+      // Navigation uses hidden md:flex classes - hidden on mobile, flex on desktop
+      const nav = container.querySelector('nav');
+      expect(nav).toBeInTheDocument();
+      expect(nav).toHaveClass('hidden');
+      expect(nav).toHaveClass('md:flex');
+    });
+
+    it('should not have mobile menu button (BottomTabBar handles mobile)', async () => {
       render(
         <TestWrapper>
           <Navigation />
         </TestWrapper>
       );
 
-      // Open mobile menu
-      const menuButton = screen.getByRole('button', { name: /open menu/i });
-      fireEvent.click(menuButton);
-
-      await waitFor(() => {
-        const mobileNav = screen.getByTestId('mobile-nav');
-        const adminLink = mobileNav.querySelector('a[href="/admin"]');
-        expect(adminLink).not.toBeInTheDocument();
-      });
-    });
-
-    it('should hide Account link in mobile menu when not authenticated', async () => {
-      render(
-        <TestWrapper>
-          <Navigation />
-        </TestWrapper>
-      );
-
-      // Open mobile menu
-      const menuButton = screen.getByRole('button', { name: /open menu/i });
-      fireEvent.click(menuButton);
-
-      await waitFor(() => {
-        const mobileNav = screen.getByTestId('mobile-nav');
-        const accountLink = mobileNav.querySelector('a[href="/account"]');
-        expect(accountLink).not.toBeInTheDocument();
-      });
-    });
-
-    it('should show Login link in mobile menu when not authenticated', async () => {
-      render(
-        <TestWrapper>
-          <Navigation />
-        </TestWrapper>
-      );
-
-      // Open mobile menu
-      const menuButton = screen.getByRole('button', { name: /open menu/i });
-      fireEvent.click(menuButton);
-
-      await waitFor(() => {
-        const mobileNav = screen.getByTestId('mobile-nav');
-        const loginLink = mobileNav.querySelector('a[href="/login"]');
-        expect(loginLink).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Mobile Navigation (Sheet) - Authenticated', () => {
-    beforeEach(() => {
-      (apiClient.apiClient.checkSession as jest.Mock).mockResolvedValue({
-        authenticated: true,
-        user: { name: 'Test User' },
-      });
-    });
-
-    it('should show Admin link in mobile menu when authenticated', async () => {
-      render(
-        <TestWrapper>
-          <Navigation />
-        </TestWrapper>
-      );
-
-      // Open mobile menu
-      const menuButton = screen.getByRole('button', { name: /open menu/i });
-      fireEvent.click(menuButton);
-
-      await waitFor(() => {
-        const mobileNav = screen.getByTestId('mobile-nav');
-        const adminLink = mobileNav.querySelector('a[href="/admin"]');
-        expect(adminLink).toBeInTheDocument();
-      });
-    });
-
-    it('should show Account link in mobile menu when authenticated', async () => {
-      render(
-        <TestWrapper>
-          <Navigation />
-        </TestWrapper>
-      );
-
-      // Open mobile menu
-      const menuButton = screen.getByRole('button', { name: /open menu/i });
-      fireEvent.click(menuButton);
-
-      await waitFor(() => {
-        const mobileNav = screen.getByTestId('mobile-nav');
-        const accountLink = mobileNav.querySelector('a[href="/account"]');
-        expect(accountLink).toBeInTheDocument();
-      });
-    });
-
-    it('should hide Login link in mobile menu when authenticated', async () => {
-      render(
-        <TestWrapper>
-          <Navigation />
-        </TestWrapper>
-      );
-
-      // Open mobile menu
-      const menuButton = screen.getByRole('button', { name: /open menu/i });
-      fireEvent.click(menuButton);
-
-      await waitFor(() => {
-        const mobileNav = screen.getByTestId('mobile-nav');
-        const loginLink = mobileNav.querySelector('a[href="/login"]');
-        expect(loginLink).not.toBeInTheDocument();
-      });
-    });
-
-    it('should show Logout button in mobile menu when authenticated', async () => {
-      render(
-        <TestWrapper>
-          <Navigation />
-        </TestWrapper>
-      );
-
-      // Open mobile menu
-      const menuButton = screen.getByRole('button', { name: /open menu/i });
-      fireEvent.click(menuButton);
-
-      await waitFor(() => {
-        const mobileNav = screen.getByTestId('mobile-nav');
-        const logoutButton = mobileNav.querySelector('button');
-        expect(logoutButton).toBeInTheDocument();
-        expect(logoutButton).toHaveTextContent(/logout/i);
-      });
+      // No hamburger menu button - mobile nav is handled by BottomTabBar
+      const menuButton = screen.queryByRole('button', { name: /open menu/i });
+      expect(menuButton).not.toBeInTheDocument();
     });
   });
 
@@ -397,13 +287,13 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
       expect(nav).toBeInTheDocument();
 
       // Public links should be visible even during loading
-      expect(screen.getByRole('link', { name: /welcome/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^home$/i })).toBeInTheDocument();
 
       // After loading completes, authenticated links should appear
       await waitFor(() => {
         const desktopNav = screen.getByTestId('desktop-nav');
-        const adminLink = desktopNav.querySelector('a[href="/admin"]');
-        expect(adminLink).toBeInTheDocument();
+        const accountLink = desktopNav.querySelector('a[href="/account"]');
+        expect(accountLink).toBeInTheDocument();
       });
     });
 
@@ -426,8 +316,8 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
       // Wait for auth to complete
       await waitFor(() => {
         const desktopNav = screen.getByTestId('desktop-nav');
-        const adminLink = desktopNav.querySelector('a[href="/admin"]');
-        expect(adminLink).toBeInTheDocument();
+        const accountLink = desktopNav.querySelector('a[href="/account"]');
+        expect(accountLink).toBeInTheDocument();
       });
 
       // Nav should still be the same element (no re-mount)
@@ -456,7 +346,7 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
 
       // Protected links should be hidden
       await waitFor(() => {
-        expect(screen.queryByRole('link', { name: /^admin$/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /^account$/i })).not.toBeInTheDocument();
       });
     });
   });
