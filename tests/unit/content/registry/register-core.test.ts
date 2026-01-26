@@ -64,6 +64,7 @@ describe('registerCoreContent', () => {
     yoMomma: createMockGenerator('yoMomma'),
     issObserver: createMockGenerator('issObserver'),
     houseboyVent: createMockGenerator('houseboyVent'),
+    corporateHoroscope: createMockGenerator('corporateHoroscope'),
     staticFallback: createMockGenerator('fallback'),
   });
 
@@ -90,8 +91,8 @@ describe('registerCoreContent', () => {
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
       // globalNews, techNews, localNews, weather, haiku, seasonal, pattern,
       // showerThought, fortuneCookie, dailyRoast, serialStory, timePerspective,
-      // hotTake, novelInsight, languageLesson, alienFieldReport, happyToSeeMe, yoMomma, issObserver, houseboyVent = 20
-      expect(normalPriorityGens.length).toBe(20);
+      // hotTake, novelInsight, languageLesson, alienFieldReport, happyToSeeMe, yoMomma, issObserver, houseboyVent, corporateHoroscope = 21
+      expect(normalPriorityGens.length).toBe(21);
     });
   });
 
@@ -127,8 +128,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const allGenerators = registry.getAll();
-      // 20 P2 + 1 P3 = 21 total
-      expect(allGenerators.length).toBe(21);
+      // 21 P2 + 1 P3 = 22 total
+      expect(allGenerators.length).toBe(22);
     });
 
     it('should maintain correct priority distribution', () => {
@@ -140,10 +141,10 @@ describe('registerCoreContent', () => {
       const fallbackGens = registry.getByPriority(ContentPriority.FALLBACK);
       const notificationGens = registry.getByPriority(ContentPriority.NOTIFICATION);
 
-      // 20 P2 generators: globalNews, techNews, localNews, weather, haiku,
+      // 21 P2 generators: globalNews, techNews, localNews, weather, haiku,
       // seasonal, pattern, showerThought, fortuneCookie, dailyRoast, serialStory,
-      // timePerspective, hotTake, novelInsight, languageLesson, alienFieldReport, happyToSeeMe, yoMomma, issObserver, houseboyVent
-      expect(normalGens.length).toBe(20);
+      // timePerspective, hotTake, novelInsight, languageLesson, alienFieldReport, happyToSeeMe, yoMomma, issObserver, houseboyVent, corporateHoroscope
+      expect(normalGens.length).toBe(21);
       expect(fallbackGens.length).toBe(1);
       expect(notificationGens.length).toBe(0);
     });
@@ -207,8 +208,8 @@ describe('registerCoreContent', () => {
       registerCoreContent(registry, generators);
 
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
-      // All 20 P2 generators including 3 news generators
-      expect(normalPriorityGens.length).toBe(20);
+      // All 21 P2 generators including 3 news generators
+      expect(normalPriorityGens.length).toBe(21);
     });
 
     it('should not register old news-summary generator', () => {
