@@ -16,7 +16,8 @@ describe('Rate Limit Integration Tests', () => {
   describe('API Route Rate Limiting', () => {
     it('should apply rate limiting to /api/* routes', async () => {
       // Configure rate limiter with low limit for testing
-      const limiter = createRateLimiter({ windowMs: 60000, max: 3 });
+      // enabled: true ensures rate limiting works regardless of env var
+      const limiter = createRateLimiter({ windowMs: 60000, max: 3, enabled: true });
       app.use('/api', limiter);
 
       app.get('/api/test', (req, res) => {
@@ -35,7 +36,7 @@ describe('Rate Limit Integration Tests', () => {
     });
 
     it('should return 429 with error message when rate limited', async () => {
-      const limiter = createRateLimiter({ windowMs: 60000, max: 2 });
+      const limiter = createRateLimiter({ windowMs: 60000, max: 2, enabled: true });
       app.use('/api', limiter);
 
       app.get('/api/endpoint', (req, res) => {
@@ -53,7 +54,7 @@ describe('Rate Limit Integration Tests', () => {
     });
 
     it('should include Retry-After header in rate limit response', async () => {
-      const limiter = createRateLimiter({ windowMs: 60000, max: 1 });
+      const limiter = createRateLimiter({ windowMs: 60000, max: 1, enabled: true });
       app.use('/api', limiter);
 
       app.get('/api/limited', (req, res) => {
@@ -70,7 +71,7 @@ describe('Rate Limit Integration Tests', () => {
     });
 
     it('should not rate limit non-API routes', async () => {
-      const limiter = createRateLimiter({ windowMs: 60000, max: 2 });
+      const limiter = createRateLimiter({ windowMs: 60000, max: 2, enabled: true });
       app.use('/api', limiter);
 
       app.get('/public', (req, res) => {
@@ -85,7 +86,7 @@ describe('Rate Limit Integration Tests', () => {
     });
 
     it('should rate limit different API endpoints independently under same path', async () => {
-      const limiter = createRateLimiter({ windowMs: 60000, max: 3 });
+      const limiter = createRateLimiter({ windowMs: 60000, max: 3, enabled: true });
       app.use('/api', limiter);
 
       app.get('/api/endpoint1', (req, res) => {
@@ -107,7 +108,7 @@ describe('Rate Limit Integration Tests', () => {
     });
 
     it('should handle concurrent requests correctly', async () => {
-      const limiter = createRateLimiter({ windowMs: 60000, max: 5 });
+      const limiter = createRateLimiter({ windowMs: 60000, max: 5, enabled: true });
       app.use('/api', limiter);
 
       app.get('/api/concurrent', (req, res) => {
@@ -129,27 +130,29 @@ describe('Rate Limit Integration Tests', () => {
     it('should reset rate limit after time window', async () => {
       jest.useFakeTimers();
 
-      const limiter = createRateLimiter({ windowMs: 1000, max: 2 });
-      app.use('/api', limiter);
+      try {
+        const limiter = createRateLimiter({ windowMs: 1000, max: 2, enabled: true });
+        app.use('/api', limiter);
 
-      app.get('/api/reset-test', (req, res) => {
-        res.json({ ok: true });
-      });
+        app.get('/api/reset-test', (req, res) => {
+          res.json({ ok: true });
+        });
 
-      // Exceed limit
-      await request(app).get('/api/reset-test');
-      await request(app).get('/api/reset-test');
-      let response = await request(app).get('/api/reset-test');
-      expect(response.status).toBe(429);
+        // Exceed limit
+        await request(app).get('/api/reset-test');
+        await request(app).get('/api/reset-test');
+        let response = await request(app).get('/api/reset-test');
+        expect(response.status).toBe(429);
 
-      // Advance time past window
-      jest.advanceTimersByTime(1100);
+        // Advance time past window (use async version for proper promise handling)
+        await jest.advanceTimersByTimeAsync(1100);
 
-      // Should be allowed again
-      response = await request(app).get('/api/reset-test');
-      expect(response.status).toBe(200);
-
-      jest.useRealTimers();
+        // Should be allowed again
+        response = await request(app).get('/api/reset-test');
+        expect(response.status).toBe(200);
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 
@@ -157,36 +160,38 @@ describe('Rate Limit Integration Tests', () => {
     it('should respect custom window duration', async () => {
       jest.useFakeTimers();
 
-      const limiter = createRateLimiter({ windowMs: 2000, max: 1 });
-      app.use('/api', limiter);
+      try {
+        const limiter = createRateLimiter({ windowMs: 2000, max: 1, enabled: true });
+        app.use('/api', limiter);
 
-      app.get('/api/window', (req, res) => {
-        res.json({ ok: true });
-      });
+        app.get('/api/window', (req, res) => {
+          res.json({ ok: true });
+        });
 
-      // First request succeeds
-      let response = await request(app).get('/api/window');
-      expect(response.status).toBe(200);
+        // First request succeeds
+        let response = await request(app).get('/api/window');
+        expect(response.status).toBe(200);
 
-      // Second request blocked
-      response = await request(app).get('/api/window');
-      expect(response.status).toBe(429);
+        // Second request blocked
+        response = await request(app).get('/api/window');
+        expect(response.status).toBe(429);
 
-      // After less than window time, still blocked
-      jest.advanceTimersByTime(1000);
-      response = await request(app).get('/api/window');
-      expect(response.status).toBe(429);
+        // After less than window time, still blocked (use async version)
+        await jest.advanceTimersByTimeAsync(1000);
+        response = await request(app).get('/api/window');
+        expect(response.status).toBe(429);
 
-      // After full window, allowed
-      jest.advanceTimersByTime(1100);
-      response = await request(app).get('/api/window');
-      expect(response.status).toBe(200);
-
-      jest.useRealTimers();
+        // After full window, allowed (use async version)
+        await jest.advanceTimersByTimeAsync(1100);
+        response = await request(app).get('/api/window');
+        expect(response.status).toBe(200);
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     it('should respect custom max requests limit', async () => {
-      const limiter = createRateLimiter({ windowMs: 60000, max: 10 });
+      const limiter = createRateLimiter({ windowMs: 60000, max: 10, enabled: true });
       app.use('/api', limiter);
 
       app.get('/api/max', (req, res) => {
@@ -210,6 +215,7 @@ describe('Rate Limit Integration Tests', () => {
         windowMs: 60000,
         max: 1,
         message: customMessage,
+        enabled: true,
       });
       app.use('/api', limiter);
 
@@ -227,7 +233,7 @@ describe('Rate Limit Integration Tests', () => {
 
   describe('Error Response Format', () => {
     it('should return JSON error response', async () => {
-      const limiter = createRateLimiter({ windowMs: 60000, max: 1 });
+      const limiter = createRateLimiter({ windowMs: 60000, max: 1, enabled: true });
       app.use('/api', limiter);
 
       app.get('/api/json', (req, res) => {
@@ -243,7 +249,7 @@ describe('Rate Limit Integration Tests', () => {
     });
 
     it('should include standard rate limit headers', async () => {
-      const limiter = createRateLimiter({ windowMs: 60000, max: 2 });
+      const limiter = createRateLimiter({ windowMs: 60000, max: 2, enabled: true });
       app.use('/api', limiter);
 
       app.get('/api/headers', (req, res) => {
