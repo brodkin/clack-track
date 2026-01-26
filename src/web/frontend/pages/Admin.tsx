@@ -1,28 +1,33 @@
 /**
  * Admin Page (/admin)
  *
- * Circuit breaker management interface.
- * Displays all circuits grouped by type with toggle controls.
+ * Administrative interface for system management.
+ * Features:
+ * - Magic link invite generation for user registration
+ * - Circuit breaker management with toggle controls
  *
  * Architecture:
- * - Single Responsibility: Manages circuit breaker UI and state
+ * - Single Responsibility: Manages admin UI and state
  * - Dependency Inversion: Uses apiClient abstraction for API calls
  * - Open/Closed: Extensible via additional admin features
+ *
+ * Note: Authentication is handled by ProtectedRoute wrapper in App.tsx.
+ * This component only renders for authenticated users.
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { PageLayout } from '../components/PageLayout.js';
 import { CircuitBreakerCard, type Circuit } from '../components/CircuitBreakerCard.js';
+import { InviteForm } from '../components/InviteForm.js';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card.js';
 import { Button } from '../components/ui/button.js';
-import { AlertCircle, LogIn } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { apiClient } from '../services/apiClient.js';
 
 export function Admin() {
   const [circuits, setCircuits] = useState<Circuit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [loadingCircuitId, setLoadingCircuitId] = useState<string | null>(null);
 
   /**
@@ -31,7 +36,6 @@ export function Admin() {
   const fetchCircuits = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    setIsUnauthorized(false);
 
     try {
       const response = await apiClient.getCircuits();
@@ -40,12 +44,7 @@ export function Admin() {
       }
     } catch (err) {
       const error = err as Error;
-      // Check for 401 Unauthorized
-      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-        setIsUnauthorized(true);
-      } else {
-        setError(error.message || 'Failed to load circuits');
-      }
+      setError(error.message || 'Failed to load circuits');
     } finally {
       setIsLoading(false);
     }
@@ -118,34 +117,6 @@ export function Admin() {
     );
   }
 
-  // Unauthorized state - prompt to log in
-  if (isUnauthorized) {
-    return (
-      <PageLayout>
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">Admin</h1>
-          <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-6">
-              <LogIn className="h-8 w-8 text-amber-600 dark:text-amber-400" />
-            </div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              Authentication Required
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Please log in to access admin features.
-            </p>
-            <Link to="/login">
-              <Button>
-                <LogIn className="h-4 w-4 mr-2" />
-                Log In
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </PageLayout>
-    );
-  }
-
   // Error state (only if no circuits loaded)
   if (error && circuits.length === 0) {
     return (
@@ -176,6 +147,19 @@ export function Admin() {
             <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
           </div>
         )}
+
+        {/* User Invites Section */}
+        <section data-testid="user-invites-section" className="mb-8">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">User Invites</h2>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Generate Registration Link</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <InviteForm />
+            </CardContent>
+          </Card>
+        </section>
 
         {/* System Controls Section */}
         <section data-testid="system-controls-section" className="mb-8">

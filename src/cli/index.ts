@@ -12,6 +12,7 @@ import {
   circuitOffCommand,
   circuitResetCommand,
   circuitWatchCommand,
+  authInviteCommand,
 } from './commands/index.js';
 import { frameCommand } from './commands/frame.js';
 
@@ -171,6 +172,17 @@ export async function runCLI(args: string[]): Promise<void> {
       });
       break;
     }
+    case 'auth:invite': {
+      const options = parseOptions(args);
+      const email = typeof options.email === 'string' ? options.email : undefined;
+      if (!email) {
+        console.error('Error: auth:invite requires --email argument');
+        console.error('Usage: npm run auth:invite -- --email user@example.com');
+        break;
+      }
+      await authInviteCommand({ email });
+      break;
+    }
     default:
       console.log(`
 Clack Track CLI
@@ -190,6 +202,7 @@ Usage:
   npm run circuit:off <id>              Turn a circuit OFF (disable)
   npm run circuit:reset <id>            Reset a provider circuit (clears counters)
   npm run circuit:watch [options]       Watch circuit status in real-time
+  npm run auth:invite --email <email>   Generate magic link for user registration
 
 Available commands:
   generate        Generate new content and send to Vestaboard
@@ -206,6 +219,7 @@ Available commands:
   circuit:off     Turn a circuit OFF (block traffic)
   circuit:reset   Reset a provider circuit to ON state
   circuit:watch   Watch circuit status in real-time (Ctrl+C to exit)
+  auth:invite     Generate magic link for user registration invite
 
 Generate Options:
   --generator <id>     Force specific generator (use content:list to see IDs)
@@ -243,6 +257,10 @@ Circuit Commands:
 Circuit Watch Options:
   --interval <ms>      Refresh interval in milliseconds (default: 2000)
   --json               Output in JSON format (newline-delimited)
+
+Auth Options:
+  auth:invite          Generate a magic link invite for user registration
+    --email <email>    Email address to invite (required)
       `);
   }
 }

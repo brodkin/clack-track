@@ -80,12 +80,36 @@ jest.mock('../../src/storage/repositories/index.js', () => ({
     recordSuccess: jest.fn(),
     resetCounters: jest.fn(),
   })),
+  SessionRepository: jest.fn().mockImplementation(() => ({
+    create: jest.fn(),
+    findByToken: jest.fn(),
+    delete: jest.fn(),
+  })),
+  UserRepository: jest.fn().mockImplementation(() => ({
+    create: jest.fn(),
+    findById: jest.fn(),
+    findByEmail: jest.fn(),
+  })),
+  CredentialRepository: jest.fn().mockImplementation(() => ({
+    save: jest.fn(),
+    findByCredentialId: jest.fn(),
+    findByUserId: jest.fn(),
+  })),
+  MagicLinkRepository: jest.fn().mockImplementation(() => ({
+    create: jest.fn(),
+    findByToken: jest.fn(),
+    markAsUsed: jest.fn(),
+  })),
 }));
 
 jest.mock('../../src/storage/models/index.js', () => ({
   ContentModel: jest.fn().mockImplementation(() => ({})),
   VoteModel: jest.fn().mockImplementation(() => ({})),
   LogModel: jest.fn().mockImplementation(() => ({})),
+  SessionModel: jest.fn().mockImplementation(() => ({})),
+  UserModel: jest.fn().mockImplementation(() => ({})),
+  CredentialModel: jest.fn().mockImplementation(() => ({})),
+  MagicLinkModel: jest.fn().mockImplementation(() => ({})),
 }));
 
 jest.mock('../../src/services/circuit-breaker-service.js', () => ({
