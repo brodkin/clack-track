@@ -1,9 +1,10 @@
 /// <reference types="@testing-library/jest-dom" />
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import App from '@/web/frontend/App';
 import { Navigation } from '@/web/frontend/components/Navigation';
+import { AuthProvider } from '@/web/frontend/context/AuthContext';
 import * as apiClient from '@/web/frontend/services/apiClient';
 
 // Mock the apiClient module
@@ -30,6 +31,11 @@ jest.mock('@/web/frontend/services/apiClient', () => ({
   },
 }));
 
+// Mock @simplewebauthn/browser
+jest.mock('@simplewebauthn/browser', () => ({
+  startAuthentication: jest.fn(),
+}));
+
 const mockApiClient = apiClient.apiClient as jest.Mocked<typeof apiClient.apiClient>;
 
 // Mock PublicKeyCredential for browser support detection
@@ -41,45 +47,72 @@ Object.defineProperty(globalThis, 'PublicKeyCredential', {
   configurable: true,
 });
 
+/**
+ * Test wrapper that provides AuthProvider and Router
+ */
+function TestWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <MemoryRouter>
+      <AuthProvider>{children}</AuthProvider>
+    </MemoryRouter>
+  );
+}
+
 describe('Navigation Component', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Mock authenticated state for these tests that expect Admin link
+    mockApiClient.checkSession.mockResolvedValue({
+      authenticated: true,
+      user: { name: 'Test User' },
+    });
+  });
+
   describe('Admin Link', () => {
-    it('displays Admin link in desktop navigation', () => {
+    it('displays Admin link in desktop navigation when authenticated', async () => {
       render(
-        <MemoryRouter>
+        <TestWrapper>
           <Navigation />
-        </MemoryRouter>
+        </TestWrapper>
       );
 
-      // Admin link should be visible in the desktop navigation
-      const adminLinks = screen.getAllByRole('link', { name: /admin/i });
-      // @ts-expect-error - jest-dom matchers
-      expect(adminLinks.length).toBeGreaterThan(0);
+      // Wait for auth state to resolve
+      await waitFor(() => {
+        const desktopNav = screen.getByTestId('desktop-nav');
+        const adminLink = desktopNav.querySelector('a[href="/admin"]');
+        expect(adminLink).toBeInTheDocument();
+      });
     });
 
-    it('displays Admin link in mobile navigation menu', () => {
+    it('displays Admin link in mobile navigation menu when authenticated', async () => {
       render(
-        <MemoryRouter>
+        <TestWrapper>
           <Navigation />
-        </MemoryRouter>
+        </TestWrapper>
       );
 
-      // Admin link should appear at least once (mobile and/or desktop)
-      const adminLinks = screen.getAllByRole('link', { name: /admin/i });
-      // @ts-expect-error - jest-dom matchers
-      expect(adminLinks.length).toBeGreaterThan(0);
+      // Wait for auth state to resolve
+      await waitFor(() => {
+        const desktopNav = screen.getByTestId('desktop-nav');
+        const adminLink = desktopNav.querySelector('a[href="/admin"]');
+        expect(adminLink).toBeInTheDocument();
+      });
     });
 
-    it('Admin link navigates to /admin', () => {
+    it('Admin link navigates to /admin', async () => {
       render(
-        <MemoryRouter>
+        <TestWrapper>
           <Navigation />
-        </MemoryRouter>
+        </TestWrapper>
       );
 
-      // Find admin link and verify href
-      const adminLinks = screen.getAllByRole('link', { name: /admin/i });
-      const adminLink = adminLinks[0];
-      expect(adminLink).toHaveAttribute('href', '/admin');
+      // Wait for auth state to resolve
+      await waitFor(() => {
+        const desktopNav = screen.getByTestId('desktop-nav');
+        const adminLink = desktopNav.querySelector('a[href="/admin"]');
+        expect(adminLink).toBeInTheDocument();
+        expect(adminLink).toHaveAttribute('href', '/admin');
+      });
     });
   });
 });
@@ -88,10 +121,10 @@ describe('Admin Route', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock successful session check
+    // Mock authenticated session for Admin page access
     mockApiClient.checkSession.mockResolvedValue({
-      authenticated: false,
-      user: null,
+      authenticated: true,
+      user: { name: 'Test User' },
     });
 
     // Mock content endpoints

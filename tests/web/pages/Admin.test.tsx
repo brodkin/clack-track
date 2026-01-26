@@ -1,11 +1,15 @@
 /**
- * Admin Page Tests (TDD - RED Phase)
+ * Admin Page Tests
  *
  * Tests for the Admin page component focusing on:
  * - Loading state while fetching circuits
- * - Error state when fetch fails
+ * - Error state when fetch fails (including API errors)
  * - Grouping circuits by type (System Controls vs Provider Circuits)
  * - Toggle actions calling appropriate API endpoints
+ *
+ * Note: Authentication is handled by ProtectedRoute wrapper in App.tsx.
+ * See tests/web/components/ProtectedRoute.test.tsx for auth tests.
+ * Admin component only renders for authenticated users.
  */
 
 /// <reference types="@testing-library/jest-dom" />
@@ -13,21 +17,26 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { Admin } from '@/web/frontend/pages/Admin';
-import { apiClient } from '@/web/frontend/services/apiClient';
+import { AuthProvider } from '@/web/frontend/context/AuthContext';
+import * as apiClientModule from '@/web/frontend/services/apiClient';
 import type { Circuit } from '@/web/frontend/components/CircuitBreakerCard';
 
-// Mock the apiClient
+// Mock the apiClient module
 jest.mock('@/web/frontend/services/apiClient', () => ({
   apiClient: {
     getCircuits: jest.fn(),
     enableCircuit: jest.fn(),
     disableCircuit: jest.fn(),
     resetCircuit: jest.fn(),
+    checkSession: jest.fn(),
+    startLogin: jest.fn(),
+    verifyLogin: jest.fn(),
+    logout: jest.fn(),
   },
 }));
 
 // Get typed mocks
-const mockApiClient = apiClient as jest.Mocked<typeof apiClient>;
+const mockApiClient = apiClientModule.apiClient as jest.Mocked<typeof apiClientModule.apiClient>;
 
 // Test fixtures for circuits
 const mockCircuits: Circuit[] = [
@@ -65,10 +74,33 @@ const mockCircuits: Circuit[] = [
   },
 ];
 
+/**
+ * Helper to render Admin with required providers
+ * Since Admin is protected by ProtectedRoute in the actual app,
+ * these tests assume the user is authenticated (as Admin only renders for auth users)
+ */
+function renderAdmin() {
+  return render(
+    <MemoryRouter>
+      <AuthProvider>
+        <Admin />
+      </AuthProvider>
+    </MemoryRouter>
+  );
+}
+
 describe('Admin Page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Default successful response
+
+    // Mock authenticated session for AuthProvider
+    // Admin component only renders for authenticated users (protected by ProtectedRoute)
+    mockApiClient.checkSession.mockResolvedValue({
+      authenticated: true,
+      user: { name: 'Test Admin' },
+    });
+
+    // Default successful response for circuits
     mockApiClient.getCircuits.mockResolvedValue({
       success: true,
       data: mockCircuits,
@@ -89,11 +121,7 @@ describe('Admin Page', () => {
       );
 
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert: Loading state shown initially
       expect(screen.getByText(/loading/i)).toBeInTheDocument();
@@ -101,11 +129,7 @@ describe('Admin Page', () => {
 
     it('should hide loading state after circuits are fetched', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert: Loading state disappears
       await waitFor(() => {
@@ -120,11 +144,7 @@ describe('Admin Page', () => {
       mockApiClient.getCircuits.mockRejectedValue(new Error('Network error'));
 
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert
       await waitFor(() => {
@@ -137,11 +157,7 @@ describe('Admin Page', () => {
       mockApiClient.getCircuits.mockRejectedValue(new Error('Failed to load'));
 
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert
       await waitFor(() => {
@@ -156,11 +172,7 @@ describe('Admin Page', () => {
         .mockResolvedValueOnce({ success: true, data: mockCircuits });
 
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Wait for error state
       await waitFor(() => {
@@ -179,52 +191,10 @@ describe('Admin Page', () => {
     });
   });
 
-  describe('Authorization State', () => {
-    it('should show login prompt when API returns 401 Unauthorized', async () => {
-      // Arrange
-      mockApiClient.getCircuits.mockRejectedValue(new Error('401 Unauthorized'));
-
-      // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
-
-      // Assert
-      await waitFor(() => {
-        expect(screen.getByText(/authentication required/i)).toBeInTheDocument();
-      });
-      expect(screen.getByRole('link', { name: /log in/i })).toBeInTheDocument();
-    });
-
-    it('should link to login page when unauthorized', async () => {
-      // Arrange
-      mockApiClient.getCircuits.mockRejectedValue(new Error('Unauthorized'));
-
-      // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
-
-      // Assert
-      await waitFor(() => {
-        const loginLink = screen.getByRole('link', { name: /log in/i });
-        expect(loginLink).toHaveAttribute('href', '/login');
-      });
-    });
-  });
-
   describe('Circuit Grouping', () => {
     it('should display "System Controls" section', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert
       await waitFor(() => {
@@ -234,11 +204,7 @@ describe('Admin Page', () => {
 
     it('should display "Provider Circuits" section', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert
       await waitFor(() => {
@@ -248,11 +214,7 @@ describe('Admin Page', () => {
 
     it('should group MASTER and SLEEP_MODE under System Controls', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert
       await waitFor(() => {
@@ -271,11 +233,7 @@ describe('Admin Page', () => {
 
     it('should group OPENAI and ANTHROPIC under Provider Circuits', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert
       await waitFor(() => {
@@ -296,11 +254,7 @@ describe('Admin Page', () => {
   describe('Circuit Card Rendering', () => {
     it('should render a CircuitBreakerCard for each circuit', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert: All four circuits are rendered
       await waitFor(() => {
@@ -313,11 +267,7 @@ describe('Admin Page', () => {
 
     it('should display correct state badges', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert: Check for state badges
       await waitFor(() => {
@@ -333,11 +283,7 @@ describe('Admin Page', () => {
 
     it('should show failure count for provider circuits', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert
       await waitFor(() => {
@@ -352,11 +298,7 @@ describe('Admin Page', () => {
   describe('Toggle Actions', () => {
     it('should call enableCircuit when toggling off circuit to on', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Wait for circuits to load
       await waitFor(() => {
@@ -379,11 +321,7 @@ describe('Admin Page', () => {
 
     it('should call disableCircuit when toggling on circuit to off', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Wait for circuits to load
       await waitFor(() => {
@@ -406,11 +344,7 @@ describe('Admin Page', () => {
 
     it('should refetch circuits after successful toggle', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Wait for initial load
       await waitFor(() => {
@@ -438,11 +372,7 @@ describe('Admin Page', () => {
       mockApiClient.disableCircuit.mockRejectedValue(new Error('Toggle failed'));
 
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Wait for circuits to load
       await waitFor(() => {
@@ -466,11 +396,7 @@ describe('Admin Page', () => {
   describe('Reset Actions for Provider Circuits', () => {
     it('should render reset button for provider circuits', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert
       await waitFor(() => {
@@ -483,11 +409,7 @@ describe('Admin Page', () => {
 
     it('should not render reset button for system control circuits', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert
       await waitFor(() => {
@@ -499,11 +421,7 @@ describe('Admin Page', () => {
 
     it('should call resetCircuit when reset button is clicked', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Wait for circuits to load
       await waitFor(() => {
@@ -528,11 +446,7 @@ describe('Admin Page', () => {
 
     it('should refetch circuits after successful reset', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Wait for initial load
       await waitFor(() => {
@@ -561,11 +475,7 @@ describe('Admin Page', () => {
   describe('Page Header', () => {
     it('should display page title "Admin"', async () => {
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert
       await waitFor(() => {
@@ -583,11 +493,7 @@ describe('Admin Page', () => {
       });
 
       // Act
-      render(
-        <MemoryRouter>
-          <Admin />
-        </MemoryRouter>
-      );
+      renderAdmin();
 
       // Assert: Should still render sections, just empty
       await waitFor(() => {

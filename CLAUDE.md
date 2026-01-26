@@ -432,7 +432,53 @@ if (eventHandler) {
 - **Rate Limiting** - 100 requests per 15 minutes on `/api/*` routes
   - Configurable via `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX_REQUESTS`
   - Returns 429 status with `RateLimit-*` headers
-- **Middleware Order** - Helmet → Compression → CORS → Rate Limit → Static → JSON → Routes
+- **Middleware Order** - Helmet → Compression → CORS → Rate Limit → Static → JSON → Session → Auth Bypass → Routes
+
+### Auth Bypass for Playwright Testing
+
+For automated end-to-end testing with Playwright, an auth bypass mechanism allows tests to authenticate without going through the full WebAuthn/magic link flow.
+
+**Security guarantees:**
+
+- Disabled by default (`AUTH_BYPASS_ENABLED` must be explicitly set to `'true'`)
+- Hard block in production (`NODE_ENV === 'production'` always disables bypass)
+- Creates real database sessions that work with `requireAuth` middleware
+- Sessions are marked with audit data (`authBypass: true, source: 'playwright'`)
+
+**Environment configuration:**
+
+```bash
+# Enable auth bypass (development/test only)
+AUTH_BYPASS_ENABLED=true
+NODE_ENV=development  # or 'test'
+```
+
+**Playwright usage:**
+
+```typescript
+// In your Playwright test setup
+await page.setExtraHTTPHeaders({
+  'X-Auth-Bypass': 'test@playwright.local',
+});
+
+// Now all requests will be authenticated as this user
+// If user doesn't exist, it will be created automatically
+await page.goto('/account'); // Protected route - now accessible
+```
+
+**How it works:**
+
+1. Playwright sets `X-Auth-Bypass` header with user email
+2. Auth bypass middleware intercepts the request
+3. Looks up or creates user by email (auto-creates with name "Test User (Playwright)")
+4. Creates a real database session
+5. Sets session cookie for subsequent requests
+6. Attaches user/session to request (skips requireAuth validation)
+
+**Key files:**
+
+- `src/web/middleware/auth-bypass.ts` - Bypass middleware implementation
+- `tests/integration/web/middleware/auth-bypass.test.ts` - Integration tests
 
 ### Module Resolution
 
