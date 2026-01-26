@@ -397,9 +397,8 @@ describe('Account Page', () => {
         expect(screen.getByText('Demo User')).toBeInTheDocument();
       });
 
-      // Admin section should not be visible
+      // Admin section should not be visible (checking for heading, not nav tabs)
       expect(screen.queryByText(/system administration/i)).toBeNull();
-      expect(screen.queryByText(/admin/i, { selector: 'span' })).toBeNull();
     });
 
     it('should show admin section for admin users', async () => {

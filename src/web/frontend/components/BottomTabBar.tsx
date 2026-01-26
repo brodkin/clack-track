@@ -14,9 +14,10 @@
  */
 
 import { NavLink } from 'react-router-dom';
-import { Home, Clock, User } from 'lucide-react';
+import { Home, Clock, Settings, User } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { triggerHaptic } from '../lib/animations';
+import { useAuth } from '../context/AuthContext.js';
 
 interface BottomTabBarProps {
   className?: string;
@@ -28,11 +29,14 @@ interface TabConfig {
   icon: typeof Home;
   /** Use 'end' prop on NavLink for exact matching (/ route) */
   exact?: boolean;
+  /** If true, only show when authenticated */
+  requiresAuth?: boolean;
 }
 
 const tabs: TabConfig[] = [
   { to: '/', label: 'Home', icon: Home, exact: true },
   { to: '/flipside', label: 'History', icon: Clock },
+  { to: '/admin', label: 'Admin', icon: Settings, requiresAuth: true },
   { to: '/account', label: 'Account', icon: User },
 ];
 
@@ -41,6 +45,11 @@ const tabs: TabConfig[] = [
  * Hidden on desktop (md breakpoint and above).
  */
 export function BottomTabBar({ className }: BottomTabBarProps) {
+  const { isAuthenticated } = useAuth();
+
+  // Filter tabs based on auth state
+  const visibleTabs = tabs.filter(tab => !tab.requiresAuth || isAuthenticated);
+
   const handleTabClick = () => {
     triggerHaptic('light');
   };
@@ -73,7 +82,7 @@ export function BottomTabBar({ className }: BottomTabBarProps) {
         className
       )}
     >
-      {tabs.map(tab => (
+      {visibleTabs.map(tab => (
         <NavLink
           key={tab.to}
           to={tab.to}

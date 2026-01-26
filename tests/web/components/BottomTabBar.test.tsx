@@ -5,31 +5,67 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
-import { BrowserRouter, MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { BottomTabBar } from '../../../src/web/frontend/components/BottomTabBar';
+import { AuthProvider } from '../../../src/web/frontend/context/AuthContext';
 import { triggerHaptic } from '../../../src/web/frontend/lib/animations';
+import * as apiClient from '../../../src/web/frontend/services/apiClient';
 
 // Mock haptic feedback
 jest.mock('../../../src/web/frontend/lib/animations', () => ({
   triggerHaptic: jest.fn(),
 }));
 
+// Mock API client
+jest.mock('../../../src/web/frontend/services/apiClient');
+
+// Mock @simplewebauthn/browser
+jest.mock('@simplewebauthn/browser', () => ({
+  startAuthentication: jest.fn(),
+}));
+
+const mockApiClient = apiClient.apiClient as jest.Mocked<typeof apiClient.apiClient>;
 const mockedTriggerHaptic = triggerHaptic as jest.MockedFunction<typeof triggerHaptic>;
+
+/**
+ * Wrapper with auth context
+ */
+function AuthWrapper({
+  children,
+  initialEntries = ['/'],
+}: {
+  children: React.ReactNode;
+  initialEntries?: string[];
+}) {
+  return (
+    <MemoryRouter initialEntries={initialEntries}>
+      <AuthProvider>{children}</AuthProvider>
+    </MemoryRouter>
+  );
+}
 
 describe('BottomTabBar', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default to unauthenticated state
+    mockApiClient.checkSession.mockResolvedValue({
+      authenticated: false,
+      user: null,
+    });
   });
 
-  describe('rendering', () => {
-    it('renders all three navigation tabs', () => {
+  describe('rendering - unauthenticated', () => {
+    it('renders three navigation tabs when not authenticated (no Admin)', async () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
-      // Check for all three tabs by their accessible roles
+      // Wait for auth check to complete
+      await screen.findByRole('navigation');
+
+      // Check for three tabs (Home, History, Account - no Admin)
       const links = screen.getAllByRole('link');
       expect(links).toHaveLength(3);
 
@@ -37,13 +73,14 @@ describe('BottomTabBar', () => {
       expect(screen.getByText('Home')).toBeInTheDocument();
       expect(screen.getByText('History')).toBeInTheDocument();
       expect(screen.getByText('Account')).toBeInTheDocument();
+      expect(screen.queryByText('Admin')).not.toBeInTheDocument();
     });
 
     it('renders Home tab with correct route', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const homeLink = screen.getByRole('link', { name: /home/i });
@@ -52,9 +89,9 @@ describe('BottomTabBar', () => {
 
     it('renders History tab with correct route', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const historyLink = screen.getByRole('link', { name: /history/i });
@@ -63,9 +100,9 @@ describe('BottomTabBar', () => {
 
     it('renders Account tab with correct route', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const accountLink = screen.getByRole('link', { name: /account/i });
@@ -74,9 +111,9 @@ describe('BottomTabBar', () => {
 
     it('applies custom className when provided', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar className="custom-class" />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       // The nav element should contain the custom class
@@ -85,12 +122,68 @@ describe('BottomTabBar', () => {
     });
   });
 
+  describe('rendering - authenticated', () => {
+    beforeEach(() => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: true,
+        user: { name: 'Test User' },
+      });
+    });
+
+    it('renders four navigation tabs when authenticated (includes Admin)', async () => {
+      render(
+        <AuthWrapper>
+          <BottomTabBar />
+        </AuthWrapper>
+      );
+
+      // Wait for auth check to complete
+      await screen.findByText('Admin');
+
+      // Check for four tabs (Home, History, Admin, Account)
+      const links = screen.getAllByRole('link');
+      expect(links).toHaveLength(4);
+
+      // Check all tab labels exist
+      expect(screen.getByText('Home')).toBeInTheDocument();
+      expect(screen.getByText('History')).toBeInTheDocument();
+      expect(screen.getByText('Admin')).toBeInTheDocument();
+      expect(screen.getByText('Account')).toBeInTheDocument();
+    });
+
+    it('renders Admin tab with correct route when authenticated', async () => {
+      render(
+        <AuthWrapper>
+          <BottomTabBar />
+        </AuthWrapper>
+      );
+
+      await screen.findByText('Admin');
+
+      const adminLink = screen.getByRole('link', { name: /admin/i });
+      expect(adminLink).toHaveAttribute('href', '/admin');
+    });
+
+    it('shows Admin tab as active when on admin route', async () => {
+      render(
+        <AuthWrapper initialEntries={['/admin']}>
+          <BottomTabBar />
+        </AuthWrapper>
+      );
+
+      await screen.findByText('Admin');
+
+      const adminLink = screen.getByRole('link', { name: /admin/i });
+      expect(adminLink).toHaveClass('text-amber-600');
+    });
+  });
+
   describe('active state', () => {
     it('shows Home tab as active when on home route', () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
+        <AuthWrapper initialEntries={['/']}>
           <BottomTabBar />
-        </MemoryRouter>
+        </AuthWrapper>
       );
 
       // Home tab should have active styling (amber color)
@@ -100,9 +193,9 @@ describe('BottomTabBar', () => {
 
     it('shows History tab as active when on flipside route', () => {
       render(
-        <MemoryRouter initialEntries={['/flipside']}>
+        <AuthWrapper initialEntries={['/flipside']}>
           <BottomTabBar />
-        </MemoryRouter>
+        </AuthWrapper>
       );
 
       const historyLink = screen.getByRole('link', { name: /history/i });
@@ -111,9 +204,9 @@ describe('BottomTabBar', () => {
 
     it('shows Account tab as active when on account route', () => {
       render(
-        <MemoryRouter initialEntries={['/account']}>
+        <AuthWrapper initialEntries={['/account']}>
           <BottomTabBar />
-        </MemoryRouter>
+        </AuthWrapper>
       );
 
       const accountLink = screen.getByRole('link', { name: /account/i });
@@ -122,9 +215,9 @@ describe('BottomTabBar', () => {
 
     it('shows inactive tabs with muted color', () => {
       render(
-        <MemoryRouter initialEntries={['/']}>
+        <AuthWrapper initialEntries={['/']}>
           <BottomTabBar />
-        </MemoryRouter>
+        </AuthWrapper>
       );
 
       // History and Account should be inactive (gray color)
@@ -139,9 +232,9 @@ describe('BottomTabBar', () => {
   describe('haptic feedback', () => {
     it('triggers light haptic feedback on tab click', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const historyLink = screen.getByRole('link', { name: /history/i });
@@ -152,9 +245,9 @@ describe('BottomTabBar', () => {
 
     it('triggers haptic feedback on each tab click', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const homeLink = screen.getByRole('link', { name: /home/i });
@@ -171,9 +264,9 @@ describe('BottomTabBar', () => {
   describe('accessibility', () => {
     it('has navigation landmark role', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       expect(screen.getByRole('navigation')).toBeInTheDocument();
@@ -181,9 +274,9 @@ describe('BottomTabBar', () => {
 
     it('has aria-label for navigation', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const nav = screen.getByRole('navigation');
@@ -192,9 +285,9 @@ describe('BottomTabBar', () => {
 
     it('tabs have focus-visible ring styles', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const links = screen.getAllByRole('link');
@@ -205,9 +298,9 @@ describe('BottomTabBar', () => {
 
     it('tabs meet minimum touch target size (44px)', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const links = screen.getAllByRole('link');
@@ -221,9 +314,9 @@ describe('BottomTabBar', () => {
   describe('styling', () => {
     it('has floating pill shape with glass effect', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const nav = screen.getByRole('navigation');
@@ -233,9 +326,9 @@ describe('BottomTabBar', () => {
 
     it('has fixed positioning at bottom center', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const nav = screen.getByRole('navigation');
@@ -247,9 +340,9 @@ describe('BottomTabBar', () => {
 
     it('is hidden on desktop (md breakpoint)', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const nav = screen.getByRole('navigation');
@@ -258,9 +351,9 @@ describe('BottomTabBar', () => {
 
     it('has safe area padding for notched devices', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const nav = screen.getByRole('navigation');
@@ -269,9 +362,9 @@ describe('BottomTabBar', () => {
 
     it('has shadow and border for depth', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const nav = screen.getByRole('navigation');
@@ -281,9 +374,9 @@ describe('BottomTabBar', () => {
 
     it('has smooth transition on state changes', () => {
       render(
-        <BrowserRouter>
+        <AuthWrapper>
           <BottomTabBar />
-        </BrowserRouter>
+        </AuthWrapper>
       );
 
       const links = screen.getAllByRole('link');
