@@ -1116,7 +1116,7 @@ describe('Frontend Auth Components Integration', () => {
         });
       });
 
-      it('should show Account link when authenticated (Admin is inside Account page)', async () => {
+      it('should show Account and Admin links when authenticated', async () => {
         render(
           <MemoryRouter>
             <AuthProvider>
@@ -1126,10 +1126,12 @@ describe('Frontend Auth Components Integration', () => {
         );
 
         await waitFor(() => {
-          // Account should be visible for authenticated users
-          // Admin is now inside the Account page, not in the navigation
+          // Account and Admin should be visible for authenticated users
           const accountLinks = screen.getAllByRole('link', { name: /account/i });
           expect(accountLinks.length).toBeGreaterThan(0);
+
+          const adminLinks = screen.getAllByRole('link', { name: /admin/i });
+          expect(adminLinks.length).toBeGreaterThan(0);
         });
       });
 
@@ -1164,7 +1166,7 @@ describe('Frontend Auth Components Integration', () => {
         });
       });
 
-      it('should have correct href attribute for Account link', async () => {
+      it('should have correct href attributes for auth-required links', async () => {
         render(
           <MemoryRouter>
             <AuthProvider>
@@ -1176,7 +1178,9 @@ describe('Frontend Auth Components Integration', () => {
         await waitFor(() => {
           const accountLink = screen.getAllByRole('link', { name: /account/i })[0];
           expect(accountLink).toHaveAttribute('href', '/account');
-          // Admin is now inside the Account page, not a separate nav link
+
+          const adminLink = screen.getAllByRole('link', { name: /admin/i })[0];
+          expect(adminLink).toHaveAttribute('href', '/admin');
         });
       });
     });
@@ -1189,7 +1193,7 @@ describe('Frontend Auth Components Integration', () => {
         });
       });
 
-      it('should hide Account link when not authenticated (Admin is inside Account page)', async () => {
+      it('should hide Account and Admin links when not authenticated', async () => {
         render(
           <MemoryRouter>
             <AuthProvider>
@@ -1199,9 +1203,9 @@ describe('Frontend Auth Components Integration', () => {
         );
 
         await waitFor(() => {
-          // Account should be hidden for unauthenticated users
-          // Admin is inside the Account page, not a separate nav link
+          // Account and Admin should be hidden for unauthenticated users
           expect(screen.queryByRole('link', { name: /account/i })).toBeNull();
+          expect(screen.queryByRole('link', { name: /admin/i })).toBeNull();
         });
       });
 

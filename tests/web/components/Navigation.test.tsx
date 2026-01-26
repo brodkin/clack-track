@@ -64,6 +64,19 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
       });
     });
 
+    it('should hide Admin link in desktop navigation when not authenticated', async () => {
+      render(
+        <TestWrapper>
+          <Navigation />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        // Admin link should not be visible
+        expect(screen.queryByRole('link', { name: /^admin$/i })).not.toBeInTheDocument();
+      });
+    });
+
     it('should show Login link in desktop navigation when not authenticated', async () => {
       render(
         <TestWrapper>
@@ -125,6 +138,20 @@ describe('Navigation Component - Auth-Aware Visibility', () => {
         const desktopNav = screen.getByTestId('desktop-nav');
         const accountLink = desktopNav.querySelector('a[href="/account"]');
         expect(accountLink).toBeInTheDocument();
+      });
+    });
+
+    it('should show Admin link in desktop navigation when authenticated', async () => {
+      render(
+        <TestWrapper>
+          <Navigation />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        const desktopNav = screen.getByTestId('desktop-nav');
+        const adminLink = desktopNav.querySelector('a[href="/admin"]');
+        expect(adminLink).toBeInTheDocument();
       });
     });
 

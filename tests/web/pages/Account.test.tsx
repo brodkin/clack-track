@@ -427,12 +427,13 @@ describe('Account Page', () => {
       renderAccountPage();
 
       await waitFor(() => {
-        const adminBadge = screen.getByText('Admin');
+        // Find the admin badge by looking for the amber-colored badge (not the nav link)
+        // The badge has bg-amber-500 class while the nav link doesn't
+        const adminBadges = screen.getAllByText('Admin');
+        const adminBadge = adminBadges.find(el => el.classList.contains('bg-amber-500'));
+        expect(adminBadge).toBeDefined();
         // @ts-expect-error - jest-dom matchers
         expect(adminBadge).toBeInTheDocument();
-        // The badge container should have amber styling
-        // @ts-expect-error - jest-dom matchers
-        expect(adminBadge).toHaveClass('bg-amber-500');
       });
     });
 

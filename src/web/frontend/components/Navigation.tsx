@@ -44,6 +44,7 @@ const navLinks: NavLinkConfig[] = [
   { to: '/', label: 'Home' },
   { to: '/flipside', label: 'Flipside' },
   { to: '/account', label: 'Account', requiresAuth: true },
+  { to: '/admin', label: 'Admin', requiresAuth: true },
   { to: '/login', label: 'Login', hideWhenAuthenticated: true },
   // Style Guide only visible in development (and test environments)
   ...(isDev ? [{ to: '/style-guide', label: 'Style Guide' }] : []),
