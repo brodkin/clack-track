@@ -43,8 +43,12 @@ import type { GenerationContext, ModelTier } from '../../../types/content-genera
  * news-summary.txt prompt for mustache rendering.
  *
  * Uses Template Method hooks:
- * - getTemplateVariables(): Injects headlines into prompt
- * - getCustomMetadata(): Adds feedUrls to metadata
+ * - getTemplateVariables(): Injects headlines into prompt, caches first RSS link
+ * - getCustomMetadata(): Adds feedUrls, headlineCount, and moreInfoUrl to metadata
+ *
+ * The first RSS item's link is cached and exposed as moreInfoUrl in metadata
+ * to enable frontend "Learn More" functionality. If RSS fetch fails or returns
+ * no items, moreInfoUrl is omitted from metadata.
  */
 export abstract class BaseNewsGenerator extends AIPromptGenerator {
   protected readonly rssClient: RSSClient;
@@ -54,6 +58,11 @@ export abstract class BaseNewsGenerator extends AIPromptGenerator {
    * Cached headlines from the last fetch, used by getCustomMetadata
    */
   private lastFetchedHeadlines: string[] = [];
+
+  /**
+   * Cached first RSS link from the last fetch, used by getCustomMetadata for moreInfoUrl
+   */
+  private lastFetchedLink: string | undefined;
 
   /**
    * Creates a new BaseNewsGenerator instance
@@ -109,9 +118,13 @@ export abstract class BaseNewsGenerator extends AIPromptGenerator {
     try {
       const items = await this.rssClient.getLatestItems(this.feedUrls, 5);
       headlines = items.map(item => item.title);
+
+      // Cache first RSS link for moreInfoUrl metadata
+      this.lastFetchedLink = items.length > 0 ? items[0].link : undefined;
     } catch (error) {
       console.error('Failed to fetch RSS headlines:', error);
       headlines = ['No news available at this time.'];
+      this.lastFetchedLink = undefined;
     }
 
     // Cache headlines for metadata
@@ -124,14 +137,21 @@ export abstract class BaseNewsGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Hook: Returns feed URLs and headline count in metadata.
+   * Hook: Returns feed URLs, headline count, and moreInfoUrl in metadata.
    *
-   * @returns Metadata with feedUrls array
+   * @returns Metadata with feedUrls array, headlineCount, and optional moreInfoUrl
    */
   protected getCustomMetadata(): Record<string, unknown> {
-    return {
+    const metadata: Record<string, unknown> = {
       feedUrls: this.feedUrls,
       headlineCount: this.lastFetchedHeadlines.length,
     };
+
+    // Include moreInfoUrl only if we have a cached link
+    if (this.lastFetchedLink) {
+      metadata.moreInfoUrl = this.lastFetchedLink;
+    }
+
+    return metadata;
   }
 }

@@ -552,4 +552,116 @@ describe('History Page', () => {
       });
     });
   });
+
+  describe('MoreInfoButton Integration', () => {
+    it('should render MoreInfoButton for content with moreInfoUrl in metadata', async () => {
+      const contentWithUrl: ContentRecord = {
+        ...createMockContent(1, 1),
+        metadata: {
+          moreInfoUrl: 'https://example.com/article-1',
+        },
+      };
+
+      mockApiClient.getContentHistory.mockResolvedValue({
+        success: true,
+        data: [contentWithUrl],
+        pagination: { limit: 20, count: 1 },
+      });
+
+      renderWithAuth(<History />);
+
+      // Wait for content to load and MoreInfoButton to appear
+      await waitFor(() => {
+        const moreInfoButton = screen.getByRole('link', { name: /more info/i });
+        // @ts-expect-error - jest-dom matchers
+        expect(moreInfoButton).toBeInTheDocument();
+        // @ts-expect-error - jest-dom matchers
+        expect(moreInfoButton).toHaveAttribute('href', 'https://example.com/article-1');
+      });
+    });
+
+    it('should not render MoreInfoButton for content without moreInfoUrl', async () => {
+      const contentWithoutUrl: ContentRecord = createMockContent(1, 1);
+
+      mockApiClient.getContentHistory.mockResolvedValue({
+        success: true,
+        data: [contentWithoutUrl],
+        pagination: { limit: 20, count: 1 },
+      });
+
+      renderWithAuth(<History />);
+
+      // Wait for content to load
+      await waitFor(() => {
+        const generatorText = screen.getByText(/generator-1/i);
+        // @ts-expect-error - jest-dom matchers
+        expect(generatorText).toBeInTheDocument();
+      });
+
+      // Verify MoreInfoButton is not present
+      const moreInfoButton = screen.queryByRole('link', { name: /more info/i });
+      expect(moreInfoButton).toBeNull();
+    });
+
+    it('should render MoreInfoButtons for multiple content items with URLs', async () => {
+      const content1: ContentRecord = {
+        ...createMockContent(1, 1),
+        metadata: {
+          moreInfoUrl: 'https://example.com/article-1',
+        },
+      };
+
+      const content2: ContentRecord = {
+        ...createMockContent(2, 2),
+        metadata: {
+          moreInfoUrl: 'https://example.com/article-2',
+        },
+      };
+
+      const content3: ContentRecord = createMockContent(3, 3); // No URL
+
+      mockApiClient.getContentHistory.mockResolvedValue({
+        success: true,
+        data: [content1, content2, content3],
+        pagination: { limit: 20, count: 3 },
+      });
+
+      renderWithAuth(<History />);
+
+      // Wait for content to load
+      await waitFor(() => {
+        const allButtons = screen.getAllByRole('link', { name: /more info/i });
+        expect(allButtons).toHaveLength(2); // Only 2 out of 3 have URLs
+        // @ts-expect-error - jest-dom matchers
+        expect(allButtons[0]).toHaveAttribute('href', 'https://example.com/article-1');
+        // @ts-expect-error - jest-dom matchers
+        expect(allButtons[1]).toHaveAttribute('href', 'https://example.com/article-2');
+      });
+    });
+
+    it('should open MoreInfoButton links in new tab', async () => {
+      const contentWithUrl: ContentRecord = {
+        ...createMockContent(1, 1),
+        metadata: {
+          moreInfoUrl: 'https://example.com/article-1',
+        },
+      };
+
+      mockApiClient.getContentHistory.mockResolvedValue({
+        success: true,
+        data: [contentWithUrl],
+        pagination: { limit: 20, count: 1 },
+      });
+
+      renderWithAuth(<History />);
+
+      await waitFor(() => {
+        const moreInfoButton = screen.getByRole('link', { name: /more info/i });
+        // @ts-expect-error - jest-dom matchers
+        expect(moreInfoButton).toHaveAttribute('target', '_blank');
+        // @ts-expect-error - jest-dom matchers
+        expect(moreInfoButton).toHaveAttribute('rel', 'noopener noreferrer');
+      });
+    });
+  });
 });

@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/
 import { Badge } from './ui/badge';
 import type { ContentRecord } from '../../../storage/models/content.js';
 import { cn } from '../lib/utils';
+import { MoreInfoButton } from './MoreInfoButton';
 
 interface ContentCardProps {
   content: ContentRecord;
@@ -44,7 +45,7 @@ export function ContentCard({ content, onClick, className }: ContentCardProps) {
         <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
           {truncatedContent}
         </p>
-        <div className="mt-4 flex gap-2 flex-wrap">
+        <div className="mt-4 flex gap-2 flex-wrap items-center">
           {content.aiModel && (
             <Badge variant="outline" className="text-xs">
               Model: {content.aiModel}
@@ -54,6 +55,13 @@ export function ContentCard({ content, onClick, className }: ContentCardProps) {
             <Badge variant="outline" className="text-xs">
               Tokens: {content.tokensUsed}
             </Badge>
+          )}
+          {content.metadata?.moreInfoUrl && (
+            <MoreInfoButton
+              url={content.metadata.moreInfoUrl as string}
+              size="sm"
+              className="ml-auto"
+            />
           )}
         </div>
       </CardContent>

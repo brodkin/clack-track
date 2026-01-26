@@ -548,5 +548,80 @@ describe('BaseNewsGenerator', () => {
       // headlineCount should be in metadata from getCustomMetadata() hook
       expect(result.metadata?.headlineCount).toBe(3);
     });
+
+    it('should include moreInfoUrl from first RSS item link', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date('2025-11-27T10:00:00Z'),
+      };
+
+      const result = await generator.generate(context);
+
+      // moreInfoUrl should be the first RSS item's link
+      expect(result.metadata?.moreInfoUrl).toBe('https://example.com/article1');
+    });
+
+    it('should not include moreInfoUrl when no RSS items fetched', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue([]);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date('2025-11-27T10:00:00Z'),
+      };
+
+      const result = await generator.generate(context);
+
+      // moreInfoUrl should be undefined when no headlines
+      expect(result.metadata?.moreInfoUrl).toBeUndefined();
+    });
+
+    it('should not include moreInfoUrl when RSS fetch fails', async () => {
+      mockRSSClient.getLatestItems.mockRejectedValue(new Error('Network timeout'));
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date('2025-11-27T10:00:00Z'),
+      };
+
+      const result = await generator.generate(context);
+
+      // moreInfoUrl should be undefined when fetch fails
+      expect(result.metadata?.moreInfoUrl).toBeUndefined();
+    });
+
+    it('should cache first RSS link between getTemplateVariables and getCustomMetadata', async () => {
+      // Use 5 items to verify we only cache the first one
+      const manyItems = [
+        ...mockRSSItems,
+        {
+          title: 'Fourth Article',
+          link: 'https://example.com/article4',
+          pubDate: new Date('2025-11-27T08:30:00Z'),
+          contentSnippet: 'Fourth article content',
+          source: 'Test Source',
+        },
+        {
+          title: 'Fifth Article',
+          link: 'https://example.com/article5',
+          pubDate: new Date('2025-11-27T08:00:00Z'),
+          contentSnippet: 'Fifth article content',
+          source: 'Test Source',
+        },
+      ];
+      mockRSSClient.getLatestItems.mockResolvedValue(manyItems);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date('2025-11-27T10:00:00Z'),
+      };
+
+      const result = await generator.generate(context);
+
+      // Should cache only the FIRST link from fetched items
+      expect(result.metadata?.moreInfoUrl).toBe('https://example.com/article1');
+      expect(result.metadata?.headlineCount).toBe(5);
+    });
   });
 });

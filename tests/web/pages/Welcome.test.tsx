@@ -410,4 +410,146 @@ describe('Welcome Page', () => {
       // VestaboardPreview will pad to 6x22
     });
   });
+
+  describe('MoreInfoButton integration', () => {
+    it('should render MoreInfoButton when content has moreInfoUrl', async () => {
+      // Arrange: Content with moreInfoUrl in metadata
+      mockApiClient.getLatestContent.mockResolvedValue({
+        success: true,
+        data: {
+          id: 8,
+          text: 'NEWS CONTENT',
+          type: 'major',
+          generatedAt: new Date(),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          generatorId: 'news-generator',
+          characterCodes: sampleCharacterCodes,
+          metadata: {
+            moreInfoUrl: 'https://example.com/article',
+          },
+        },
+      });
+
+      // Act
+      renderWithAuth(<Welcome />);
+
+      // Assert: Wait for content to load
+      await waitFor(() => {
+        expect(screen.queryByText('Loading content...')).not.toBeInTheDocument();
+      });
+
+      // MoreInfoButton should be rendered
+      const button = screen.getByRole('link', { name: /more info/i });
+      // @ts-expect-error - jest-dom matchers
+      expect(button).toBeInTheDocument();
+      // @ts-expect-error - jest-dom matchers
+      expect(button).toHaveAttribute('href', 'https://example.com/article');
+    });
+
+    it('should not render MoreInfoButton when moreInfoUrl is missing', async () => {
+      // Arrange: Content without moreInfoUrl
+      mockApiClient.getLatestContent.mockResolvedValue({
+        success: true,
+        data: {
+          id: 9,
+          text: 'QUOTE CONTENT',
+          type: 'major',
+          generatedAt: new Date(),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          generatorId: 'quote-generator',
+          characterCodes: sampleCharacterCodes,
+          metadata: {
+            // No moreInfoUrl
+          },
+        },
+      });
+
+      // Act
+      renderWithAuth(<Welcome />);
+
+      // Assert: Wait for content to load
+      await waitFor(() => {
+        expect(screen.queryByText('Loading content...')).not.toBeInTheDocument();
+      });
+
+      // MoreInfoButton should NOT be rendered
+      const button = screen.queryByRole('link', { name: /more info/i });
+      expect(button).toBeNull();
+    });
+
+    it('should not render MoreInfoButton when metadata is undefined', async () => {
+      // Arrange: Content without metadata
+      mockApiClient.getLatestContent.mockResolvedValue({
+        success: true,
+        data: {
+          id: 10,
+          text: 'SIMPLE CONTENT',
+          type: 'major',
+          generatedAt: new Date(),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          generatorId: 'simple-generator',
+          characterCodes: sampleCharacterCodes,
+          // No metadata field
+        },
+      });
+
+      // Act
+      renderWithAuth(<Welcome />);
+
+      // Assert: Wait for content to load
+      await waitFor(() => {
+        expect(screen.queryByText('Loading content...')).not.toBeInTheDocument();
+      });
+
+      // MoreInfoButton should NOT be rendered
+      const button = screen.queryByRole('link', { name: /more info/i });
+      expect(button).toBeNull();
+    });
+
+    it('should render MoreInfoButton below VestaboardPreview', async () => {
+      // Arrange: Content with moreInfoUrl
+      mockApiClient.getLatestContent.mockResolvedValue({
+        success: true,
+        data: {
+          id: 11,
+          text: 'NEWS CONTENT',
+          type: 'major',
+          generatedAt: new Date(),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          generatorId: 'news-generator',
+          characterCodes: sampleCharacterCodes,
+          metadata: {
+            moreInfoUrl: 'https://example.com/news',
+          },
+        },
+      });
+
+      // Act
+      const { container } = renderWithAuth(<Welcome />);
+
+      // Assert: Wait for content to load
+      await waitFor(() => {
+        expect(screen.queryByText('Loading content...')).not.toBeInTheDocument();
+      });
+
+      // Check that MoreInfoButton appears after VestaboardPreview in DOM order
+      const vestaboard = screen.getByTestId('vestaboard');
+      const button = screen.getByRole('link', { name: /more info/i });
+
+      // Both should exist
+      // @ts-expect-error - jest-dom matchers
+      expect(vestaboard).toBeInTheDocument();
+      // @ts-expect-error - jest-dom matchers
+      expect(button).toBeInTheDocument();
+
+      // Compare positions in DOM (button should come after vestaboard)
+      const vestaboardPos = Array.from(container.querySelectorAll('*')).indexOf(vestaboard);
+      const buttonPos = Array.from(container.querySelectorAll('*')).indexOf(button);
+      expect(buttonPos).toBeGreaterThan(vestaboardPos);
+    });
+  });
 });
