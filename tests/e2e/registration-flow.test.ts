@@ -46,10 +46,11 @@ async function isServerRunning(): Promise<boolean> {
 describe('Registration Flow', () => {
   const testEmail = `e2e-test-${Date.now()}@playwright.local`;
   let token: string;
+  let serverRunning = false;
 
   beforeAll(async () => {
     // Check if dev server is running
-    const serverRunning = await isServerRunning();
+    serverRunning = await isServerRunning();
     if (!serverRunning) {
       console.warn('Dev server not running at localhost:4000 - skipping e2e tests');
       return;
@@ -60,8 +61,8 @@ describe('Registration Flow', () => {
   });
 
   it('should validate magic link token via API', async () => {
-    if (!token) {
-      console.warn('Skipping - no token generated');
+    if (!serverRunning || !token) {
+      console.warn('Skipping - server not running or no token generated');
       return;
     }
 
@@ -74,6 +75,11 @@ describe('Registration Flow', () => {
   });
 
   it('should return error for invalid token', async () => {
+    if (!serverRunning) {
+      console.warn('Skipping - server not running');
+      return;
+    }
+
     const invalidToken = 'a'.repeat(64);
     const response = await fetch(`${API_BASE}/api/auth/register/validate?token=${invalidToken}`);
     expect(response.status).toBe(400);
@@ -83,6 +89,11 @@ describe('Registration Flow', () => {
   });
 
   it('should return error for missing token', async () => {
+    if (!serverRunning) {
+      console.warn('Skipping - server not running');
+      return;
+    }
+
     const response = await fetch(`${API_BASE}/api/auth/register/validate`);
     expect(response.status).toBe(400);
 

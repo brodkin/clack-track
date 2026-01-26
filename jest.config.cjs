@@ -200,4 +200,22 @@ module.exports = {
   // CI improvements (clack-zhvj)
   maxWorkers: process.env.CI ? 4 : '50%', // Use 4 workers in CI, 50% of cores locally
   verbose: true, // Better error output
+
+  // Roots configuration - explicitly tell Jest where to look for files
+  // This prevents jest-haste-map from scanning worktrees in ./trees/
+  roots: ['<rootDir>/src', '<rootDir>/tests', '<rootDir>/prompts'],
+
+  // Module path ignore patterns - prevents jest-haste-map from scanning worktrees
+  // These are regex patterns matched against absolute file paths
+  modulePathIgnorePatterns: ['<rootDir>/trees'],
+
+  // Watch ignore patterns - exclude worktrees from watch mode
+  watchPathIgnorePatterns: ['<rootDir>/trees'],
+
+  // Haste configuration - customize module discovery
+  haste: {
+    // Don't throw on duplicate modules - just use the first one found
+    // This allows worktrees to coexist without breaking tests
+    throwOnModuleCollision: false,
+  },
 };
