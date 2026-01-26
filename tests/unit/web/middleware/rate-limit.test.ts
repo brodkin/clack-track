@@ -56,6 +56,13 @@ describe('Rate Limit Middleware', () => {
         ip: '127.0.0.1',
         path: '/api/test',
         headers: {},
+        method: 'GET',
+        originalUrl: '/api/test',
+        app: {
+          get: jest.fn().mockReturnValue(false), // Mock app for express-rate-limit
+          set: jest.fn(),
+        },
+        socket: { remoteAddress: '127.0.0.1' },
       };
 
       mockRes = {
@@ -81,7 +88,7 @@ describe('Rate Limit Middleware', () => {
     });
 
     it('should allow requests under the limit', async () => {
-      const limiter = createRateLimiter({ windowMs: 60000, max: 5 });
+      const limiter = createRateLimiter({ windowMs: 60000, max: 5, enabled: true });
 
       // Make 3 requests (under limit of 5)
       for (let i = 0; i < 3; i++) {
@@ -93,7 +100,7 @@ describe('Rate Limit Middleware', () => {
     });
 
     it('should block requests over the limit', async () => {
-      const limiter = createRateLimiter({ windowMs: 60000, max: 3 });
+      const limiter = createRateLimiter({ windowMs: 60000, max: 3, enabled: true });
 
       // Make requests up to and beyond the limit
       for (let i = 0; i < 3; i++) {
@@ -107,7 +114,7 @@ describe('Rate Limit Middleware', () => {
     });
 
     it('should return 429 status code when limit exceeded', async () => {
-      const limiter = createRateLimiter({ windowMs: 60000, max: 2 });
+      const limiter = createRateLimiter({ windowMs: 60000, max: 2, enabled: true });
 
       // Exceed the limit
       for (let i = 0; i < 3; i++) {
@@ -119,7 +126,7 @@ describe('Rate Limit Middleware', () => {
     });
 
     it('should include Retry-After header in 429 response', async () => {
-      const limiter = createRateLimiter({ windowMs: 60000, max: 2 });
+      const limiter = createRateLimiter({ windowMs: 60000, max: 2, enabled: true });
 
       // Exceed the limit
       for (let i = 0; i < 3; i++) {
@@ -136,6 +143,7 @@ describe('Rate Limit Middleware', () => {
         windowMs: 60000,
         max: 1,
         message: customMessage,
+        enabled: true,
       });
 
       // Exceed the limit
@@ -148,7 +156,7 @@ describe('Rate Limit Middleware', () => {
     });
 
     it('should track requests per IP address', async () => {
-      const limiter = createRateLimiter({ windowMs: 60000, max: 2 });
+      const limiter = createRateLimiter({ windowMs: 60000, max: 2, enabled: true });
 
       // IP 1 makes requests
       mockReq.ip = '192.168.1.1';
@@ -172,27 +180,29 @@ describe('Rate Limit Middleware', () => {
     it('should reset limits after time window expires', async () => {
       jest.useFakeTimers();
 
-      const limiter = createRateLimiter({ windowMs: 1000, max: 2 }); // 1 second window
+      try {
+        const limiter = createRateLimiter({ windowMs: 1000, max: 2, enabled: true }); // 1 second window
 
-      // Exceed limit
-      await limiter(mockReq as Request, mockRes as Response, mockNext);
-      await limiter(mockReq as Request, mockRes as Response, mockNext);
-      await limiter(mockReq as Request, mockRes as Response, mockNext);
+        // Exceed limit
+        await limiter(mockReq as Request, mockRes as Response, mockNext);
+        await limiter(mockReq as Request, mockRes as Response, mockNext);
+        await limiter(mockReq as Request, mockRes as Response, mockNext);
 
-      expect(statusCode).toBe(429);
+        expect(statusCode).toBe(429);
 
-      // Advance time past the window
-      jest.advanceTimersByTime(1100);
+        // Advance time past the window (use async version for proper promise handling)
+        await jest.advanceTimersByTimeAsync(1100);
 
-      // Reset tracking
-      statusCode = 200;
+        // Reset tracking
+        statusCode = 200;
 
-      // Should be allowed again
-      await limiter(mockReq as Request, mockRes as Response, mockNext);
+        // Should be allowed again
+        await limiter(mockReq as Request, mockRes as Response, mockNext);
 
-      expect(statusCode).not.toBe(429);
-
-      jest.useRealTimers();
+        expect(statusCode).not.toBe(429);
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 
@@ -235,6 +245,13 @@ describe('Rate Limit Middleware', () => {
         ip: '127.0.0.1',
         path: '/api/test',
         headers: {},
+        method: 'GET',
+        originalUrl: '/api/test',
+        app: {
+          get: jest.fn().mockReturnValue(false), // Mock app for express-rate-limit
+          set: jest.fn(),
+        },
+        socket: { remoteAddress: '127.0.0.1' },
       };
       mockRes = {
         status: jest.fn().mockImplementation((code: number) => {
