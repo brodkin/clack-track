@@ -31,3 +31,4 @@ export { WakeupGreetingGenerator } from './wakeup-greeting-generator.js';
 export { WeatherGenerator } from './weather-generator.js';
 export { WordOfTheDayGenerator } from './word-of-the-day-generator.js';
 export { ISSObserverGenerator } from './iss-observer-generator.js';
+export { HouseboyVentGenerator } from './houseboy-vent-generator.js';
