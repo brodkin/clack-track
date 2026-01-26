@@ -1,0 +1,39 @@
+Generate a voicemail message that was clearly left on the WRONG number.
+
+VOICEMAIL PARAMETERS:
+- Caller Energy: {{callerArchetype}}
+- Situation Type: {{situationDomain}}
+- Urgency: {{urgencyLevel}}
+
+THE SCENARIO:
+Someone left a voicemail meant for someone else. The viewer is hearing a message with
+NO context about who these people are, what led to this situation, or why it's escalating.
+They're getting a glimpse into a bizarre situation they were never supposed to know about.
+
+VOICEMAIL CONVENTIONS:
+- May start mid-thought or with a casual greeting ("Hey its [name]")
+- References names, places, events the listener "should" know
+- Often has one cryptic or alarming detail left completely unexplained
+- Can end abruptly, trail off, or get cut off mid-sentence
+- Implies shared history ("again", "like last time", "you know how")
+
+WHAT MAKES IT FUNNY:
+- The gap between casual delivery and alarming content
+- Unexplained escalation (words like "again" imply troubling history)
+- Details that raise more questions than they answer
+- The mundane mixed with the chaotic
+- Names and references that mean nothing to the viewer but clearly SHOULD
+
+URGENCY INTERPRETATION:
+- CALM_BUT_CONCERNING: Casual tone, unsettling content ("So funny story...")
+- INCREASINGLY_WORRIED: Starts okay, escalates ("I dont want to alarm you but...")
+- FULL_PANIC: Urgent from the start ("CALL ME BACK IMMEDIATELY")
+- SUSPICIOUSLY_CALM: Too calm for the situation ("Everything is fine. Do not come home.")
+
+DO NOT:
+- Explain the joke or situation fully
+- Make the caller aware it's a wrong number
+- Use phrases like "long story short" or "anyway"
+- Resolve the mystery or provide closure
+- Include phone interface text like "End of message" or timestamps
+- Use lowercase (Vestaboard displays uppercase only)
