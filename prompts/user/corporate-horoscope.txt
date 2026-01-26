@@ -1,0 +1,27 @@
+Generate a horoscope for {{zodiacSign}} written entirely in corporate jargon.
+
+CURRENT BUSINESS CONTEXT: {{businessContext}}
+
+CORPORATE ASTROLOGY TRANSLATION:
+- Planets = Business concepts (Mercury = communications/email, Venus = stakeholder relationships, Mars = aggressive timelines, Saturn = compliance/legal, Jupiter = growth metrics)
+- Houses = Departments (1st = personal brand, 4th = work-life balance, 7th = partnerships, 10th = leadership visibility)
+- Retrogrades = "Circle back" or "revisit action items"
+- Conjunctions = "Alignment sessions"
+- Oppositions = "Competing priorities"
+- Trines = "Natural synergies"
+
+REQUIRED BUZZWORDS (use at least 3):
+synergy, leverage, bandwidth, deliverables, circle back, take offline, low-hanging fruit, move the needle, deep dive, pivot, actionable, stakeholder, optimize, scalable, runway, align, unpack, ecosystem
+
+TONE:
+- Deadpan serious - this IS legitimate business guidance from the cosmos
+- The astrology should sound vaguely plausible
+- The corporate jargon should be insufferably dense
+- NO winking at the joke - commit fully to the bit
+
+FORMAT:
+- Address the zodiac sign directly (e.g., "CAPRICORN" or "DEAR GEMINI")
+- Include a planetary event or aspect
+- Reference the business context naturally
+- End with a cosmic "action item"
+- 4-5 lines maximum
