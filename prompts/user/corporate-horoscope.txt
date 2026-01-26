@@ -1,4 +1,4 @@
-Generate a horoscope for {{zodiacSign}} season written entirely in corporate jargon.
+Generate a horoscope for {{zodiacSign}} written entirely in corporate jargon.
 
 CURRENT BUSINESS CONTEXT: {{businessContext}}
 

@@ -9,7 +9,7 @@
  * - Uses Template Method hooks correctly:
  *   - getTemplateVariables() for zodiac sign and business context injection
  *   - getCustomMetadata() for sign and context tracking
- * - Zodiac sign calculation based on date
+ * - Random zodiac sign selection from all 12 signs
  * - Business context randomization produces valid contexts
  * - Handles AI provider failures gracefully
  */
@@ -139,140 +139,61 @@ describe('CorporateHoroscopeGenerator', () => {
     });
   });
 
-  describe('getCurrentZodiacSign()', () => {
-    it('should return Capricorn for January 1', () => {
+  describe('random zodiac sign selection', () => {
+    const validSigns = [
+      'Aries',
+      'Taurus',
+      'Gemini',
+      'Cancer',
+      'Leo',
+      'Virgo',
+      'Libra',
+      'Scorpio',
+      'Sagittarius',
+      'Capricorn',
+      'Aquarius',
+      'Pisces',
+    ];
+
+    it('should select zodiac sign from all 12 valid signs', async () => {
       const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      const sign = generator.getCurrentZodiacSign(new Date('2025-01-01'));
-      expect(sign).toBe('Capricorn');
+      // Run multiple times to verify random selection from valid signs
+      for (let i = 0; i < 10; i++) {
+        mockPromptLoader.loadPromptWithVariables.mockClear();
+        await generator.generate(mockContext);
+
+        const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
+        const userPromptCall = calls[1];
+        const templateVars = userPromptCall[2] as Record<string, unknown>;
+        const sign = templateVars.zodiacSign as string;
+
+        expect(validSigns).toContain(sign);
+      }
     });
 
-    it('should return Aquarius for January 20', () => {
+    it('should produce variety in zodiac sign selection over multiple generations', async () => {
       const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      const sign = generator.getCurrentZodiacSign(new Date('2025-01-20'));
-      expect(sign).toBe('Aquarius');
-    });
+      const selectedSigns = new Set<string>();
 
-    it('should return Pisces for February 19', () => {
-      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
+      // Run enough times to likely get variety (with 12 signs, 20 runs should produce multiple unique signs)
+      for (let i = 0; i < 20; i++) {
+        mockPromptLoader.loadPromptWithVariables.mockClear();
+        await generator.generate(mockContext);
 
-      const sign = generator.getCurrentZodiacSign(new Date('2025-02-19'));
-      expect(sign).toBe('Pisces');
-    });
+        const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
+        const userPromptCall = calls[1];
+        const templateVars = userPromptCall[2] as Record<string, unknown>;
+        selectedSigns.add(templateVars.zodiacSign as string);
+      }
 
-    it('should return Aries for March 21', () => {
-      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const sign = generator.getCurrentZodiacSign(new Date('2025-03-21'));
-      expect(sign).toBe('Aries');
-    });
-
-    it('should return Taurus for April 20', () => {
-      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const sign = generator.getCurrentZodiacSign(new Date('2025-04-20'));
-      expect(sign).toBe('Taurus');
-    });
-
-    it('should return Gemini for May 21', () => {
-      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const sign = generator.getCurrentZodiacSign(new Date('2025-05-21'));
-      expect(sign).toBe('Gemini');
-    });
-
-    it('should return Cancer for June 21', () => {
-      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const sign = generator.getCurrentZodiacSign(new Date('2025-06-21'));
-      expect(sign).toBe('Cancer');
-    });
-
-    it('should return Leo for July 23', () => {
-      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const sign = generator.getCurrentZodiacSign(new Date('2025-07-23'));
-      expect(sign).toBe('Leo');
-    });
-
-    it('should return Virgo for August 23', () => {
-      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const sign = generator.getCurrentZodiacSign(new Date('2025-08-23'));
-      expect(sign).toBe('Virgo');
-    });
-
-    it('should return Libra for September 23', () => {
-      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const sign = generator.getCurrentZodiacSign(new Date('2025-09-23'));
-      expect(sign).toBe('Libra');
-    });
-
-    it('should return Scorpio for October 23', () => {
-      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const sign = generator.getCurrentZodiacSign(new Date('2025-10-23'));
-      expect(sign).toBe('Scorpio');
-    });
-
-    it('should return Sagittarius for November 22', () => {
-      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const sign = generator.getCurrentZodiacSign(new Date('2025-11-22'));
-      expect(sign).toBe('Sagittarius');
-    });
-
-    it('should return Capricorn for December 22', () => {
-      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const sign = generator.getCurrentZodiacSign(new Date('2025-12-22'));
-      expect(sign).toBe('Capricorn');
-    });
-
-    it('should return correct sign for edge case: January 19 (still Capricorn)', () => {
-      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const sign = generator.getCurrentZodiacSign(new Date('2025-01-19'));
-      expect(sign).toBe('Capricorn');
-    });
-
-    it('should return correct sign for edge case: December 21 (still Sagittarius)', () => {
-      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const sign = generator.getCurrentZodiacSign(new Date('2025-12-21'));
-      expect(sign).toBe('Sagittarius');
+      // Should have selected more than one unique sign (randomness working)
+      expect(selectedSigns.size).toBeGreaterThan(1);
     });
   });
 

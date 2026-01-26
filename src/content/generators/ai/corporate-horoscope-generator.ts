@@ -8,7 +8,7 @@
  * Features:
  * - Uses prompts/system/major-update-base.txt for system context
  * - Uses prompts/user/corporate-horoscope.txt for content guidance
- * - Selects zodiac sign based on current date (which sign season it is)
+ * - Randomly selects zodiac sign for variety and inclusivity
  * - Randomly selects business context for variety
  * - Optimized with LIGHT model tier (comedic content, simple generation)
  *
@@ -61,33 +61,32 @@ const BUSINESS_CONTEXTS = [
 ] as const;
 
 /**
- * Zodiac sign date ranges
+ * All twelve zodiac signs
  *
- * Each entry defines the start month/day for a zodiac sign.
- * Signs are ordered by their start date throughout the year.
+ * Randomly selected for each generation to provide variety
+ * and be inclusive of all audience members regardless of birth date.
  */
 const ZODIAC_SIGNS = [
-  { sign: 'Capricorn', startMonth: 1, startDay: 1 }, // Jan 1-19
-  { sign: 'Aquarius', startMonth: 1, startDay: 20 }, // Jan 20 - Feb 18
-  { sign: 'Pisces', startMonth: 2, startDay: 19 }, // Feb 19 - Mar 20
-  { sign: 'Aries', startMonth: 3, startDay: 21 }, // Mar 21 - Apr 19
-  { sign: 'Taurus', startMonth: 4, startDay: 20 }, // Apr 20 - May 20
-  { sign: 'Gemini', startMonth: 5, startDay: 21 }, // May 21 - Jun 20
-  { sign: 'Cancer', startMonth: 6, startDay: 21 }, // Jun 21 - Jul 22
-  { sign: 'Leo', startMonth: 7, startDay: 23 }, // Jul 23 - Aug 22
-  { sign: 'Virgo', startMonth: 8, startDay: 23 }, // Aug 23 - Sep 22
-  { sign: 'Libra', startMonth: 9, startDay: 23 }, // Sep 23 - Oct 22
-  { sign: 'Scorpio', startMonth: 10, startDay: 23 }, // Oct 23 - Nov 21
-  { sign: 'Sagittarius', startMonth: 11, startDay: 22 }, // Nov 22 - Dec 21
-  { sign: 'Capricorn', startMonth: 12, startDay: 22 }, // Dec 22-31
+  'Aries',
+  'Taurus',
+  'Gemini',
+  'Cancer',
+  'Leo',
+  'Virgo',
+  'Libra',
+  'Scorpio',
+  'Sagittarius',
+  'Capricorn',
+  'Aquarius',
+  'Pisces',
 ] as const;
 
 /**
  * Generates corporate jargon horoscopes
  *
  * Extends AIPromptGenerator with horoscope-specific prompts,
- * zodiac sign selection based on current date, and random
- * business context for variety.
+ * random zodiac sign selection for variety and inclusivity,
+ * and random business context for topical flavor.
  */
 export class CorporateHoroscopeGenerator extends AIPromptGenerator {
   /**
@@ -141,32 +140,16 @@ export class CorporateHoroscopeGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Determines the current zodiac sign based on date
+   * Selects a random zodiac sign
    *
-   * Returns the zodiac sign whose "season" the current date falls within.
-   * This provides natural variety (changes monthly) while being deterministic.
+   * Randomly picks from all 12 zodiac signs to provide variety
+   * and be inclusive of all audience members.
    *
-   * @param date - Date to calculate zodiac sign for (defaults to now)
-   * @returns The zodiac sign name (e.g., "Capricorn", "Aquarius")
+   * @returns A random zodiac sign name (e.g., "Capricorn", "Gemini")
    */
-  public getCurrentZodiacSign(date: Date = new Date()): string {
-    const month = date.getMonth() + 1; // 1-12
-    const day = date.getDate();
-
-    // Find the sign for the current date
-    // Iterate backwards through signs to find the most recent start date
-    for (let i = ZODIAC_SIGNS.length - 1; i >= 0; i--) {
-      const zodiac = ZODIAC_SIGNS[i];
-      if (
-        month > zodiac.startMonth ||
-        (month === zodiac.startMonth && day >= zodiac.startDay)
-      ) {
-        return zodiac.sign;
-      }
-    }
-
-    // Fallback to Capricorn (shouldn't happen with proper date ranges)
-    return 'Capricorn';
+  private getRandomZodiacSign(): string {
+    const randomIndex = Math.floor(Math.random() * ZODIAC_SIGNS.length);
+    return ZODIAC_SIGNS[randomIndex];
   }
 
   /**
@@ -182,7 +165,7 @@ export class CorporateHoroscopeGenerator extends AIPromptGenerator {
   /**
    * Hook: Returns template variables for prompt injection
    *
-   * Selects the current zodiac sign and a random business context
+   * Selects a random zodiac sign and business context
    * to inject into the prompt template.
    *
    * @param _context - Generation context (unused, but required by hook signature)
@@ -191,7 +174,7 @@ export class CorporateHoroscopeGenerator extends AIPromptGenerator {
   protected async getTemplateVariables(
     _context: GenerationContext
   ): Promise<Record<string, string>> {
-    this.selectedSign = this.getCurrentZodiacSign();
+    this.selectedSign = this.getRandomZodiacSign();
     this.selectedContext = this.getRandomBusinessContext();
 
     return {
