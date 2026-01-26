@@ -55,7 +55,7 @@ describe('BottomTabBar', () => {
   });
 
   describe('rendering - unauthenticated', () => {
-    it('renders three navigation tabs when not authenticated (no Admin)', async () => {
+    it('renders public navigation tabs when not authenticated (no Admin, no Account)', async () => {
       render(
         <AuthWrapper>
           <BottomTabBar />
@@ -65,14 +65,18 @@ describe('BottomTabBar', () => {
       // Wait for auth check to complete
       await screen.findByRole('navigation');
 
-      // Check for three tabs (Home, History, Account - no Admin)
+      // Check for public tabs (Home, History, Login, Style Guide - no Admin, no Account)
       const links = screen.getAllByRole('link');
-      expect(links).toHaveLength(3);
+      expect(links).toHaveLength(4); // Home, History, Login, Style Guide (test env)
 
       // Check tab labels exist
       expect(screen.getByText('Home')).toBeInTheDocument();
       expect(screen.getByText('History')).toBeInTheDocument();
-      expect(screen.getByText('Account')).toBeInTheDocument();
+      expect(screen.getByText('Login')).toBeInTheDocument();
+      expect(screen.getByText('Style Guide')).toBeInTheDocument();
+
+      // Auth-required tabs should not be visible
+      expect(screen.queryByText('Account')).not.toBeInTheDocument();
       expect(screen.queryByText('Admin')).not.toBeInTheDocument();
     });
 
@@ -98,15 +102,15 @@ describe('BottomTabBar', () => {
       expect(historyLink).toHaveAttribute('href', '/flipside');
     });
 
-    it('renders Account tab with correct route', () => {
+    it('renders Login tab with correct route when unauthenticated', () => {
       render(
         <AuthWrapper>
           <BottomTabBar />
         </AuthWrapper>
       );
 
-      const accountLink = screen.getByRole('link', { name: /account/i });
-      expect(accountLink).toHaveAttribute('href', '/account');
+      const loginLink = screen.getByRole('link', { name: /login/i });
+      expect(loginLink).toHaveAttribute('href', '/login');
     });
 
     it('applies custom className when provided', () => {
@@ -130,7 +134,7 @@ describe('BottomTabBar', () => {
       });
     });
 
-    it('renders four navigation tabs when authenticated (includes Admin)', async () => {
+    it('renders auth-protected navigation tabs when authenticated', async () => {
       render(
         <AuthWrapper>
           <BottomTabBar />
@@ -140,15 +144,19 @@ describe('BottomTabBar', () => {
       // Wait for auth check to complete
       await screen.findByText('Admin');
 
-      // Check for four tabs (Home, History, Admin, Account)
+      // Check for authenticated tabs (Home, History, Account, Admin, Style Guide - no Login)
       const links = screen.getAllByRole('link');
-      expect(links).toHaveLength(4);
+      expect(links).toHaveLength(5); // Home, History, Account, Admin, Style Guide
 
       // Check all tab labels exist
       expect(screen.getByText('Home')).toBeInTheDocument();
       expect(screen.getByText('History')).toBeInTheDocument();
-      expect(screen.getByText('Admin')).toBeInTheDocument();
       expect(screen.getByText('Account')).toBeInTheDocument();
+      expect(screen.getByText('Admin')).toBeInTheDocument();
+      expect(screen.getByText('Style Guide')).toBeInTheDocument();
+
+      // Login should be hidden when authenticated
+      expect(screen.queryByText('Login')).not.toBeInTheDocument();
     });
 
     it('renders Admin tab with correct route when authenticated', async () => {
@@ -179,46 +187,61 @@ describe('BottomTabBar', () => {
   });
 
   describe('active state', () => {
-    it('shows Home tab as active when on home route', () => {
+    beforeEach(() => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: true,
+        user: { name: 'Test User' },
+      });
+    });
+
+    it('shows Home tab as active when on home route', async () => {
       render(
         <AuthWrapper initialEntries={['/']}>
           <BottomTabBar />
         </AuthWrapper>
       );
+
+      await screen.findByText('Admin');
 
       // Home tab should have active styling (amber color)
       const homeLink = screen.getByRole('link', { name: /home/i });
       expect(homeLink).toHaveClass('text-amber-600');
     });
 
-    it('shows History tab as active when on flipside route', () => {
+    it('shows History tab as active when on flipside route', async () => {
       render(
         <AuthWrapper initialEntries={['/flipside']}>
           <BottomTabBar />
         </AuthWrapper>
       );
 
+      await screen.findByText('Admin');
+
       const historyLink = screen.getByRole('link', { name: /history/i });
       expect(historyLink).toHaveClass('text-amber-600');
     });
 
-    it('shows Account tab as active when on account route', () => {
+    it('shows Account tab as active when on account route', async () => {
       render(
         <AuthWrapper initialEntries={['/account']}>
           <BottomTabBar />
         </AuthWrapper>
       );
 
+      await screen.findByText('Admin');
+
       const accountLink = screen.getByRole('link', { name: /account/i });
       expect(accountLink).toHaveClass('text-amber-600');
     });
 
-    it('shows inactive tabs with muted color', () => {
+    it('shows inactive tabs with muted color', async () => {
       render(
         <AuthWrapper initialEntries={['/']}>
           <BottomTabBar />
         </AuthWrapper>
       );
+
+      await screen.findByText('Admin');
 
       // History and Account should be inactive (gray color)
       const historyLink = screen.getByRole('link', { name: /history/i });
@@ -251,10 +274,10 @@ describe('BottomTabBar', () => {
       );
 
       const homeLink = screen.getByRole('link', { name: /home/i });
-      const accountLink = screen.getByRole('link', { name: /account/i });
+      const historyLink = screen.getByRole('link', { name: /history/i });
 
       fireEvent.click(homeLink);
-      fireEvent.click(accountLink);
+      fireEvent.click(historyLink);
 
       expect(mockedTriggerHaptic).toHaveBeenCalledTimes(2);
       expect(mockedTriggerHaptic).toHaveBeenCalledWith('light');
@@ -338,7 +361,7 @@ describe('BottomTabBar', () => {
       expect(nav).toHaveClass('-translate-x-1/2');
     });
 
-    it('is hidden on desktop (md breakpoint)', () => {
+    it('is visible on all screen sizes (no md:hidden)', () => {
       render(
         <AuthWrapper>
           <BottomTabBar />
@@ -346,7 +369,7 @@ describe('BottomTabBar', () => {
       );
 
       const nav = screen.getByRole('navigation');
-      expect(nav).toHaveClass('md:hidden');
+      expect(nav).not.toHaveClass('md:hidden');
     });
 
     it('has safe area padding for notched devices', () => {
@@ -384,6 +407,179 @@ describe('BottomTabBar', () => {
         expect(link).toHaveClass('transition-all');
         expect(link).toHaveClass('duration-200');
       });
+    });
+  });
+
+  describe('logout functionality', () => {
+    beforeEach(() => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: true,
+        user: { name: 'Test User' },
+      });
+    });
+
+    it('shows logout button when authenticated', async () => {
+      render(
+        <AuthWrapper>
+          <BottomTabBar />
+        </AuthWrapper>
+      );
+
+      // Wait for auth state to load
+      await screen.findByText('Admin');
+
+      // Logout button should be visible
+      const logoutButton = screen.getByRole('button', { name: /logout/i });
+      expect(logoutButton).toBeInTheDocument();
+    });
+
+    it('does not show logout button when not authenticated', async () => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: false,
+        user: null,
+      });
+
+      render(
+        <AuthWrapper>
+          <BottomTabBar />
+        </AuthWrapper>
+      );
+
+      // Wait for component to render
+      await screen.findByRole('navigation');
+
+      // Logout button should not exist
+      expect(screen.queryByRole('button', { name: /logout/i })).not.toBeInTheDocument();
+    });
+
+    it('calls logout handler when logout button is clicked', async () => {
+      mockApiClient.logout.mockResolvedValue(undefined);
+
+      render(
+        <AuthWrapper>
+          <BottomTabBar />
+        </AuthWrapper>
+      );
+
+      await screen.findByText('Admin');
+
+      const logoutButton = screen.getByRole('button', { name: /logout/i });
+      fireEvent.click(logoutButton);
+
+      expect(mockApiClient.logout).toHaveBeenCalled();
+    });
+
+    it('triggers haptic feedback when logout button is clicked', async () => {
+      mockApiClient.logout.mockResolvedValue(undefined);
+
+      render(
+        <AuthWrapper>
+          <BottomTabBar />
+        </AuthWrapper>
+      );
+
+      await screen.findByText('Admin');
+
+      const logoutButton = screen.getByRole('button', { name: /logout/i });
+      fireEvent.click(logoutButton);
+
+      expect(mockedTriggerHaptic).toHaveBeenCalledWith('light');
+    });
+  });
+
+  describe('complete navigation links', () => {
+    it('shows Login link when not authenticated', async () => {
+      render(
+        <AuthWrapper>
+          <BottomTabBar />
+        </AuthWrapper>
+      );
+
+      await screen.findByRole('navigation');
+
+      const loginLink = screen.getByRole('link', { name: /login/i });
+      expect(loginLink).toBeInTheDocument();
+      expect(loginLink).toHaveAttribute('href', '/login');
+    });
+
+    it('hides Login link when authenticated', async () => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: true,
+        user: { name: 'Test User' },
+      });
+
+      render(
+        <AuthWrapper>
+          <BottomTabBar />
+        </AuthWrapper>
+      );
+
+      await screen.findByText('Admin');
+
+      expect(screen.queryByRole('link', { name: /^login$/i })).not.toBeInTheDocument();
+    });
+
+    it('shows Style Guide link in development environment', async () => {
+      // Set NODE_ENV to development (Jest sets it to 'test' by default, which should also show Style Guide)
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+
+      render(
+        <AuthWrapper>
+          <BottomTabBar />
+        </AuthWrapper>
+      );
+
+      await screen.findByRole('navigation');
+
+      const styleGuideLink = screen.getByRole('link', { name: /style guide/i });
+      expect(styleGuideLink).toBeInTheDocument();
+      expect(styleGuideLink).toHaveAttribute('href', '/style-guide');
+
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    it('hides Style Guide link in production environment', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+
+      render(
+        <AuthWrapper>
+          <BottomTabBar />
+        </AuthWrapper>
+      );
+
+      await screen.findByRole('navigation');
+
+      expect(screen.queryByRole('link', { name: /style guide/i })).not.toBeInTheDocument();
+
+      process.env.NODE_ENV = originalEnv;
+    });
+  });
+
+  describe('all navigation routes accessible', () => {
+    beforeEach(() => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: true,
+        user: { name: 'Test User' },
+      });
+    });
+
+    it('provides access to all main routes when authenticated', async () => {
+      render(
+        <AuthWrapper>
+          <BottomTabBar />
+        </AuthWrapper>
+      );
+
+      await screen.findByText('Admin');
+
+      // Check all routes are accessible
+      expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('href', '/');
+      expect(screen.getByRole('link', { name: /history/i })).toHaveAttribute('href', '/flipside');
+      expect(screen.getByRole('link', { name: /account/i })).toHaveAttribute('href', '/account');
+      expect(screen.getByRole('link', { name: /admin/i })).toHaveAttribute('href', '/admin');
+      expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
     });
   });
 });
