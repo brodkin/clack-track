@@ -432,7 +432,31 @@ if (eventHandler) {
 - **Rate Limiting** - 100 requests per 15 minutes on `/api/*` routes
   - Configurable via `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX_REQUESTS`
   - Returns 429 status with `RateLimit-*` headers
+  - Set `RATE_LIMIT_ENABLED=false` to disable (recommended for development/Playwright)
 - **Middleware Order** - Helmet → Compression → CORS → Rate Limit → Static → JSON → Session → Auth Bypass → Routes
+
+### Rate Limiting in Development
+
+**Recommendation:** Set `RATE_LIMIT_ENABLED=false` in your development `.env` file to avoid triggering rate limits during Playwright testing and local development.
+
+```bash
+# .env (development)
+RATE_LIMIT_ENABLED=false
+```
+
+**Writing Rate Limit Tests:**
+
+When writing tests that verify rate limiting behavior, you must explicitly set `enabled: true` in the config to override the environment variable:
+
+```typescript
+// ✅ CORRECT - Explicitly enable for testing rate limit behavior
+const limiter = createRateLimiter({ windowMs: 60000, max: 3, enabled: true });
+
+// ❌ WRONG - Will be disabled if RATE_LIMIT_ENABLED=false in env
+const limiter = createRateLimiter({ windowMs: 60000, max: 3 });
+```
+
+This ensures tests work correctly regardless of the developer's local environment configuration. The `enabled` config parameter takes priority over the `RATE_LIMIT_ENABLED` environment variable.
 
 ### Auth Bypass for Playwright Testing
 
