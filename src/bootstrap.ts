@@ -40,6 +40,7 @@ import { HappyToSeeMeGenerator } from './content/generators/ai/happy-to-see-me-g
 import { YoMommaGenerator } from './content/generators/ai/yo-momma-generator.js';
 import { WakeupGreetingGenerator } from './content/generators/ai/wakeup-greeting-generator.js';
 import { ISSObserverGenerator } from './content/generators/ai/iss-observer-generator.js';
+import { OneStarReviewGenerator } from './content/generators/ai/one-star-review-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { SleepModeGenerator } from './content/generators/programmatic/sleep-mode-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
@@ -212,6 +213,7 @@ function createCoreGenerators(
       apiKeys,
       new ISSClient()
     ),
+    oneStarReview: new OneStarReviewGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }

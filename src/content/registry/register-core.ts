@@ -92,6 +92,8 @@ export interface CoreGenerators {
   yoMomma: ContentGenerator;
   /** ISS observer generator (P2, LIGHT, AI-powered) */
   issObserver: ContentGenerator;
+  /** One-star review generator (P2, LIGHT, AI-powered) */
+  oneStarReview: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -353,6 +355,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.issObserver
+  );
+
+  registry.register(
+    {
+      id: 'one-star-review',
+      name: 'One-Star Review Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.oneStarReview
   );
 
   // Register P3 fallback generator (FALLBACK priority)
