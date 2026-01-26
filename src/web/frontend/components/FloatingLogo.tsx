@@ -31,12 +31,12 @@ export function FloatingLogo({ className }: FloatingLogoProps) {
         'fixed top-0 left-0 w-full',
         // Z-index: above content (z-40), below modals (z-50)
         'z-40',
-        // Gradient background with blur
-        'bg-gradient-to-b from-gray-50 via-gray-50/90 to-transparent',
-        'dark:from-gray-900 dark:via-gray-900/90 dark:to-transparent',
+        // Gradient background with blur - smooth fade without hard edge
+        'bg-gradient-to-b from-gray-50 to-transparent',
+        'dark:from-gray-900 dark:to-transparent',
         'backdrop-blur-md',
-        // Spacing
-        'py-6 px-4',
+        // Spacing - extended vertical padding for smoother gradient fade
+        'pt-6 pb-12 px-4',
         // Layout
         'flex justify-center items-center',
         // Pointer events - allow clicks through to content below
