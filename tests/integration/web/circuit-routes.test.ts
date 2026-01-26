@@ -579,8 +579,14 @@ describe('Circuit Breaker API Routes', () => {
       const routes = routerStack.filter(layer => layer.route);
       const middleware = routerStack.filter(layer => !layer.route);
 
-      // Should have 5 routes (GET /, GET /:id, POST /:id/on, POST /:id/off, POST /:id/reset)
-      expect(routes.length).toBe(5);
+      // Verify expected routes exist (don't assert exact count - it may grow)
+      const routePaths = routes.map(r => r.route?.path);
+      expect(routePaths).toContain('/');
+      expect(routePaths).toContain('/:id');
+      expect(routePaths).toContain('/:id/on');
+      expect(routePaths).toContain('/:id/off');
+      expect(routePaths).toContain('/:id/reset');
+
       // Should have at least 1 middleware (requireAuth)
       expect(middleware.length).toBeGreaterThanOrEqual(1);
     });
