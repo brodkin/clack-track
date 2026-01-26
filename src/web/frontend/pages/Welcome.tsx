@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PageLayout } from '../components/PageLayout';
 import { VestaboardPreview } from '../components/VestaboardPreview';
 import { VotingButtons } from '../components/VotingButtons';
+import { MoreInfoButton } from '../components/MoreInfoButton';
 import { apiClient } from '../services/apiClient';
 import { textToCharacterCodes, emptyGrid } from '../lib/textToCharCodes';
 import type { ContentWithCharacterCodes } from '../services/types.js';
@@ -187,6 +188,12 @@ export function Welcome() {
     );
   }
 
+  // Extract moreInfoUrl from metadata
+  const moreInfoUrl =
+    content.metadata && typeof content.metadata.moreInfoUrl === 'string'
+      ? content.metadata.moreInfoUrl
+      : null;
+
   return (
     <PageLayout>
       <div className="max-w-5xl mx-auto">
@@ -195,6 +202,13 @@ export function Welcome() {
         </h1>
 
         <VestaboardPreview content={characterCodes} className="mb-8" model={vestaboardModel} />
+
+        {/* More Info Button - renders below VestaboardPreview when moreInfoUrl is present */}
+        {moreInfoUrl && (
+          <div className="flex justify-center mb-6">
+            <MoreInfoButton url={moreInfoUrl} />
+          </div>
+        )}
 
         <div className="text-center mb-6">
           <p className="text-sm text-gray-600 dark:text-gray-400">

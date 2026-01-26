@@ -108,6 +108,33 @@ describe('ContentRepository', () => {
       });
       expect(result.id).toBeDefined();
     });
+
+    test('should preserve moreInfoUrl through save/retrieve round-trip', async () => {
+      const now = new Date();
+      const contentData = {
+        text: 'News Content with URL',
+        type: 'major' as const,
+        generatedAt: now,
+        sentAt: null,
+        aiProvider: 'openai',
+        metadata: {
+          model: 'gpt-4',
+          tier: 'heavy',
+          provider: 'openai',
+          tokensUsed: 300,
+          moreInfoUrl: 'https://news.example.com/breaking-story',
+        },
+      };
+
+      const saved = await contentRepo.saveContent(contentData);
+
+      // Verify moreInfoUrl is present after save
+      expect(saved.metadata?.moreInfoUrl).toBe('https://news.example.com/breaking-story');
+
+      // Retrieve from database to verify round-trip
+      const latest = await contentRepo.getLatestContent();
+      expect(latest?.metadata?.moreInfoUrl).toBe('https://news.example.com/breaking-story');
+    });
   });
 
   describe('getLatestContent', () => {
