@@ -262,4 +262,59 @@ describe('Rate Limit Integration Tests', () => {
       expect(response.headers['retry-after']).toBeDefined();
     });
   });
+
+  describe('Rate Limiting Disabled', () => {
+    afterEach(() => {
+      delete process.env.RATE_LIMIT_ENABLED;
+    });
+
+    it('should not rate limit when enabled=false in config', async () => {
+      const limiter = createRateLimiter({ windowMs: 60000, max: 2, enabled: false });
+      app.use('/api', limiter);
+
+      app.get('/api/disabled', (req, res) => {
+        res.json({ success: true });
+      });
+
+      // Make many requests - none should be blocked
+      for (let i = 0; i < 10; i++) {
+        const response = await request(app).get('/api/disabled');
+        expect(response.status).toBe(200);
+      }
+    });
+
+    it('should not rate limit when RATE_LIMIT_ENABLED=false env var', async () => {
+      process.env.RATE_LIMIT_ENABLED = 'false';
+      const limiter = createRateLimiter({ windowMs: 60000, max: 2 });
+      app.use('/api', limiter);
+
+      app.get('/api/env-disabled', (req, res) => {
+        res.json({ success: true });
+      });
+
+      // Make many requests - none should be blocked
+      for (let i = 0; i < 10; i++) {
+        const response = await request(app).get('/api/env-disabled');
+        expect(response.status).toBe(200);
+      }
+    });
+
+    it('should rate limit when explicitly enabled via config', async () => {
+      process.env.RATE_LIMIT_ENABLED = 'false';
+      const limiter = createRateLimiter({ windowMs: 60000, max: 2, enabled: true });
+      app.use('/api', limiter);
+
+      app.get('/api/force-enabled', (req, res) => {
+        res.json({ success: true });
+      });
+
+      // Make requests up to the limit
+      await request(app).get('/api/force-enabled');
+      await request(app).get('/api/force-enabled');
+
+      // Third request should be rate limited (config overrides env)
+      const response = await request(app).get('/api/force-enabled');
+      expect(response.status).toBe(429);
+    });
+  });
 });

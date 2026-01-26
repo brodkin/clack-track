@@ -222,4 +222,118 @@ describe('Rate Limit Middleware', () => {
       delete process.env.RATE_LIMIT_MAX_REQUESTS;
     });
   });
+
+  describe('Rate Limit Disabled', () => {
+    let mockReq: Partial<Request>;
+    let mockRes: Partial<Response>;
+    let mockNext: NextFunction;
+    let statusCode: number;
+
+    beforeEach(() => {
+      statusCode = 200;
+      mockReq = {
+        ip: '127.0.0.1',
+        path: '/api/test',
+        headers: {},
+      };
+      mockRes = {
+        status: jest.fn().mockImplementation((code: number) => {
+          statusCode = code;
+          return mockRes;
+        }),
+        json: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        setHeader: jest.fn().mockReturnThis(),
+      } as Partial<Response>;
+      mockNext = jest.fn();
+    });
+
+    afterEach(() => {
+      delete process.env.RATE_LIMIT_ENABLED;
+    });
+
+    it('should disable rate limiting when enabled=false in config', async () => {
+      const limiter = createRateLimiter({ enabled: false, max: 1 });
+
+      // Make many requests - none should be blocked
+      for (let i = 0; i < 10; i++) {
+        await limiter(mockReq as Request, mockRes as Response, mockNext);
+      }
+
+      expect(mockNext).toHaveBeenCalledTimes(10);
+      expect(statusCode).not.toBe(429);
+    });
+
+    it('should disable rate limiting when RATE_LIMIT_ENABLED=false env var', async () => {
+      process.env.RATE_LIMIT_ENABLED = 'false';
+      const limiter = createRateLimiter({ max: 1 });
+
+      // Make many requests - none should be blocked
+      for (let i = 0; i < 10; i++) {
+        await limiter(mockReq as Request, mockRes as Response, mockNext);
+      }
+
+      expect(mockNext).toHaveBeenCalledTimes(10);
+      expect(statusCode).not.toBe(429);
+    });
+
+    it('should enable rate limiting when RATE_LIMIT_ENABLED=true env var', async () => {
+      process.env.RATE_LIMIT_ENABLED = 'true';
+      const limiter = createRateLimiter({ max: 2 });
+
+      // Make requests to exceed limit
+      for (let i = 0; i < 3; i++) {
+        await limiter(mockReq as Request, mockRes as Response, mockNext);
+      }
+
+      expect(statusCode).toBe(429);
+    });
+
+    it('should prioritize config enabled over environment variable', async () => {
+      process.env.RATE_LIMIT_ENABLED = 'true';
+      const limiter = createRateLimiter({ enabled: false, max: 1 });
+
+      // Make many requests - config should override env var
+      for (let i = 0; i < 10; i++) {
+        await limiter(mockReq as Request, mockRes as Response, mockNext);
+      }
+
+      expect(mockNext).toHaveBeenCalledTimes(10);
+      expect(statusCode).not.toBe(429);
+    });
+
+    it('should handle RATE_LIMIT_ENABLED=0 as false', async () => {
+      process.env.RATE_LIMIT_ENABLED = '0';
+      const limiter = createRateLimiter({ max: 1 });
+
+      for (let i = 0; i < 5; i++) {
+        await limiter(mockReq as Request, mockRes as Response, mockNext);
+      }
+
+      expect(mockNext).toHaveBeenCalledTimes(5);
+      expect(statusCode).not.toBe(429);
+    });
+
+    it('should handle RATE_LIMIT_ENABLED=1 as true', async () => {
+      process.env.RATE_LIMIT_ENABLED = '1';
+      const limiter = createRateLimiter({ max: 2 });
+
+      for (let i = 0; i < 3; i++) {
+        await limiter(mockReq as Request, mockRes as Response, mockNext);
+      }
+
+      expect(statusCode).toBe(429);
+    });
+
+    it('should default to enabled when env var is empty', async () => {
+      process.env.RATE_LIMIT_ENABLED = '';
+      const limiter = createRateLimiter({ max: 2 });
+
+      for (let i = 0; i < 3; i++) {
+        await limiter(mockReq as Request, mockRes as Response, mockNext);
+      }
+
+      expect(statusCode).toBe(429);
+    });
+  });
 });
