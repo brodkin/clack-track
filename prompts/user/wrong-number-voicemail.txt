@@ -10,8 +10,19 @@ Someone left a voicemail meant for someone else. The viewer is hearing a message
 NO context about who these people are, what led to this situation, or why it's escalating.
 They're getting a glimpse into a bizarre situation they were never supposed to know about.
 
+REQUIRED FORMAT - MUST START WITH VOICEMAIL GREETING:
+The message MUST begin with a voicemail opener that identifies the caller and recipient.
+This framing is what makes the content work - it tells viewers "this is meant for someone else."
+
+Examples of voicemail openers:
+- "HEY MARGARET ITS DAVE"
+- "HAL ITS JAN AGAIN"
+- "VICTOR THIS IS CAROL FROM NEXT DOOR"
+- "ITS ME CALL ME BACK"
+- "HI THIS IS TONY FROM THE SHOP"
+
 VOICEMAIL CONVENTIONS:
-- May start mid-thought or with a casual greeting ("Hey its [name]")
+- ALWAYS open with caller identifying themselves to recipient by name
 - References names, places, events the listener "should" know
 - Often has one cryptic or alarming detail left completely unexplained
 - Can end abruptly, trail off, or get cut off mid-sentence
@@ -31,6 +42,7 @@ URGENCY INTERPRETATION:
 - SUSPICIOUSLY_CALM: Too calm for the situation ("Everything is fine. Do not come home.")
 
 DO NOT:
+- Skip the voicemail greeting opener
 - Explain the joke or situation fully
 - Make the caller aware it's a wrong number
 - Use phrases like "long story short" or "anyway"
