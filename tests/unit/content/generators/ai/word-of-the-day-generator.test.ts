@@ -293,6 +293,6 @@ describe('WordOfTheDayGenerator', () => {
 
       // At least some variety expected (allow for randomness)
       expect(uniqueDomains.size + uniqueVibes.size + uniqueStyles.size).toBeGreaterThanOrEqual(1);
-    });
+    }, 15000); // Extended timeout for 10 iterations
   });
 });

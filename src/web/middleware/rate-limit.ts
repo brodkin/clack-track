@@ -1,4 +1,5 @@
 import rateLimit, { RateLimitRequestHandler } from 'express-rate-limit';
+import type { RequestHandler } from 'express';
 
 /**
  * Configuration options for rate limiting
@@ -13,6 +14,8 @@ export interface RateLimitConfig {
   max?: number;
   /** Custom error message for rate limit exceeded */
   message?: string;
+  /** Whether rate limiting is enabled (default: true, can be set via RATE_LIMIT_ENABLED env var) */
+  enabled?: boolean;
 }
 
 /**
@@ -24,6 +27,7 @@ const DEFAULT_CONFIG: Required<RateLimitConfig> = {
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
   message: 'Too many requests from this IP, please try again later',
+  enabled: true,
 };
 
 /**
@@ -40,6 +44,27 @@ function parseEnvNumber(envVar: string | undefined, fallback: number): number {
   const parsed = parseInt(envVar, 10);
   return isNaN(parsed) ? fallback : parsed;
 }
+
+/**
+ * Parse environment variable as boolean with fallback
+ *
+ * @param envVar - Environment variable value
+ * @param fallback - Fallback value if not set
+ * @returns Parsed boolean or fallback
+ */
+function parseEnvBoolean(envVar: string | undefined, fallback: boolean): boolean {
+  if (envVar === undefined || envVar === '') {
+    return fallback;
+  }
+  return envVar.toLowerCase() === 'true' || envVar === '1';
+}
+
+/**
+ * Pass-through middleware that does nothing (used when rate limiting is disabled)
+ */
+const noopMiddleware: RequestHandler = (_req, _res, next) => {
+  next();
+};
 
 /**
  * Create rate limiter middleware with configurable options
@@ -67,7 +92,18 @@ function parseEnvNumber(envVar: string | undefined, fallback: number): number {
  * app.use('/api/auth', strictLimiter);
  * ```
  */
-export function createRateLimiter(config: RateLimitConfig = {}): RateLimitRequestHandler {
+export function createRateLimiter(
+  config: RateLimitConfig = {}
+): RateLimitRequestHandler | RequestHandler {
+  // Check if rate limiting is enabled
+  // Priority: config parameter > environment variable > default (true)
+  const enabled = config.enabled ?? parseEnvBoolean(process.env.RATE_LIMIT_ENABLED, true);
+
+  if (!enabled) {
+    // Return pass-through middleware when rate limiting is disabled
+    return noopMiddleware;
+  }
+
   // Merge configuration with environment variables and defaults
   // Priority: config parameter > environment variables > defaults
   const windowMs =
