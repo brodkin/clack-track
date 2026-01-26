@@ -70,11 +70,15 @@ describe('StyleGuide Page', () => {
     it('should render with PageLayout wrapper', () => {
       renderStyleGuide();
 
-      // PageLayout includes Navigation - verify it's rendered by checking for nav brand
-      // Note: Navigation is desktop-only (hidden on mobile), using BottomTabBar for mobile
-      const brandLink = screen.getByRole('link', { name: /clack track/i });
+      // PageLayout includes FloatingLogo - verify it's rendered
+      const logo = screen.getByTestId('floating-logo');
       // @ts-expect-error - jest-dom matchers
-      expect(brandLink).toBeInTheDocument();
+      expect(logo).toBeInTheDocument();
+
+      // Verify logo text exists as heading
+      const logoHeading = screen.getByRole('heading', { name: /clack track/i });
+      // @ts-expect-error - jest-dom matchers
+      expect(logoHeading).toBeInTheDocument();
     });
 
     it('should display the page title', () => {

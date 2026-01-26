@@ -1,16 +1,16 @@
 /**
  * PageLayout Component Tests
  *
- * Tests for the page layout wrapper with navigation integration
+ * Tests for the page layout wrapper with FloatingLogo and BottomTabBar navigation
  */
 
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { PageLayout } from '../../../src/web/frontend/components/PageLayout';
 
-// Mock the Navigation component
-jest.mock('../../../src/web/frontend/components/Navigation', () => ({
-  Navigation: () => <nav data-testid="desktop-navigation">Desktop Navigation</nav>,
+// Mock the FloatingLogo component
+jest.mock('../../../src/web/frontend/components/FloatingLogo', () => ({
+  FloatingLogo: () => <header data-testid="floating-logo">Floating Logo</header>,
 }));
 
 // Mock the BottomTabBar component
@@ -33,7 +33,7 @@ describe('PageLayout', () => {
       expect(screen.getByText('Test Content')).toBeInTheDocument();
     });
 
-    it('renders Navigation component for desktop', () => {
+    it('renders FloatingLogo component at top', () => {
       render(
         <BrowserRouter>
           <PageLayout>
@@ -42,10 +42,10 @@ describe('PageLayout', () => {
         </BrowserRouter>
       );
 
-      expect(screen.getByTestId('desktop-navigation')).toBeInTheDocument();
+      expect(screen.getByTestId('floating-logo')).toBeInTheDocument();
     });
 
-    it('renders BottomTabBar component for mobile', () => {
+    it('renders BottomTabBar component for navigation', () => {
       render(
         <BrowserRouter>
           <PageLayout>
@@ -57,7 +57,7 @@ describe('PageLayout', () => {
       expect(screen.getByTestId('bottom-tab-bar')).toBeInTheDocument();
     });
 
-    it('renders both navigation components (responsive behavior handled by CSS)', () => {
+    it('does NOT render Navigation component (deleted)', () => {
       render(
         <BrowserRouter>
           <PageLayout>
@@ -66,9 +66,8 @@ describe('PageLayout', () => {
         </BrowserRouter>
       );
 
-      // Both are rendered; CSS handles visibility based on breakpoint
-      expect(screen.getByTestId('desktop-navigation')).toBeInTheDocument();
-      expect(screen.getByTestId('bottom-tab-bar')).toBeInTheDocument();
+      // Navigation component should NOT exist
+      expect(screen.queryByTestId('desktop-navigation')).not.toBeInTheDocument();
     });
   });
 
@@ -116,8 +115,22 @@ describe('PageLayout', () => {
     });
   });
 
-  describe('mobile bottom padding', () => {
-    it('has bottom padding on main content for mobile nav overlap prevention', () => {
+  describe('spacing adjustments', () => {
+    it('has top padding/margin for FloatingLogo height', () => {
+      render(
+        <BrowserRouter>
+          <PageLayout>
+            <div>Content</div>
+          </PageLayout>
+        </BrowserRouter>
+      );
+
+      const mainElement = screen.getByRole('main');
+      // Should have top padding to account for floating logo
+      expect(mainElement).toHaveClass('pt-32');
+    });
+
+    it('has bottom padding on main content for BottomTabBar overlap prevention', () => {
       render(
         <BrowserRouter>
           <PageLayout>
