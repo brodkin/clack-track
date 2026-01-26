@@ -406,9 +406,27 @@ describe('Circuit CLI Commands', () => {
         }
         return process;
       });
+      // Reset modules and set up mocks BEFORE activating fake timers
+      // This prevents timer scope contamination issues
+      jest.resetModules();
+      jest.mock('@/storage/knex', () => ({
+        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
+        closeKnexInstance: jest.fn().mockResolvedValue(undefined),
+      }));
+      jest.mock('@/services/circuit-breaker-service', () => ({
+        CircuitBreakerService: jest.fn().mockImplementation(() => mockCircuitBreakerService),
+      }));
+      jest.mock('@/storage/repositories/circuit-breaker-repo', () => ({
+        CircuitBreakerRepository: jest.fn().mockImplementation(() => mockCircuitBreakerRepository),
+      }));
+      // Activate fake timers AFTER module mocks are set up
+      jest.useFakeTimers();
     });
 
     afterEach(() => {
+      // Clean up timers before restoring real timers
+      jest.clearAllTimers();
+      jest.useRealTimers();
       consoleClearSpy.mockRestore();
       (process.on as jest.Mock).mockRestore();
     });
@@ -427,19 +445,7 @@ describe('Circuit CLI Commands', () => {
       ];
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue(circuits);
 
-      // Reset modules to get fresh import
-      jest.resetModules();
-      jest.mock('@/storage/knex', () => ({
-        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
-        closeKnexInstance: jest.fn().mockResolvedValue(undefined),
-      }));
-      jest.mock('@/services/circuit-breaker-service', () => ({
-        CircuitBreakerService: jest.fn().mockImplementation(() => mockCircuitBreakerService),
-      }));
-      jest.mock('@/storage/repositories/circuit-breaker-repo', () => ({
-        CircuitBreakerRepository: jest.fn().mockImplementation(() => mockCircuitBreakerRepository),
-      }));
-
+      // Module mocks are set up in beforeEach
       const { circuitWatchCommand } = await import('@/cli/commands/circuit');
       const { getKnexInstance, closeKnexInstance } = await import('@/storage/knex');
 
@@ -461,23 +467,11 @@ describe('Circuit CLI Commands', () => {
     });
 
     test('respects interval option', async () => {
-      jest.useFakeTimers();
-
+      // Fake timers set up in beforeEach
       const circuits = [createMockCircuit({ circuitId: 'MASTER', state: 'on' })];
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue(circuits);
 
-      jest.resetModules();
-      jest.mock('@/storage/knex', () => ({
-        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
-        closeKnexInstance: jest.fn().mockResolvedValue(undefined),
-      }));
-      jest.mock('@/services/circuit-breaker-service', () => ({
-        CircuitBreakerService: jest.fn().mockImplementation(() => mockCircuitBreakerService),
-      }));
-      jest.mock('@/storage/repositories/circuit-breaker-repo', () => ({
-        CircuitBreakerRepository: jest.fn().mockImplementation(() => mockCircuitBreakerRepository),
-      }));
-
+      // Module mocks are set up in beforeEach
       const { circuitWatchCommand } = await import('@/cli/commands/circuit');
 
       // Start watch with custom interval and 2 iterations
@@ -495,7 +489,7 @@ describe('Circuit CLI Commands', () => {
       expect(mockCircuitBreakerService.getAllCircuits).toHaveBeenCalledTimes(2);
 
       await watchPromise;
-      jest.useRealTimers();
+      // Timer cleanup handled in afterEach
     });
 
     test('respects json flag for output format', async () => {
@@ -504,18 +498,7 @@ describe('Circuit CLI Commands', () => {
       ];
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue(circuits);
 
-      jest.resetModules();
-      jest.mock('@/storage/knex', () => ({
-        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
-        closeKnexInstance: jest.fn().mockResolvedValue(undefined),
-      }));
-      jest.mock('@/services/circuit-breaker-service', () => ({
-        CircuitBreakerService: jest.fn().mockImplementation(() => mockCircuitBreakerService),
-      }));
-      jest.mock('@/storage/repositories/circuit-breaker-repo', () => ({
-        CircuitBreakerRepository: jest.fn().mockImplementation(() => mockCircuitBreakerRepository),
-      }));
-
+      // Module mocks are set up in beforeEach
       const { circuitWatchCommand } = await import('@/cli/commands/circuit');
 
       await circuitWatchCommand({ json: true, maxIterations: 1 });
@@ -534,18 +517,7 @@ describe('Circuit CLI Commands', () => {
       const circuits = [createMockCircuit({ circuitId: 'MASTER', state: 'on' })];
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue(circuits);
 
-      jest.resetModules();
-      jest.mock('@/storage/knex', () => ({
-        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
-        closeKnexInstance: jest.fn().mockResolvedValue(undefined),
-      }));
-      jest.mock('@/services/circuit-breaker-service', () => ({
-        CircuitBreakerService: jest.fn().mockImplementation(() => mockCircuitBreakerService),
-      }));
-      jest.mock('@/storage/repositories/circuit-breaker-repo', () => ({
-        CircuitBreakerRepository: jest.fn().mockImplementation(() => mockCircuitBreakerRepository),
-      }));
-
+      // Module mocks are set up in beforeEach
       const { circuitWatchCommand } = await import('@/cli/commands/circuit');
 
       await circuitWatchCommand({ maxIterations: 1 });
@@ -555,23 +527,11 @@ describe('Circuit CLI Commands', () => {
     });
 
     test('multiple refresh cycles work correctly', async () => {
-      jest.useFakeTimers();
-
+      // Fake timers set up in beforeEach
       const circuits = [createMockCircuit({ circuitId: 'MASTER', state: 'on' })];
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue(circuits);
 
-      jest.resetModules();
-      jest.mock('@/storage/knex', () => ({
-        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
-        closeKnexInstance: jest.fn().mockResolvedValue(undefined),
-      }));
-      jest.mock('@/services/circuit-breaker-service', () => ({
-        CircuitBreakerService: jest.fn().mockImplementation(() => mockCircuitBreakerService),
-      }));
-      jest.mock('@/storage/repositories/circuit-breaker-repo', () => ({
-        CircuitBreakerRepository: jest.fn().mockImplementation(() => mockCircuitBreakerRepository),
-      }));
-
+      // Module mocks are set up in beforeEach
       const { circuitWatchCommand } = await import('@/cli/commands/circuit');
 
       // Run with 3 iterations
@@ -586,26 +546,14 @@ describe('Circuit CLI Commands', () => {
 
       // getAllCircuits should have been called 3 times
       expect(mockCircuitBreakerService.getAllCircuits).toHaveBeenCalledTimes(3);
-
-      jest.useRealTimers();
+      // Timer cleanup handled in afterEach
     });
 
     test('cleanup is called on successful completion', async () => {
       const circuits = [createMockCircuit({ circuitId: 'MASTER', state: 'on' })];
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue(circuits);
 
-      jest.resetModules();
-      jest.mock('@/storage/knex', () => ({
-        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
-        closeKnexInstance: jest.fn().mockResolvedValue(undefined),
-      }));
-      jest.mock('@/services/circuit-breaker-service', () => ({
-        CircuitBreakerService: jest.fn().mockImplementation(() => mockCircuitBreakerService),
-      }));
-      jest.mock('@/storage/repositories/circuit-breaker-repo', () => ({
-        CircuitBreakerRepository: jest.fn().mockImplementation(() => mockCircuitBreakerRepository),
-      }));
-
+      // Module mocks are set up in beforeEach
       const { circuitWatchCommand } = await import('@/cli/commands/circuit');
       const { closeKnexInstance } = await import('@/storage/knex');
 
@@ -615,7 +563,7 @@ describe('Circuit CLI Commands', () => {
     });
 
     test('detects and highlights state changes', async () => {
-      jest.useFakeTimers();
+      // Fake timers set up in beforeEach
 
       // First call returns circuit in 'on' state
       const circuitOn = createMockCircuit({ circuitId: 'MASTER', state: 'on' });
@@ -626,18 +574,7 @@ describe('Circuit CLI Commands', () => {
         .mockResolvedValueOnce([circuitOn])
         .mockResolvedValueOnce([circuitOff]);
 
-      jest.resetModules();
-      jest.mock('@/storage/knex', () => ({
-        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
-        closeKnexInstance: jest.fn().mockResolvedValue(undefined),
-      }));
-      jest.mock('@/services/circuit-breaker-service', () => ({
-        CircuitBreakerService: jest.fn().mockImplementation(() => mockCircuitBreakerService),
-      }));
-      jest.mock('@/storage/repositories/circuit-breaker-repo', () => ({
-        CircuitBreakerRepository: jest.fn().mockImplementation(() => mockCircuitBreakerRepository),
-      }));
-
+      // Module mocks are set up in beforeEach
       const { circuitWatchCommand } = await import('@/cli/commands/circuit');
 
       const watchPromise = circuitWatchCommand({ interval: 1000, maxIterations: 2 });
@@ -651,28 +588,15 @@ describe('Circuit CLI Commands', () => {
       const allCalls = consoleLogSpy.mock.calls.map(call => String(call[0]));
       const output = allCalls.join('\n');
       expect(output).toContain('CHANGED');
-
-      jest.useRealTimers();
+      // Timer cleanup handled in afterEach
     });
 
     test('uses default interval of 2000ms when not specified', async () => {
-      jest.useFakeTimers();
-
+      // Fake timers set up in beforeEach
       const circuits = [createMockCircuit({ circuitId: 'MASTER', state: 'on' })];
       mockCircuitBreakerService.getAllCircuits.mockResolvedValue(circuits);
 
-      jest.resetModules();
-      jest.mock('@/storage/knex', () => ({
-        getKnexInstance: jest.fn().mockImplementation(() => mockKnex),
-        closeKnexInstance: jest.fn().mockResolvedValue(undefined),
-      }));
-      jest.mock('@/services/circuit-breaker-service', () => ({
-        CircuitBreakerService: jest.fn().mockImplementation(() => mockCircuitBreakerService),
-      }));
-      jest.mock('@/storage/repositories/circuit-breaker-repo', () => ({
-        CircuitBreakerRepository: jest.fn().mockImplementation(() => mockCircuitBreakerRepository),
-      }));
-
+      // Module mocks are set up in beforeEach
       const { circuitWatchCommand } = await import('@/cli/commands/circuit');
 
       // Start watch without interval option (should default to 2000ms), with 2 iterations
@@ -691,7 +615,7 @@ describe('Circuit CLI Commands', () => {
       expect(mockCircuitBreakerService.getAllCircuits).toHaveBeenCalledTimes(2);
 
       await watchPromise;
-      jest.useRealTimers();
+      // Timer cleanup handled in afterEach
     });
   });
 });
