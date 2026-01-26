@@ -304,7 +304,9 @@ export function VestaboardPreview({ content, className, model = 'black' }: Vesta
               }
 
               // Calculate animation delay for staggered effect
-              const animationDelay = isAnimating ? `${getSplitFlapDelay(rowIndex, colIndex)}ms` : '';
+              const animationDelay = isAnimating
+                ? `${getSplitFlapDelay(rowIndex, colIndex)}ms`
+                : '';
 
               return (
                 <div

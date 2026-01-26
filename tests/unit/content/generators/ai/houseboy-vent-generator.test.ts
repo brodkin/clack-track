@@ -345,8 +345,7 @@ describe('HouseboyVentGenerator', () => {
       const situations = HouseboyVentGenerator.SITUATIONS;
 
       // Should be short springboards
-      const avgLength =
-        situations.reduce((sum, s) => sum + s.length, 0) / situations.length;
+      const avgLength = situations.reduce((sum, s) => sum + s.length, 0) / situations.length;
       expect(avgLength).toBeLessThan(20); // Short average length
 
       // Should NOT contain prescriptive phrases like "being slow" or "ran out"

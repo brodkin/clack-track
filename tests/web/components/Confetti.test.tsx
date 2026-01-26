@@ -52,7 +52,9 @@ describe('Confetti Component', () => {
     global.cancelAnimationFrame = mockCAF as unknown as typeof cancelAnimationFrame;
 
     // Mock canvas getContext
-    HTMLCanvasElement.prototype.getContext = jest.fn(() => mockCtx) as typeof HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = jest.fn(
+      () => mockCtx
+    ) as typeof HTMLCanvasElement.prototype.getContext;
 
     // Reset mocks
     mockRAF.mockClear();
@@ -65,8 +67,16 @@ describe('Confetti Component', () => {
     });
 
     // Mock window dimensions
-    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true, configurable: true });
-    Object.defineProperty(window, 'innerHeight', { value: 768, writable: true, configurable: true });
+    Object.defineProperty(window, 'innerWidth', {
+      value: 1024,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(window, 'innerHeight', {
+      value: 768,
+      writable: true,
+      configurable: true,
+    });
   });
 
   afterEach(() => {
@@ -173,12 +183,7 @@ describe('Confetti Component', () => {
 
       function TestWrapper() {
         const [active, setActiveState] = React.useState(true);
-        return (
-          <Confetti
-            active={active}
-            onComplete={() => setActiveState(false)}
-          />
-        );
+        return <Confetti active={active} onComplete={() => setActiveState(false)} />;
       }
 
       await act(async () => {
@@ -241,8 +246,16 @@ describe('Confetti Component', () => {
       expect(canvas?.height).toBe(768);
 
       // Simulate window resize
-      Object.defineProperty(window, 'innerWidth', { value: 1280, writable: true, configurable: true });
-      Object.defineProperty(window, 'innerHeight', { value: 800, writable: true, configurable: true });
+      Object.defineProperty(window, 'innerWidth', {
+        value: 1280,
+        writable: true,
+        configurable: true,
+      });
+      Object.defineProperty(window, 'innerHeight', {
+        value: 800,
+        writable: true,
+        configurable: true,
+      });
 
       await act(async () => {
         window.dispatchEvent(new Event('resize'));
