@@ -105,7 +105,12 @@ describe('Knex Factory and Singleton', () => {
 
     it('should use development config when NODE_ENV is development', () => {
       const originalEnv = process.env.NODE_ENV;
+      const originalDbType = process.env.DATABASE_TYPE;
+      const originalDbUrl = process.env.DATABASE_URL;
       process.env.NODE_ENV = 'development';
+      // Clear MySQL-triggering env vars to test default SQLite behavior
+      delete process.env.DATABASE_TYPE;
+      delete process.env.DATABASE_URL;
 
       const instance = getKnexInstance();
 
@@ -114,6 +119,8 @@ describe('Knex Factory and Singleton', () => {
       expect(callConfig.client).toBe('sqlite3');
 
       process.env.NODE_ENV = originalEnv;
+      if (originalDbType !== undefined) process.env.DATABASE_TYPE = originalDbType;
+      if (originalDbUrl !== undefined) process.env.DATABASE_URL = originalDbUrl;
     });
   });
 
