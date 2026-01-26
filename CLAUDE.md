@@ -97,23 +97,37 @@ The frontend is a React Single Page Application in `src/web/frontend/`:
 
 ```
 src/web/frontend/
-├── App.tsx              # Root with React Router
+├── App.tsx              # Root with React Router + Suspense
 ├── main.tsx             # Entry point with BrowserRouter
 ├── components/          # Reusable UI components
-│   ├── ui/              # shadcn/ui components (Button, Card, Sheet, Badge...)
-│   ├── Navigation.tsx   # Mobile hamburger + desktop nav bar
-│   ├── PageLayout.tsx   # Wrapper with navigation
-│   ├── VestaboardPreview.tsx  # 6×22 character grid display
-│   ├── VotingButtons.tsx      # Thumbs up/down voting
-│   └── ContentCard.tsx        # Content item with metadata badges
-├── pages/               # Route components
+│   ├── ui/              # shadcn/ui components (Button, Card, Sheet, Badge, Switch...)
+│   ├── FloatingLogo.tsx      # Fixed header with gradient fade
+│   ├── BottomTabBar.tsx      # iOS 26-style floating navigation
+│   ├── PageLayout.tsx        # Wrapper with FloatingLogo + BottomTabBar
+│   ├── VestaboardPreview.tsx # 6×22 character grid display
+│   ├── VotingButtons.tsx     # Thumbs up/down voting
+│   ├── ContentCard.tsx       # Content item with metadata badges
+│   ├── MoreInfoButton.tsx    # External link button for news sources
+│   ├── CircuitBreakerCard.tsx # Circuit state toggle UI
+│   ├── InviteForm.tsx        # Admin invite generation form
+│   ├── Confetti.tsx          # Celebration animation canvas
+│   ├── AuthGuard.tsx         # Conditional rendering based on auth
+│   ├── ProtectedRoute.tsx    # Route-level auth protection
+│   └── RouteLoading.tsx      # Suspense fallback component
+├── pages/               # Route components (lazy-loaded)
 │   ├── Welcome.tsx      # / - Latest content + voting
 │   ├── History.tsx      # /flipside - Content history list
 │   ├── Account.tsx      # /account - Profile + passkeys
-│   └── Login.tsx        # /login - Passkey authentication
+│   ├── Login.tsx        # /login - Passkey authentication
+│   ├── Register.tsx     # /register?token=xxx - New user registration
+│   ├── Admin.tsx        # /admin - Invites + circuit breaker controls
+│   └── StyleGuide.tsx   # /style-guide - Component showcase (dev-only)
+├── context/
+│   └── AuthContext.tsx  # Authentication state management
 ├── lib/
 │   ├── mockData.ts      # Placeholder data for development
-│   └── utils.ts         # cn() helper for Tailwind classes
+│   ├── utils.ts         # cn() helper for Tailwind classes
+│   └── animations.ts    # Confetti + haptic feedback utilities
 └── services/
     └── apiClient.ts     # REST API wrapper
 ```
@@ -121,8 +135,47 @@ src/web/frontend/
 **Key Components:**
 
 - `VestaboardPreview` - Renders 6×22 grid with split-flap aesthetic (amber text, black cells)
-- `Navigation` - Responsive: Sheet-based hamburger on mobile, horizontal links on desktop
+- `FloatingLogo` - Fixed header with "Clack Track" branding, gradient blur effect, non-blocking pointer events
+- `BottomTabBar` - iOS 26-style floating navigation with glass effect, haptic feedback, auth-aware visibility
+- `PageLayout` - Wraps pages with FloatingLogo + BottomTabBar + proper content spacing
 - `VotingButtons` - Touch-friendly (44px min) thumbs up/down for content quality voting
+- `MoreInfoButton` - External link for news content (only renders when `moreInfoUrl` is present)
+- `ProtectedRoute` - Redirects unauthenticated users to `/login`
+
+**Navigation Architecture:**
+
+```
+┌─────────────────────────────────────┐
+│         FloatingLogo                │  ← Fixed, gradient fade, non-blocking
+│   "Clack Track" + "BY HOUSEBOY"     │
+├─────────────────────────────────────┤
+│                                     │
+│         Page Content                │  ← pt-32 pb-20 for spacing
+│         (lazy-loaded)               │
+│                                     │
+├─────────────────────────────────────┤
+│        BottomTabBar                 │  ← Fixed, floating pill, glass effect
+│   Home | History | Account | Admin  │     Auth-aware tab visibility
+└─────────────────────────────────────┘
+```
+
+**Auth-Aware Tab Visibility:**
+
+| Tab       | Show When       | Hide When        |
+| --------- | --------------- | ---------------- |
+| Home      | Always          | Never            |
+| History   | Always          | Never            |
+| Account   | Authenticated   | Not authenticated|
+| Admin     | Authenticated   | Not authenticated|
+| Login     | Not authenticated | Authenticated  |
+| Logout    | Authenticated   | Not authenticated|
+
+**Animation Utilities** (`lib/animations.ts`):
+
+- `createConfettiAnimation(canvas)` - Canvas-based particle system with gravity physics
+- `triggerHaptic(intensity)` - Device vibration feedback ('light', 'medium', 'heavy')
+- Amber/gold/orange theme matching Vestaboard aesthetic
+- Used by `BottomTabBar` for tab interactions and `Confetti` for celebrations
 
 **Testing:** Frontend tests in `tests/web/` use jsdom environment with React Testing Library.
 
@@ -307,6 +360,39 @@ HaikuGenerator → no weather fetch → clean prompt with just universal context
 
 **Universal context** (date, time, personality) is already in the system prompt via template variables. Content-specific data (weather, news, etc.) must be fetched by generators that need it.
 
+### Content Metadata: moreInfoUrl
+
+News generators can include a `moreInfoUrl` linking to the original article source.
+
+**How It Works:**
+
+```
+News Generator → fetches RSS feed → extracts first item URL → sets moreInfoUrl in result
+                                                                    ↓
+Frontend → ContentCard/Welcome → MoreInfoButton renders if moreInfoUrl present
+```
+
+**Implementation Pattern:**
+
+```typescript
+// In generator result
+return {
+  text: 'Summary of the news...',
+  moreInfoUrl: 'https://example.com/article', // Optional
+};
+
+// In frontend (auto-rendered when present)
+<MoreInfoButton url={content.moreInfoUrl} />
+```
+
+**Supported Generators:**
+- `global-news`, `tech-news`, `local-news` - Extract URL from RSS feed
+
+**Frontend Component:**
+- `MoreInfoButton` - External link with "More Info" label, opens in new tab
+- Only renders when `moreInfoUrl` is a non-empty string
+- Accessible with proper ARIA attributes
+
 ### Content Registry & Priority Selection
 
 All generators registered via `ContentRegistry.register(metadata, generator)`. Selection uses P0→P2→P3 cascade:
@@ -314,6 +400,33 @@ All generators registered via `ContentRegistry.register(metadata, generator)`. S
 - **P0 (NOTIFICATION)** - Event pattern matching for HA events (immediate, no frame)
 - **P2 (NORMAL)** - Random selection from available generators
 - **P3 (FALLBACK)** - Static fallback when all else fails
+
+**Registered Generators (P2 - Normal Priority):**
+
+| Generator ID       | Model Tier | Type         | Description                        |
+| ------------------ | ---------- | ------------ | ---------------------------------- |
+| `global-news`      | MEDIUM     | AI           | Global news summaries              |
+| `tech-news`        | MEDIUM     | AI           | Tech news summaries                |
+| `local-news`       | MEDIUM     | AI           | Local news summaries               |
+| `weather-focus`    | LIGHT      | AI           | Weather updates                    |
+| `haiku`            | LIGHT      | AI           | Haiku poems                        |
+| `seasonal`         | LIGHT      | AI           | Seasonal content                   |
+| `pattern-art`      | LIGHT      | Programmatic | Mathematical patterns (no frame)   |
+| `shower-thought`   | LIGHT      | AI           | Philosophical musings              |
+| `fortune-cookie`   | LIGHT      | AI           | Twisted wisdom                     |
+| `daily-roast`      | MEDIUM     | AI           | Playful roasts                     |
+| `serial-story`     | MEDIUM     | AI           | Ongoing story segments             |
+| `time-perspective` | MEDIUM     | AI           | Historical time comparisons        |
+| `hot-take`         | LIGHT      | AI           | Playful opinions                   |
+| `novel-insight`    | MEDIUM     | AI           | Fresh perspectives                 |
+| `language-lesson`  | LIGHT      | AI           | Duolingo-style micro-lessons       |
+| `alien-field-report`| LIGHT     | AI           | Alien anthropologist observations  |
+| `happy-to-see-me`  | LIGHT      | AI           | Playful greetings                  |
+| `yo-momma`         | LIGHT      | AI           | Yo momma jokes                     |
+| `iss-observer`     | LIGHT      | AI           | ISS crew observations              |
+| `houseboy-vent`    | LIGHT      | AI           | Gen Z-style dramatic venting       |
+
+**P3 Fallback:** `static-fallback` - Static message when all AI fails
 
 ### Sleep Mode System
 
@@ -363,6 +476,74 @@ Overlay text on art → combined characterCodes layout
 - `src/content/generators/programmatic/sleep-art-generator.ts` - Starfield pattern
 - `src/content/generators/ai/sleep-greeting-generator.ts` - AI bedtime text
 - `src/cli/commands/circuit.ts` - `enterSleepMode()` and `exitSleepMode()` functions
+
+### Circuit Breaker System
+
+The circuit breaker system provides both manual control and automatic failure handling for the application.
+
+**Circuit Types:**
+
+| Type     | Purpose                                    | Management       |
+| -------- | ------------------------------------------ | ---------------- |
+| Manual   | Admin-controlled system switches           | User-triggered   |
+| Provider | AI provider failure tracking               | Auto-managed     |
+
+**Manual Circuits:**
+
+| Circuit ID   | Default | Description                                |
+| ------------ | ------- | ------------------------------------------ |
+| `MASTER`     | on      | Global kill switch - blocks all updates    |
+| `SLEEP_MODE` | off     | Quiet hours - blocks updates when enabled  |
+
+**Provider Circuits:**
+
+| Circuit ID          | Default | Auto-trips On                    |
+| ------------------- | ------- | -------------------------------- |
+| `PROVIDER_OPENAI`   | on      | 5 failures (1 for AuthError)     |
+| `PROVIDER_ANTHROPIC`| on      | 5 failures (1 for AuthError)     |
+
+**Circuit States:**
+
+```
+CLOSED (on)     → Traffic flows, failures counted
+     ↓ (failures >= threshold)
+OPEN (off)      → Traffic blocked
+     ↓ (reset timeout or manual reset)
+HALF_OPEN       → Testing recovery (limited traffic)
+     ↓ (success) or ↓ (failure)
+CLOSED          ←    OPEN
+```
+
+**CRITICAL: Circuit Semantics:**
+
+- "Open" circuit (isCircuitOpen=true) = traffic is **BLOCKED** (state='off')
+- "Closed" circuit (isCircuitOpen=false) = traffic **ALLOWED** (state='on' or 'half_open')
+- Default fail-open behavior: unknown circuits allow traffic
+
+**Admin UI:**
+
+The `/admin` page provides:
+- Manual circuit toggles (MASTER, SLEEP_MODE)
+- Provider circuit status display with reset buttons
+- User invite generation for registration
+
+**API Endpoints:**
+
+```typescript
+GET    /api/circuits           // List all circuits
+GET    /api/circuits/:id       // Get single circuit status
+POST   /api/circuits/:id/on    // Enable circuit (allow traffic)
+POST   /api/circuits/:id/off   // Disable circuit (block traffic)
+POST   /api/circuits/:id/reset // Reset provider circuit counters
+```
+
+**Key Files:**
+
+- `src/services/circuit-breaker-service.ts` - Service layer with state machine
+- `src/storage/repositories/circuit-breaker-repo.ts` - Database persistence
+- `src/web/routes/circuit.ts` - API endpoints
+- `src/web/frontend/pages/Admin.tsx` - Admin UI
+- `src/web/frontend/components/CircuitBreakerCard.tsx` - Circuit toggle component
 
 ### Home Assistant Integration
 
@@ -479,6 +660,79 @@ await page.goto('/account'); // Protected route - now accessible
 
 - `src/web/middleware/auth-bypass.ts` - Bypass middleware implementation
 - `tests/integration/web/middleware/auth-bypass.test.ts` - Integration tests
+
+### Authentication System
+
+The application uses WebAuthn/Passkey-based authentication for passwordless login.
+
+**Flow Overview:**
+
+```
+Registration (invite-based):
+Admin generates invite → User receives magic link → User registers passkey → Session created
+
+Login:
+User visits /login → WebAuthn challenge → User authenticates with passkey → Session created
+```
+
+**Frontend Auth Architecture:**
+
+```typescript
+// AuthContext provides global auth state
+const { isAuthenticated, user, isLoading, logout } = useAuth();
+
+// ProtectedRoute wraps routes requiring authentication
+<Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+
+// AuthGuard for conditional rendering within pages
+<AuthGuard>{user.name}</AuthGuard>
+```
+
+**Registration Flow:**
+
+1. Admin visits `/admin` and generates invite via `InviteForm`
+2. Magic link created with expiring token (stored in `magic_links` table)
+3. User clicks link → `/register?token=xxx`
+4. Token validated → WebAuthn registration challenge
+5. User creates passkey → credential stored in `credentials` table
+6. Session created → user redirected to home
+
+**Database Tables:**
+
+| Table         | Purpose                                   |
+| ------------- | ----------------------------------------- |
+| `users`       | User accounts (id, email, name)           |
+| `sessions`    | Login sessions with expiration            |
+| `credentials` | WebAuthn passkey public keys              |
+| `magic_links` | Registration invite tokens with expiration|
+
+**API Endpoints:**
+
+```typescript
+// Registration
+GET  /api/auth/register/validate  // Validate token from magic link
+GET  /api/auth/register/options   // Get WebAuthn registration challenge
+POST /api/auth/register           // Complete registration with passkey
+
+// Login
+GET  /api/auth/login/options      // Get WebAuthn login challenge
+POST /api/auth/login              // Verify passkey and create session
+
+// Session
+GET  /api/auth/me                 // Get current user
+POST /api/auth/logout             // End session
+
+// Admin (requires auth)
+POST /api/admin/invite            // Generate magic link invite
+```
+
+**Key Files:**
+
+- `src/web/frontend/context/AuthContext.tsx` - React auth context
+- `src/web/frontend/components/ProtectedRoute.tsx` - Route protection
+- `src/web/routes/auth.ts` - Auth API endpoints
+- `src/services/magic-link-service.ts` - Invite token generation
+- `src/web/middleware/require-auth.ts` - Express auth middleware
 
 ### Module Resolution
 
@@ -656,21 +910,52 @@ DATABASE_URL=mysql://root:devpassword@mysql:3306/clack_track
 - `src/storage/models/` - Data access layer (ContentModel, VoteModel, etc.)
 - `src/storage/repositories/` - Repository pattern wrappers with error handling
 
+## Key Environment Variables
+
+**Authentication & Security:**
+
+| Variable              | Default     | Description                              |
+| --------------------- | ----------- | ---------------------------------------- |
+| `AUTH_BYPASS_ENABLED` | `false`     | Enable X-Auth-Bypass header (dev only)   |
+| `SESSION_DURATION_DAYS` | `30`      | Login session lifetime                   |
+| `WEBAUTHN_RP_ID`      | `localhost` | Passkey relying party identifier         |
+| `WEBAUTHN_ORIGIN`     | (computed)  | Expected WebAuthn origin                 |
+
+**Rate Limiting:**
+
+| Variable                  | Default   | Description                          |
+| ------------------------- | --------- | ------------------------------------ |
+| `RATE_LIMIT_ENABLED`      | `true`    | Enable API rate limiting             |
+| `RATE_LIMIT_WINDOW_MS`    | `900000`  | Time window (15 min)                 |
+| `RATE_LIMIT_MAX_REQUESTS` | `100`     | Max requests per window              |
+
+**Vestaboard:**
+
+| Variable              | Default   | Description                              |
+| --------------------- | --------- | ---------------------------------------- |
+| `VESTABOARD_MODEL`    | `black`   | Board model: `black` or `white`          |
+
+See `.env.example` for comprehensive environment variable documentation.
+
 ## Quick Reference
 
-| Need              | Source                                                                            |
-| ----------------- | --------------------------------------------------------------------------------- |
-| npm scripts       | `npm run` or `package.json`                                                       |
-| Environment vars  | `.env.example`                                                                    |
-| Production access | `.env.production` (contains `DOCKER_HOST` for inspecting prod containers)         |
-| TypeScript config | `tsconfig.json`                                                                   |
-| Test config       | `jest.config.cjs`                                                                 |
-| Commit rules      | `commitlint.config.cjs`                                                           |
-| HA API docs       | `src/api/data-sources/CLAUDE.md`                                                  |
-| HA setup guide    | `docs/HOME_ASSISTANT_SETUP.md`                                                    |
-| Trigger config    | `config/triggers.example.yaml`                                                    |
-| AI fixtures       | `tests/fixtures/openai-responses.json`, `tests/fixtures/anthropic-responses.json` |
-| Test mocks        | `tests/__mocks__/`                                                                |
+| Need                  | Source                                                                            |
+| --------------------- | --------------------------------------------------------------------------------- |
+| npm scripts           | `npm run` or `package.json`                                                       |
+| Environment vars      | `.env.example`                                                                    |
+| Production access     | `.env.production` (contains `DOCKER_HOST` for inspecting prod containers)         |
+| TypeScript config     | `tsconfig.json`                                                                   |
+| Test config           | `jest.config.cjs`                                                                 |
+| Commit rules          | `commitlint.config.cjs`                                                           |
+| HA API docs           | `src/api/data-sources/CLAUDE.md`                                                  |
+| HA setup guide        | `docs/HOME_ASSISTANT_SETUP.md`                                                    |
+| Trigger config        | `config/triggers.example.yaml`                                                    |
+| AI fixtures           | `tests/fixtures/openai-responses.json`, `tests/fixtures/anthropic-responses.json` |
+| Test mocks            | `tests/__mocks__/`                                                                |
+| Circuit breaker       | `src/services/circuit-breaker-service.ts`                                         |
+| Auth context          | `src/web/frontend/context/AuthContext.tsx`                                        |
+| Generator registration| `src/content/registry/register-core.ts`                                           |
+| Animation utilities   | `src/web/frontend/lib/animations.ts`                                              |
 
 ## Critical Integration Patterns
 
