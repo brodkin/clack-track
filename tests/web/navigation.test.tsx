@@ -1,9 +1,10 @@
 /// <reference types="@testing-library/jest-dom" />
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import App from '@/web/frontend/App';
 import { Navigation } from '@/web/frontend/components/Navigation';
+import { AuthProvider } from '@/web/frontend/context/AuthContext';
 import * as apiClient from '@/web/frontend/services/apiClient';
 
 // Mock the apiClient module
@@ -30,6 +31,11 @@ jest.mock('@/web/frontend/services/apiClient', () => ({
   },
 }));
 
+// Mock @simplewebauthn/browser
+jest.mock('@simplewebauthn/browser', () => ({
+  startAuthentication: jest.fn(),
+}));
+
 const mockApiClient = apiClient.apiClient as jest.Mocked<typeof apiClient.apiClient>;
 
 // Mock PublicKeyCredential for browser support detection
@@ -41,65 +47,147 @@ Object.defineProperty(globalThis, 'PublicKeyCredential', {
   configurable: true,
 });
 
+/**
+ * Test wrapper that provides AuthProvider and Router
+ */
+function TestWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <MemoryRouter>
+      <AuthProvider>{children}</AuthProvider>
+    </MemoryRouter>
+  );
+}
+
 describe('Navigation Component', () => {
-  describe('Desktop Navigation', () => {
-    it('renders navigation links on desktop', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Mock authenticated state for these tests
+    mockApiClient.checkSession.mockResolvedValue({
+      authenticated: true,
+      user: { name: 'Test User' },
+    });
+  });
+
+  describe('Desktop Navigation (hidden on mobile, BottomTabBar handles mobile)', () => {
+    it('renders navigation links on desktop when authenticated', async () => {
       render(
-        <MemoryRouter>
+        <TestWrapper>
           <Navigation />
-        </MemoryRouter>
+        </TestWrapper>
       );
 
-      // Core navigation links should be present
-      expect(screen.getByRole('link', { name: /home/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /flipside/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /account/i })).toBeInTheDocument();
+      // Wait for auth state to resolve
+      await waitFor(() => {
+        // Core navigation links should be present
+        expect(screen.getByRole('link', { name: /home/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /flipside/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /account/i })).toBeInTheDocument();
+      });
     });
 
-    it('renders brand link to home', () => {
+    it('renders brand link to home', async () => {
       render(
-        <MemoryRouter>
+        <TestWrapper>
           <Navigation />
-        </MemoryRouter>
+        </TestWrapper>
       );
 
-      const brandLink = screen.getByRole('link', { name: /clack track/i });
-      expect(brandLink).toHaveAttribute('href', '/');
+      await waitFor(() => {
+        const brandLink = screen.getByRole('link', { name: /clack track/i });
+        expect(brandLink).toHaveAttribute('href', '/');
+      });
     });
 
-    it('does not include Admin link (moved to Account page)', () => {
+    it('hides login link when authenticated', async () => {
       render(
-        <MemoryRouter>
+        <TestWrapper>
           <Navigation />
-        </MemoryRouter>
+        </TestWrapper>
       );
 
-      // Admin link should NOT be in Navigation anymore
-      const adminLinks = screen.queryAllByRole('link', { name: /admin/i });
-      expect(adminLinks.length).toBe(0);
+      await waitFor(() => {
+        // Login link should NOT be visible when authenticated
+        const loginLinks = screen.queryAllByRole('link', { name: /^login$/i });
+        expect(loginLinks.length).toBe(0);
+      });
     });
 
-    it('includes Style Guide link in development mode', () => {
+    it('shows login link when not authenticated', async () => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: false,
+        user: null,
+      });
+
       render(
-        <MemoryRouter>
+        <TestWrapper>
           <Navigation />
-        </MemoryRouter>
+        </TestWrapper>
       );
 
-      // Style Guide should be present in test/dev mode
-      expect(screen.getByRole('link', { name: /style guide/i })).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: /^login$/i })).toBeInTheDocument();
+      });
     });
 
-    it('navigation links have correct href attributes', () => {
+    it('hides account link when not authenticated', async () => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: false,
+        user: null,
+      });
+
       render(
-        <MemoryRouter>
+        <TestWrapper>
           <Navigation />
-        </MemoryRouter>
+        </TestWrapper>
       );
 
-      expect(screen.getByRole('link', { name: /^home$/i })).toHaveAttribute('href', '/');
-      expect(screen.getByRole('link', { name: /flipside/i })).toHaveAttribute('href', '/flipside');
-      expect(screen.getByRole('link', { name: /account/i })).toHaveAttribute('href', '/account');
+      await waitFor(() => {
+        // Account link should NOT be visible when not authenticated
+        const accountLinks = screen.queryAllByRole('link', { name: /account/i });
+        expect(accountLinks.length).toBe(0);
+      });
+    });
+
+    it('includes Style Guide link in development mode', async () => {
+      render(
+        <TestWrapper>
+          <Navigation />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        // Style Guide should be present in test/dev mode
+        expect(screen.getByRole('link', { name: /style guide/i })).toBeInTheDocument();
+      });
+    });
+
+    it('navigation links have correct href attributes when authenticated', async () => {
+      render(
+        <TestWrapper>
+          <Navigation />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: /^home$/i })).toHaveAttribute('href', '/');
+        expect(screen.getByRole('link', { name: /flipside/i })).toHaveAttribute(
+          'href',
+          '/flipside'
+        );
+        expect(screen.getByRole('link', { name: /account/i })).toHaveAttribute('href', '/account');
+      });
+    });
+
+    it('shows logout button when authenticated', async () => {
+      render(
+        <TestWrapper>
+          <Navigation />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+      });
     });
   });
 });
@@ -108,10 +196,10 @@ describe('Admin Route', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock successful session check
+    // Mock authenticated session for Admin page access
     mockApiClient.checkSession.mockResolvedValue({
-      authenticated: false,
-      user: null,
+      authenticated: true,
+      user: { name: 'Test User' },
     });
 
     // Mock content endpoints

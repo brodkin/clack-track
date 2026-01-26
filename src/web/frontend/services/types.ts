@@ -122,17 +122,17 @@ export interface SessionResponse {
  * Account API Types
  */
 export interface ProfileResponse {
-  username: string;
+  name: string;
   email: string;
   createdAt: string;
 }
 
 export interface Passkey {
-  id: string;
+  id: string | number;
   name: string;
-  deviceType: 'phone' | 'tablet' | 'laptop' | 'desktop' | 'security-key';
+  deviceType: 'phone' | 'tablet' | 'laptop' | 'desktop' | 'security-key' | 'platform' | string;
   createdAt: string;
-  lastUsed: string;
+  lastUsed: string | null;
 }
 
 export interface PasskeysResponse {
@@ -228,6 +228,40 @@ export type CircuitsResponse = CircuitData[];
 export interface CircuitActionResponse {
   success: boolean;
   message?: string;
+}
+
+/**
+ * Admin API Types
+ */
+export interface GenerateInviteResponse {
+  success: boolean;
+  link: string;
+  email: string;
+  expiresAt: string;
+}
+
+/**
+ * Registration API Types
+ */
+export interface ValidateRegistrationTokenResponse {
+  valid: boolean;
+  email: string;
+}
+
+export interface CompleteRegistrationRequest {
+  token: string;
+  name: string;
+  credential: RegistrationCredential;
+}
+
+export interface CompleteRegistrationResponse {
+  success: boolean;
+  authenticated: boolean;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+  };
 }
 
 /**

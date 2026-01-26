@@ -9,6 +9,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { History } from '@/web/frontend/pages/History';
+import { AuthProvider } from '@/web/frontend/context/AuthContext';
 import { apiClient } from '@/web/frontend/services/apiClient';
 import type { ContentRecord } from '@/storage/models/content';
 
@@ -18,7 +19,13 @@ jest.mock('@/web/frontend/services/apiClient', () => ({
     getContentHistory: jest.fn(),
     submitVote: jest.fn(),
     getVestaboardConfig: jest.fn(),
+    checkSession: jest.fn(),
   },
+}));
+
+// Mock @simplewebauthn/browser (required by AuthProvider)
+jest.mock('@simplewebauthn/browser', () => ({
+  startAuthentication: jest.fn(),
 }));
 
 const mockApiClient = apiClient as jest.Mocked<typeof apiClient>;
@@ -46,18 +53,30 @@ describe('History Page', () => {
     jest.clearAllMocks();
     // Default mock for config - returns black model
     mockApiClient.getVestaboardConfig.mockResolvedValue({ model: 'black' });
+    // Default auth mock - unauthenticated is fine for History page (public)
+    mockApiClient.checkSession.mockResolvedValue({
+      authenticated: false,
+      user: null,
+    });
   });
+
+  /**
+   * Helper to render with AuthProvider context
+   */
+  const renderWithAuth = (ui: React.ReactElement) => {
+    return render(
+      <MemoryRouter>
+        <AuthProvider>{ui}</AuthProvider>
+      </MemoryRouter>
+    );
+  };
 
   describe('Loading State', () => {
     it('should show loading skeleton while fetching history', async () => {
       // Create a promise that never resolves to keep loading state
       mockApiClient.getContentHistory.mockReturnValue(new Promise(() => {}));
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       // Check for loading state by looking for the header text
       const heading = screen.getByRole('heading', { name: /the flip side/i });
@@ -68,11 +87,7 @@ describe('History Page', () => {
     it('should display page title and description during loading', async () => {
       mockApiClient.getContentHistory.mockReturnValue(new Promise(() => {}));
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       const heading = screen.getByRole('heading', { name: /the flip side/i });
       // @ts-expect-error - jest-dom matchers
@@ -92,11 +107,7 @@ describe('History Page', () => {
         pagination: { limit: 20, count: 5 },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const firstContent = screen.getByText(/generator-1/i);
@@ -112,11 +123,7 @@ describe('History Page', () => {
         pagination: { limit: 20, count: 5 },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         mockContents.forEach(content => {
@@ -134,11 +141,7 @@ describe('History Page', () => {
         pagination: { limit: 20, count: 1 },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const timeText = screen.getByText(/2 hours ago/i);
@@ -158,11 +161,7 @@ describe('History Page', () => {
         pagination: { limit: 20, count: 1 },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const timeText = screen.getByText(/just now/i);
@@ -180,11 +179,7 @@ describe('History Page', () => {
         pagination: { limit: 20, count: 0 },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const emptyMessage = screen.getByText(/no content history available/i);
@@ -200,11 +195,7 @@ describe('History Page', () => {
         pagination: { limit: 20, count: 0 },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const hint = screen.getByText(/generate some content/i);
@@ -218,11 +209,7 @@ describe('History Page', () => {
     it('should show error message when API call fails', async () => {
       mockApiClient.getContentHistory.mockRejectedValue(new Error('Network error'));
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const errorMessage = screen.getByText(/network error/i);
@@ -234,11 +221,7 @@ describe('History Page', () => {
     it('should show retry button on error', async () => {
       mockApiClient.getContentHistory.mockRejectedValue(new Error('Failed'));
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const retryButton = screen.getByRole('button', { name: /try again/i });
@@ -256,11 +239,7 @@ describe('History Page', () => {
           pagination: { limit: 20, count: 5 },
         });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const retryButton = screen.getByRole('button', { name: /try again/i });
@@ -281,11 +260,7 @@ describe('History Page', () => {
         pagination: { limit: 20, count: 10 },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const loadMoreButton = screen.getByRole('button', { name: /load more/i });
@@ -301,11 +276,7 @@ describe('History Page', () => {
         pagination: { limit: 20, count: 10 },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const loadMoreButton = screen.getByRole('button', { name: /3 of 10/i });
@@ -321,11 +292,7 @@ describe('History Page', () => {
         pagination: { limit: 20, count: 5 },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const loadMoreButton = screen.queryByRole('button', { name: /load more/i });
@@ -349,11 +316,7 @@ describe('History Page', () => {
           pagination: { limit: 20, count: 5 },
         });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const loadMoreButton = screen.getByRole('button', { name: /load more/i });
@@ -372,11 +335,7 @@ describe('History Page', () => {
         pagination: { limit: 20, count: 10 },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const loadMoreButton = screen.getByRole('button', { name: /load more/i });
@@ -408,11 +367,7 @@ describe('History Page', () => {
     });
 
     it('should render voting buttons for each content item', async () => {
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         // Should have multiple voting button pairs (Good/Bad buttons)
@@ -437,11 +392,7 @@ describe('History Page', () => {
         },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const goodButtons = screen.getAllByRole('button', { name: /good/i });
@@ -469,11 +420,7 @@ describe('History Page', () => {
         },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const goodButtons = screen.getAllByRole('button', { name: /good/i });
@@ -490,11 +437,7 @@ describe('History Page', () => {
     it('should show error message when vote submission fails', async () => {
       mockApiClient.submitVote.mockRejectedValue(new Error('Vote failed'));
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const goodButtons = screen.getAllByRole('button', { name: /good/i });
@@ -519,11 +462,7 @@ describe('History Page', () => {
     });
 
     it('should display content items as clickable cards', async () => {
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         // Find the generator ID text which indicates cards are rendered
@@ -534,11 +473,7 @@ describe('History Page', () => {
     });
 
     it('should display multiple content cards', async () => {
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         // Check multiple items are displayed
@@ -560,11 +495,7 @@ describe('History Page', () => {
         pagination: { limit: 20, count: 5 },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const providerBadges = screen.getAllByText(/openai/i);
@@ -579,11 +510,7 @@ describe('History Page', () => {
         pagination: { limit: 20, count: 5 },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         const typeBadges = screen.getAllByText(/major/i);
@@ -600,11 +527,7 @@ describe('History Page', () => {
         pagination: { limit: 20, count: 5 },
       });
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       await waitFor(() => {
         expect(mockApiClient.getVestaboardConfig).toHaveBeenCalledTimes(1);
@@ -619,11 +542,7 @@ describe('History Page', () => {
       });
       mockApiClient.getVestaboardConfig.mockRejectedValue(new Error('Config failed'));
 
-      render(
-        <MemoryRouter>
-          <History />
-        </MemoryRouter>
-      );
+      renderWithAuth(<History />);
 
       // Page should still render content even if config fails
       await waitFor(() => {

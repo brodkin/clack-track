@@ -23,6 +23,7 @@ jest.mock('../../../src/cli/commands/index.js', () => ({
   circuitOffCommand: jest.fn().mockResolvedValue(undefined),
   circuitResetCommand: jest.fn().mockResolvedValue(undefined),
   circuitWatchCommand: jest.fn().mockResolvedValue(undefined),
+  authInviteCommand: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('../../../src/cli/commands/frame.js', () => ({

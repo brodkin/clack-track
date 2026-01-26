@@ -55,7 +55,17 @@ import {
   ContentRepository,
   VoteRepository,
   CircuitBreakerRepository,
+  SessionRepository,
+  UserRepository,
+  CredentialRepository,
+  MagicLinkRepository,
 } from './storage/repositories/index.js';
+import {
+  SessionModel,
+  UserModel,
+  CredentialModel,
+  MagicLinkModel,
+} from './storage/models/index.js';
 import { CircuitBreakerService } from './services/circuit-breaker-service.js';
 import type { AIProvider } from './types/ai.js';
 import { ContentPriority, ModelTier } from './types/content-generator.js';
@@ -91,6 +101,14 @@ export interface BootstrapResult {
   circuitBreaker: CircuitBreakerService | undefined;
   /** Frame decorator for applying time/weather frame to content */
   frameDecorator: FrameDecorator;
+  /** Session repository for auth (undefined if database not configured) */
+  sessionRepository: SessionRepository | undefined;
+  /** User repository for auth (undefined if database not configured) */
+  userRepository: UserRepository | undefined;
+  /** Credential repository for auth (undefined if database not configured) */
+  credentialRepository: CredentialRepository | undefined;
+  /** Magic link repository for registration (undefined if database not configured) */
+  magicLinkRepository: MagicLinkRepository | undefined;
 }
 
 /**
@@ -316,6 +334,10 @@ export async function bootstrap(): Promise<BootstrapResult> {
   let voteRepository: VoteRepository | undefined;
   let logModel: LogModel | undefined;
   let circuitBreakerService: CircuitBreakerService | undefined;
+  let sessionRepository: SessionRepository | undefined;
+  let userRepository: UserRepository | undefined;
+  let credentialRepository: CredentialRepository | undefined;
+  let magicLinkRepository: MagicLinkRepository | undefined;
 
   // In test environment, always use in-memory SQLite
   // In production, require DATABASE_URL to be configured
@@ -344,6 +366,19 @@ export async function bootstrap(): Promise<BootstrapResult> {
       // Initialize circuit breaker default circuits (idempotent)
       await circuitBreakerService.initialize();
 
+      // Create auth-related models and repositories
+      const sessionModel = new SessionModel(knex);
+      sessionRepository = new SessionRepository(sessionModel);
+
+      const userModel = new UserModel(knex);
+      userRepository = new UserRepository(userModel);
+
+      const credentialModel = new CredentialModel(knex);
+      credentialRepository = new CredentialRepository(credentialModel);
+
+      const magicLinkModel = new MagicLinkModel(knex);
+      magicLinkRepository = new MagicLinkRepository(magicLinkModel);
+
       // Run 90-day retention cleanup on startup (fire-and-forget)
       contentRepository.cleanupOldRecords(90).catch(cleanupError => {
         console.warn(
@@ -362,6 +397,10 @@ export async function bootstrap(): Promise<BootstrapResult> {
       voteRepository = undefined;
       logModel = undefined;
       circuitBreakerService = undefined;
+      sessionRepository = undefined;
+      userRepository = undefined;
+      credentialRepository = undefined;
+      magicLinkRepository = undefined;
     }
   }
 
@@ -508,5 +547,9 @@ export async function bootstrap(): Promise<BootstrapResult> {
     triggerConfigLoader,
     circuitBreaker: circuitBreakerService,
     frameDecorator,
+    sessionRepository,
+    userRepository,
+    credentialRepository,
+    magicLinkRepository,
   };
 }

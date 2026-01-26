@@ -579,10 +579,21 @@ export class HomeAssistantClient {
       return;
     }
 
-    // Listen for connection close events
-    // Note: home-assistant-js-websocket library uses a different event model
-    // For now, we expose handleConnectionClose for external triggering
-    // In production, this would be connected to the actual WebSocket close event
+    // Listen for connection close events using the library's event system
+    this.connection.addEventListener('disconnected', () => {
+      this.logger.warn('WebSocket disconnected event received', {
+        url: this.config.url,
+        wasManualDisconnect: this.isManualDisconnect,
+      });
+      this.handleConnectionClose();
+    });
+
+    // Also listen for reconnect errors
+    this.connection.addEventListener('reconnect-error', () => {
+      this.logger.warn('WebSocket reconnect error received', {
+        url: this.config.url,
+      });
+    });
   }
 
   /**

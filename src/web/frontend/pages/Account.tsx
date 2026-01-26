@@ -48,12 +48,16 @@ import { apiClient } from '../services/apiClient.js';
 import { startRegistration } from '@simplewebauthn/browser';
 import type { Passkey, ProfileResponse } from '../services/types.js';
 
-const deviceIcons = {
+// Note: This page should be wrapped with ProtectedRoute in App.tsx
+// Authentication redirect is handled by ProtectedRoute, not by this component
+
+const deviceIcons: Record<string, typeof Shield> = {
   phone: Smartphone,
   tablet: Tablet,
   laptop: Laptop,
   desktop: Monitor,
   'security-key': Shield,
+  platform: Laptop, // Default for platform authenticators (TouchID, Windows Hello, etc.)
 };
 
 export function Account() {
@@ -76,14 +80,8 @@ export function Account() {
   const [loadingCircuitId, setLoadingCircuitId] = useState<string | null>(null);
   const [adminError, setAdminError] = useState<string | null>(null);
 
-  /**
-   * Redirect to login if not authenticated
-   */
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate('/login');
-    }
-  }, [isAuthenticated, authLoading, navigate]);
+  // Note: Authentication redirect is now handled by ProtectedRoute in App.tsx
+  // The isAuthenticated check below is only for UI rendering, not protection
 
   /**
    * Fetch circuits from API to check admin access
@@ -328,7 +326,7 @@ export function Account() {
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Name</p>
-              <p className="font-semibold text-gray-900 dark:text-white">{profile.username}</p>
+              <p className="font-semibold text-gray-900 dark:text-white">{profile.name}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
@@ -360,7 +358,7 @@ export function Account() {
           <CardContent>
             <div className="space-y-4">
               {passkeys.map((passkey, index) => {
-                const Icon = deviceIcons[passkey.deviceType];
+                const Icon = deviceIcons[passkey.deviceType] || Shield;
                 const isLastPasskey = passkeys.length === 1;
 
                 return (
@@ -379,7 +377,10 @@ export function Account() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">
-                          Last used: {new Date(passkey.lastUsed).toLocaleDateString()}
+                          Last used:{' '}
+                          {passkey.lastUsed
+                            ? new Date(passkey.lastUsed).toLocaleDateString()
+                            : 'Never'}
                         </Badge>
                         <Button
                           onClick={() => {

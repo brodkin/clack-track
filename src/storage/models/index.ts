@@ -1,6 +1,14 @@
 export { ContentModel } from './content.js';
 export { VoteModel } from './vote.js';
 export { LogModel } from './log.js';
+export { SessionModel } from './session.js';
+export { UserModel } from './user.js';
+export { MagicLinkModel } from './magic-link.js';
+export { CredentialModel } from './credential.js';
 export type { ContentRecord, RejectionReason } from './content.js';
 export type { VoteRecord } from './vote.js';
 export type { LogRecord, LogLevel } from './log.js';
+export type { SessionRecord } from './session.js';
+export type { UserRecord, CreateUserInput, UpdateUserInput } from './user.js';
+export type { MagicLinkRecord, CreateMagicLinkInput } from './magic-link.js';
+export type { CredentialRecord } from './credential.js';

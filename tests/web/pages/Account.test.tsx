@@ -11,6 +11,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { Account } from '@/web/frontend/pages/Account';
+import { ProtectedRoute } from '@/web/frontend/components/ProtectedRoute';
 import { AuthProvider } from '@/web/frontend/context/AuthContext';
 import * as apiClient from '@/web/frontend/services/apiClient';
 import { startRegistration } from '@simplewebauthn/browser';
@@ -56,7 +57,7 @@ describe('Account Page', () => {
 
     // Mock profile data
     mockApiClient.getProfile.mockResolvedValue({
-      username: 'Demo User',
+      name: 'Demo User',
       email: 'demo@example.com',
       createdAt: '2024-01-01T00:00:00Z',
     });
@@ -82,12 +83,22 @@ describe('Account Page', () => {
     });
   });
 
+  /**
+   * Render Account page wrapped in ProtectedRoute, matching real App.tsx structure
+   */
   const renderAccountPage = () => {
     return render(
       <MemoryRouter initialEntries={['/account']}>
         <AuthProvider>
           <Routes>
-            <Route path="/account" element={<Account />} />
+            <Route
+              path="/account"
+              element={
+                <ProtectedRoute>
+                  <Account />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/login" element={<div>Login Page</div>} />
           </Routes>
         </AuthProvider>

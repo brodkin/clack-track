@@ -14,3 +14,5 @@ export {
   circuitWatchCommand,
 } from './circuit.js';
 export type { CircuitWatchOptions } from './circuit.js';
+export { authInviteCommand } from './auth.js';
+export type { AuthInviteOptions } from './auth.js';

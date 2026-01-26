@@ -53,7 +53,7 @@ describe('Account Routes', () => {
         .set('x-session-id', sessionId);
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('username');
+      expect(response.body).toHaveProperty('name');
       expect(response.body).toHaveProperty('email');
       expect(response.body).toHaveProperty('createdAt');
     });
