@@ -277,16 +277,21 @@ describe('Account Page', () => {
     it('should show confirmation dialog before removing', async () => {
       renderAccountPage();
 
-      await waitFor(async () => {
+      // Wait for remove buttons to be available
+      await waitFor(() => {
         const removeButtons = screen.getAllByRole('button', { name: /remove/i });
-        fireEvent.click(removeButtons[0]);
+        expect(removeButtons.length).toBeGreaterThan(0);
+      });
 
-        // Confirmation dialog should appear
-        await waitFor(() => {
-          const confirmText = screen.getByText(/are you sure/i);
-          // @ts-expect-error - jest-dom matchers
-          expect(confirmText).toBeInTheDocument();
-        });
+      // Click the first remove button
+      const removeButtons = screen.getAllByRole('button', { name: /remove/i });
+      fireEvent.click(removeButtons[0]);
+
+      // Confirmation dialog should appear
+      await waitFor(() => {
+        const confirmText = screen.getByText(/are you sure/i);
+        // @ts-expect-error - jest-dom matchers
+        expect(confirmText).toBeInTheDocument();
       });
     });
   });
@@ -333,9 +338,8 @@ describe('Account Page', () => {
       renderAccountPage();
 
       await waitFor(() => {
-        const button = screen.getByRole('button', { name: /logout/i });
-        // @ts-expect-error - jest-dom matchers
-        expect(button).toBeInTheDocument();
+        const buttons = screen.getAllByRole('button', { name: /logout/i });
+        expect(buttons.length).toBeGreaterThan(0);
       });
     });
 
@@ -347,13 +351,19 @@ describe('Account Page', () => {
 
       renderAccountPage();
 
-      await waitFor(async () => {
-        const button = screen.getByRole('button', { name: /logout/i });
-        fireEvent.click(button);
+      // Wait for logout buttons to be available
+      await waitFor(() => {
+        const buttons = screen.getAllByRole('button', { name: /logout/i });
+        expect(buttons.length).toBeGreaterThan(0);
+      });
 
-        await waitFor(() => {
-          expect(mockApiClient.logout).toHaveBeenCalled();
-        });
+      // Click the first logout button (navigation)
+      const buttons = screen.getAllByRole('button', { name: /logout/i });
+      fireEvent.click(buttons[0]);
+
+      // Verify logout was called
+      await waitFor(() => {
+        expect(mockApiClient.logout).toHaveBeenCalled();
       });
     });
   });

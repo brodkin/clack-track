@@ -18,6 +18,11 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Custom Font Variables */
+  --font-brush: 'Pacifico', cursive;
+  --font-display: 'Bebas Neue', sans-serif;
+
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -77,6 +82,8 @@ h1 {
 }
 
 @theme inline {
+  --font-family-brush: var(--font-brush);
+  --font-family-display: var(--font-display);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -155,6 +162,17 @@ h1 {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ============================================
+   Custom Font Utility Classes
+   ============================================ */
+.font-brush {
+  font-family: var(--font-brush);
+}
+
+.font-display {
+  font-family: var(--font-display);
 }
 
 /* ============================================
