@@ -547,115 +547,93 @@ await page.goto('/account'); // Protected route - now accessible
 
 ## Important Constraints
 
-### Testing Requirements
-
-- 80% minimum coverage enforced by Jest (branches, functions, lines, statements)
-- All external APIs mocked (no real HTTP calls)
-- Four isolated test environments: unit, integration, e2e (60s timeout), web (jsdom)
-- Tests MUST run in worktrees under `./trees/`, never from root directory
-- Coverage reports in `coverage/` directory
-
 ### Testing Standards
 
-**Performance Expectations:**
+**Philosophy:** Prioritize tests that prove features work over tests that verify implementation details. Integration tests are the primary defense against regressions. Unit tests are reserved for pure logic only.
 
-- Unit tests: < 5 seconds per file
-- Integration tests: < 10 seconds per file
-- Full test suite: < 60 seconds
-- Global timeout: 10 seconds (e2e has 60s override)
+**Test Environments:**
+- Four isolated environments: unit, integration, e2e (60s timeout), web (jsdom)
+- Tests run in worktrees under `./trees/`, never from root directory
+- 80% coverage minimum (branches, functions, lines, statements)
+- All external APIs mocked (AI providers, Vestaboard, Home Assistant)
 
-**Timer Mocking Pattern:**
+**When to Use Each Test Type:**
 
-Tests that involve delays, timeouts, or retries MUST use Jest fake timers instead of real time:
+| Test Type | Use For | Skip For |
+|-----------|---------|----------|
+| **Unit** | Pure functions, math, formatting, parsing (deterministic input→output) | Orchestration, workflows, anything requiring mocks |
+| **Integration** | Feature behavior, component interactions, database ops, API handlers | Library behavior, implementation details |
+| **E2E** | Critical user journeys (auth, content pipeline, web UI) | Features covered by integration tests |
+
+**Unit Tests - Selective Use Only:**
+
+Reserve for pure functions with no dependencies:
+- `text-layout.ts` - character wrapping, line breaking
+- `CharacterEncoder` - character code mapping
+- Validators with complex logic
+- Date/time calculations
+
+Skip unit tests for orchestration, pass-through functions, or anything requiring multiple mocks.
+
+**Integration Tests - Primary Focus:**
+
+Test that features work, not how they work:
 
 ```typescript
-// ✅ CORRECT - Use fake timers for delay testing
-beforeEach(() => {
-  jest.useFakeTimers();
+// ✅ GOOD - Tests behavior
+it('uses fallback generator when AI provider fails', async () => {
+  mockAIProvider.generate.mockRejectedValue(new Error('API down'));
+  const result = await orchestrator.generateAndSend(context);
+  expect(result.generatorId).toBe('static-fallback');
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
-
-it('should handle exponential backoff', async () => {
-  const promise = client.retryWithBackoff();
-  await jest.advanceTimersByTimeAsync(1000); // Simulate first delay
-  await jest.advanceTimersByTimeAsync(2000); // Simulate second delay
-  await expect(promise).resolves.toBe(true);
-});
-
-// ❌ WRONG - Real timers waste test execution time
-it('should handle exponential backoff', async () => {
-  const startTime = Date.now();
-  await client.retryWithBackoff(); // Waits REAL time!
-  expect(Date.now() - startTime).toBeGreaterThan(3000);
+// ❌ BAD - Tests implementation
+it('calls selector.select() exactly once', async () => {
+  await orchestrator.generateAndSend(context);
+  expect(mockSelector.select).toHaveBeenCalledTimes(1);
 });
 ```
 
-**Reference implementations:** `tests/unit/scheduler/cron.test.ts`, `tests/unit/scheduler/trigger-matcher.test.ts`
+**Mocking strategy:** Mock at boundaries (external APIs), use real internal components (ContentRegistry, database, services).
 
-**Database Test Setup Pattern:**
+**CLI Testing:**
 
-Database tests should use `beforeAll`/`afterAll` for connection lifecycle:
-
-```typescript
-// ✅ CORRECT - Connection once per suite, data cleanup per test
-let knex: Knex;
-
-beforeAll(async () => {
-  resetKnexInstance();
-  knex = getKnexInstance();
-  await knex.schema.createTable('content', ...);
-});
-
-beforeEach(async () => {
-  await knex('content').del(); // Just clean data
-});
-
-afterAll(async () => {
-  await closeKnexInstance();
-});
-
-// ❌ WRONG - Connection per test is slow
-beforeEach(async () => {
-  resetKnexInstance();
-  knex = getKnexInstance();
-  await knex.schema.createTable('content', ...); // Recreated each test!
-});
-
-afterEach(async () => {
-  await closeKnexInstance(); // Closed each test!
-});
-```
-
-**Reference implementations:** `tests/unit/storage/models/content.test.ts`, `tests/unit/storage/repositories/content-repo.test.ts`
-
-**Timestamp Ordering Without Real Delays:**
-
-When testing ordering by timestamps, use timestamp manipulation instead of real delays:
+Never spawn CLI processes in tests - call exported functions directly:
 
 ```typescript
-// ✅ CORRECT - Manipulate timestamps directly
-const now = new Date();
-await repo.save({ text: 'First', generatedAt: new Date(now.getTime()) });
-await repo.save({ text: 'Second', generatedAt: new Date(now.getTime() + 1000) });
+// ✅ CORRECT
+import { generate } from '@/cli/commands/generate.js';
+const result = await generate({ generator: 'haiku' });
 
-// ❌ WRONG - Real delays waste time
-await repo.save({ text: 'First', generatedAt: new Date() });
-await new Promise(resolve => setTimeout(resolve, 1000)); // Wastes 1 second!
-await repo.save({ text: 'Second', generatedAt: new Date() });
+// ❌ WRONG - Flaky, environment-dependent
+const { stdout } = await exec('npm run generate');
 ```
 
-**Anti-Patterns to Avoid:**
+**Anti-Patterns:**
 
-| Anti-Pattern                    | Problem                      | Solution                            |
-| ------------------------------- | ---------------------------- | ----------------------------------- |
-| Real `setTimeout` in tests      | Slow test execution          | Use `jest.advanceTimersByTimeAsync` |
-| `Date.now()` elapsed assertions | Tests actual wall-clock time | Use fake timers or timestamp values |
-| Per-test database connections   | Expensive setup/teardown     | Use `beforeAll`/`afterAll`          |
-| Real delays for ordering tests  | Wastes seconds per test      | Use timestamp manipulation          |
-| Large test timeouts (>10s)      | Masks slow tests             | Fix the test or use fake timers     |
+| Anti-Pattern | Problem | Do Instead |
+|--------------|---------|------------|
+| Fixed counts (`toHaveLength(5)`) | Breaks when features added | Test presence: `toContainEqual(expect.objectContaining({ id: 'haiku' }))` |
+| Testing library behavior | Tests nothing about your code | Test YOUR code's behavior |
+| Arbitrary existence checks (`toContain('hello')`) | No functional purpose | Test behavior that matters |
+| Mocking internals | Couples to implementation | Mock at boundaries only |
+| CLI process spawning | Flaky, environment issues | Call exported functions |
+| Real timers in tests | Slow execution | Use `jest.useFakeTimers()` |
+| Per-test DB connections | Expensive setup/teardown | Use `beforeAll`/`afterAll` |
+
+**Test Naming - Describe Behavior:**
+
+```typescript
+// ✅ GOOD
+it('returns fallback content when AI provider fails')
+it('saves generated content to database')
+
+// ❌ BAD
+it('calls aiProvider.generate()')
+it('should have 5 generators registered')
+```
+
+**Performance:** Unit < 5s/file, Integration < 10s/file, Full suite < 60s. Use fake timers for delays/retries.
 
 ### TypeScript Configuration
 
