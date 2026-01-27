@@ -64,6 +64,7 @@ describe('registerCoreContent', () => {
     yoMomma: createMockGenerator('yoMomma'),
     issObserver: createMockGenerator('issObserver'),
     houseboyVent: createMockGenerator('houseboyVent'),
+    wrongNumberVoicemail: createMockGenerator('wrongNumberVoicemail'),
     staticFallback: createMockGenerator('fallback'),
   });
 

@@ -41,6 +41,7 @@ import { YoMommaGenerator } from './content/generators/ai/yo-momma-generator.js'
 import { WakeupGreetingGenerator } from './content/generators/ai/wakeup-greeting-generator.js';
 import { ISSObserverGenerator } from './content/generators/ai/iss-observer-generator.js';
 import { HouseboyVentGenerator } from './content/generators/ai/houseboy-vent-generator.js';
+import { WrongNumberVoicemailGenerator } from './content/generators/ai/wrong-number-voicemail-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { SleepModeGenerator } from './content/generators/programmatic/sleep-mode-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
@@ -232,6 +233,11 @@ function createCoreGenerators(
       new ISSClient()
     ),
     houseboyVent: new HouseboyVentGenerator(promptLoader, modelTierSelector, apiKeys),
+    wrongNumberVoicemail: new WrongNumberVoicemailGenerator(
+      promptLoader,
+      modelTierSelector,
+      apiKeys
+    ),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }
