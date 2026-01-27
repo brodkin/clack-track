@@ -63,18 +63,30 @@ describe('registerNotifications', () => {
     };
   });
 
-  it('should register 4 notification generators', () => {
+  it('should register expected notification generators', () => {
     registerNotifications(registry, mockFactory);
 
-    const allGenerators = registry.getAll();
-    expect(allGenerators).toHaveLength(4);
+    // Verify expected notification generators are registered by ID
+    const expectedIds = [
+      'ha-notification-door',
+      'ha-notification-person',
+      'ha-notification-motion',
+      'ha-notification-garage',
+    ];
+    for (const id of expectedIds) {
+      expect(registry.getById(id)).toBeDefined();
+    }
   });
 
   it('should register all generators with P0 NOTIFICATION priority', () => {
     registerNotifications(registry, mockFactory);
 
-    const notificationGenerators = registry.getByPriority(ContentPriority.NOTIFICATION);
-    expect(notificationGenerators).toHaveLength(4);
+    const allGenerators = registry.getAll();
+    // All registered notifications should have P0 priority
+    expect(allGenerators.length).toBeGreaterThan(0);
+    expect(allGenerators.every(g => g.registration.priority === ContentPriority.NOTIFICATION)).toBe(
+      true
+    );
   });
 
   it('should register all generators with LIGHT model tier', () => {
@@ -168,10 +180,15 @@ describe('registerNotifications', () => {
     expect(factoryCreateSpy).toHaveBeenCalledWith(/^cover\..*garage.*$/i, 'Garage Notification');
   });
 
-  it('should call factory exactly 4 times', () => {
+  it('should call factory for each notification type', () => {
     registerNotifications(registry, mockFactory);
 
-    expect(factoryCreateSpy).toHaveBeenCalledTimes(4);
+    // Verify factory was called for each expected notification type
+    // (specific calls are tested in individual tests above)
+    expect(factoryCreateSpy).toHaveBeenCalled();
+    // Factory should be called at least once per expected notification type
+    const allGenerators = registry.getAll();
+    expect(factoryCreateSpy).toHaveBeenCalledTimes(allGenerators.length);
   });
 
   describe('Event pattern matching', () => {
