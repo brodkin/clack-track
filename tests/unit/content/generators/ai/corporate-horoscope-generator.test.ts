@@ -113,11 +113,9 @@ describe('CorporateHoroscopeGenerator', () => {
 
   describe('getSystemPromptFile()', () => {
     it('should return major-update-base.txt', () => {
-      const generator = new CorporateHoroscopeGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' }
-      ) as ProtectedCorporateHoroscopeGenerator;
+      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      }) as ProtectedCorporateHoroscopeGenerator;
 
       const systemPromptFile = generator.getSystemPromptFile();
 
@@ -127,11 +125,9 @@ describe('CorporateHoroscopeGenerator', () => {
 
   describe('getUserPromptFile()', () => {
     it('should return corporate-horoscope.txt', () => {
-      const generator = new CorporateHoroscopeGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' }
-      ) as ProtectedCorporateHoroscopeGenerator;
+      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      }) as ProtectedCorporateHoroscopeGenerator;
 
       const userPromptFile = generator.getUserPromptFile();
 
