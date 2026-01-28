@@ -98,6 +98,8 @@ export interface CoreGenerators {
   houseboyVent: ContentGenerator;
   /** Corporate horoscope generator (P2, LIGHT, AI-powered) */
   corporateHoroscope: ContentGenerator;
+  /** Wrong number voicemail generator (P2, LIGHT, AI-powered) */
+  wrongNumberVoicemail: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -392,6 +394,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.corporateHoroscope
+  );
+
+  registry.register(
+    {
+      id: 'wrong-number-voicemail',
+      name: 'Wrong Number Voicemail Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.wrongNumberVoicemail
   );
 
   // Register P3 fallback generator (FALLBACK priority)
