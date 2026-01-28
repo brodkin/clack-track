@@ -1,5 +1,9 @@
 {
   "mcpServers": {
+    "beads": {
+      "type": "stdio",
+      "command": "beads-mcp"
+    },
     "context7": {
       "type": "stdio",
       "command": "npx",
