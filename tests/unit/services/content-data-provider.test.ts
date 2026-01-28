@@ -24,6 +24,8 @@ describe('ContentDataProvider', () => {
   let provider: ContentDataProvider;
 
   beforeEach(() => {
+    jest.useFakeTimers();
+
     // Mock WeatherService
     mockWeatherService = {
       getWeather: jest.fn(),
@@ -35,6 +37,10 @@ describe('ContentDataProvider', () => {
     } as unknown as jest.Mocked<ColorBarService>;
 
     provider = new ContentDataProvider(mockWeatherService, mockColorBarService);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('fetchData()', () => {
@@ -211,7 +217,9 @@ describe('ContentDataProvider', () => {
         });
 
         // Act
-        const result = await provider.fetchData();
+        const fetchPromise = provider.fetchData();
+        await jest.advanceTimersByTimeAsync(10);
+        const result = await fetchPromise;
 
         // Assert
         expect(weatherResolved).toBe(true);

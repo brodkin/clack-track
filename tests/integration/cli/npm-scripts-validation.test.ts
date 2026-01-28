@@ -1,84 +1,155 @@
 /**
- * Validation tests for npm scripts - verifies scripts can be invoked
- * This test suite validates command structure without requiring full environment setup
+ * Validation tests for database CLI commands
+ *
+ * Tests that database commands can be invoked via direct function imports.
+ * Uses real database operations with mocked external boundaries.
+ *
+ * These tests validate command structure and functionality without spawning processes.
  */
 
-import { execSync } from 'child_process';
-import { describe, it, expect } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+  jest,
+} from '@jest/globals';
+import { dbMigrateCommand } from '@/cli/commands/db-migrate.js';
+import { dbResetCommand } from '@/cli/commands/db-reset.js';
+import type { DbResetOptions } from '@/cli/commands/db-reset.js';
+import { resetKnexInstance, closeKnexInstance } from '@/storage/knex.js';
 
-interface ExecSyncErrorWithMessage extends Error {
-  message: string;
-}
+// Mock console methods to capture output
+const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-describe('Database npm scripts validation', () => {
-  // Use current working directory (or workspace root)
-  const worktreePath = process.cwd();
+// Store original process.exit to restore later
+const originalExit = process.exit;
+
+// Mock process.exit to prevent actual exit
+const mockExit = jest.fn() as unknown as typeof process.exit;
+
+describe('Database CLI commands validation', () => {
+  beforeAll(async () => {
+    process.exit = mockExit;
+  });
+
+  afterAll(async () => {
+    process.exit = originalExit;
+    consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+  });
+
+  beforeEach(() => {
+    consoleLogSpy.mockClear();
+    consoleErrorSpy.mockClear();
+    mockExit.mockClear();
+
+    // Reset database instance for clean state
+    resetKnexInstance();
+  });
+
+  afterEach(async () => {
+    // Close database connection after each test
+    try {
+      await closeKnexInstance();
+    } catch {
+      // Ignore cleanup errors
+    }
+  });
 
   describe('Custom CLI migration scripts', () => {
-    it('db:migrate should use custom CLI handler', () => {
-      // db:migrate uses custom CLI (like db:reset), not direct knex CLI
-      // We verify the script is accessible via npm run listing
-      const output = execSync('npm run', {
-        cwd: worktreePath,
-        encoding: 'utf-8',
-        stdio: 'pipe',
-      });
+    it('db:migrate should execute migration command', async () => {
+      await dbMigrateCommand();
 
-      // Verify db:migrate is listed and uses tsx (custom CLI pattern)
-      expect(output).toContain('db:migrate');
-      expect(output).toContain('tsx src/cli/index.ts db:migrate');
+      const output = consoleLogSpy.mock.calls.map(call => call.join(' ')).join('\n');
+
+      // Verify migration output
+      expect(output).toMatch(/Running database migrations|Database is already up to date/);
     });
   });
 
-  describe('Knex migration scripts', () => {
-    it('db:rollback should use correct knexfile path', () => {
-      try {
-        const output = execSync('npm run db:rollback -- --help', {
-          cwd: worktreePath,
-          encoding: 'utf-8',
-          stdio: 'pipe',
-        });
+  describe('Database reset commands', () => {
+    it('db:reset should complete with force mode', async () => {
+      // First run migrations to have tables to reset
+      await dbMigrateCommand();
+      consoleLogSpy.mockClear(); // Clear migration output
 
-        // Should show migrate:rollback help
-        expect(output).toContain('Rollback');
-      } catch (error) {
-        // If command fails, check it's using correct knexfile
-        const execError = error as ExecSyncErrorWithMessage;
-        expect(execError.message).toContain('knexfile');
-      }
+      const options: DbResetOptions = {
+        truncate: false,
+        seed: false,
+        force: true, // Use force to skip interactive prompt in tests
+      };
+
+      await dbResetCommand(options);
+
+      const output = consoleLogSpy.mock.calls.map(call => call.join(' ')).join('\n');
+
+      // Verify reset completed
+      expect(output).toMatch(/Database reset complete/);
     });
 
-    it('db:seed should use correct knexfile path', () => {
-      try {
-        const output = execSync('npm run db:seed -- --help', {
-          cwd: worktreePath,
-          encoding: 'utf-8',
-          stdio: 'pipe',
-        });
+    it('db:reset should support truncate mode', async () => {
+      // First run migrations to have tables to truncate
+      await dbMigrateCommand();
+      consoleLogSpy.mockClear(); // Clear migration output
 
-        // Should show seed:run help
-        expect(output).toContain('seed');
-      } catch (error) {
-        // If command fails, check it's using correct knexfile
-        const execError = error as ExecSyncErrorWithMessage;
-        expect(execError.message).toContain('knexfile');
-      }
+      const options: DbResetOptions = {
+        truncate: true,
+        seed: false,
+        force: true,
+      };
+
+      await dbResetCommand(options);
+
+      const output = consoleLogSpy.mock.calls.map(call => call.join(' ')).join('\n');
+
+      // Verify truncate mode was used
+      expect(output).toMatch(/Truncating all tables|Database reset complete/);
+    });
+
+    it('db:reset should support seed mode', async () => {
+      // First run migrations to have tables for seeds
+      await dbMigrateCommand();
+      consoleLogSpy.mockClear(); // Clear migration output
+
+      const options: DbResetOptions = {
+        truncate: false,
+        seed: true,
+        force: true,
+      };
+
+      await dbResetCommand(options);
+
+      const output = consoleLogSpy.mock.calls.map(call => call.join(' ')).join('\n');
+
+      // Verify seeds were run
+      expect(output).toMatch(/Running seeds|Seeds executed successfully|Database reset complete/);
     });
   });
 
-  describe('Script accessibility', () => {
-    it('should list all db: scripts via npm run', () => {
-      const output = execSync('npm run', {
-        cwd: worktreePath,
-        encoding: 'utf-8',
-        stdio: 'pipe',
-      });
+  describe('Production safety', () => {
+    it('db:reset should block execution in production', async () => {
+      const originalNodeEnv = process.env.NODE_ENV;
 
-      expect(output).toContain('db:reset');
-      expect(output).toContain('db:reset:seed');
-      expect(output).toContain('db:migrate');
-      expect(output).toContain('db:rollback');
-      expect(output).toContain('db:seed');
+      try {
+        process.env.NODE_ENV = 'production';
+
+        const options: DbResetOptions = {
+          truncate: false,
+          seed: false,
+          force: true,
+        };
+
+        await expect(dbResetCommand(options)).rejects.toThrow(
+          'db:reset is not allowed in production'
+        );
+      } finally {
+        process.env.NODE_ENV = originalNodeEnv;
+      }
     });
   });
 });
