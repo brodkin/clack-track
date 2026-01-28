@@ -39,7 +39,7 @@ describe('VoteModel', () => {
   let voteModel: VoteModel;
   let contentHelper: TempContentHelper;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     // Reset singleton to ensure clean state
     resetKnexInstance();
     knex = getKnexInstance();
@@ -76,15 +76,17 @@ describe('VoteModel', () => {
       });
     }
 
-    // Clean tables for isolated tests
-    await knex('votes').del();
-    await knex('content').del();
-
     voteModel = new VoteModel(knex);
     contentHelper = new TempContentHelper(knex);
   });
 
-  afterEach(async () => {
+  beforeEach(async () => {
+    // Clean tables for isolated tests
+    await knex('votes').del();
+    await knex('content').del();
+  });
+
+  afterAll(async () => {
     await closeKnexInstance();
   });
 

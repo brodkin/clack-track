@@ -10,7 +10,7 @@ describe('LogModel', () => {
   let knex: Knex;
   let logModel: LogModel;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     // Reset singleton to ensure clean state
     resetKnexInstance();
     knex = getKnexInstance();
@@ -29,12 +29,15 @@ describe('LogModel', () => {
       });
     }
 
-    // Clean tables for isolated tests
-    await knex('logs').del();
     logModel = new LogModel(knex);
   });
 
-  afterEach(async () => {
+  beforeEach(async () => {
+    // Clean tables for isolated tests
+    await knex('logs').del();
+  });
+
+  afterAll(async () => {
     await closeKnexInstance();
   });
 

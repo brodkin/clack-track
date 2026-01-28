@@ -40,7 +40,9 @@ import { HappyToSeeMeGenerator } from './content/generators/ai/happy-to-see-me-g
 import { YoMommaGenerator } from './content/generators/ai/yo-momma-generator.js';
 import { WakeupGreetingGenerator } from './content/generators/ai/wakeup-greeting-generator.js';
 import { ISSObserverGenerator } from './content/generators/ai/iss-observer-generator.js';
+import { OneStarReviewGenerator } from './content/generators/ai/one-star-review-generator.js';
 import { HouseboyVentGenerator } from './content/generators/ai/houseboy-vent-generator.js';
+import { CorporateHoroscopeGenerator } from './content/generators/ai/corporate-horoscope-generator.js';
 import { WrongNumberVoicemailGenerator } from './content/generators/ai/wrong-number-voicemail-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { SleepModeGenerator } from './content/generators/programmatic/sleep-mode-generator.js';
@@ -232,7 +234,9 @@ function createCoreGenerators(
       apiKeys,
       new ISSClient()
     ),
+    oneStarReview: new OneStarReviewGenerator(promptLoader, modelTierSelector, apiKeys),
     houseboyVent: new HouseboyVentGenerator(promptLoader, modelTierSelector, apiKeys),
+    corporateHoroscope: new CorporateHoroscopeGenerator(promptLoader, modelTierSelector, apiKeys),
     wrongNumberVoicemail: new WrongNumberVoicemailGenerator(
       promptLoader,
       modelTierSelector,

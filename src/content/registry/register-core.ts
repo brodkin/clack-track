@@ -92,8 +92,12 @@ export interface CoreGenerators {
   yoMomma: ContentGenerator;
   /** ISS observer generator (P2, LIGHT, AI-powered) */
   issObserver: ContentGenerator;
+  /** One-star review generator (P2, LIGHT, AI-powered) */
+  oneStarReview: ContentGenerator;
   /** Houseboy vent generator (P2, LIGHT, AI-powered) */
   houseboyVent: ContentGenerator;
+  /** Corporate horoscope generator (P2, LIGHT, AI-powered) */
+  corporateHoroscope: ContentGenerator;
   /** Wrong number voicemail generator (P2, LIGHT, AI-powered) */
   wrongNumberVoicemail: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
@@ -361,6 +365,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
 
   registry.register(
     {
+      id: 'one-star-review',
+      name: 'One-Star Review Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.oneStarReview
+  );
+
+  registry.register(
+    {
       id: 'houseboy-vent',
       name: 'Houseboy Vent Generator',
       priority: ContentPriority.NORMAL,
@@ -368,6 +383,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.houseboyVent
+  );
+
+  registry.register(
+    {
+      id: 'corporate-horoscope',
+      name: 'Corporate Horoscope Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.corporateHoroscope
   );
 
   registry.register(

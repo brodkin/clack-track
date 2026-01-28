@@ -1,0 +1,22 @@
+Generate a one-star review of something that cannot actually be rated - a concept, phenomenon, or universal experience treated as a disappointing product or service.
+
+INSPIRATION (pivot freely for humor): {{reviewSubject}}
+
+STYLE: {{reviewStyle}}
+{{styleGuidance}}
+
+REQUIREMENTS:
+- MUST include "1 STAR" or "ONE STAR" somewhere
+- Specific grievances, not vague complaints
+- Review structure (setup + punchline)
+
+GOOD:
+1 STAR
+ORDERED CONSCIOUSNESS
+ARRIVED WITH ANXIETY
+NO RETURN POLICY
+WOULD NOT RECOMMEND
+
+BAD:
+- "LIFE IS BAD" (too vague, no review structure)
+- Missing the rating (readers need format clarity)

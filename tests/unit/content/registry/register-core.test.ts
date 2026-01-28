@@ -63,7 +63,9 @@ describe('registerCoreContent', () => {
     happyToSeeMe: createMockGenerator('happyToSeeMe'),
     yoMomma: createMockGenerator('yoMomma'),
     issObserver: createMockGenerator('issObserver'),
+    oneStarReview: createMockGenerator('oneStarReview'),
     houseboyVent: createMockGenerator('houseboyVent'),
+    corporateHoroscope: createMockGenerator('corporateHoroscope'),
     wrongNumberVoicemail: createMockGenerator('wrongNumberVoicemail'),
     staticFallback: createMockGenerator('fallback'),
   });
@@ -91,9 +93,9 @@ describe('registerCoreContent', () => {
       const normalPriorityGens = registry.getByPriority(ContentPriority.NORMAL);
       // Verify P2 generators are registered - don't assert exact count as it grows over time
       expect(normalPriorityGens.length).toBeGreaterThan(0);
-      expect(normalPriorityGens.every(g => g.registration.priority === ContentPriority.NORMAL)).toBe(
-        true
-      );
+      expect(
+        normalPriorityGens.every(g => g.registration.priority === ContentPriority.NORMAL)
+      ).toBe(true);
     });
   });
 

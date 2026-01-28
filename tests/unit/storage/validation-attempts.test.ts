@@ -18,7 +18,7 @@ describe('Validation Attempts Tracking', () => {
   let contentModel: ContentModel;
   let contentRepo: ContentRepository;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     // Reset singleton to ensure clean state
     resetKnexInstance();
     knex = getKnexInstance();
@@ -81,13 +81,16 @@ describe('Validation Attempts Tracking', () => {
       });
     }
 
-    // Clean table for isolated tests
-    await knex('content').del();
     contentModel = new ContentModel(knex);
     contentRepo = new ContentRepository(contentModel);
   });
 
-  afterEach(async () => {
+  beforeEach(async () => {
+    // Clean table for isolated tests
+    await knex('content').del();
+  });
+
+  afterAll(async () => {
     await closeKnexInstance();
   });
 
