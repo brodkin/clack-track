@@ -51,6 +51,7 @@ describe('content:test command', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
 
     // Reset registry before each test
     ContentRegistry.reset();
@@ -87,6 +88,7 @@ describe('content:test command', () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     bootstrapSpy.mockRestore();
     ContentRegistry.reset();
   });
@@ -234,7 +236,7 @@ describe('content:test command', () => {
       // Assert
       expect(mockDecorate).toHaveBeenCalledWith('TEST CONTENT', expect.any(Date));
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('FRAME PREVIEW'));
-    }, 10000); // Increase timeout for frame decoration async operation
+    });
 
     it('should handle generation errors gracefully', async () => {
       // Arrange
@@ -293,7 +295,9 @@ describe('content:test command', () => {
       );
 
       // Act
-      await contentTestCommand({ generatorId: 'motivational' });
+      const commandPromise = contentTestCommand({ generatorId: 'motivational' });
+      await jest.advanceTimersByTimeAsync(100);
+      await commandPromise;
 
       // Assert
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringMatching(/Generation time:.*ms/));

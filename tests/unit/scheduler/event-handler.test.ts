@@ -18,6 +18,8 @@ describe('EventHandler', () => {
   let eventHandler: EventHandler;
 
   beforeEach(() => {
+    jest.useFakeTimers();
+
     // Create mock HomeAssistantClient
     mockHomeAssistant = {
       connect: jest.fn().mockResolvedValue(undefined),
@@ -36,6 +38,10 @@ describe('EventHandler', () => {
     } as unknown as jest.Mocked<ContentOrchestrator>;
 
     eventHandler = new EventHandler(mockHomeAssistant, mockOrchestrator);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('constructor', () => {
@@ -131,10 +137,11 @@ describe('EventHandler', () => {
 
       // Should not throw - errors are logged internally
       // Callback returns void, so we just verify it doesn't crash
-      refreshCallback(event);
+      const callbackPromise = refreshCallback(event);
 
-      // Wait for async operation to complete
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // Advance timers to complete async operations
+      await jest.advanceTimersByTimeAsync(10);
+      await callbackPromise;
 
       // Verify orchestrator was called despite error
       expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
@@ -751,9 +758,10 @@ describe('EventHandler', () => {
           data: { trigger: 'manual' },
         };
 
-        refreshCallback(event);
-        // Wait for async operation to complete
-        await new Promise(resolve => setTimeout(resolve, 10));
+        const callbackPromise = refreshCallback(event);
+        // Advance timers to complete async operations
+        await jest.advanceTimersByTimeAsync(10);
+        await callbackPromise;
 
         expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
         expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
@@ -775,9 +783,10 @@ describe('EventHandler', () => {
           data: { trigger: 'manual' },
         };
 
-        callback(event);
-        // Wait for async operation to complete
-        await new Promise(resolve => setTimeout(resolve, 10));
+        const callbackPromise = callback(event);
+        // Advance timers to complete async operations
+        await jest.advanceTimersByTimeAsync(10);
+        await callbackPromise;
 
         expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
       });
@@ -792,9 +801,10 @@ describe('EventHandler', () => {
           data: { trigger: 'manual' },
         };
 
-        refreshCallback(event);
-        // Wait for async operation to complete
-        await new Promise(resolve => setTimeout(resolve, 10));
+        const callbackPromise = refreshCallback(event);
+        // Advance timers to complete async operations
+        await jest.advanceTimersByTimeAsync(10);
+        await callbackPromise;
 
         expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
         expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
@@ -858,9 +868,10 @@ describe('EventHandler', () => {
           },
         };
 
-        stateChangedCallback(event);
-        // Wait for async operation to complete
-        await new Promise(resolve => setTimeout(resolve, 10));
+        const callbackPromise = stateChangedCallback(event);
+        // Advance timers to complete async operations
+        await jest.advanceTimersByTimeAsync(10);
+        await callbackPromise;
 
         expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
         expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
@@ -889,9 +900,10 @@ describe('EventHandler', () => {
           },
         };
 
-        callback(event);
-        // Wait for async operation to complete
-        await new Promise(resolve => setTimeout(resolve, 10));
+        const callbackPromise = callback(event);
+        // Advance timers to complete async operations
+        await jest.advanceTimersByTimeAsync(10);
+        await callbackPromise;
 
         expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
       });
@@ -910,9 +922,10 @@ describe('EventHandler', () => {
           },
         };
 
-        stateChangedCallback(event);
-        // Wait for async operation to complete
-        await new Promise(resolve => setTimeout(resolve, 10));
+        const callbackPromise = stateChangedCallback(event);
+        // Advance timers to complete async operations
+        await jest.advanceTimersByTimeAsync(10);
+        await callbackPromise;
 
         expect(mockCircuitBreaker.isCircuitOpen).toHaveBeenCalledWith('MASTER');
         expect(mockOrchestrator.generateAndSend).toHaveBeenCalled();
