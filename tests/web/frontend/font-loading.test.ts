@@ -21,8 +21,8 @@ describe('Font Loading Infrastructure', () => {
       expect(indexHtml).toContain('https://fonts.googleapis.com');
     });
 
-    it('should include Google Fonts DNS prefetch for gstatic', () => {
-      expect(indexHtml).toContain('rel="dns-prefetch"');
+    it('should include Google Fonts preconnect for gstatic', () => {
+      expect(indexHtml).toContain('rel="preconnect"');
       expect(indexHtml).toContain('https://fonts.gstatic.com');
     });
 
@@ -170,10 +170,10 @@ describe('Font Loading Infrastructure', () => {
       expect(hasPreconnect).toBe(true);
     });
 
-    it('should use dns-prefetch for fonts.gstatic.com', () => {
-      const hasDnsPrefetch =
-        indexHtml.includes('rel="dns-prefetch"') && indexHtml.includes('fonts.gstatic.com');
-      expect(hasDnsPrefetch).toBe(true);
+    it('should use preconnect for fonts.gstatic.com', () => {
+      const hasPreconnect =
+        indexHtml.includes('rel="preconnect"') && indexHtml.includes('fonts.gstatic.com');
+      expect(hasPreconnect).toBe(true);
     });
 
     it('should use font-display swap strategy', () => {

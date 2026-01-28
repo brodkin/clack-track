@@ -168,7 +168,7 @@ describe('FloatingLogo', () => {
     it('has vertical padding for spacing', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
-      expect(container.className).toMatch(/py-/);
+      expect(container.className).toMatch(/p[tb]-/);
     });
 
     it('has horizontal padding', () => {
@@ -245,7 +245,7 @@ describe('FloatingLogo', () => {
     it('adjusts padding on mobile', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
-      expect(container.className).toMatch(/py-/);
+      expect(container.className).toMatch(/p[tb]-/);
     });
   });
 
