@@ -38,45 +38,55 @@ FORMAT IS NON-NEGOTIABLE:
 - Lines 1, 2, and 3 EACH must contain a colon followed by a dollar sign and a number. No exceptions. Every line must be a real purchase.
 - Line 5 MUST end with PRICELESS. This is the signature of the format. NEVER omit it.
 
-THE REVEAL MUST DO THREE THINGS:
-1. CONNECT to the setup - the reveal recontextualizes the innocent purchases. When you re-read the list after the reveal, the items take on new meaning.
-2. PAINT A PICTURE - the reader must be able to visualize the exact moment. A person, an action, a consequence.
-3. STAND ALONE - the reveal must be clear without explanation. If you have to think about it, it failed.
+COHERENT ESCALATION (most important rule):
+All three setup items MUST be purchases for the SAME activity, building ONE scene. The reader should picture a single person preparing for one specific thing. When the reveal hits, EVERY item takes on new meaning.
 
-GOOD (reveal recontextualizes the setup):
+TEST: After writing the reveal, re-read each setup item. Does each one become funnier or more painful in light of the reveal? If any item feels unrelated, replace it.
+
+GOOD - Every item is for the same scene:
+AIRPORT PIZZA: $19
+NECK PILLOW: $28
+PHONE CHARGER: $15
+MISS YOUR OWN
+WEDDING? PRICELESS.
+(All airport items for one person - the reveal recolors everything)
+
+GOOD - Unified party prep:
+BIRTHDAY CAKE: $42
+PARTY STREAMERS: $15
+KIDDIE DECOR: $28
+JUST TURNED THIRTY-
+FIVE? PRICELESS.
+(All party supplies for one event - the reveal flips the whole list)
+
+GOOD - One interview, one disaster:
 NEW SUIT: $400
 FRESH HAIRCUT: $35
 PRINTED RESUMES: $12
 WRONG COMPANY NAME?
 PRICELESS.
 
-GOOD:
-YOGA MAT: $45
-WATER BOTTLE: $12
-MATCHING LEGGINGS: $68
-SHOWED UP A DAY LATE?
-PRICELESS.
-
-GOOD:
+GOOD - Romantic dinner, one slip:
 RIBEYE STEAKS: $87
 BOTTLE OF WINE: $65
 FRESH ORCHID: $22
 LIKING HER EXS POST?
 PRICELESS.
 
-GOOD:
-MONOPOLY BOARD: $24
-SNACKS AND BEER: $38
-SCENTED CANDLES: $19
-YOUR EX BROUGHT A +1?
-PRICELESS.
-
-GOOD:
+GOOD - Field trip prep, one parent:
 FIELD TRIP SHIRT: $18
 BUS CHAPERONE FEE: $25
 ALLERGY SNACKS: $31
 BROUGHT THE WRONG KID
 HOME? PRICELESS.
+
+BAD - Items from different scenes:
+WINE TASTING FEE: $40
+UBER TO NAPA: $87
+BREATH MINTS: $6
+YOUR MIC WAS ON?
+PRICELESS.
+(Breath mints have nothing to do with a hot mic. Items feel random.)
 
 BAD REVEALS AND WHY:
 - "SHE FORWARDED IT ALL" (forwarded what? no visual)
@@ -85,3 +95,4 @@ BAD REVEALS AND WHY:
 - "STILL IN THE PARKING" (not embarrassing, just mundane)
 - Setup items that hint at disaster (COURT FILING FEE hints at trouble)
 - $0 as a price (every item is a real purchase)
+- Items from different activities (every item must be for ONE scene)
