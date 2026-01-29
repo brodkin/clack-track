@@ -100,7 +100,7 @@ export interface CoreGenerators {
   corporateHoroscope: ContentGenerator;
   /** Wrong number voicemail generator (P2, LIGHT, AI-powered) */
   wrongNumberVoicemail: ContentGenerator;
-  /** Priceless parody generator (P2, LIGHT, AI-powered) */
+  /** Priceless parody generator (P2, MEDIUM, AI-powered) */
   priceless: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
@@ -414,7 +414,7 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       id: 'priceless',
       name: 'Priceless Parody Generator',
       priority: ContentPriority.NORMAL,
-      modelTier: ModelTier.LIGHT,
+      modelTier: ModelTier.MEDIUM,
       applyFrame: true,
     },
     generators.priceless

@@ -63,8 +63,8 @@ import {
  * Generates Mastercard "Priceless" parody content
  *
  * Extends AIPromptGenerator with priceless-specific prompts,
- * LIGHT model tier for efficiency, and three-dimensional random
- * seed injection for maximum content variety.
+ * MEDIUM model tier for comedic reasoning quality, and three-dimensional
+ * random seed injection for maximum content variety.
  */
 export class PricelessGenerator extends AIPromptGenerator {
   /**
@@ -102,7 +102,7 @@ export class PricelessGenerator extends AIPromptGenerator {
     modelTierSelector: ModelTierSelector,
     apiKeys: AIProviderAPIKeys = {}
   ) {
-    super(promptLoader, modelTierSelector, ModelTierEnum.LIGHT, apiKeys);
+    super(promptLoader, modelTierSelector, ModelTierEnum.MEDIUM, apiKeys);
   }
 
   /**

@@ -1,31 +1,72 @@
-Generate a Mastercard "PRICELESS" parody - a satirical list where mundane purchases build toward an embarrassing, ironic, or catastrophic reveal.
+Generate a Mastercard "PRICELESS" parody.
+
+CONTEXT: The original Mastercard ads list 3 mundane purchases with dollar amounts, then deliver a heartwarming emotional payoff labeled "priceless." The PARODY version preserves this exact structure but inverts the emotional valence - instead of a heartwarming conclusion, the "priceless" moment reveals something embarrassing, incriminating, ironic, or catastrophic.
+
+WHY THIS FORMAT IS FUNNY:
+1. SUBVERTED EXPECTATION - The rigid list format creates anticipation. The audience knows "priceless" is coming, so the comedic turn has built-in timing.
+2. TONAL WHIPLASH - The itemized list feels earnest and sincere (mimicking the original warmth), making the dark or absurd punchline hit harder through contrast.
+3. IRONIC "PRICELESS" - Using a word that connotes treasured memories to describe humiliation creates instant irony.
+4. DEADPAN PRICES - Precise dollar amounts ($28, not "about $30") add a clinical, deadpan quality that enhances the comedy.
+
+THE KEY INSIGHT: The best parodies maintain the earnest tone of the original for as long as possible. The longer the setup feels genuine, the funnier the subversion. Weak parodies tip their hand too early.
 
 SCENARIO INSPIRATION (pivot freely): {{pricelessScenario}}
 COMEDY TROPE (general direction): {{pricelessTrope}}
 TONE: {{pricelessTone}}
 
-FORMAT (exactly 5 lines):
-Lines 1-3: Item + dollar amount (escalating setup)
-Line 4: The priceless moment (the reveal)
-Line 5: Just the word "PRICELESS"
+RIGID FORMAT (exactly 5 lines):
+Line 1: ITEM: $PRICE
+Line 2: ITEM: $PRICE
+Line 3: ITEM: $PRICE
+Line 4: THE REVEAL (one line, max 21 chars)
+Line 5: PRICELESS
 
-RULES:
-- Prices must be specific and realistic ($14, $280, not $999,999)
-- Setup lines should feel earnest and innocent
-- The reveal is the ONLY funny line - setups play it straight
-- The longer the setup feels genuine, the funnier the subversion
-- Keep the reveal relatable and universal
-- The word PRICELESS does the ironic heavy lifting
+FORMAT IS NON-NEGOTIABLE:
+- Lines 1, 2, and 3 EACH must contain a colon followed by a dollar sign and a number. No exceptions. Every line must be a real purchase.
+- Line 4 is the ONLY line without a price. It is the punchline.
+- Line 5 is ALWAYS exactly "PRICELESS"
 
-GOOD EXAMPLE:
+THE REVEAL MUST DO THREE THINGS:
+1. CONNECT to the setup - the reveal recontextualizes the innocent purchases. When you re-read the list after the reveal, the items take on new meaning.
+2. PAINT A PICTURE - the reader must be able to visualize the exact moment. A person, an action, a consequence.
+3. STAND ALONE - the reveal must be clear without explanation. If you have to think about it, it failed.
+
+GOOD (reveal recontextualizes the setup):
 NEW SUIT: $400
 FRESH HAIRCUT: $35
 PRINTED RESUMES: $12
-THE INTERVIEWERS FACE
+WRONG COMPANY NAME
 PRICELESS
+(The purchases were all for an interview - the reveal makes you re-read them with sympathy)
 
-BAD:
-- Funny setup lines (kills the contrast)
-- Vague reveals ("THINGS GO WRONG")
-- Prices that break the deadpan feel
-- Skipping the final PRICELESS line
+GOOD:
+YOGA MAT: $45
+WATER BOTTLE: $12
+MATCHING LEGGINGS: $68
+CLASS WAS YESTERDAY
+PRICELESS
+(All that gear purchased, and the class already happened)
+
+GOOD:
+RIBEYE STEAKS: $87
+BOTTLE OF WINE: $65
+FRESH ORCHID: $22
+LIKING HER EXS POST
+PRICELESS
+(Romantic dinner prep, then a phone slip ruins it all)
+
+GOOD:
+MONOPOLY BOARD: $24
+SNACKS AND BEER: $38
+SCENTED CANDLES: $19
+YOUR EX BROUGHT A +1
+PRICELESS
+(Cozy game night, then social ambush)
+
+BAD REVEALS AND WHY:
+- "SHE FORWARDED IT ALL" (forwarded what? no visual)
+- "YOUR BOSS SAW IT ALL" (saw what? incomplete thought)
+- "INSTAGRAM SHOWED HER" (showed her what? dangling)
+- "STILL IN THE PARKING" (not embarrassing, just mundane)
+- Setup items that hint at disaster (COURT FILING FEE hints at trouble)
+- $0 as a price (every item is a real purchase)

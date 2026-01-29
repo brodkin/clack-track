@@ -323,7 +323,7 @@ describe('PricelessGenerator', () => {
       );
     });
 
-    it('should use LIGHT model tier for cost efficiency', async () => {
+    it('should use MEDIUM model tier for comedic reasoning quality', async () => {
       const context = {
         timestamp: new Date(),
         updateType: 'major' as const,
@@ -331,7 +331,7 @@ describe('PricelessGenerator', () => {
 
       await generator.generate(context);
 
-      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
+      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
     });
   });
 });
