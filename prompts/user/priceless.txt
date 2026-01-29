@@ -14,17 +14,29 @@ SCENARIO INSPIRATION (pivot freely): {{pricelessScenario}}
 COMEDY TROPE (general direction): {{pricelessTrope}}
 TONE: {{pricelessTone}}
 
-RIGID FORMAT (exactly 5 lines):
+FORMAT (exactly 5 lines):
 Line 1: ITEM: $PRICE
 Line 2: ITEM: $PRICE
 Line 3: ITEM: $PRICE
-Line 4: THE REVEAL (one line, max 21 chars)
-Line 5: PRICELESS
+Line 4: THE REVEAL (or start of reveal)
+Line 5: MUST end with PRICELESS
+
+THE CLOSING:
+Line 5 ALWAYS ends with PRICELESS. No exceptions. Two options:
+
+Option A - Reveal fits on line 4:
+  Line 4: WRONG COMPANY NAME?
+  Line 5: PRICELESS.
+
+Option B - Reveal wraps across both lines:
+  Line 4: BROUGHT THE WRONG KID
+  Line 5: HOME? PRICELESS.
+
+Either way, the LAST WORD on line 5 is PRICELESS.
 
 FORMAT IS NON-NEGOTIABLE:
 - Lines 1, 2, and 3 EACH must contain a colon followed by a dollar sign and a number. No exceptions. Every line must be a real purchase.
-- Line 4 is the ONLY line without a price. It is the punchline.
-- Line 5 is ALWAYS exactly "PRICELESS"
+- Line 5 MUST end with PRICELESS. This is the signature of the format. NEVER omit it.
 
 THE REVEAL MUST DO THREE THINGS:
 1. CONNECT to the setup - the reveal recontextualizes the innocent purchases. When you re-read the list after the reveal, the items take on new meaning.
@@ -35,33 +47,36 @@ GOOD (reveal recontextualizes the setup):
 NEW SUIT: $400
 FRESH HAIRCUT: $35
 PRINTED RESUMES: $12
-WRONG COMPANY NAME
-PRICELESS
-(The purchases were all for an interview - the reveal makes you re-read them with sympathy)
+WRONG COMPANY NAME?
+PRICELESS.
 
 GOOD:
 YOGA MAT: $45
 WATER BOTTLE: $12
 MATCHING LEGGINGS: $68
-CLASS WAS YESTERDAY
-PRICELESS
-(All that gear purchased, and the class already happened)
+SHOWED UP A DAY LATE?
+PRICELESS.
 
 GOOD:
 RIBEYE STEAKS: $87
 BOTTLE OF WINE: $65
 FRESH ORCHID: $22
-LIKING HER EXS POST
-PRICELESS
-(Romantic dinner prep, then a phone slip ruins it all)
+LIKING HER EXS POST?
+PRICELESS.
 
 GOOD:
 MONOPOLY BOARD: $24
 SNACKS AND BEER: $38
 SCENTED CANDLES: $19
-YOUR EX BROUGHT A +1
-PRICELESS
-(Cozy game night, then social ambush)
+YOUR EX BROUGHT A +1?
+PRICELESS.
+
+GOOD:
+FIELD TRIP SHIRT: $18
+BUS CHAPERONE FEE: $25
+ALLERGY SNACKS: $31
+BROUGHT THE WRONG KID
+HOME? PRICELESS.
 
 BAD REVEALS AND WHY:
 - "SHE FORWARDED IT ALL" (forwarded what? no visual)
