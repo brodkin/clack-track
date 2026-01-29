@@ -44,6 +44,7 @@ import { OneStarReviewGenerator } from './content/generators/ai/one-star-review-
 import { HouseboyVentGenerator } from './content/generators/ai/houseboy-vent-generator.js';
 import { CorporateHoroscopeGenerator } from './content/generators/ai/corporate-horoscope-generator.js';
 import { WrongNumberVoicemailGenerator } from './content/generators/ai/wrong-number-voicemail-generator.js';
+import { PricelessGenerator } from './content/generators/ai/priceless-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { SleepModeGenerator } from './content/generators/programmatic/sleep-mode-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
@@ -242,6 +243,7 @@ function createCoreGenerators(
       modelTierSelector,
       apiKeys
     ),
+    priceless: new PricelessGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }

@@ -1,0 +1,31 @@
+Generate a Mastercard "PRICELESS" parody - a satirical list where mundane purchases build toward an embarrassing, ironic, or catastrophic reveal.
+
+SCENARIO INSPIRATION (pivot freely): {{pricelessScenario}}
+COMEDY TROPE (general direction): {{pricelessTrope}}
+TONE: {{pricelessTone}}
+
+FORMAT (exactly 5 lines):
+Lines 1-3: Item + dollar amount (escalating setup)
+Line 4: The priceless moment (the reveal)
+Line 5: Just the word "PRICELESS"
+
+RULES:
+- Prices must be specific and realistic ($14, $280, not $999,999)
+- Setup lines should feel earnest and innocent
+- The reveal is the ONLY funny line - setups play it straight
+- The longer the setup feels genuine, the funnier the subversion
+- Keep the reveal relatable and universal
+- The word PRICELESS does the ironic heavy lifting
+
+GOOD EXAMPLE:
+NEW SUIT: $400
+FRESH HAIRCUT: $35
+PRINTED RESUMES: $12
+THE INTERVIEWERS FACE
+PRICELESS
+
+BAD:
+- Funny setup lines (kills the contrast)
+- Vague reveals ("THINGS GO WRONG")
+- Prices that break the deadpan feel
+- Skipping the final PRICELESS line
