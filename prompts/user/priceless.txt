@@ -1,0 +1,98 @@
+Generate a Mastercard "PRICELESS" parody.
+
+CONTEXT: The original Mastercard ads list 3 mundane purchases with dollar amounts, then deliver a heartwarming emotional payoff labeled "priceless." The PARODY version preserves this exact structure but inverts the emotional valence - instead of a heartwarming conclusion, the "priceless" moment reveals something embarrassing, incriminating, ironic, or catastrophic.
+
+WHY THIS FORMAT IS FUNNY:
+1. SUBVERTED EXPECTATION - The rigid list format creates anticipation. The audience knows "priceless" is coming, so the comedic turn has built-in timing.
+2. TONAL WHIPLASH - The itemized list feels earnest and sincere (mimicking the original warmth), making the dark or absurd punchline hit harder through contrast.
+3. IRONIC "PRICELESS" - Using a word that connotes treasured memories to describe humiliation creates instant irony.
+4. DEADPAN PRICES - Precise dollar amounts ($28, not "about $30") add a clinical, deadpan quality that enhances the comedy.
+
+THE KEY INSIGHT: The best parodies maintain the earnest tone of the original for as long as possible. The longer the setup feels genuine, the funnier the subversion. Weak parodies tip their hand too early.
+
+SCENARIO INSPIRATION (pivot freely): {{pricelessScenario}}
+COMEDY TROPE (general direction): {{pricelessTrope}}
+TONE: {{pricelessTone}}
+
+FORMAT (exactly 5 lines):
+Line 1: ITEM: $PRICE
+Line 2: ITEM: $PRICE
+Line 3: ITEM: $PRICE
+Line 4: THE REVEAL (or start of reveal)
+Line 5: MUST end with PRICELESS
+
+THE CLOSING:
+Line 5 ALWAYS ends with PRICELESS. No exceptions. Two options:
+
+Option A - Reveal fits on line 4:
+  Line 4: WRONG COMPANY NAME?
+  Line 5: PRICELESS.
+
+Option B - Reveal wraps across both lines:
+  Line 4: BROUGHT THE WRONG KID
+  Line 5: HOME? PRICELESS.
+
+Either way, the LAST WORD on line 5 is PRICELESS.
+
+FORMAT IS NON-NEGOTIABLE:
+- Lines 1, 2, and 3 EACH must contain a colon followed by a dollar sign and a number. No exceptions. Every line must be a real purchase.
+- Line 5 MUST end with PRICELESS. This is the signature of the format. NEVER omit it.
+
+COHERENT ESCALATION (most important rule):
+All three setup items MUST be purchases for the SAME activity, building ONE scene. The reader should picture a single person preparing for one specific thing. When the reveal hits, EVERY item takes on new meaning.
+
+TEST: After writing the reveal, re-read each setup item. Does each one become funnier or more painful in light of the reveal? If any item feels unrelated, replace it.
+
+GOOD - Every item is for the same scene:
+AIRPORT PIZZA: $19
+NECK PILLOW: $28
+PHONE CHARGER: $15
+MISS YOUR OWN
+WEDDING? PRICELESS.
+(All airport items for one person - the reveal recolors everything)
+
+GOOD - Unified party prep:
+BIRTHDAY CAKE: $42
+PARTY STREAMERS: $15
+KIDDIE DECOR: $28
+JUST TURNED THIRTY-
+FIVE? PRICELESS.
+(All party supplies for one event - the reveal flips the whole list)
+
+GOOD - One interview, one disaster:
+NEW SUIT: $400
+FRESH HAIRCUT: $35
+PRINTED RESUMES: $12
+WRONG COMPANY NAME?
+PRICELESS.
+
+GOOD - Romantic dinner, one slip:
+RIBEYE STEAKS: $87
+BOTTLE OF WINE: $65
+FRESH ORCHID: $22
+LIKING HER EXS POST?
+PRICELESS.
+
+GOOD - Field trip prep, one parent:
+FIELD TRIP SHIRT: $18
+BUS CHAPERONE FEE: $25
+ALLERGY SNACKS: $31
+BROUGHT THE WRONG KID
+HOME? PRICELESS.
+
+BAD - Items from different scenes:
+WINE TASTING FEE: $40
+UBER TO NAPA: $87
+BREATH MINTS: $6
+YOUR MIC WAS ON?
+PRICELESS.
+(Breath mints have nothing to do with a hot mic. Items feel random.)
+
+BAD REVEALS AND WHY:
+- "SHE FORWARDED IT ALL" (forwarded what? no visual)
+- "YOUR BOSS SAW IT ALL" (saw what? incomplete thought)
+- "INSTAGRAM SHOWED HER" (showed her what? dangling)
+- "STILL IN THE PARKING" (not embarrassing, just mundane)
+- Setup items that hint at disaster (COURT FILING FEE hints at trouble)
+- $0 as a price (every item is a real purchase)
+- Items from different activities (every item must be for ONE scene)
