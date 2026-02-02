@@ -6,8 +6,8 @@
  * - Uses LIGHT model tier
  * - Validates prompt files exist
  * - Returns correct system and user prompt file names
- * - Injects random location, opener, and angle into prompts
- * - Covers all location domains, openers, and angles
+ * - Injects random location and angle into prompts
+ * - Covers all location domains and angles
  */
 
 import { TourGuideGenerator } from '@/content/generators/ai/tour-guide-generator';
@@ -21,7 +21,6 @@ type ProtectedTourGuideGenerator = TourGuideGenerator & {
   getUserPromptFile(): string;
   modelTier: ModelTier;
   selectRandomLocation(): { locationDomain: string; location: string };
-  selectRandomOpener(): string;
   selectRandomAngle(): string;
 };
 
@@ -148,16 +147,16 @@ describe('TourGuideGenerator', () => {
         {}
       ) as ProtectedTourGuideGenerator;
 
-      const validDomains = ['HOME', 'WORK', 'PUBLIC', 'DIGITAL'];
+      const validDomains = ['HOME', 'WORK', 'PUBLIC', 'DIGITAL', 'SOCIAL'];
 
       const selectedDomains = new Set<string>();
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 200; i++) {
         const { locationDomain } = generator.selectRandomLocation();
         selectedDomains.add(locationDomain);
         expect(validDomains).toContain(locationDomain);
       }
 
-      // With 100 iterations, we should have hit most domains
+      // With 200 iterations, we should have hit most domains
       expect(selectedDomains.size).toBeGreaterThan(1);
     });
 
@@ -178,27 +177,6 @@ describe('TourGuideGenerator', () => {
     });
   });
 
-  describe('opener selection', () => {
-    it('should select from valid tour guide openers', () => {
-      const generator = new TourGuideGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        {}
-      ) as ProtectedTourGuideGenerator;
-
-      const validOpeners = [...TourGuideGenerator.TOUR_GUIDE_OPENERS];
-
-      const selectedOpeners = new Set<string>();
-      for (let i = 0; i < 100; i++) {
-        const opener = generator.selectRandomOpener();
-        selectedOpeners.add(opener);
-        expect(validOpeners).toContain(opener);
-      }
-
-      expect(selectedOpeners.size).toBeGreaterThan(1);
-    });
-  });
-
   describe('angle selection', () => {
     it('should select from valid angles', () => {
       const generator = new TourGuideGenerator(
@@ -207,10 +185,10 @@ describe('TourGuideGenerator', () => {
         {}
       ) as ProtectedTourGuideGenerator;
 
-      const validAngles = ['WILDLIFE', 'HISTORICAL', 'DANGER ZONE', 'EXHIBIT', 'HAUNTED'];
+      const validAngles = [...TourGuideGenerator.ANGLES];
 
       const selectedAngles = new Set<string>();
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 100; i++) {
         const angle = generator.selectRandomAngle();
         selectedAngles.add(angle);
         expect(validAngles).toContain(angle);
@@ -246,7 +224,7 @@ describe('TourGuideGenerator', () => {
       expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
     });
 
-    it('should inject location, opener, and angle variables into user prompt', async () => {
+    it('should inject location and angle variables into user prompt', async () => {
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
         provider: 'openai',
@@ -272,8 +250,8 @@ describe('TourGuideGenerator', () => {
       expect(userPromptCall).toBeDefined();
       const variables = userPromptCall?.[2];
       expect(variables).toHaveProperty('location');
-      expect(variables).toHaveProperty('opener');
       expect(variables).toHaveProperty('angle');
+      expect(variables).not.toHaveProperty('opener');
     });
   });
 
@@ -285,35 +263,39 @@ describe('TourGuideGenerator', () => {
       expect(locations).toHaveProperty('WORK');
       expect(locations).toHaveProperty('PUBLIC');
       expect(locations).toHaveProperty('DIGITAL');
+      expect(locations).toHaveProperty('SOCIAL');
 
       expect(locations.HOME).toContain('kitchen');
+      expect(locations.HOME).toContain('junk drawer');
       expect(locations.WORK).toContain('office');
       expect(locations.PUBLIC).toContain('supermarket');
+      expect(locations.PUBLIC).toContain('DMV');
       expect(locations.DIGITAL).toContain('email inbox');
-    });
-  });
-
-  describe('TOUR_GUIDE_OPENERS constant', () => {
-    it('should contain tour guide trope openers', () => {
-      const openers = TourGuideGenerator.TOUR_GUIDE_OPENERS;
-
-      expect(openers).toContain('ON YOUR LEFT YOU WILL SEE');
-      expect(openers).toContain('IF YOU LOOK UP');
-      expect(openers).toContain('AND HERE WE HAVE');
-      expect(openers.length).toBeGreaterThanOrEqual(10);
+      expect(locations.DIGITAL).toContain('dating app');
+      expect(locations.SOCIAL).toContain('first date');
+      expect(locations.SOCIAL).toContain('brunch');
     });
   });
 
   describe('ANGLES constant', () => {
-    it('should contain all required angles', () => {
+    it('should contain all required angles including houseboy-personal ones', () => {
       const angles = TourGuideGenerator.ANGLES;
 
+      // Observational angles
       expect(angles).toContain('WILDLIFE');
       expect(angles).toContain('HISTORICAL');
       expect(angles).toContain('DANGER ZONE');
       expect(angles).toContain('EXHIBIT');
       expect(angles).toContain('HAUNTED');
-      expect(angles.length).toBe(5);
+      expect(angles).toContain('CRIME SCENE');
+      expect(angles).toContain('REAL ESTATE LISTING');
+
+      // Houseboy-personal angles
+      expect(angles).toContain('DEVASTATING MEMORIES');
+      expect(angles).toContain('CONFESSIONAL');
+      expect(angles).toContain('FIVE STAR REVIEW');
+
+      expect(angles.length).toBe(10);
     });
   });
 });
