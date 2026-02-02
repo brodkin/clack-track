@@ -102,6 +102,8 @@ export interface CoreGenerators {
   wrongNumberVoicemail: ContentGenerator;
   /** Priceless parody generator (P2, MEDIUM, AI-powered) */
   priceless: ContentGenerator;
+  /** Tour guide generator (P2, LIGHT, AI-powered) */
+  tourGuide: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -418,6 +420,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.priceless
+  );
+
+  registry.register(
+    {
+      id: 'tour-guide',
+      name: 'Tour Guide Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.tourGuide
   );
 
   // Register P3 fallback generator (FALLBACK priority)
