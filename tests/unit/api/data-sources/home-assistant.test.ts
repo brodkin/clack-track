@@ -1052,6 +1052,91 @@ describe('HomeAssistantClient - Connection Management', () => {
         expect(unsubscribe2).toBeDefined();
       });
 
+      it('should deliver events to original callbacks after reconnection via triggerReconnection()', async () => {
+        const mockLogger = {
+          info: jest.fn(),
+          warn: jest.fn(),
+          error: jest.fn(),
+          debug: jest.fn(),
+        };
+
+        const config: HomeAssistantConnectionConfig = {
+          url: 'ws://localhost:8123/api/websocket',
+          token: 'test-token',
+          logger: mockLogger,
+          reconnection: {
+            enabled: true,
+            maxAttempts: 3,
+            initialDelayMs: 100,
+            maxDelayMs: 1000,
+            backoffMultiplier: 2,
+          },
+        };
+        const clientWithReconnect = new HomeAssistantClient(config);
+
+        // Setup first connection with subscribeEvents capturing
+        mockConnection.subscribeEvents.mockImplementation(
+          (_cb: (event: { event_type: string; data: Record<string, unknown> }) => void) => {
+            return Promise.resolve(() => {});
+          }
+        );
+
+        // Connect and subscribe
+        await clientWithReconnect.connect();
+        const callback = jest.fn();
+        await clientWithReconnect.subscribeToEvents('state_changed', callback);
+
+        // Simulate connection loss (mimics what attemptReconnection does before connect())
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        (clientWithReconnect as any).connection = null;
+        (clientWithReconnect as any).state = 'disconnected';
+        /* eslint-enable @typescript-eslint/no-explicit-any */
+
+        // Create a fresh mock connection for reconnection that captures its own listener
+        let reconnectedListener:
+          | ((event: { event_type: string; data: Record<string, unknown> }) => void)
+          | null = null;
+        const reconnectedMockConnection = {
+          close: jest.fn(),
+          addEventListener: jest.fn(),
+          removeEventListener: jest.fn(),
+          subscribeEvents: jest
+            .fn()
+            .mockImplementation(
+              (cb: (event: { event_type: string; data: Record<string, unknown> }) => void) => {
+                reconnectedListener = cb;
+                return Promise.resolve(() => {});
+              }
+            ),
+        };
+        (haWebsocket.createConnection as jest.Mock).mockResolvedValueOnce(
+          reconnectedMockConnection
+        );
+
+        // Trigger reconnection (not disconnect - this is the bug scenario)
+        clientWithReconnect.triggerReconnection();
+        await jest.advanceTimersByTimeAsync(100);
+
+        // Client should be reconnected
+        expect(clientWithReconnect.isConnected()).toBe(true);
+
+        // The new connection MUST have subscribeEvents called to re-register listeners
+        // This is the core assertion: stale connectionListeners should not block re-registration
+        expect(reconnectedMockConnection.subscribeEvents).toHaveBeenCalledWith(
+          expect.any(Function),
+          'state_changed'
+        );
+
+        // Fire an event through the NEW connection's listener
+        expect(reconnectedListener).not.toBeNull();
+        const postReconnectEvent = {
+          event_type: 'state_changed',
+          data: { entity_id: 'light.reconnected' },
+        };
+        reconnectedListener!(postReconnectEvent);
+        expect(callback).toHaveBeenCalledWith(postReconnectEvent);
+      });
+
       it('should handle resubscription failures gracefully', async () => {
         const mockLogger = {
           info: jest.fn(),

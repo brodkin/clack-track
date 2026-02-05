@@ -709,6 +709,17 @@ export class HomeAssistantClient {
       return;
     }
 
+    // Clear stale connection listener and unsubscriber entries from the previous connection
+    // so registerConnectionListener() guard clause does not skip re-registration
+    const staleCount = this.connectionListeners.size;
+    this.connectionListeners.clear();
+    this.connectionUnsubscribers.clear();
+
+    this.logger.info('Clearing stale subscriptions for re-registration after reconnection', {
+      eventTypes: [...this.eventHandlers.keys()],
+      staleListenersCleared: staleCount,
+    });
+
     // Resubscribe to all event types
     for (const [eventType] of this.eventHandlers.entries()) {
       try {
