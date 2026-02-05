@@ -20,6 +20,7 @@ import type { SessionRepository } from '@/storage/repositories/session-repo.js';
 import type { UserRepository } from '@/storage/repositories/user-repo.js';
 import type { CredentialRepository } from '@/storage/repositories/credential-repo.js';
 import { requireAuth as dbRequireAuth } from '../middleware/session.js';
+import { config } from '../../config/env.js';
 
 /**
  * Dependencies for account routes
@@ -123,17 +124,10 @@ function initAuthenticatedSession(sessionId: string): void {
   }
 }
 
-/**
- * Relying Party configuration
- * Must match auth.ts configuration for consistent WebAuthn behavior
- *
- * WEBAUTHN_RP_ID: The relying party ID (typically the domain, defaults to 'localhost')
- * WEBAUTHN_ORIGIN: The expected origin for WebAuthn operations (defaults to http://localhost:PORT)
- */
-const RP_NAME = 'Clack Track';
-const RP_ID = process.env.WEBAUTHN_RP_ID || 'localhost';
-const DEFAULT_PORT = process.env.WEB_SERVER_PORT || process.env.PORT || '3000';
-const EXPECTED_ORIGIN = process.env.WEBAUTHN_ORIGIN || `http://${RP_ID}:${DEFAULT_PORT}`;
+/** Relying Party configuration - sourced from centralized config (shared with auth.ts) */
+const RP_NAME = config.webauthn.rpName;
+const RP_ID = config.webauthn.rpId;
+const EXPECTED_ORIGIN = config.webauthn.origin;
 
 /**
  * requireAuth middleware

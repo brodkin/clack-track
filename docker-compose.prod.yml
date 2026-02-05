@@ -28,6 +28,8 @@ services:
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
       - VAPID_SUBJECT=${VAPID_SUBJECT:-}
+      - WEBAUTHN_RP_ID=${WEBAUTHN_RP_ID}
+      - WEBAUTHN_ORIGIN=${WEBAUTHN_ORIGIN}
     networks:
       - clack-network
       - traefik_traefik

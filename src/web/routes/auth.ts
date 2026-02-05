@@ -36,6 +36,7 @@ import type { UserRepository } from '../../storage/repositories/user-repo.js';
 import type { SessionRepository } from '../../storage/repositories/session-repo.js';
 import type { MagicLinkService } from '../../auth/magic-link-service.js';
 import { createSession, destroySession, SESSION_COOKIE_NAME } from '../middleware/session.js';
+import { config } from '../../config/env.js';
 
 /**
  * Dependencies for auth routes
@@ -112,16 +113,10 @@ function getLegacySessionId(req: Request): string {
   return sessionId;
 }
 
-/**
- * Relying Party configuration
- *
- * WEBAUTHN_RP_ID: The relying party ID (typically the domain, defaults to 'localhost')
- * WEBAUTHN_ORIGIN: The expected origin for WebAuthn operations (defaults to http://localhost:PORT)
- */
-const RP_NAME = 'Clack Track';
-const RP_ID = process.env.WEBAUTHN_RP_ID || 'localhost';
-const DEFAULT_PORT = process.env.WEB_SERVER_PORT || process.env.PORT || '3000';
-const EXPECTED_ORIGIN = process.env.WEBAUTHN_ORIGIN || `http://${RP_ID}:${DEFAULT_PORT}`;
+/** Relying Party configuration - sourced from centralized config */
+const RP_NAME = config.webauthn.rpName;
+const RP_ID = config.webauthn.rpId;
+const EXPECTED_ORIGIN = config.webauthn.origin;
 
 /**
  * Create startLogin handler with optional dependencies
