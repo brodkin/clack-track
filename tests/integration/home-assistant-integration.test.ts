@@ -724,6 +724,81 @@ describe('Home Assistant WebSocket Client Integration Tests', () => {
       await client.disconnect();
     });
 
+    it('should deliver vestaboard_refresh events through full reconnection pipeline', async () => {
+      // Arrange: Create client and subscribe to vestaboard_refresh (the production event type)
+      const client = new HomeAssistantClient({ ...testConfig, logger: mockLogger });
+      await client.connect();
+
+      const receivedEvents: HomeAssistantEvent[] = [];
+      await client.subscribeToEvents('vestaboard_refresh', event => {
+        receivedEvents.push(event);
+      });
+
+      // Verify: Events delivered on the initial connection
+      const preReconnectEvent: HomeAssistantEvent = {
+        event_type: 'vestaboard_refresh',
+        data: { phase: 'before_reconnection' },
+        origin: 'LOCAL',
+        time_fired: '2024-12-01T00:00:00Z',
+      };
+      eventListeners.get('vestaboard_refresh')?.(preReconnectEvent);
+      expect(receivedEvents).toHaveLength(1);
+      expect(receivedEvents[0].data.phase).toBe('before_reconnection');
+
+      // Act: Build a fresh mock connection to simulate a truly new WebSocket session.
+      // This ensures stale listeners from the old connection are cleared and
+      // new subscriptions are registered on the replacement connection.
+      const freshEventListeners = new Map<string, (event: HomeAssistantEvent) => void>();
+      const freshMockConnection = {
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        close: jest.fn(),
+        subscribeEvents: jest.fn(
+          (callback: (event: HomeAssistantEvent) => void, eventType: string) => {
+            freshEventListeners.set(eventType, callback);
+            return Promise.resolve(() => {
+              freshEventListeners.delete(eventType);
+            });
+          }
+        ),
+      };
+      (haWebsocket.createConnection as jest.Mock).mockResolvedValue(freshMockConnection);
+
+      // Act: Trigger reconnection and advance past the backoff delay (100ms initial)
+      client.triggerReconnection();
+      await jest.advanceTimersByTimeAsync(150);
+
+      // Assert: The client re-registered its subscription on the fresh connection
+      expect(freshMockConnection.subscribeEvents).toHaveBeenCalledWith(
+        expect.any(Function),
+        'vestaboard_refresh'
+      );
+      expect(freshEventListeners.has('vestaboard_refresh')).toBe(true);
+
+      // Act: Fire an event on the NEW connection (simulating HA sending an event
+      // after the WebSocket session was re-established)
+      const postReconnectEvent: HomeAssistantEvent = {
+        event_type: 'vestaboard_refresh',
+        data: { phase: 'after_reconnection' },
+        origin: 'LOCAL',
+        time_fired: '2024-12-01T00:01:00Z',
+      };
+      freshEventListeners.get('vestaboard_refresh')?.(postReconnectEvent);
+
+      // Assert: The original callback received events from BOTH connections
+      expect(receivedEvents).toHaveLength(2);
+      expect(receivedEvents[0].data.phase).toBe('before_reconnection');
+      expect(receivedEvents[1].data.phase).toBe('after_reconnection');
+
+      // Assert: Reconnection was logged
+      expect(logCapture.info.some(log => log.message.includes('reconnection successful'))).toBe(
+        true
+      );
+
+      // Cleanup
+      await client.disconnect();
+    });
+
     it('should respect maxAttempts limit', async () => {
       // Arrange
       const configWithLowMaxAttempts = {
