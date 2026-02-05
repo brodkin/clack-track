@@ -83,6 +83,13 @@ export interface EnvironmentConfig {
     url?: string;
     type: 'sqlite' | 'mysql' | 'postgres' | 'mongodb';
   };
+
+  // WebAuthn / Passkeys
+  webauthn: {
+    rpName: string;
+    rpId: string;
+    origin: string;
+  };
 }
 
 function getRequiredEnv(key: string): string {
@@ -200,6 +207,36 @@ export function loadConfig(): EnvironmentConfig {
         | 'postgres'
         | 'mongodb',
     },
+
+    webauthn: (() => {
+      const webPort = getOptionalEnv('WEB_SERVER_PORT', getOptionalEnv('PORT', '3000'));
+      const rpId = getOptionalEnv('WEBAUTHN_RP_ID');
+      const origin = getOptionalEnv('WEBAUTHN_ORIGIN');
+
+      if (rpId) {
+        return {
+          rpName: 'Clack Track',
+          rpId,
+          origin: origin || `https://${rpId}`,
+        };
+      }
+
+      // In production, warn if not configured (passkeys will fail)
+      if (nodeEnv === 'production') {
+        console.warn(
+          'WARNING: WEBAUTHN_RP_ID is not set. Passkey authentication will not work. ' +
+            'Set WEBAUTHN_RP_ID to your domain (e.g., "example.com").'
+        );
+      }
+
+      // Development/test default
+      const defaultRpId = 'localhost';
+      return {
+        rpName: 'Clack Track',
+        rpId: defaultRpId,
+        origin: origin || `http://${defaultRpId}:${webPort}`,
+      };
+    })(),
   };
 }
 
