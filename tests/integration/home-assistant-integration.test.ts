@@ -49,13 +49,6 @@ describe('Home Assistant WebSocket Client Integration Tests', () => {
   const testConfig: HomeAssistantConnectionConfig = {
     url: 'ws://homeassistant.local:8123/api/websocket',
     token: 'test-long-lived-token-12345',
-    reconnection: {
-      enabled: true,
-      maxAttempts: 3,
-      initialDelayMs: 100,
-      maxDelayMs: 1000,
-      backoffMultiplier: 2,
-    },
     stateCache: {
       enabled: true,
       ttlMs: 5000,
@@ -668,129 +661,37 @@ describe('Home Assistant WebSocket Client Integration Tests', () => {
     });
   });
 
-  describe('Reconnection Logic Integration', () => {
-    it('should attempt reconnection with exponential backoff', async () => {
-      // Arrange
-      const client = new HomeAssistantClient({ ...testConfig, logger: mockLogger });
-      await client.connect();
+  describe('Library-Delegated Reconnection Integration', () => {
+    // Helper to capture addEventListener callbacks registered by connect()
+    let connectionEventCallbacks: Record<string, () => void>;
 
-      // Reset mock to simulate connection loss
-      (haWebsocket.createConnection as jest.Mock).mockClear();
-      (haWebsocket.createConnection as jest.Mock).mockResolvedValue(mockConnection);
-
-      // Act: Trigger reconnection
-      client.triggerReconnection();
-
-      // Wait for reconnection attempt (using fake timers)
-      await jest.advanceTimersByTimeAsync(150);
-
-      // Assert: Should attempt reconnection
-      expect(haWebsocket.createConnection).toHaveBeenCalled();
-      expect(logCapture.warn.some(log => log.message.includes('Connection lost'))).toBe(true);
-
-      // Cleanup
-      await client.disconnect();
-    });
-
-    it('should resubscribe to events after reconnection', async () => {
-      // Arrange
-      const client = new HomeAssistantClient(testConfig);
-      await client.connect();
-
-      const receivedEvents: HomeAssistantEvent[] = [];
-      await client.subscribeToEvents('state_changed', event => {
-        receivedEvents.push(event);
-      });
-
-      // Trigger event before reconnection
-      eventListeners.get('state_changed')?.({
-        event_type: 'state_changed',
-        data: { before: true },
-      });
-      expect(receivedEvents).toHaveLength(1);
-
-      // Act: Simulate reconnection
-      (haWebsocket.createConnection as jest.Mock).mockResolvedValue(mockConnection);
-      client.triggerReconnection();
-      await jest.advanceTimersByTimeAsync(150);
-
-      // Trigger event after reconnection
-      eventListeners.get('state_changed')?.({ event_type: 'state_changed', data: { after: true } });
-
-      // Assert: Should receive events after reconnection
-      expect(receivedEvents.length).toBeGreaterThan(1);
-
-      // Cleanup
-      await client.disconnect();
-    });
-
-    it('should deliver vestaboard_refresh events through full reconnection pipeline', async () => {
-      // Arrange: Create client and subscribe to vestaboard_refresh (the production event type)
-      const client = new HomeAssistantClient({ ...testConfig, logger: mockLogger });
-      await client.connect();
-
-      const receivedEvents: HomeAssistantEvent[] = [];
-      await client.subscribeToEvents('vestaboard_refresh', event => {
-        receivedEvents.push(event);
-      });
-
-      // Verify: Events delivered on the initial connection
-      const preReconnectEvent: HomeAssistantEvent = {
-        event_type: 'vestaboard_refresh',
-        data: { phase: 'before_reconnection' },
-        origin: 'LOCAL',
-        time_fired: '2024-12-01T00:00:00Z',
-      };
-      eventListeners.get('vestaboard_refresh')?.(preReconnectEvent);
-      expect(receivedEvents).toHaveLength(1);
-      expect(receivedEvents[0].data.phase).toBe('before_reconnection');
-
-      // Act: Build a fresh mock connection to simulate a truly new WebSocket session.
-      // This ensures stale listeners from the old connection are cleared and
-      // new subscriptions are registered on the replacement connection.
-      const freshEventListeners = new Map<string, (event: HomeAssistantEvent) => void>();
-      const freshMockConnection = {
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-        close: jest.fn(),
-        subscribeEvents: jest.fn(
-          (callback: (event: HomeAssistantEvent) => void, eventType: string) => {
-            freshEventListeners.set(eventType, callback);
-            return Promise.resolve(() => {
-              freshEventListeners.delete(eventType);
-            });
-          }
-        ),
-      };
-      (haWebsocket.createConnection as jest.Mock).mockResolvedValue(freshMockConnection);
-
-      // Act: Trigger reconnection and advance past the backoff delay (100ms initial)
-      client.triggerReconnection();
-      await jest.advanceTimersByTimeAsync(150);
-
-      // Assert: The client re-registered its subscription on the fresh connection
-      expect(freshMockConnection.subscribeEvents).toHaveBeenCalledWith(
-        expect.any(Function),
-        'vestaboard_refresh'
+    beforeEach(() => {
+      connectionEventCallbacks = {};
+      mockConnection.addEventListener.mockImplementation(
+        (eventType: string, callback: () => void) => {
+          connectionEventCallbacks[eventType] = callback;
+        }
       );
-      expect(freshEventListeners.has('vestaboard_refresh')).toBe(true);
+    });
 
-      // Act: Fire an event on the NEW connection (simulating HA sending an event
-      // after the WebSocket session was re-established)
-      const postReconnectEvent: HomeAssistantEvent = {
-        event_type: 'vestaboard_refresh',
-        data: { phase: 'after_reconnection' },
-        origin: 'LOCAL',
-        time_fired: '2024-12-01T00:01:00Z',
-      };
-      freshEventListeners.get('vestaboard_refresh')?.(postReconnectEvent);
+    it('should track state through disconnect and reconnect cycle', async () => {
+      // Arrange
+      const client = new HomeAssistantClient({ ...testConfig, logger: mockLogger });
+      await client.connect();
+      expect(client.isConnected()).toBe(true);
 
-      // Assert: The original callback received events from BOTH connections
-      expect(receivedEvents).toHaveLength(2);
-      expect(receivedEvents[0].data.phase).toBe('before_reconnection');
-      expect(receivedEvents[1].data.phase).toBe('after_reconnection');
+      // Act: Library fires disconnected event (connection lost)
+      connectionEventCallbacks['disconnected']();
 
-      // Assert: Reconnection was logged
+      // Assert: Client reflects disconnected state
+      expect(client.isConnected()).toBe(false);
+      expect(logCapture.warn.some(log => log.message.includes('connection lost'))).toBe(true);
+
+      // Act: Library reconnects and fires ready event
+      connectionEventCallbacks['ready']();
+
+      // Assert: Client reflects connected state and logs reconnection
+      expect(client.isConnected()).toBe(true);
       expect(logCapture.info.some(log => log.message.includes('reconnection successful'))).toBe(
         true
       );
@@ -799,63 +700,118 @@ describe('Home Assistant WebSocket Client Integration Tests', () => {
       await client.disconnect();
     });
 
-    it('should respect maxAttempts limit', async () => {
-      // Arrange
-      const configWithLowMaxAttempts = {
-        ...testConfig,
-        reconnection: { ...testConfig.reconnection!, maxAttempts: 2 },
-        logger: mockLogger,
-      };
-      const client = new HomeAssistantClient(configWithLowMaxAttempts);
+    it('should deliver events to subscribers after library reconnection', async () => {
+      // Arrange: Create client and subscribe to events
+      const client = new HomeAssistantClient({ ...testConfig, logger: mockLogger });
       await client.connect();
 
-      // Setup mock to fail reconnection attempts
-      (haWebsocket.createConnection as jest.Mock).mockRejectedValue(new Error('Connection failed'));
+      const receivedEvents: HomeAssistantEvent[] = [];
+      await client.subscribeToEvents('state_changed', event => {
+        receivedEvents.push(event);
+      });
 
-      // Act: Trigger reconnection attempts
-      client.triggerReconnection();
-      await jest.advanceTimersByTimeAsync(150);
+      // Verify events work before disconnect
+      const preDisconnectEvent: HomeAssistantEvent = {
+        event_type: 'state_changed',
+        data: { phase: 'before_disconnect' },
+      };
+      eventListeners.get('state_changed')?.(preDisconnectEvent);
+      expect(receivedEvents).toHaveLength(1);
 
-      client.triggerReconnection();
-      await jest.advanceTimersByTimeAsync(150);
+      // Act: Simulate library disconnect then reconnect
+      connectionEventCallbacks['disconnected']();
+      connectionEventCallbacks['ready']();
 
-      client.triggerReconnection();
-      await jest.advanceTimersByTimeAsync(150);
+      // Library replays subscriptions automatically - events through the original
+      // connection listener should still be delivered to callbacks
+      const postReconnectEvent: HomeAssistantEvent = {
+        event_type: 'state_changed',
+        data: { phase: 'after_reconnect' },
+      };
+      eventListeners.get('state_changed')?.(postReconnectEvent);
 
-      // Assert: Should stop after maxAttempts
-      const maxAttemptsWarnings = logCapture.warn.filter(log =>
-        log.message.includes('Maximum reconnection attempts')
-      );
-      expect(maxAttemptsWarnings.length).toBeGreaterThan(0);
+      // Assert: Received events from both before and after reconnection
+      expect(receivedEvents).toHaveLength(2);
+      expect(receivedEvents[0].data.phase).toBe('before_disconnect');
+      expect(receivedEvents[1].data.phase).toBe('after_reconnect');
 
       // Cleanup
       await client.disconnect();
     });
 
-    it('should not reconnect on manual disconnect', async () => {
+    it('should deliver events to multiple subscribers after library reconnection', async () => {
       // Arrange
       const client = new HomeAssistantClient({ ...testConfig, logger: mockLogger });
       await client.connect();
 
-      // Track reconnection attempts
+      const subscriber1Events: HomeAssistantEvent[] = [];
+      const subscriber2Events: HomeAssistantEvent[] = [];
+
+      await client.subscribeToEvents('vestaboard_refresh', event => {
+        subscriber1Events.push(event);
+      });
+      await client.subscribeToEvents('vestaboard_refresh', event => {
+        subscriber2Events.push(event);
+      });
+
+      // Simulate library disconnect then reconnect
+      connectionEventCallbacks['disconnected']();
+      connectionEventCallbacks['ready']();
+
+      // Fire event after reconnection
+      const postReconnectEvent: HomeAssistantEvent = {
+        event_type: 'vestaboard_refresh',
+        data: { phase: 'after_reconnect' },
+        origin: 'LOCAL',
+        time_fired: '2024-12-01T00:01:00Z',
+      };
+      eventListeners.get('vestaboard_refresh')?.(postReconnectEvent);
+
+      // Assert: Both subscribers receive the event after reconnection
+      expect(subscriber1Events).toHaveLength(1);
+      expect(subscriber2Events).toHaveLength(1);
+      expect(subscriber1Events[0].data.phase).toBe('after_reconnect');
+      expect(subscriber2Events[0].data.phase).toBe('after_reconnect');
+
+      // Cleanup
+      await client.disconnect();
+    });
+
+    it('should not log reconnection successful on initial connect', async () => {
+      // Arrange
+      const client = new HomeAssistantClient({ ...testConfig, logger: mockLogger });
+      await client.connect();
+
+      // Fire ready without prior disconnect (simulating initial connection stability)
+      connectionEventCallbacks['ready']();
+
+      // Assert: No "reconnection successful" log on first ready
+      expect(logCapture.info.some(log => log.message.includes('reconnection successful'))).toBe(
+        false
+      );
+
+      // Cleanup
+      await client.disconnect();
+    });
+
+    it('should prevent library auto-reconnect on manual disconnect via connection.close()', async () => {
+      // Arrange
+      const client = new HomeAssistantClient({ ...testConfig, logger: mockLogger });
+      await client.connect();
+
       const initialConnectCalls = (haWebsocket.createConnection as jest.Mock).mock.calls.length;
 
       // Act: Manual disconnect
       await client.disconnect();
 
-      // Verify disconnected
+      // Assert: connection.close() was called (which sets library's closeRequested=true)
+      expect(mockConnection.close).toHaveBeenCalledTimes(1);
       expect(client.isConnected()).toBe(false);
 
-      // Trigger reconnection - should work AFTER manual disconnect completes
-      // (isManualDisconnect flag is reset after disconnect finishes)
-      client.triggerReconnection();
-      await jest.advanceTimersByTimeAsync(150);
-
-      // Assert: Reconnection should have been attempted (after disconnect completes)
-      // This is expected behavior - manual disconnect only prevents AUTOMATIC reconnection
-      // during connection loss, not explicit reconnection requests afterward
-      const finalConnectCalls = (haWebsocket.createConnection as jest.Mock).mock.calls.length;
-      expect(finalConnectCalls).toBeGreaterThan(initialConnectCalls);
+      // No additional connection attempts should have been made
+      expect((haWebsocket.createConnection as jest.Mock).mock.calls.length).toBe(
+        initialConnectCalls
+      );
     });
   });
 

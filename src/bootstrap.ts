@@ -263,13 +263,6 @@ function createHAClientIfConfigured(
   return new HomeAssistantClient({
     url: config.dataSources.homeAssistant.url,
     token: config.dataSources.homeAssistant.token,
-    reconnection: {
-      enabled: true,
-      maxAttempts: config.dataSources.homeAssistant.maxReconnectAttempts ?? 10,
-      initialDelayMs: config.dataSources.homeAssistant.reconnectDelayMs ?? 5000,
-      maxDelayMs: 30000,
-      backoffMultiplier: 2,
-    },
   });
 }
 

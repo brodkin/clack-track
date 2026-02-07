@@ -123,9 +123,6 @@ export async function testHACommand(options: TestHAOptions): Promise<void> {
   const config: HomeAssistantConnectionConfig = {
     url,
     token,
-    reconnection: {
-      enabled: false, // Disable for testing
-    },
   };
 
   const client = new HomeAssistantClient(config);
