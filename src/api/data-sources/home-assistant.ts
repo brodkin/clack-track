@@ -8,12 +8,15 @@
  * - Connection state tracking
  * - Validation methods for testing
  * - Event subscription system with multiple subscribers per event type
- * - Automatic reconnection with exponential backoff
- * - Event resubscription after reconnection
  * - Proper cleanup on disconnect
  * - Graceful degradation on connection failures
  * - State query methods with optional caching
  * - Service call method with parameter validation
+ *
+ * Reconnection is handled entirely by the home-assistant-js-websocket library,
+ * which provides built-in auto-reconnection with subscription replay. This client
+ * registers "ready" and "disconnected" listeners on the Connection for state
+ * tracking and logging only.
  *
  * Design Patterns:
  * - Dependency Injection: Configuration injected via constructor
@@ -21,27 +24,12 @@
  * - Observer Pattern: Event subscription with multiple observers per event
  * - Error Handling: Graceful cleanup on failures, console warnings for degradation
  * - State Machine: Tracks connection state transitions
- * - Exponential Backoff: Progressive retry delays with configurable caps
- *
- * Reconnection Behavior:
- * - Automatically attempts reconnection on connection loss (if enabled)
- * - Uses exponential backoff: initialDelay * (multiplier ^ attempt)
- * - Respects maxDelayMs cap and maxAttempts limit
- * - Resubscribes to all events after successful reconnection
- * - Logs warnings on failures, never crashes the application
  *
  * @example
  * ```typescript
  * const client = new HomeAssistantClient({
  *   url: 'wss://homeassistant.local:8123/api/websocket',
  *   token: 'your-long-lived-token',
- *   reconnection: {
- *     enabled: true,
- *     maxAttempts: 10,
- *     initialDelayMs: 1000,
- *     maxDelayMs: 30000,
- *     backoffMultiplier: 2
- *   }
  * });
  *
  * await client.connect();
@@ -52,7 +40,7 @@
  *   console.log('State changed:', event.data);
  * });
  *
- * // Connection lost? Auto-reconnection will handle it and resubscribe events
+ * // Connection lost? Library auto-reconnection handles it and replays subscriptions
  *
  * // Later: unsubscribe
  * unsubscribe();
@@ -88,7 +76,6 @@ import type {
   HomeAssistantEvent,
   EventCallback,
   UnsubscribeFunction,
-  ReconnectionConfig,
   StateCacheConfig,
   HassEntityState,
   Logger,
@@ -101,17 +88,6 @@ import {
   StateQueryError,
   ServiceCallError,
 } from '../../types/home-assistant.js';
-
-/**
- * Default reconnection configuration
- */
-const DEFAULT_RECONNECTION_CONFIG: ReconnectionConfig = {
-  enabled: true,
-  maxAttempts: 10,
-  initialDelayMs: 1000,
-  maxDelayMs: 30000,
-  backoffMultiplier: 2,
-};
 
 /**
  * Default state cache configuration
@@ -179,21 +155,9 @@ export class HomeAssistantClient {
    */
   private connectionUnsubscribers: Map<string, UnsubscribeFunction> = new Map();
   /**
-   * Reconnection configuration with defaults
+   * Tracks whether a disconnect has occurred (for logging reconnection success)
    */
-  private reconnectionConfig: ReconnectionConfig;
-  /**
-   * Current reconnection attempt counter
-   */
-  private reconnectionAttempt: number = 0;
-  /**
-   * Reconnection timeout handle
-   */
-  private reconnectionTimeout: NodeJS.Timeout | null = null;
-  /**
-   * Flag to track manual disconnect vs automatic disconnect
-   */
-  private isManualDisconnect: boolean = false;
+  private hasBeenDisconnected: boolean = false;
   /**
    * Logger instance for structured logging
    */
@@ -217,11 +181,6 @@ export class HomeAssistantClient {
 
   constructor(config: HomeAssistantConnectionConfig) {
     this.config = config;
-    // Merge user config with defaults
-    this.reconnectionConfig = {
-      ...DEFAULT_RECONNECTION_CONFIG,
-      ...config.reconnection,
-    };
     // Merge state cache config with defaults
     this.stateCacheConfig = {
       ...DEFAULT_STATE_CACHE_CONFIG,
@@ -256,12 +215,8 @@ export class HomeAssistantClient {
 
       this.state = 'connected' as ConnectionState;
 
-      // Reset reconnection counter on successful connection
-      this.reconnectionAttempt = 0;
-
       this.logger.info('Connected to Home Assistant successfully', {
         url: this.config.url,
-        reconnectionAttempt: this.reconnectionAttempt,
       });
 
       if (this.debug) {
@@ -271,11 +226,24 @@ export class HomeAssistantClient {
         });
       }
 
-      // Setup close event listener for automatic reconnection
-      this.setupCloseListener();
+      // Register connection state listeners for logging/tracking only.
+      // The library handles reconnection and subscription replay automatically.
+      this.connection.addEventListener('disconnected', () => {
+        this.hasBeenDisconnected = true;
+        this.state = 'disconnected' as ConnectionState;
+        this.logger.warn('Home Assistant connection lost', {
+          url: this.config.url,
+        });
+      });
 
-      // Resubscribe to all events after reconnection
-      await this.resubscribeAllEvents();
+      this.connection.addEventListener('ready', () => {
+        this.state = 'connected' as ConnectionState;
+        if (this.hasBeenDisconnected) {
+          this.logger.info('Home Assistant reconnection successful', {
+            url: this.config.url,
+          });
+        }
+      });
     } catch (error) {
       this.state = 'error' as ConnectionState;
       this.connection = null;
@@ -328,19 +296,11 @@ export class HomeAssistantClient {
     }
 
     try {
-      // Set manual disconnect flag to prevent automatic reconnection
-      this.isManualDisconnect = true;
-
       this.state = 'disconnecting' as ConnectionState;
-
-      // Cancel any pending reconnection attempts
-      if (this.reconnectionTimeout) {
-        clearTimeout(this.reconnectionTimeout);
-        this.reconnectionTimeout = null;
-      }
 
       // Remove all connection event listeners
       this.cleanupEventListeners();
+      // close() sets the library's closeRequested flag, preventing auto-reconnect
       this.connection.close();
     } catch (error) {
       // Log error but still cleanup connection reference
@@ -355,8 +315,8 @@ export class HomeAssistantClient {
       // Clear state cache
       this.stateCache.clear();
       this.allStatesCache = null;
-      // Reset manual disconnect flag
-      this.isManualDisconnect = false;
+      // Reset disconnect tracking
+      this.hasBeenDisconnected = false;
     }
   }
 
@@ -569,170 +529,6 @@ export class HomeAssistantClient {
     // Clear all maps
     this.connectionUnsubscribers.clear();
     this.connectionListeners.clear();
-  }
-
-  /**
-   * Setup WebSocket close event listener for automatic reconnection
-   */
-  private setupCloseListener(): void {
-    if (!this.connection) {
-      return;
-    }
-
-    // Listen for connection close events using the library's event system
-    this.connection.addEventListener('disconnected', () => {
-      this.logger.warn('WebSocket disconnected event received', {
-        url: this.config.url,
-        wasManualDisconnect: this.isManualDisconnect,
-      });
-      this.handleConnectionClose();
-    });
-
-    // Also listen for reconnect errors
-    this.connection.addEventListener('reconnect-error', () => {
-      this.logger.warn('WebSocket reconnect error received', {
-        url: this.config.url,
-      });
-    });
-  }
-
-  /**
-   * Public method to trigger reconnection logic (for testing and external use)
-   * Can be called when connection is detected as lost
-   */
-  public triggerReconnection(): void {
-    this.handleConnectionClose();
-  }
-
-  /**
-   * Handle connection close event and initiate reconnection if enabled
-   */
-  private handleConnectionClose(): void {
-    // Don't reconnect if this was a manual disconnect
-    if (this.isManualDisconnect) {
-      return;
-    }
-
-    // Don't reconnect if reconnection is disabled
-    if (!this.reconnectionConfig.enabled) {
-      this.logger.warn('Home Assistant connection lost. Auto-reconnection is disabled.', {
-        url: this.config.url,
-        reconnectionEnabled: false,
-      });
-      return;
-    }
-
-    // Check if we've exceeded max attempts
-    if (this.reconnectionAttempt >= this.reconnectionConfig.maxAttempts) {
-      this.logger.warn(
-        `Home Assistant connection lost. Maximum reconnection attempts (${this.reconnectionConfig.maxAttempts}) reached. Giving up.`,
-        {
-          url: this.config.url,
-          maxAttempts: this.reconnectionConfig.maxAttempts,
-          currentAttempt: this.reconnectionAttempt,
-        }
-      );
-      return;
-    }
-
-    // Calculate exponential backoff delay
-    const delay = this.calculateReconnectionDelay();
-
-    this.logger.warn('Connection lost', {
-      url: this.config.url,
-      attempt: this.reconnectionAttempt + 1,
-      maxAttempts: this.reconnectionConfig.maxAttempts,
-      nextRetryDelayMs: delay,
-    });
-
-    // Schedule reconnection attempt
-    this.reconnectionTimeout = setTimeout(() => {
-      this.attemptReconnection();
-    }, delay);
-  }
-
-  /**
-   * Calculate reconnection delay using exponential backoff
-   */
-  private calculateReconnectionDelay(): number {
-    const { initialDelayMs, maxDelayMs, backoffMultiplier } = this.reconnectionConfig;
-
-    // Calculate delay: initialDelay * (multiplier ^ attempt)
-    const delay = initialDelayMs * Math.pow(backoffMultiplier, this.reconnectionAttempt);
-
-    // Cap at maxDelayMs
-    return Math.min(delay, maxDelayMs);
-  }
-
-  /**
-   * Attempt to reconnect to Home Assistant
-   */
-  private async attemptReconnection(): Promise<void> {
-    this.reconnectionAttempt++;
-
-    try {
-      // Clear existing connection reference
-      this.connection = null;
-      this.state = 'disconnected' as ConnectionState;
-
-      // Attempt to reconnect
-      await this.connect();
-
-      this.logger.info('Home Assistant reconnection successful', {
-        url: this.config.url,
-        attempt: this.reconnectionAttempt,
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.warn(`Home Assistant reconnection attempt ${this.reconnectionAttempt} failed`, {
-        url: this.config.url,
-        attempt: this.reconnectionAttempt,
-        error: errorMessage,
-      });
-
-      // Schedule next attempt if we haven't exceeded max attempts
-      this.handleConnectionClose();
-    }
-  }
-
-  /**
-   * Resubscribe to all previously subscribed events after reconnection
-   */
-  private async resubscribeAllEvents(): Promise<void> {
-    // Skip if no event handlers or not connected
-    if (this.eventHandlers.size === 0 || !this.isConnected()) {
-      return;
-    }
-
-    // Skip on initial connection (reconnectionAttempt === 0 means first connection)
-    if (this.reconnectionAttempt === 0 && this.connectionListeners.size === 0) {
-      return;
-    }
-
-    // Clear stale connection listener and unsubscriber entries from the previous connection
-    // so registerConnectionListener() guard clause does not skip re-registration
-    const staleCount = this.connectionListeners.size;
-    this.connectionListeners.clear();
-    this.connectionUnsubscribers.clear();
-
-    this.logger.info('Clearing stale subscriptions for re-registration after reconnection', {
-      eventTypes: [...this.eventHandlers.keys()],
-      staleListenersCleared: staleCount,
-    });
-
-    // Resubscribe to all event types
-    for (const [eventType] of this.eventHandlers.entries()) {
-      try {
-        // Re-register the connection listener for this event type
-        await this.registerConnectionListener(eventType);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        this.logger.warn(`Failed to resubscribe to event type '${eventType}'`, {
-          eventType,
-          error: errorMessage,
-        });
-      }
-    }
   }
 
   /**

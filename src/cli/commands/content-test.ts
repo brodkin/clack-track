@@ -206,7 +206,6 @@ export async function contentTestCommand(options: ContentTestOptions): Promise<v
             localHaClient = new HomeAssistantClient({
               url: haUrl,
               token: haToken,
-              reconnection: { enabled: false },
             });
             await localHaClient.connect();
           } catch {

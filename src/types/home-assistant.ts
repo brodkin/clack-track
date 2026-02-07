@@ -40,47 +40,11 @@ export interface StateCacheConfig {
 }
 
 /**
- * Configuration for automatic reconnection behavior
- */
-export interface ReconnectionConfig {
-  /**
-   * Enable automatic reconnection on connection loss
-   * @default true
-   */
-  enabled: boolean;
-  /**
-   * Maximum number of reconnection attempts before giving up
-   * @default 10
-   */
-  maxAttempts: number;
-  /**
-   * Initial delay in milliseconds before first reconnection attempt
-   * @default 1000
-   */
-  initialDelayMs: number;
-  /**
-   * Maximum delay in milliseconds between reconnection attempts
-   * @default 30000
-   */
-  maxDelayMs: number;
-  /**
-   * Multiplier for exponential backoff (delay = initialDelay * multiplier ^ attempt)
-   * @default 2
-   */
-  backoffMultiplier: number;
-}
-
-/**
  * Configuration for Home Assistant WebSocket connection
  */
 export interface HomeAssistantConnectionConfig {
   url: string;
   token: string;
-  /**
-   * Optional reconnection configuration
-   * If not provided, uses default reconnection settings
-   */
-  reconnection?: Partial<ReconnectionConfig>;
   /**
    * Optional state caching configuration
    * If not provided, caching is disabled

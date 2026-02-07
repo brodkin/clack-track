@@ -72,8 +72,6 @@ export interface EnvironmentConfig {
       url: string;
       token: string;
       websocketUrl?: string;
-      reconnectDelayMs?: number;
-      maxReconnectAttempts?: number;
       triggerConfigPath?: string;
     };
   };
@@ -173,15 +171,6 @@ export function loadConfig(): EnvironmentConfig {
 
         if (!url || !token) return undefined;
 
-        const reconnectDelayMs = parseInt(
-          getOptionalEnv('HOME_ASSISTANT_RECONNECT_DELAY', '5000'),
-          10
-        );
-        const maxReconnectAttempts = parseInt(
-          getOptionalEnv('HOME_ASSISTANT_MAX_RECONNECT_ATTEMPTS', '10'),
-          10
-        );
-
         // Construct WebSocket URL from HTTP/HTTPS URL
         const websocketUrl = url
           .replace(/^http:/, 'ws:')
@@ -192,8 +181,6 @@ export function loadConfig(): EnvironmentConfig {
           url,
           token,
           websocketUrl,
-          reconnectDelayMs,
-          maxReconnectAttempts,
           triggerConfigPath: getOptionalEnv('TRIGGER_CONFIG_PATH'),
         };
       })(),

@@ -105,7 +105,6 @@ async function setupHomeAssistant(): Promise<HomeAssistantClient | undefined> {
     const client = new HomeAssistantClient({
       url,
       token,
-      reconnection: { enabled: false },
     });
     await client.connect();
     return client;
