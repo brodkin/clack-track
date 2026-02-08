@@ -134,8 +134,8 @@ export class WebServer {
     const rateLimiter = createRateLimiter();
     this.app.use('/api', rateLimiter);
 
-    // Static file serving
-    this.app.use(express.static(this.staticPath));
+    // Static file serving with long-lived cache for Vite hashed assets
+    this.app.use(express.static(this.staticPath, { maxAge: '1y', immutable: true }));
 
     // JSON body parsing
     this.app.use(express.json());

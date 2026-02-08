@@ -20,6 +20,9 @@ jest.mock('@/utils/logger', () => ({
 }));
 
 import request from 'supertest';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 import { WebServer } from '@/web/server';
 
 describe('WebServer', () => {
@@ -140,6 +143,44 @@ describe('WebServer', () => {
 
       it('should include explicit connect-src set to self', () => {
         expect(csp).toContain("connect-src 'self'");
+      });
+    });
+
+    describe('static asset caching', () => {
+      let tmpDir: string;
+
+      beforeAll(() => {
+        // Create a temporary directory with a test static file to simulate Vite hashed assets
+        tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'clack-static-'));
+        const assetsDir = path.join(tmpDir, 'assets');
+        fs.mkdirSync(assetsDir);
+        fs.writeFileSync(path.join(assetsDir, 'index-abc123.js'), '// test asset');
+      });
+
+      afterAll(() => {
+        // Clean up temporary directory
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      });
+
+      it('should set Cache-Control with max-age and immutable for static assets', async () => {
+        server = new WebServer({
+          port: 0,
+          host: '127.0.0.1',
+          staticPath: tmpDir,
+        });
+
+        await server.start();
+
+        const app = (server as unknown as { app: Express.Application }).app;
+        const response = await request(app).get('/assets/index-abc123.js');
+
+        expect(response.status).toBe(200);
+
+        const cacheControl = response.headers['cache-control'];
+        expect(cacheControl).toBeDefined();
+        // express.static with maxAge: '1y' sets max-age=31536000 (seconds in a year)
+        expect(cacheControl).toContain('max-age=31536000');
+        expect(cacheControl).toContain('immutable');
       });
     });
 
