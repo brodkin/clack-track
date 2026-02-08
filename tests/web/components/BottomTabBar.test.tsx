@@ -182,7 +182,7 @@ describe('BottomTabBar', () => {
       await screen.findByText('Admin');
 
       const adminLink = screen.getByRole('link', { name: /admin/i });
-      expect(adminLink).toHaveClass('text-amber-600');
+      expect(adminLink).toHaveClass('text-red-600');
     });
   });
 
@@ -203,9 +203,9 @@ describe('BottomTabBar', () => {
 
       await screen.findByText('Admin');
 
-      // Home tab should have active styling (amber color)
+      // Home tab should have active styling (brand-red color)
       const homeLink = screen.getByRole('link', { name: /home/i });
-      expect(homeLink).toHaveClass('text-amber-600');
+      expect(homeLink).toHaveClass('text-red-600');
     });
 
     it('shows History tab as active when on flipside route', async () => {
@@ -218,7 +218,7 @@ describe('BottomTabBar', () => {
       await screen.findByText('Admin');
 
       const historyLink = screen.getByRole('link', { name: /history/i });
-      expect(historyLink).toHaveClass('text-amber-600');
+      expect(historyLink).toHaveClass('text-red-600');
     });
 
     it('shows Account tab as active when on account route', async () => {
@@ -231,7 +231,20 @@ describe('BottomTabBar', () => {
       await screen.findByText('Admin');
 
       const accountLink = screen.getByRole('link', { name: /account/i });
-      expect(accountLink).toHaveClass('text-amber-600');
+      expect(accountLink).toHaveClass('text-red-600');
+    });
+
+    it('applies brand-red background to active tab', async () => {
+      render(
+        <AuthWrapper initialEntries={['/']}>
+          <BottomTabBar />
+        </AuthWrapper>
+      );
+
+      await screen.findByText('Admin');
+
+      const homeLink = screen.getByRole('link', { name: /home/i });
+      expect(homeLink).toHaveClass('bg-red-50');
     });
 
     it('shows inactive tabs with muted color', async () => {
@@ -306,7 +319,7 @@ describe('BottomTabBar', () => {
       expect(nav).toHaveAttribute('aria-label', 'Main navigation');
     });
 
-    it('tabs have focus-visible ring styles', () => {
+    it('tabs have focus-visible ring styles with brand-red color', () => {
       render(
         <AuthWrapper>
           <BottomTabBar />
@@ -316,6 +329,7 @@ describe('BottomTabBar', () => {
       const links = screen.getAllByRole('link');
       links.forEach(link => {
         expect(link).toHaveClass('focus-visible:ring-2');
+        expect(link).toHaveClass('focus-visible:ring-red-500');
       });
     });
 
@@ -344,7 +358,8 @@ describe('BottomTabBar', () => {
 
       const nav = screen.getByRole('navigation');
       expect(nav).toHaveClass('rounded-full');
-      expect(nav).toHaveClass('backdrop-blur-xl');
+      expect(nav).toHaveClass('backdrop-blur-2xl');
+      expect(nav).toHaveClass('backdrop-saturate-150');
     });
 
     it('has fixed positioning at bottom center', () => {
