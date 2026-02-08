@@ -299,11 +299,11 @@ describe('Navigation Flow Integration', () => {
       await waitFor(() => screen.getByRole('navigation'));
 
       const banner = screen.getByRole('banner');
-      expect(banner).toHaveClass('backdrop-blur-md');
-      expect(banner).toHaveClass('bg-gradient-to-b');
+      expect(banner).toHaveClass('backdrop-blur-2xl');
+      expect(banner).toHaveClass('bg-white/60');
     });
 
-    it('FloatingLogo is fixed at top of viewport', async () => {
+    it('FloatingLogo is sticky at top of viewport', async () => {
       render(
         <NavigationTestWrapper>
           <div>Test Page</div>
@@ -313,9 +313,8 @@ describe('Navigation Flow Integration', () => {
       await waitFor(() => screen.getByRole('navigation'));
 
       const banner = screen.getByRole('banner');
-      expect(banner).toHaveClass('fixed');
+      expect(banner).toHaveClass('sticky');
       expect(banner).toHaveClass('top-0');
-      expect(banner).toHaveClass('left-0');
       expect(banner).toHaveClass('w-full');
     });
   });
