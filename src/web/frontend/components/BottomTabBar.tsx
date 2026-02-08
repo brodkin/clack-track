@@ -103,9 +103,9 @@ export function BottomTabBar({ className }: BottomTabBarProps) {
         'z-50',
         // Pill shape
         'rounded-full',
-        // Glass effect with backdrop blur
+        // Glass effect with backdrop blur (matches header treatment)
         'bg-white/80 dark:bg-gray-900/80',
-        'backdrop-blur-xl',
+        'backdrop-blur-2xl backdrop-saturate-150',
         // Border for definition
         'border border-gray-200/50 dark:border-gray-700/50',
         // Shadow for depth
@@ -139,13 +139,13 @@ export function BottomTabBar({ className }: BottomTabBarProps) {
               // Smooth transitions
               'transition-all duration-200',
               // Focus visible state for accessibility
-              'focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2',
               // Active vs inactive styling
               isActive
                 ? [
-                    // Active: amber color, scale up
-                    'text-amber-600 dark:text-amber-400',
-                    'bg-amber-50 dark:bg-amber-900/30',
+                    // Active: brand-red color, scale up
+                    'text-red-600 dark:text-red-400',
+                    'bg-red-50 dark:bg-red-900/20',
                     'scale-105',
                   ]
                 : [
@@ -193,7 +193,7 @@ export function BottomTabBar({ className }: BottomTabBarProps) {
             'px-4 py-2',
             'rounded-full',
             'transition-all duration-200',
-            'focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2',
             // Logout styling
             'text-gray-500 dark:text-gray-400',
             'hover:text-gray-700 dark:hover:text-gray-300',

@@ -1,7 +1,9 @@
 /**
  * FloatingLogo Component Tests
  *
- * Tests for the floating logo with gradient blur effect
+ * Tests for the sticky glassmorphism header with gradient brand text.
+ * Verifies the new design: sticky positioning, heavy blur, saturation boost,
+ * crisp border, gradient logo text, and absence of old broken patterns.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -25,11 +27,12 @@ describe('FloatingLogo', () => {
     });
   });
 
-  describe('fixed positioning', () => {
-    it('has fixed position class', () => {
+  describe('sticky positioning (replaces fixed)', () => {
+    it('uses sticky positioning instead of fixed', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
-      expect(container).toHaveClass('fixed');
+      expect(container).toHaveClass('sticky');
+      expect(container).not.toHaveClass('fixed');
     });
 
     it('is positioned at top of viewport', () => {
@@ -38,48 +41,164 @@ describe('FloatingLogo', () => {
       expect(container).toHaveClass('top-0');
     });
 
-    it('is positioned at left of viewport', () => {
-      render(<FloatingLogo />);
-      const container = screen.getByTestId('floating-logo');
-      expect(container).toHaveClass('left-0');
-    });
-
     it('spans full width', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
       expect(container).toHaveClass('w-full');
     });
+
+    it('does not use left-0 (not needed for sticky)', () => {
+      render(<FloatingLogo />);
+      const container = screen.getByTestId('floating-logo');
+      expect(container).not.toHaveClass('left-0');
+    });
   });
 
   describe('z-index layering', () => {
-    it('has high z-index for stacking above content', () => {
+    it('has z-40 for stacking above content but below modals', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
-      // z-40 provides stacking above most content but below modals (z-50)
       expect(container).toHaveClass('z-40');
     });
   });
 
-  describe('gradient blur effect', () => {
-    it('has gradient background', () => {
+  describe('glassmorphism effect', () => {
+    it('has uniform white background with opacity', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
-      // Gradient from solid to transparent for fade effect
-      expect(container.className).toMatch(/bg-gradient-to-b/);
+      expect(container.className).toContain('bg-white/60');
     });
 
-    it('has backdrop blur effect', () => {
+    it('has dark mode uniform background with opacity', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
-      expect(container).toHaveClass('backdrop-blur-md');
+      expect(container.className).toContain('dark:bg-gray-950/50');
     });
 
-    it('fades from opaque to transparent', () => {
+    it('applies heavy backdrop blur', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
-      // Gradient should go from solid background color to transparent
-      expect(container.className).toMatch(/from-/);
-      expect(container.className).toMatch(/to-transparent/);
+      expect(container).toHaveClass('backdrop-blur-2xl');
+    });
+
+    it('applies backdrop saturation boost', () => {
+      render(<FloatingLogo />);
+      const container = screen.getByTestId('floating-logo');
+      expect(container).toHaveClass('backdrop-saturate-150');
+    });
+
+    it('does not use gradient-to-transparent background', () => {
+      render(<FloatingLogo />);
+      const container = screen.getByTestId('floating-logo');
+      expect(container.className).not.toContain('bg-gradient-to-b');
+      expect(container.className).not.toContain('to-transparent');
+      expect(container.className).not.toContain('from-gray-50');
+    });
+
+    it('does not use old backdrop-blur-md', () => {
+      render(<FloatingLogo />);
+      const container = screen.getByTestId('floating-logo');
+      expect(container).not.toHaveClass('backdrop-blur-md');
+    });
+  });
+
+  describe('crisp border and shadow', () => {
+    it('has bottom border for crisp boundary', () => {
+      render(<FloatingLogo />);
+      const container = screen.getByTestId('floating-logo');
+      expect(container).toHaveClass('border-b');
+    });
+
+    it('has red-tinted border color', () => {
+      render(<FloatingLogo />);
+      const container = screen.getByTestId('floating-logo');
+      expect(container.className).toContain('border-red-200/30');
+    });
+
+    it('has dark mode border color', () => {
+      render(<FloatingLogo />);
+      const container = screen.getByTestId('floating-logo');
+      expect(container.className).toContain('dark:border-red-500/20');
+    });
+
+    it('has red-tinted shadow', () => {
+      render(<FloatingLogo />);
+      const container = screen.getByTestId('floating-logo');
+      expect(container.className).toContain('shadow-');
+    });
+  });
+
+  describe('pointer events removed', () => {
+    it('does not have pointer-events-none on container', () => {
+      render(<FloatingLogo />);
+      const container = screen.getByTestId('floating-logo');
+      expect(container).not.toHaveClass('pointer-events-none');
+    });
+
+    it('does not have pointer-events-auto on any child', () => {
+      render(<FloatingLogo />);
+      const mainText = screen.getByText('Clack Track');
+      const textContainer = mainText.parentElement;
+      if (textContainer) {
+        expect(textContainer).not.toHaveClass('pointer-events-auto');
+      }
+    });
+  });
+
+  describe('gradient logo text', () => {
+    it('applies transparent text color for gradient effect', () => {
+      render(<FloatingLogo />);
+      const mainText = screen.getByText('Clack Track');
+      expect(mainText).toHaveClass('text-transparent');
+    });
+
+    it('applies background clip text for gradient', () => {
+      render(<FloatingLogo />);
+      const mainText = screen.getByText('Clack Track');
+      expect(mainText).toHaveClass('bg-clip-text');
+    });
+
+    it('applies red-yellow-red gradient to logo', () => {
+      render(<FloatingLogo />);
+      const mainText = screen.getByText('Clack Track');
+      expect(mainText.className).toContain('bg-gradient-to-r');
+      expect(mainText.className).toContain('from-red-500');
+      expect(mainText.className).toContain('via-yellow-400');
+      expect(mainText.className).toContain('to-red-500');
+    });
+
+    it('does not use old solid text colors on logo', () => {
+      render(<FloatingLogo />);
+      const mainText = screen.getByText('Clack Track');
+      expect(mainText).not.toHaveClass('text-gray-900');
+      expect(mainText).not.toHaveClass('dark:text-white');
+    });
+  });
+
+  describe('byline styling', () => {
+    it('has red-tinted color in light mode', () => {
+      render(<FloatingLogo />);
+      const byline = screen.getByText('BY HOUSEBOY');
+      expect(byline.className).toContain('text-red-800/60');
+    });
+
+    it('has red-tinted color in dark mode', () => {
+      render(<FloatingLogo />);
+      const byline = screen.getByText('BY HOUSEBOY');
+      expect(byline.className).toContain('dark:text-red-300/50');
+    });
+
+    it('has wide letter spacing', () => {
+      render(<FloatingLogo />);
+      const byline = screen.getByText('BY HOUSEBOY');
+      expect(byline.className).toContain('tracking-[0.3em]');
+    });
+
+    it('does not use old gray text colors', () => {
+      render(<FloatingLogo />);
+      const byline = screen.getByText('BY HOUSEBOY');
+      expect(byline).not.toHaveClass('text-gray-600');
+      expect(byline).not.toHaveClass('dark:text-gray-400');
     });
   });
 
@@ -87,7 +206,6 @@ describe('FloatingLogo', () => {
     it('applies brush script font to main text', () => {
       render(<FloatingLogo />);
       const mainText = screen.getByText('Clack Track');
-      // Will use font-brush class (defined in clack-0rij.4)
       expect(mainText).toHaveClass('font-brush');
     });
 
@@ -97,10 +215,9 @@ describe('FloatingLogo', () => {
       expect(mainText).toHaveClass('text-4xl');
     });
 
-    it('applies sans-serif font to byline', () => {
+    it('applies display font to byline', () => {
       render(<FloatingLogo />);
       const byline = screen.getByText('BY HOUSEBOY');
-      // Will use font-display class (defined in clack-0rij.4)
       expect(byline).toHaveClass('font-display');
     });
 
@@ -109,72 +226,34 @@ describe('FloatingLogo', () => {
       const byline = screen.getByText('BY HOUSEBOY');
       expect(byline).toHaveClass('text-sm');
     });
-
-    it('applies letter spacing to byline', () => {
-      render(<FloatingLogo />);
-      const byline = screen.getByText('BY HOUSEBOY');
-      expect(byline).toHaveClass('tracking-widest');
-    });
-
-    it('applies font weight to byline', () => {
-      render(<FloatingLogo />);
-      const byline = screen.getByText('BY HOUSEBOY');
-      expect(byline).toHaveClass('font-light');
-    });
-  });
-
-  describe('dark mode support', () => {
-    it('has light mode gradient colors', () => {
-      render(<FloatingLogo />);
-      const container = screen.getByTestId('floating-logo');
-      // Light mode: from white/gray
-      expect(container.className).toMatch(/from-(white|gray-50|gray-100)/);
-    });
-
-    it('has dark mode gradient colors', () => {
-      render(<FloatingLogo />);
-      const container = screen.getByTestId('floating-logo');
-      // Dark mode: from dark gray
-      expect(container.className).toMatch(/dark:from-gray-(800|900|950)/);
-    });
-
-    it('has light mode text color', () => {
-      render(<FloatingLogo />);
-      const mainText = screen.getByText('Clack Track');
-      expect(mainText).toHaveClass('text-gray-900');
-    });
-
-    it('has dark mode text color', () => {
-      render(<FloatingLogo />);
-      const mainText = screen.getByText('Clack Track');
-      expect(mainText).toHaveClass('dark:text-white');
-    });
   });
 
   describe('layout structure', () => {
-    it('centers content horizontally', () => {
+    it('uses flexbox centered layout', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
       expect(container).toHaveClass('flex');
       expect(container).toHaveClass('justify-center');
-    });
-
-    it('centers content vertically within padding', () => {
-      render(<FloatingLogo />);
-      const container = screen.getByTestId('floating-logo');
       expect(container).toHaveClass('items-center');
     });
 
-    it('has vertical padding for spacing', () => {
+    it('has reduced bottom padding (pb-4 not pb-12)', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
-      expect(container.className).toMatch(/p[tb]-/);
+      expect(container).toHaveClass('pb-4');
+      expect(container).not.toHaveClass('pb-12');
+    });
+
+    it('has top padding', () => {
+      render(<FloatingLogo />);
+      const container = screen.getByTestId('floating-logo');
+      expect(container).toHaveClass('pt-6');
     });
 
     it('has horizontal padding', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
-      expect(container.className).toMatch(/px-/);
+      expect(container).toHaveClass('px-4');
     });
   });
 
@@ -188,26 +267,8 @@ describe('FloatingLogo', () => {
     it('merges custom className with default styles', () => {
       render(<FloatingLogo className="custom-margin" />);
       const container = screen.getByTestId('floating-logo');
-      // Should have both default and custom classes
-      expect(container).toHaveClass('fixed');
+      expect(container).toHaveClass('sticky');
       expect(container).toHaveClass('custom-margin');
-    });
-  });
-
-  describe('pointer events', () => {
-    it('allows pointer events to pass through container', () => {
-      render(<FloatingLogo />);
-      const container = screen.getByTestId('floating-logo');
-      // Logo should not block interactions with content below
-      expect(container).toHaveClass('pointer-events-none');
-    });
-
-    it('enables pointer events on text elements', () => {
-      render(<FloatingLogo />);
-      const mainText = screen.getByText('Clack Track');
-      const textContainer = mainText.parentElement;
-      // Text itself should be clickable if needed
-      expect(textContainer).toHaveClass('pointer-events-auto');
     });
   });
 
@@ -222,50 +283,38 @@ describe('FloatingLogo', () => {
     it('has proper heading hierarchy', () => {
       render(<FloatingLogo />);
       const mainText = screen.getByText('Clack Track');
-      // Main text should be in an h1
       expect(mainText.closest('h1')).toBeInTheDocument();
     });
   });
 
   describe('responsive design', () => {
-    it('adjusts text size on mobile', () => {
+    it('has mobile-first text sizing', () => {
       render(<FloatingLogo />);
       const mainText = screen.getByText('Clack Track');
-      // Should have mobile-first sizing
       expect(mainText).toHaveClass('text-4xl');
     });
 
     it('increases text size on larger screens', () => {
       render(<FloatingLogo />);
       const mainText = screen.getByText('Clack Track');
-      // Should have responsive sizing
       expect(mainText.className).toMatch(/md:text-/);
-    });
-
-    it('adjusts padding on mobile', () => {
-      render(<FloatingLogo />);
-      const container = screen.getByTestId('floating-logo');
-      expect(container.className).toMatch(/p[tb]-/);
     });
   });
 
   describe('accessibility', () => {
-    it('has descriptive role', () => {
+    it('has banner role via header element', () => {
       render(<FloatingLogo />);
-      // Header element provides banner role
       expect(screen.getByRole('banner')).toBeInTheDocument();
     });
 
     it('main text is readable by screen readers', () => {
       render(<FloatingLogo />);
-      const mainText = screen.getByText('Clack Track');
-      expect(mainText).toBeVisible();
+      expect(screen.getByText('Clack Track')).toBeVisible();
     });
 
     it('byline is readable by screen readers', () => {
       render(<FloatingLogo />);
-      const byline = screen.getByText('BY HOUSEBOY');
-      expect(byline).toBeVisible();
+      expect(screen.getByText('BY HOUSEBOY')).toBeVisible();
     });
   });
 });

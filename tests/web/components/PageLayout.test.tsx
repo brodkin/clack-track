@@ -1,7 +1,8 @@
 /**
  * PageLayout Component Tests
  *
- * Tests for the page layout wrapper with FloatingLogo and BottomTabBar navigation
+ * Tests for the page layout wrapper with FloatingLogo and BottomTabBar navigation.
+ * Verifies sticky header spacing (pt-6 breathing room) and dark mode background (gray-950).
  */
 
 import { render, screen } from '@testing-library/react';
@@ -116,7 +117,7 @@ describe('PageLayout', () => {
   });
 
   describe('spacing adjustments', () => {
-    it('has top padding/margin for FloatingLogo height', () => {
+    it('has minimal top padding for breathing room below sticky header', () => {
       render(
         <BrowserRouter>
           <PageLayout>
@@ -126,8 +127,21 @@ describe('PageLayout', () => {
       );
 
       const mainElement = screen.getByRole('main');
-      // Should have top padding to account for floating logo
-      expect(mainElement).toHaveClass('pt-32');
+      // pt-6 breathing room - sticky header no longer needs large spacer
+      expect(mainElement).toHaveClass('pt-6');
+    });
+
+    it('does not use pt-32 spacer hack (removed for sticky header)', () => {
+      render(
+        <BrowserRouter>
+          <PageLayout>
+            <div>Content</div>
+          </PageLayout>
+        </BrowserRouter>
+      );
+
+      const mainElement = screen.getByRole('main');
+      expect(mainElement).not.toHaveClass('pt-32');
     });
 
     it('has bottom padding on main content for BottomTabBar overlap prevention', () => {
@@ -203,7 +217,7 @@ describe('PageLayout', () => {
       expect(rootDiv).toHaveClass('bg-gray-50');
     });
 
-    it('has dark mode background', () => {
+    it('has darker dark mode background surface', () => {
       render(
         <BrowserRouter>
           <PageLayout>
@@ -213,7 +227,20 @@ describe('PageLayout', () => {
       );
 
       const rootDiv = screen.getByTestId('child').closest('main')?.parentElement;
-      expect(rootDiv).toHaveClass('dark:bg-gray-900');
+      expect(rootDiv).toHaveClass('dark:bg-gray-950');
+    });
+
+    it('does not use dark:bg-gray-900 (replaced with darker surface)', () => {
+      render(
+        <BrowserRouter>
+          <PageLayout>
+            <div data-testid="child">Content</div>
+          </PageLayout>
+        </BrowserRouter>
+      );
+
+      const rootDiv = screen.getByTestId('child').closest('main')?.parentElement;
+      expect(rootDiv).not.toHaveClass('dark:bg-gray-900');
     });
   });
 });

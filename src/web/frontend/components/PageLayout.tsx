@@ -18,15 +18,15 @@ interface PageLayoutProps {
  * PageLayout wraps pages with consistent navigation and spacing.
  *
  * Layout structure:
- * - FloatingLogo: Fixed at top with gradient blur effect
- * - Main content: Top padding for logo, bottom padding for tab bar
+ * - FloatingLogo: Sticky at top with gradient blur effect
+ * - Main content: Minimal top padding (pt-6) for breathing room, bottom padding for tab bar
  * - BottomTabBar: Fixed at bottom for all screen sizes
  */
 export function PageLayout({ children, className }: PageLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <FloatingLogo />
-      <main className={cn('container mx-auto px-4 py-8 pt-32 pb-20 md:pb-0', className)}>
+      <main className={cn('container mx-auto px-4 py-8 pt-6 pb-20 md:pb-0', className)}>
         {children}
       </main>
       <BottomTabBar />

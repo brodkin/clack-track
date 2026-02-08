@@ -4,6 +4,27 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================
+   Font Fallback Metrics
+   Reduce FOUT by matching fallback fonts to
+   the metrics of Pacifico and Bebas Neue.
+   ============================================ */
+@font-face {
+  font-family: 'Pacifico Fallback';
+  src: local('Brush Script MT'), local('Comic Sans MS'), local('cursive');
+  size-adjust: 118%;
+  ascent-override: 105%;
+  descent-override: 35%;
+}
+
+@font-face {
+  font-family: 'Bebas Neue Fallback';
+  src: local('Arial Narrow'), local('Helvetica Neue'), local('sans-serif');
+  size-adjust: 75%;
+  ascent-override: 115%;
+  descent-override: 22%;
+}
+
 /* Base styles from App.css */
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -19,9 +40,17 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Custom Font Variables */
-  --font-brush: 'Pacifico', cursive;
-  --font-display: 'Bebas Neue', sans-serif;
+  /* Custom Font Variables (with metric-matched fallbacks) */
+  --font-brush: 'Pacifico', 'Pacifico Fallback', cursive;
+  --font-display: 'Bebas Neue', 'Bebas Neue Fallback', sans-serif;
+
+  /* Brand Colors (OKLCH) */
+  --brand-red: oklch(0.55 0.22 25);
+  --brand-red-light: oklch(0.7 0.18 25);
+  --brand-yellow: oklch(0.88 0.18 90);
+  --brand-yellow-light: oklch(0.93 0.12 90);
+  --brand-glass: oklch(1 0 0 / 60%);
+  --brand-glass-border: oklch(0.55 0.22 25 / 15%);
 
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -84,6 +113,12 @@ h1 {
 @theme inline {
   --font-family-brush: var(--font-brush);
   --font-family-display: var(--font-display);
+  --color-brand-red: var(--brand-red);
+  --color-brand-red-light: var(--brand-red-light);
+  --color-brand-yellow: var(--brand-yellow);
+  --color-brand-yellow-light: var(--brand-yellow-light);
+  --color-brand-glass: var(--brand-glass);
+  --color-brand-glass-border: var(--brand-glass-border);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -122,6 +157,14 @@ h1 {
 }
 
 .dark {
+  /* Brand Colors - Dark Mode */
+  --brand-red: oklch(0.62 0.2 25);
+  --brand-red-light: oklch(0.75 0.16 25);
+  --brand-yellow: oklch(0.9 0.16 90);
+  --brand-yellow-light: oklch(0.95 0.1 90);
+  --brand-glass: oklch(0.15 0 0 / 60%);
+  --brand-glass-border: oklch(0.7 0.18 25 / 20%);
+
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -236,19 +279,15 @@ h1 {
    Glass Morphism & Device Safety
    ============================================ */
 
-/* Glass effect with backdrop blur */
+/* Glass effect with backdrop blur (uses brand tokens) */
 .glass-effect {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: var(--brand-glass);
+  border: 1px solid var(--brand-glass-border);
 }
 
-/* Dark mode glass effect */
-.dark .glass-effect {
-  background: rgba(0, 0, 0, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
+/* Dark mode glass inherits via .dark overrides on brand tokens */
 
 /* Safe area padding for notched devices (iPhone X+, etc.) */
 .safe-area-bottom {

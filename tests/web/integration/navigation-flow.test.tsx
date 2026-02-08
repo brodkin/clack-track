@@ -117,9 +117,9 @@ describe('Navigation Flow Integration', () => {
 
       await waitFor(() => screen.getByRole('navigation'));
 
-      // Main content should have top padding for FloatingLogo
+      // Main content should have breathing room below sticky header
       const main = screen.getByRole('main');
-      expect(main).toHaveClass('pt-32');
+      expect(main).toHaveClass('pt-6');
 
       // Main content should have bottom padding for BottomTabBar on mobile
       expect(main).toHaveClass('pb-20');
@@ -299,11 +299,11 @@ describe('Navigation Flow Integration', () => {
       await waitFor(() => screen.getByRole('navigation'));
 
       const banner = screen.getByRole('banner');
-      expect(banner).toHaveClass('backdrop-blur-md');
-      expect(banner).toHaveClass('bg-gradient-to-b');
+      expect(banner).toHaveClass('backdrop-blur-2xl');
+      expect(banner).toHaveClass('bg-white/60');
     });
 
-    it('FloatingLogo is fixed at top of viewport', async () => {
+    it('FloatingLogo is sticky at top of viewport', async () => {
       render(
         <NavigationTestWrapper>
           <div>Test Page</div>
@@ -313,9 +313,8 @@ describe('Navigation Flow Integration', () => {
       await waitFor(() => screen.getByRole('navigation'));
 
       const banner = screen.getByRole('banner');
-      expect(banner).toHaveClass('fixed');
+      expect(banner).toHaveClass('sticky');
       expect(banner).toHaveClass('top-0');
-      expect(banner).toHaveClass('left-0');
       expect(banner).toHaveClass('w-full');
     });
   });
@@ -332,7 +331,7 @@ describe('Navigation Flow Integration', () => {
 
       const nav = screen.getByRole('navigation');
       expect(nav).toHaveClass('rounded-full');
-      expect(nav).toHaveClass('backdrop-blur-xl');
+      expect(nav).toHaveClass('backdrop-blur-2xl');
       expect(nav).toHaveClass('shadow-lg');
     });
 
@@ -385,7 +384,7 @@ describe('Navigation Flow Integration', () => {
       await waitFor(() => screen.getByText('Admin'));
 
       const homeLink = screen.getByRole('link', { name: /home/i });
-      expect(homeLink).toHaveClass('text-amber-600');
+      expect(homeLink).toHaveClass('text-red-600');
     });
 
     it('highlights History tab when on flipside route', async () => {
@@ -398,7 +397,7 @@ describe('Navigation Flow Integration', () => {
       await waitFor(() => screen.getByText('Admin'));
 
       const historyLink = screen.getByRole('link', { name: /history/i });
-      expect(historyLink).toHaveClass('text-amber-600');
+      expect(historyLink).toHaveClass('text-red-600');
     });
 
     it('highlights Account tab when on account route', async () => {
@@ -411,7 +410,7 @@ describe('Navigation Flow Integration', () => {
       await waitFor(() => screen.getByText('Admin'));
 
       const accountLink = screen.getByRole('link', { name: /account/i });
-      expect(accountLink).toHaveClass('text-amber-600');
+      expect(accountLink).toHaveClass('text-red-600');
     });
 
     it('highlights Admin tab when on admin route', async () => {
@@ -424,7 +423,7 @@ describe('Navigation Flow Integration', () => {
       await waitFor(() => screen.getByText('Admin'));
 
       const adminLink = screen.getByRole('link', { name: /admin/i });
-      expect(adminLink).toHaveClass('text-amber-600');
+      expect(adminLink).toHaveClass('text-red-600');
     });
 
     it('shows inactive tabs with muted color', async () => {
