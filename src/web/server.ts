@@ -109,8 +109,10 @@ export class WebServer {
           directives: {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
             imgSrc: ["'self'", 'data:', 'https:'],
+            fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+            connectSrc: ["'self'"],
           },
         },
       })

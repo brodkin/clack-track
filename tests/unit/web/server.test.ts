@@ -111,6 +111,38 @@ describe('WebServer', () => {
       expect(response.headers['x-frame-options']).toBe('SAMEORIGIN');
     });
 
+    describe('Content-Security-Policy directives', () => {
+      let csp: string;
+
+      beforeEach(async () => {
+        server = new WebServer({
+          port: 0,
+          host: '127.0.0.1',
+        });
+
+        await server.start();
+
+        // Use a valid route to get Helmet CSP (404 responses override CSP with default-src 'none')
+        const app = (server as unknown as { app: Express.Application }).app;
+        const response = await request(app).get('/api/auth/session');
+        csp = response.headers['content-security-policy'];
+      });
+
+      it('should include font-src allowing self and Google Fonts', () => {
+        expect(csp).toContain("font-src 'self' https://fonts.gstatic.com");
+      });
+
+      it('should include fonts.googleapis.com in style-src', () => {
+        expect(csp).toContain('https://fonts.googleapis.com');
+        expect(csp).toMatch(/style-src[^;]*'self'/);
+        expect(csp).toMatch(/style-src[^;]*'unsafe-inline'/);
+      });
+
+      it('should include explicit connect-src set to self', () => {
+        expect(csp).toContain("connect-src 'self'");
+      });
+    });
+
     it('should apply compression middleware', async () => {
       server = new WebServer({
         port: 0,
