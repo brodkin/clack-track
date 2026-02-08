@@ -552,6 +552,7 @@ await page.goto('/account'); // Protected route - now accessible
 **Philosophy:** Prioritize tests that prove features work over tests that verify implementation details. Integration tests are the primary defense against regressions. Unit tests are reserved for pure logic only.
 
 **Test Environments:**
+
 - Four isolated environments: unit, integration, e2e (60s timeout), web (jsdom)
 - Tests run in worktrees under `./trees/`, never from root directory
 - 80% coverage minimum (branches, functions, lines, statements)
@@ -559,15 +560,16 @@ await page.goto('/account'); // Protected route - now accessible
 
 **When to Use Each Test Type:**
 
-| Test Type | Use For | Skip For |
-|-----------|---------|----------|
-| **Unit** | Pure functions, math, formatting, parsing (deterministic input→output) | Orchestration, workflows, anything requiring mocks |
-| **Integration** | Feature behavior, component interactions, database ops, API handlers | Library behavior, implementation details |
-| **E2E** | Critical user journeys (auth, content pipeline, web UI) | Features covered by integration tests |
+| Test Type       | Use For                                                                | Skip For                                           |
+| --------------- | ---------------------------------------------------------------------- | -------------------------------------------------- |
+| **Unit**        | Pure functions, math, formatting, parsing (deterministic input→output) | Orchestration, workflows, anything requiring mocks |
+| **Integration** | Feature behavior, component interactions, database ops, API handlers   | Library behavior, implementation details           |
+| **E2E**         | Critical user journeys (auth, content pipeline, web UI)                | Features covered by integration tests              |
 
 **Unit Tests - Selective Use Only:**
 
 Reserve for pure functions with no dependencies:
+
 - `text-layout.ts` - character wrapping, line breaking
 - `CharacterEncoder` - character code mapping
 - Validators with complex logic
@@ -611,26 +613,26 @@ const { stdout } = await exec('npm run generate');
 
 **Anti-Patterns:**
 
-| Anti-Pattern | Problem | Do Instead |
-|--------------|---------|------------|
-| Fixed counts (`toHaveLength(5)`) | Breaks when features added | Test presence: `toContainEqual(expect.objectContaining({ id: 'haiku' }))` |
-| Testing library behavior | Tests nothing about your code | Test YOUR code's behavior |
-| Arbitrary existence checks (`toContain('hello')`) | No functional purpose | Test behavior that matters |
-| Mocking internals | Couples to implementation | Mock at boundaries only |
-| CLI process spawning | Flaky, environment issues | Call exported functions |
-| Real timers in tests | Slow execution | Use `jest.useFakeTimers()` |
-| Per-test DB connections | Expensive setup/teardown | Use `beforeAll`/`afterAll` |
+| Anti-Pattern                                      | Problem                       | Do Instead                                                                |
+| ------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------- |
+| Fixed counts (`toHaveLength(5)`)                  | Breaks when features added    | Test presence: `toContainEqual(expect.objectContaining({ id: 'haiku' }))` |
+| Testing library behavior                          | Tests nothing about your code | Test YOUR code's behavior                                                 |
+| Arbitrary existence checks (`toContain('hello')`) | No functional purpose         | Test behavior that matters                                                |
+| Mocking internals                                 | Couples to implementation     | Mock at boundaries only                                                   |
+| CLI process spawning                              | Flaky, environment issues     | Call exported functions                                                   |
+| Real timers in tests                              | Slow execution                | Use `jest.useFakeTimers()`                                                |
+| Per-test DB connections                           | Expensive setup/teardown      | Use `beforeAll`/`afterAll`                                                |
 
 **Test Naming - Describe Behavior:**
 
 ```typescript
 // ✅ GOOD
-it('returns fallback content when AI provider fails')
-it('saves generated content to database')
+it('returns fallback content when AI provider fails');
+it('saves generated content to database');
 
 // ❌ BAD
-it('calls aiProvider.generate()')
-it('should have 5 generators registered')
+it('calls aiProvider.generate()');
+it('should have 5 generators registered');
 ```
 
 **Performance:** Unit < 5s/file, Integration < 10s/file, Full suite < 60s. Use fake timers for delays/retries.

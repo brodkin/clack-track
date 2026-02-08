@@ -1,7 +1,7 @@
 /**
  * Playwright E2E Tests for FloatingLogo Component
  *
- * Visual validation tests for the floating logo with gradient blur effect.
+ * Visual validation tests for the sticky glassmorphism header.
  * Run these tests with the web server running:
  *   npm run dev (in one terminal)
  *   npx playwright test tests/e2e/floating-logo.playwright.ts (in another)
@@ -11,8 +11,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('FloatingLogo Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to home page
-    await page.goto('http://localhost:3000');
+    // Navigate to home page (uses baseURL from playwright.config.ts)
+    await page.goto('/');
     // Wait for logo to render
     await page.waitForSelector('[data-testid="floating-logo"]');
   });
@@ -27,7 +27,7 @@ test.describe('FloatingLogo Visual Tests', () => {
     await expect(byline).toBeVisible();
   });
 
-  test('logo remains fixed during scroll', async ({ page }) => {
+  test('logo remains at top during scroll (sticky behavior)', async ({ page }) => {
     const logo = page.locator('[data-testid="floating-logo"]');
 
     // Get initial position
@@ -39,7 +39,7 @@ test.describe('FloatingLogo Visual Tests', () => {
     await page.evaluate(() => window.scrollBy(0, 500));
     await page.waitForTimeout(100); // Allow scroll to settle
 
-    // Logo should remain at same position (fixed)
+    // Logo should remain at same position (sticky sticks to top)
     const scrolledBox = await logo.boundingBox();
     expect(scrolledBox).toBeTruthy();
     expect(scrolledBox!.y).toBe(initialTop);
@@ -54,15 +54,14 @@ test.describe('FloatingLogo Visual Tests', () => {
     expect(box!.y).toBeLessThanOrEqual(5);
   });
 
-  test('gradient blur effect is visible', async ({ page }) => {
+  test('glassmorphism effect is visible', async ({ page }) => {
     const logo = page.locator('[data-testid="floating-logo"]');
 
-    // Check for backdrop-blur class
+    // Check for glassmorphism classes (heavy blur + saturation + semi-transparent bg)
     const classList = await logo.getAttribute('class');
-    expect(classList).toContain('backdrop-blur');
-
-    // Check for gradient classes
-    expect(classList).toContain('bg-gradient-to-b');
+    expect(classList).toContain('backdrop-blur-2xl');
+    expect(classList).toContain('backdrop-saturate-150');
+    expect(classList).toContain('bg-white/60');
   });
 
   test('dark mode styling works correctly', async ({ page }) => {
@@ -74,8 +73,8 @@ test.describe('FloatingLogo Visual Tests', () => {
     const logo = page.locator('[data-testid="floating-logo"]');
     const classList = await logo.getAttribute('class');
 
-    // Should have dark mode gradient classes
-    expect(classList).toContain('dark:from-gray-900');
+    // Should have dark mode glassmorphism background
+    expect(classList).toContain('dark:bg-gray-950/50');
   });
 
   test('logo has proper z-index layering', async ({ page }) => {
@@ -90,12 +89,14 @@ test.describe('FloatingLogo Visual Tests', () => {
     expect(parseInt(zIndex)).toBeGreaterThan(0);
   });
 
-  test('logo allows pointer events to pass through', async ({ page }) => {
+  test('logo is interactive (sticky header accepts pointer events)', async ({ page }) => {
     const logo = page.locator('[data-testid="floating-logo"]');
     const classList = await logo.getAttribute('class');
 
-    // Container should have pointer-events-none
-    expect(classList).toContain('pointer-events-none');
+    // Sticky header participates in layout and accepts pointer events
+    // (unlike the old fixed header which used pointer-events-none)
+    expect(classList).toContain('sticky');
+    expect(classList).not.toContain('pointer-events-none');
   });
 
   test('typography fonts are applied', async ({ page }) => {
