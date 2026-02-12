@@ -30,6 +30,7 @@ export { TimePerspectiveGenerator } from './time-perspective-generator.js';
 export { TourGuideGenerator } from './tour-guide-generator.js';
 export { WakeupGreetingGenerator } from './wakeup-greeting-generator.js';
 export { WeatherGenerator } from './weather-generator.js';
+export { WikipediaFactGenerator } from './wikipedia-fact-generator.js';
 export { WordOfTheDayGenerator } from './word-of-the-day-generator.js';
 export { ISSObserverGenerator } from './iss-observer-generator.js';
 export { OneStarReviewGenerator } from './one-star-review-generator.js';
