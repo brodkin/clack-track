@@ -104,6 +104,8 @@ export interface CoreGenerators {
   priceless: ContentGenerator;
   /** Tour guide generator (P2, LIGHT, AI-powered) */
   tourGuide: ContentGenerator;
+  /** Cast Member Radio generator (P2, LIGHT, AI-powered) */
+  castMemberRadio: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -431,6 +433,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.tourGuide
+  );
+
+  registry.register(
+    {
+      id: 'cast-member-radio',
+      name: 'Cast Member Radio Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.castMemberRadio
   );
 
   // Register P3 fallback generator (FALLBACK priority)

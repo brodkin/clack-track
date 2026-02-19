@@ -46,6 +46,7 @@ import { CorporateHoroscopeGenerator } from './content/generators/ai/corporate-h
 import { WrongNumberVoicemailGenerator } from './content/generators/ai/wrong-number-voicemail-generator.js';
 import { PricelessGenerator } from './content/generators/ai/priceless-generator.js';
 import { TourGuideGenerator } from './content/generators/ai/tour-guide-generator.js';
+import { CastMemberRadioGenerator } from './content/generators/ai/cast-member-radio-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { SleepModeGenerator } from './content/generators/programmatic/sleep-mode-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
@@ -246,6 +247,7 @@ function createCoreGenerators(
     ),
     priceless: new PricelessGenerator(promptLoader, modelTierSelector, apiKeys),
     tourGuide: new TourGuideGenerator(promptLoader, modelTierSelector, apiKeys),
+    castMemberRadio: new CastMemberRadioGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }
