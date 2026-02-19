@@ -9,6 +9,7 @@
  */
 
 export { AlienFieldReportGenerator } from './alien-field-report-generator.js';
+export { BaristaLifeGenerator } from './barista-life-generator.js';
 export { DailyRoastGenerator } from './daily-roast-generator.js';
 export { HappyToSeeMeGenerator } from './happy-to-see-me-generator.js';
 export { YoMommaGenerator } from './yo-momma-generator.js';

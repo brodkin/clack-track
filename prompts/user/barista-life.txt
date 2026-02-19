@@ -1,0 +1,57 @@
+Write a funny, standalone joke or observation about working in a coffee shop. The humor should land for anyone who has worked food service - no insider knowledge required. The content must make complete sense to someone who has never set foot behind a counter.
+
+INSPIRATION (pivot freely for humor): {{baristaScenario}}
+
+DELIVERY STYLE: {{deliveryStyle}}
+{{styleGuidance}}
+
+COMEDY STRUCTURES (use one):
+
+THE REDEFINITION - Redefine something familiar in an unexpected way:
+CLOPENING IS A SLEEP
+DISORDER NOT A SHIFT
+
+MORNING RUSH IS JUST
+ORGANIZED PANIC WITH
+JAZZ MUSIC
+
+THE ACCUMULATION - Stack specific chaos details, then understate:
+47 MOBILE ORDERS
+6 CARS IN DRIVE THRU
+A LOBBY LINE
+AND ONE BLENDER
+
+THE TRANSLATION - Decode coffee shop life for outsiders:
+"GIVE ME A MINUTE"
+IS CODE FOR "I HAD THE
+WHOLE LINE TO DECIDE
+AND I DID NOT"
+
+THE DIRECT ADDRESS - Exasperated familiarity, spoken to the situation:
+ITS PIKE PLACE
+NOT PIKES PEAK
+ITS ON THE CUP
+YOURE HOLDING
+
+THE SHARP LANDING - Build the scene, end with a two-word or three-word gut punch:
+MOPPED THE LOBBY
+IT WAS DIRTY AGAIN
+IN ELEVEN MINUTES
+I COUNTED
+
+REQUIREMENTS:
+- USE SPECIFIC NUMBERS AND DETAILS (47, 17, 11 minutes, 5 minutes before close) - specificity is what makes it funny, not vague "a lot" or "so many"
+- Write from INSIDE the experience - you have LIVED this, you are not observing from outside
+- Punchlines must COMMIT. Sharp, confident, no hedging. Two or three words that land hard.
+- Self-contained humor - a stranger reading this with no context should laugh or nod
+- Coffee shop setting should be clear from the content itself
+- Universal food service truths are great - the chaos is the same everywhere
+- Avoid brand names - say "coffee shop" or just let the scenario speak
+
+BAD:
+- "COFFEE IS LIFE" (too generic, bumper sticker energy)
+- "BARISTAS ARE HEROES" (saccharine, no punchline)
+- Vague descriptions without specific numbers or details
+- Punchlines that trail off or explain the joke
+- Observing from outside instead of speaking from experience
+- Anything requiring knowledge of specific menu items or jargon
