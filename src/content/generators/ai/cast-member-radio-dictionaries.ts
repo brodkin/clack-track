@@ -6,18 +6,20 @@
  * - 25 caller stations (specific Disneyland locations/roles, not generic)
  * - 20 situation domains (categories of park chaos, not specific incidents)
  * - 5 urgency levels (radio communication tone)
+ * - 8 shift moments (time-of-day context that shapes the scenario)
  *
  * Design principles:
  * - Stations reference REAL Disneyland (Anaheim) attractions, lands, and roles
  * - NO Walt Disney World, no overseas parks, no general Disney properties
  * - Domains define WHAT category of incident (not specific scenarios)
  * - Urgency sets the radio communication tone without scripting content
+ * - Shift moments ground the scenario in a specific operational phase
  * - All selections use true randomness via Math.random()
  *
  * These are SEEDS not SCRIPTS - they point the LLM toward a corner of
  * the park and a category of chaos, then let it invent the rest.
  *
- * Total combinations: 25 x 20 x 5 = 2,500+ unique seeds
+ * Total combinations: 25 x 20 x 5 x 8 = 20,000+ unique seeds
  *
  * @example
  * ```typescript
@@ -25,12 +27,14 @@
  *   CALLER_STATIONS,
  *   SITUATION_DOMAINS,
  *   URGENCY_LEVELS,
+ *   SHIFT_MOMENTS,
  *   selectRandomItem,
  * } from './cast-member-radio-dictionaries.js';
  *
  * const station = selectRandomItem(CALLER_STATIONS);
  * const domain = selectRandomItem(SITUATION_DOMAINS);
  * const urgency = selectRandomItem(URGENCY_LEVELS);
+ * const moment = selectRandomItem(SHIFT_MOMENTS);
  * ```
  */
 
@@ -163,6 +167,31 @@ export const URGENCY_LEVELS = [
 ] as const;
 
 /**
+ * Shift moments for Cast Member Radio generation.
+ *
+ * Grounds the radio call in a specific time-of-day context. The operational
+ * phase changes everything about a radio call — a rope drop incident has
+ * completely different energy than a 2am maintenance discovery.
+ *
+ * These moments shape:
+ * - WHO would plausibly be on radio (maintenance at 2am, not churro cart)
+ * - WHAT kind of situations arise (pre-show prep vs. crowd chaos vs. cleanup)
+ * - The TONE of the call (morning optimism vs. end-of-day exhaustion)
+ *
+ * 8 moments = 12.5% chance per moment
+ */
+export const SHIFT_MOMENTS = [
+  'ROPE_DROP',
+  'MIDDAY_RUSH',
+  'PARADE_STAGING',
+  'FIREWORKS_COUNTDOWN',
+  'PARK_CLOSE',
+  'AFTER_HOURS_MAINTENANCE',
+  'EARLY_MORNING_PREP',
+  'SHIFT_CHANGE',
+] as const;
+
+/**
  * Type for caller station values.
  */
 export type CallerStation = (typeof CALLER_STATIONS)[number];
@@ -176,6 +205,11 @@ export type SituationDomain = (typeof SITUATION_DOMAINS)[number];
  * Type for urgency level values.
  */
 export type UrgencyLevel = (typeof URGENCY_LEVELS)[number];
+
+/**
+ * Type for shift moment values.
+ */
+export type ShiftMoment = (typeof SHIFT_MOMENTS)[number];
 
 /**
  * Selects a random item from an array using Math.random().

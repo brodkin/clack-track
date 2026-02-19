@@ -9,12 +9,12 @@
  * Features:
  * - Uses prompts/system/major-update-base.txt for system context
  * - Uses prompts/user/cast-member-radio.txt for radio chatter guidance
- * - Variety via CALLER_STATIONS (25), SITUATION_DOMAINS (20), URGENCY_LEVELS (5)
- * - 2,500+ unique combinations ensure high content variability
+ * - Variety via CALLER_STATIONS (25), SITUATION_DOMAINS (20), URGENCY_LEVELS (5), SHIFT_MOMENTS (8)
+ * - 20,000+ unique combinations ensure high content variability
  * - Optimized with LIGHT model tier for efficiency
  *
  * Uses Template Method hooks:
- * - getTemplateVariables(): Injects callerStation, situationDomain, urgencyLevel
+ * - getTemplateVariables(): Injects callerStation, situationDomain, urgencyLevel, shiftMoment
  * - getCustomMetadata(): Tracks selections in generation metadata
  *
  * Dictionary design principle: Seeds, not scripts. Stations reference real
@@ -39,11 +39,11 @@
  * });
  *
  * console.log(content.text);
- * // "JUNGLE CRUISE TO BASE
+ * // "JUNGLE CRUISE TO ADVENTURE 1
  * //  HIPPO 3 IS STUCK AGAIN
  * //  GUEST TRIED TO FEED IT
  * //  A TURKEY LEG
- * //  SEND MAINTENANCE"
+ * //  SEND CYCLE SHOP"
  * ```
  */
 
@@ -55,10 +55,12 @@ import {
   CALLER_STATIONS,
   SITUATION_DOMAINS,
   URGENCY_LEVELS,
+  SHIFT_MOMENTS,
   selectRandomItem,
   type CallerStation,
   type SituationDomain,
   type UrgencyLevel,
+  type ShiftMoment,
 } from './cast-member-radio-dictionaries.js';
 
 /**
@@ -66,7 +68,7 @@ import {
  *
  * Extends AIPromptGenerator with Disneyland-specific prompts,
  * efficient LIGHT model tier selection, and variety dimensions
- * for caller station, situation domain, and urgency level.
+ * for caller station, situation domain, urgency level, and shift moment.
  *
  * Uses the getTemplateVariables hook to inject randomly selected
  * parameters into prompts, and getCustomMetadata to track
@@ -90,6 +92,12 @@ export class CastMemberRadioGenerator extends AIPromptGenerator {
    * Populated by getTemplateVariables() before each generation.
    */
   protected selectedUrgency: UrgencyLevel = 'MILDLY_CONCERNED';
+
+  /**
+   * Stores the selected shift moment for metadata tracking.
+   * Populated by getTemplateVariables() before each generation.
+   */
+  protected selectedMoment: ShiftMoment = 'MIDDAY_RUSH';
 
   /**
    * Creates a new CastMemberRadioGenerator instance
@@ -145,24 +153,27 @@ export class CastMemberRadioGenerator extends AIPromptGenerator {
     this.selectedStation = selectRandomItem(CALLER_STATIONS);
     this.selectedDomain = selectRandomItem(SITUATION_DOMAINS);
     this.selectedUrgency = selectRandomItem(URGENCY_LEVELS);
+    this.selectedMoment = selectRandomItem(SHIFT_MOMENTS);
 
     return {
       callerStation: this.selectedStation,
       situationDomain: this.selectedDomain,
       urgencyLevel: this.selectedUrgency,
+      shiftMoment: this.selectedMoment,
     };
   }
 
   /**
    * Hook: Returns metadata with selected parameters for tracking.
    *
-   * @returns Metadata with callerStation, situationDomain, and urgencyLevel
+   * @returns Metadata with callerStation, situationDomain, urgencyLevel, and shiftMoment
    */
   protected getCustomMetadata(): Record<string, unknown> {
     return {
       callerStation: this.selectedStation,
       situationDomain: this.selectedDomain,
       urgencyLevel: this.selectedUrgency,
+      shiftMoment: this.selectedMoment,
     };
   }
 }

@@ -4,6 +4,7 @@ RADIO PARAMETERS:
 - Calling Station: {{callerStation}}
 - Situation Type: {{situationDomain}}
 - Urgency: {{urgencyLevel}}
+- Shift Moment: {{shiftMoment}}
 
 THE SCENARIO:
 A Cast Member is radioing in about a situation at their station. The viewer is overhearing
@@ -88,6 +89,25 @@ URGENCY INTERPRETATION:
 - INCREASINGLY_WORRIED: Escalating, needs backup ("Gonna need some help over here")
 - FULL_CODE_DISNEY: All hands, this is serious ("Code Disney, I repeat, code Disney")
 - SUSPICIOUSLY_CALM: Way too calm for what they're describing ("Everything is fine. Mostly.")
+
+SHIFT MOMENT INTERPRETATION:
+The time-of-day shapes everything: who's on radio, what goes wrong, and the energy.
+- ROPE_DROP: Gates just opened, fresh chaos, guests sprinting, crowd control
+- MIDDAY_RUSH: Peak capacity, lines everywhere, heat, exhaustion setting in
+- PARADE_STAGING: Pre-parade scramble, floats not ready, route clearance, performer issues
+- FIREWORKS_COUNTDOWN: Code 100 (radio silence) about to hit, last-minute emergencies
+- PARK_CLOSE: "Kiss goodnight" mode, stragglers who won't leave, end-of-day exhaustion
+- AFTER_HOURS_MAINTENANCE: 2am energy, skeleton crew, discovering things in the dark
+- EARLY_MORNING_PREP: Pre-opening, testing rides, stocking, finding overnight surprises
+- SHIFT_CHANGE: Handoff chaos, outgoing crew briefing incoming, things falling through cracks
+
+RADIO FORMAT VARIETY:
+Not every transmission is an initial call-in. Vary the format:
+- Initial report: standard "STATION TO DESTINATION, we have a situation..."
+- Status update: "UPDATE ON THE HIPPO SITUATION, IT'S WORSE"
+- Response/pushback: "COPY THAT CONTROL BUT WE'RE DOWN TWO SKIPPERS"
+- Hot mic: someone keyed their radio by accident and you hear backstage chatter
+- Handoff: outgoing shift briefing the next person on an ongoing situation
 
 DO NOT:
 - Reference Walt Disney World, Tokyo Disney, Disneyland Paris, or any non-Anaheim park

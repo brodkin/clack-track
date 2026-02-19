@@ -9,7 +9,8 @@
  * - CALLER_STATIONS array (25 items) for Disneyland locations/roles
  * - SITUATION_DOMAINS array (20 items) for incident categories
  * - URGENCY_LEVELS array (5 items) for radio communication tone
- * - getTemplateVariables() returning { callerStation, situationDomain, urgencyLevel }
+ * - SHIFT_MOMENTS array (8 items) for time-of-day context
+ * - getTemplateVariables() returning { callerStation, situationDomain, urgencyLevel, shiftMoment }
  * - getCustomMetadata() returning selection tracking
  * - selectRandomItem<T>() utility function
  */
@@ -19,6 +20,7 @@ import {
   CALLER_STATIONS,
   SITUATION_DOMAINS,
   URGENCY_LEVELS,
+  SHIFT_MOMENTS,
   selectRandomItem,
 } from '@/content/generators/ai/cast-member-radio-dictionaries';
 import { PromptLoader } from '@/content/prompt-loader';
@@ -36,6 +38,7 @@ type ProtectedCastMemberRadioGenerator = CastMemberRadioGenerator & {
   selectedStation: string;
   selectedDomain: string;
   selectedUrgency: string;
+  selectedMoment: string;
   modelTier: ModelTier;
 };
 
@@ -202,6 +205,12 @@ SEND MAINTENANCE`;
       expect(URGENCY_LEVELS).toHaveLength(5);
     });
 
+    it('should have SHIFT_MOMENTS array with 8 items', () => {
+      expect(SHIFT_MOMENTS).toBeDefined();
+      expect(Array.isArray(SHIFT_MOMENTS)).toBe(true);
+      expect(SHIFT_MOMENTS).toHaveLength(8);
+    });
+
     it('should have unique stations in CALLER_STATIONS', () => {
       const uniqueStations = new Set(CALLER_STATIONS);
       expect(uniqueStations.size).toBe(CALLER_STATIONS.length);
@@ -215,6 +224,11 @@ SEND MAINTENANCE`;
     it('should have unique levels in URGENCY_LEVELS', () => {
       const uniqueLevels = new Set(URGENCY_LEVELS);
       expect(uniqueLevels.size).toBe(URGENCY_LEVELS.length);
+    });
+
+    it('should have unique moments in SHIFT_MOMENTS', () => {
+      const uniqueMoments = new Set(SHIFT_MOMENTS);
+      expect(uniqueMoments.size).toBe(SHIFT_MOMENTS.length);
     });
 
     it('should have non-empty string values in stations', () => {
@@ -238,6 +252,13 @@ SEND MAINTENANCE`;
       });
     });
 
+    it('should have non-empty string values in shift moments', () => {
+      SHIFT_MOMENTS.forEach((moment: string) => {
+        expect(typeof moment).toBe('string');
+        expect(moment.length).toBeGreaterThan(0);
+      });
+    });
+
     it('should have at least 20 stations for location variety', () => {
       expect(CALLER_STATIONS.length).toBeGreaterThanOrEqual(20);
     });
@@ -246,10 +267,13 @@ SEND MAINTENANCE`;
       expect(SITUATION_DOMAINS.length).toBeGreaterThanOrEqual(15);
     });
 
-    it('should produce 2500+ unique combinations', () => {
+    it('should produce 20000+ unique combinations', () => {
       const totalCombinations =
-        CALLER_STATIONS.length * SITUATION_DOMAINS.length * URGENCY_LEVELS.length;
-      expect(totalCombinations).toBeGreaterThanOrEqual(2500);
+        CALLER_STATIONS.length *
+        SITUATION_DOMAINS.length *
+        URGENCY_LEVELS.length *
+        SHIFT_MOMENTS.length;
+      expect(totalCombinations).toBeGreaterThanOrEqual(20000);
     });
   });
 
@@ -278,7 +302,7 @@ SEND MAINTENANCE`;
   });
 
   describe('getTemplateVariables()', () => {
-    it('should return callerStation, situationDomain, and urgencyLevel', async () => {
+    it('should return callerStation, situationDomain, urgencyLevel, and shiftMoment', async () => {
       const generator = new CastMemberRadioGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedCastMemberRadioGenerator;
@@ -288,6 +312,7 @@ SEND MAINTENANCE`;
       expect(templateVars.callerStation).toBeDefined();
       expect(templateVars.situationDomain).toBeDefined();
       expect(templateVars.urgencyLevel).toBeDefined();
+      expect(templateVars.shiftMoment).toBeDefined();
     });
 
     it('should return station from CALLER_STATIONS array', async () => {
@@ -320,6 +345,16 @@ SEND MAINTENANCE`;
       expect(URGENCY_LEVELS).toContain(templateVars.urgencyLevel);
     });
 
+    it('should return moment from SHIFT_MOMENTS array', async () => {
+      const generator = new CastMemberRadioGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      }) as ProtectedCastMemberRadioGenerator;
+
+      const templateVars = await generator.getTemplateVariables(mockContext);
+
+      expect(SHIFT_MOMENTS).toContain(templateVars.shiftMoment);
+    });
+
     it('should store selected station in instance property', async () => {
       const generator = new CastMemberRadioGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
@@ -348,6 +383,16 @@ SEND MAINTENANCE`;
       const templateVars = await generator.getTemplateVariables(mockContext);
 
       expect(generator.selectedUrgency).toBe(templateVars.urgencyLevel);
+    });
+
+    it('should store selected moment in instance property', async () => {
+      const generator = new CastMemberRadioGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      }) as ProtectedCastMemberRadioGenerator;
+
+      const templateVars = await generator.getTemplateVariables(mockContext);
+
+      expect(generator.selectedMoment).toBe(templateVars.shiftMoment);
     });
 
     it('should generate different selections on multiple calls', async () => {
@@ -411,6 +456,18 @@ SEND MAINTENANCE`;
       expect(typeof metadata.urgencyLevel).toBe('string');
     });
 
+    it('should return shiftMoment in metadata', async () => {
+      const generator = new CastMemberRadioGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      }) as ProtectedCastMemberRadioGenerator;
+
+      await generator.getTemplateVariables(mockContext);
+      const metadata = generator.getCustomMetadata();
+
+      expect(metadata.shiftMoment).toBeDefined();
+      expect(typeof metadata.shiftMoment).toBe('string');
+    });
+
     it('should match instance properties', async () => {
       const generator = new CastMemberRadioGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
@@ -422,6 +479,7 @@ SEND MAINTENANCE`;
       expect(metadata.callerStation).toBe(generator.selectedStation);
       expect(metadata.situationDomain).toBe(generator.selectedDomain);
       expect(metadata.urgencyLevel).toBe(generator.selectedUrgency);
+      expect(metadata.shiftMoment).toBe(generator.selectedMoment);
     });
   });
 
@@ -471,6 +529,7 @@ SEND MAINTENANCE`;
       expect(templateVars.callerStation).toBeDefined();
       expect(templateVars.situationDomain).toBeDefined();
       expect(templateVars.urgencyLevel).toBeDefined();
+      expect(templateVars.shiftMoment).toBeDefined();
     });
 
     it('should include selections in result metadata', async () => {
@@ -483,6 +542,7 @@ SEND MAINTENANCE`;
       expect(result.metadata?.callerStation).toBeDefined();
       expect(result.metadata?.situationDomain).toBeDefined();
       expect(result.metadata?.urgencyLevel).toBeDefined();
+      expect(result.metadata?.shiftMoment).toBeDefined();
     });
 
     it('should generate content with expected GeneratedContent structure', async () => {
