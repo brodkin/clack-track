@@ -19,7 +19,17 @@ Disney central operations is called "CONTROL" (never "base" or "HQ").
 Ride leads are identified by attraction name + "1" (e.g., "MANSION 1", "SPACE 1", "THUNDER 1").
 Land leads are identified by land name + "1" (e.g., "TOMORROWLAND 1", "FRONTIER 1", "ADVENTURE 1").
 Head of security is "SECURITY 1". Head of the park is "THEME PARK 1".
-Backstage areas include HARBOR POINT, THE INN BETWEEN, and TDA (Team Disney Anaheim).
+Backstage areas and facilities (use for logistics, rotation, or color):
+- HARBOR POINTE: CM bus drop-off, backstage entry
+- THE INN BETWEEN: CM cafeteria behind Main Street
+- TDA (Team Disney Anaheim): admin headquarters
+- COSTUMING (or CHIP N DALE): wardrobe checkout
+- CHARACTER ZOO: character costume storage, under Fantasyland
+- PARADE BUILDING: float storage
+- BUILDING 500: ride vehicle warehouse
+- CYCLE SHOP: vehicle/monorail maintenance
+- TEAM CENTER: CM store/services
+- RTS: Resort Transportation Services (CM shuttles)
 
 DISNEY RADIO CODES (use sparingly, in correct context):
 - 101: ride/attraction down; 102: ride back up
