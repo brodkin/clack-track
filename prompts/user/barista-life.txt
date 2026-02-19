@@ -1,0 +1,35 @@
+Write a funny, standalone joke or observation about working in a coffee shop. The humor should land for anyone who has worked food service - no insider knowledge required. The content must make complete sense to someone who has never set foot behind a counter.
+
+INSPIRATION (pivot freely for humor): {{baristaScenario}}
+
+DELIVERY STYLE: {{deliveryStyle}}
+{{styleGuidance}}
+
+REQUIREMENTS:
+- Self-contained humor - a stranger reading this with no context should laugh or nod
+- Specific, vivid details make it funny (not vague complaints)
+- Structure: setup that draws you in, payoff that lands
+- Coffee shop setting should be clear from the content itself
+- Universal food service truths are great - the chaos is the same everywhere
+- Avoid brand names - say "coffee shop" or just let the scenario speak
+
+GOOD EXAMPLES:
+MORNING RUSH IS JUST
+ORGANIZED PANIC WITH
+JAZZ MUSIC
+
+CUSTOMER ORDERED A
+DRINK WITH 17 CHANGES
+THEN SAID IT TASTES
+DIFFERENT
+
+MOPPED THE LOBBY
+IT WAS DIRTY AGAIN
+IN ELEVEN MINUTES
+I COUNTED
+
+BAD:
+- "COFFEE IS LIFE" (too generic, bumper sticker energy)
+- "BARISTAS ARE HEROES" (saccharine, no punchline)
+- Anything requiring knowledge of specific menu items or jargon
+- Inside jokes that only make sense if you work there

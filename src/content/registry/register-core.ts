@@ -104,6 +104,8 @@ export interface CoreGenerators {
   priceless: ContentGenerator;
   /** Tour guide generator (P2, LIGHT, AI-powered) */
   tourGuide: ContentGenerator;
+  /** Barista life humor generator (P2, LIGHT, AI-powered) */
+  baristaLife: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -431,6 +433,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.tourGuide
+  );
+
+  registry.register(
+    {
+      id: 'barista-life',
+      name: 'Barista Life Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.baristaLife
   );
 
   // Register P3 fallback generator (FALLBACK priority)
