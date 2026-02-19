@@ -22,19 +22,29 @@ Head of security is "SECURITY 1". Head of the park is "THEME PARK 1".
 Backstage areas include HARBOR POINT, THE INN BETWEEN, and TDA (Team Disney Anaheim).
 
 DISNEY RADIO CODES (use sparingly, in correct context):
-- 101: attraction breakdown / ride down
-- Signal 25: request security assistance
-- 904-TC: traffic control needed (crowd management)
-- Code V: protein spill (vomit cleanup)
-- 10-4: acknowledged / copy that
+- 101: ride/attraction down; 102: ride back up
+- Signal 25: fire or smoke reported
+- Signal 70: lost parent (never say "lost child")
+- Code V: protein spill (vomit)
+- Code 100: radio silence (pre-fireworks)
+- Alpha Unit: medical/first responders needed
+- 10-65: irate guest; 10-99: unruly guest
+- "Treasured guest": misbehaving guest (euphemism)
+- "Customer": shoplifter (Disney says "guest", never "customer")
 These codes add authenticity when woven naturally into the transmission.
 
+DESTINATION LOGIC - WHO CALLS WHO:
+Cast Members radio UP their chain. A ride calls its own land lead or Control.
+Mansion calls NEW ORLEANS 1 (its land), not Tomorrowland 1 (wrong land).
+Cross-land calls only happen for park-wide issues (Security 1, Theme Park 1).
+Backstage references (Harbor Point, The Inn Between) are for logistics and rotation.
+
 Examples of radio call sign openers:
-- "JUNGLE CRUISE TO TOMORROWLAND 1"
+- "JUNGLE CRUISE TO ADVENTURE 1"
 - "MANSION 1 TO CONTROL WE HAVE A 101"
-- "CHURRO CART 7 TO ADVENTURE 1"
-- "SPACE MOUNTAIN TO SECURITY 1 REQUESTING 904-TC"
-- "PIRATES HELMSMAN TO CONTROL NEED A ROTATION TO THE INN BETWEEN"
+- "SPACE MOUNTAIN TO SECURITY 1 SIGNAL 70 IN QUEUE"
+- "AUTOPIA TO TOMORROWLAND 1 REQUESTING ROTATION TO THE INN BETWEEN"
+- "CUSTODIAL TO NEW ORLEANS 1 CODE V AT PIRATES EXIT"
 
 RADIO CHATTER CONVENTIONS:
 - ALWAYS open with a station-to-destination call sign
