@@ -14,20 +14,37 @@ REQUIRED FORMAT - MUST START WITH RADIO CALL SIGN:
 The message MUST begin with a radio call sign identifying the station and who they're calling.
 This framing is what sells the bit - it tells the viewer "you're hearing something you shouldn't."
 
+DISNEYLAND RADIO CALL SIGN PROTOCOL:
+Disney central operations is called "CONTROL" (never "base" or "HQ").
+Ride leads are identified by attraction name + "1" (e.g., "MANSION 1", "SPACE 1", "THUNDER 1").
+Land leads are identified by land name + "1" (e.g., "TOMORROWLAND 1", "FRONTIER 1", "ADVENTURE 1").
+Head of security is "SECURITY 1". Head of the park is "THEME PARK 1".
+Backstage areas include HARBOR POINT, THE INN BETWEEN, and TDA (Team Disney Anaheim).
+
+DISNEY RADIO CODES (use sparingly, in correct context):
+- 101: attraction breakdown / ride down
+- Signal 25: request security assistance
+- 904-TC: traffic control needed (crowd management)
+- Code V: protein spill (vomit cleanup)
+- 10-4: acknowledged / copy that
+These codes add authenticity when woven naturally into the transmission.
+
 Examples of radio call sign openers:
-- "JUNGLE CRUISE TO BASE"
-- "HAUNTED MANSION TO OPS"
-- "SPACE MOUNTAIN TO CONTROL"
-- "CHURRO CART 7 TO DISPATCH"
-- "TIKI ROOM CHECKING IN"
+- "JUNGLE CRUISE TO TOMORROWLAND 1"
+- "MANSION 1 TO CONTROL WE HAVE A 101"
+- "CHURRO CART 7 TO ADVENTURE 1"
+- "SPACE MOUNTAIN TO SECURITY 1 REQUESTING 904-TC"
+- "PIRATES HELMSMAN TO CONTROL NEED A ROTATION TO THE INN BETWEEN"
 
 RADIO CHATTER CONVENTIONS:
 - ALWAYS open with a station-to-destination call sign
+- VARY the destination: Control, land leads (#1), ride leads (#1), Security 1, backstage areas
 - Use clipped, professional radio cadence (short phrases, no flowery language)
 - Reference specific Disneyland locations, attractions, or lore naturally
 - One detail should be unexpectedly specific or absurd
 - Imply this is not the first time ("again", "the same one", "per usual")
 - Can end with a request, a status update, or trail off mid-transmission
+- Disney radio codes can be dropped in naturally when they fit the situation
 
 WHAT MAKES IT FUNNY:
 - Professional radio protocol applied to absurd theme park situations
@@ -54,7 +71,7 @@ URGENCY INTERPRETATION:
 
 DO NOT:
 - Reference Walt Disney World, Tokyo Disney, Disneyland Paris, or any non-Anaheim park
-- Use actual Disney radio codes or operational terminology that could be confused with real procedures
+- Invent fake radio codes (use the real ones listed above, or omit codes entirely)
 - Make the situation genuinely dangerous or upsetting (keep it absurd, not alarming)
 - Break character - the Cast Member believes this is a real radio call
 - Explain the joke or provide commentary outside the radio transmission
