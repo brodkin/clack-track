@@ -100,6 +100,8 @@ export interface CoreGenerators {
   corporateHoroscope: ContentGenerator;
   /** Wrong number voicemail generator (P2, LIGHT, AI-powered) */
   wrongNumberVoicemail: ContentGenerator;
+  /** Wikipedia fact generator (P2, MEDIUM, AI-powered) */
+  wikipediaFact: ContentGenerator;
   /** Priceless parody generator (P2, MEDIUM, AI-powered) */
   priceless: ContentGenerator;
   /** Tour guide generator (P2, LIGHT, AI-powered) */
@@ -411,6 +413,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.wrongNumberVoicemail
+  );
+
+  registry.register(
+    {
+      id: 'wikipedia-fact',
+      name: 'Wikipedia Fact Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.wikipediaFact
   );
 
   registry.register(

@@ -44,13 +44,14 @@ import { OneStarReviewGenerator } from './content/generators/ai/one-star-review-
 import { HouseboyVentGenerator } from './content/generators/ai/houseboy-vent-generator.js';
 import { CorporateHoroscopeGenerator } from './content/generators/ai/corporate-horoscope-generator.js';
 import { WrongNumberVoicemailGenerator } from './content/generators/ai/wrong-number-voicemail-generator.js';
+import { WikipediaFactGenerator } from './content/generators/ai/wikipedia-fact-generator.js';
 import { PricelessGenerator } from './content/generators/ai/priceless-generator.js';
 import { TourGuideGenerator } from './content/generators/ai/tour-guide-generator.js';
 import { BaristaLifeGenerator } from './content/generators/ai/barista-life-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { SleepModeGenerator } from './content/generators/programmatic/sleep-mode-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
-import { RSSClient, ISSClient } from './api/data-sources/index.js';
+import { RSSClient, ISSClient, WikipediaClient } from './api/data-sources/index.js';
 import { PromptLoader } from './content/prompt-loader.js';
 import { MinorUpdateGenerator } from './content/generators/minor-update.js';
 import { ContentDataProvider } from './services/content-data-provider.js';
@@ -244,6 +245,12 @@ function createCoreGenerators(
       promptLoader,
       modelTierSelector,
       apiKeys
+    ),
+    wikipediaFact: new WikipediaFactGenerator(
+      promptLoader,
+      modelTierSelector,
+      apiKeys,
+      new WikipediaClient()
     ),
     priceless: new PricelessGenerator(promptLoader, modelTierSelector, apiKeys),
     tourGuide: new TourGuideGenerator(promptLoader, modelTierSelector, apiKeys),
