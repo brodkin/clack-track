@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { parseMySQLDateTime } from '@/storage/parse-datetime.js';
+import { parseMySQLDateTime } from '../parse-datetime.js';
 
 /**
  * Represents a user record in the database
