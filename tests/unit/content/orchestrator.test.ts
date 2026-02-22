@@ -9,7 +9,7 @@ import { ContentOrchestrator } from '@/content/orchestrator';
 import { ContentSelector } from '@/content/registry/content-selector';
 import { FrameDecorator } from '@/content/frame/frame-decorator';
 import { StaticFallbackGenerator } from '@/content/generators/static-fallback-generator';
-import { RateLimitError, AuthenticationError, ContentValidationError } from '@/types/errors';
+import { RateLimitError, AuthenticationError } from '@/types/errors';
 import type { VestaboardClient } from '@/api/vestaboard/types';
 import type { AIProvider } from '@/types/ai';
 import {
@@ -514,6 +514,72 @@ describe('ContentOrchestrator', () => {
       await expect(orchestrator.generateAndSend(context)).rejects.toThrow('Network error');
     });
 
+    it('saves content to DB even when Vestaboard send fails', async () => {
+      // Arrange
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: new Date('2025-01-15T10:30:00Z'),
+      };
+
+      const mockGenerator: ContentGenerator = {
+        generate: jest.fn(),
+        validate: jest.fn().mockReturnValue({ valid: true }),
+      };
+
+      const registeredGenerator: RegisteredGenerator = {
+        registration: {
+          id: 'haiku-gen',
+          name: 'Haiku Generator',
+          priority: 2,
+          modelTier: ModelTier.LIGHT,
+          applyFrame: true,
+        },
+        generator: mockGenerator,
+      };
+
+      const generatedContent: GeneratedContent = {
+        text: 'HAIKU CONTENT',
+        outputMode: 'text',
+        metadata: {
+          provider: 'openai',
+          model: 'gpt-4.1-nano',
+          tier: 'LIGHT',
+          tokensUsed: 100,
+          failedOver: false,
+        },
+      };
+
+      mockSelector.select.mockReturnValue(registeredGenerator);
+      (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
+      mockDecorator.decorate.mockResolvedValue({
+        layout: [[1, 2, 3]],
+        warnings: [],
+      });
+
+      // Vestaboard send fails AFTER content was generated successfully
+      mockVestaboardClient.sendLayout.mockRejectedValue(new Error('VestaboardConnectionError'));
+
+      // Act - generateAndSend will throw due to Vestaboard failure
+      await expect(orchestrator.generateAndSend(context)).rejects.toThrow(
+        'VestaboardConnectionError'
+      );
+
+      // Wait for fire-and-forget promise
+      await new Promise(resolve => setImmediate(resolve));
+
+      // Assert - Content should still have been saved to DB before the send attempt
+      expect(mockContentRepository.saveContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: 'HAIKU CONTENT',
+          type: 'major',
+          status: 'success',
+          generatorId: 'haiku-gen',
+          generatorName: 'Haiku Generator',
+          aiProvider: 'openai',
+        })
+      );
+    });
+
     it('should throw error when selector returns null', async () => {
       // Arrange
       const context: GenerationContext = {
@@ -828,7 +894,7 @@ describe('ContentOrchestrator', () => {
     });
 
     describe('Failed Generations', () => {
-      it('should save text and metadata on validation failure', async () => {
+      it('does not save failed generations to database', async () => {
         // Arrange
         const context: GenerationContext = {
           updateType: 'major',
@@ -842,86 +908,8 @@ describe('ContentOrchestrator', () => {
 
         const registeredGenerator: RegisteredGenerator = {
           registration: {
-            id: 'quote-gen',
-            name: 'Quote Generator',
-            priority: 2,
-            modelTier: ModelTier.LIGHT,
-            applyFrame: true,
-          },
-          generator: mockGenerator,
-        };
-
-        // Content that fails validation
-        const generatedContent: GeneratedContent = {
-          text: 'LINE ONE\nLINE TWO\nLINE THREE\nLINE FOUR\nLINE FIVE\nLINE SIX\nLINE SEVEN',
-          outputMode: 'text',
-          metadata: {
-            provider: 'openai',
-            model: 'gpt-4.1-nano',
-            tier: 'LIGHT',
-            tokensUsed: 250,
-            failedOver: false,
-          },
-        };
-
-        mockSelector.select.mockReturnValue(registeredGenerator);
-        (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
-
-        // Mock validation to throw ContentValidationError
-        mockValidateGeneratorOutput.mockImplementation(() => {
-          throw new ContentValidationError('Content exceeds 6 lines');
-        });
-
-        const fallbackContent: GeneratedContent = {
-          text: 'Static fallback content',
-          outputMode: 'text',
-        };
-
-        mockFallbackGenerator.generate.mockResolvedValue(fallbackContent);
-        mockDecorator.decorate.mockResolvedValue({
-          layout: [[1, 2, 3]],
-          warnings: [],
-        });
-
-        // Act
-        await orchestrator.generateAndSend(context);
-
-        // Wait for fire-and-forget promise
-        await new Promise(resolve => setImmediate(resolve));
-
-        // Assert - Should save the generated text and metadata, even though validation failed
-        expect(mockContentRepository.saveContent).toHaveBeenCalledWith(
-          expect.objectContaining({
-            text: 'LINE ONE\nLINE TWO\nLINE THREE\nLINE FOUR\nLINE FIVE\nLINE SIX\nLINE SEVEN',
-            status: 'failed',
-            generatorId: 'quote-gen',
-            generatorName: 'Quote Generator',
-            aiProvider: 'openai',
-            aiModel: 'gpt-4.1-nano',
-            modelTier: 'LIGHT',
-            tokensUsed: 250,
-            errorType: 'ContentValidationError',
-            errorMessage: 'Content exceeds 6 lines',
-          })
-        );
-      });
-
-      it('should save with empty fields when provider fails (no content)', async () => {
-        // Arrange
-        const context: GenerationContext = {
-          updateType: 'major',
-          timestamp: new Date('2025-01-15T10:30:00Z'),
-        };
-
-        const mockGenerator: ContentGenerator = {
-          generate: jest.fn(),
-          validate: jest.fn().mockReturnValue({ valid: true }),
-        };
-
-        const registeredGenerator: RegisteredGenerator = {
-          registration: {
-            id: 'news-gen',
-            name: 'News Generator',
+            id: 'failing-gen',
+            name: 'Failing Generator',
             priority: 2,
             modelTier: ModelTier.MEDIUM,
             applyFrame: true,
@@ -929,71 +917,12 @@ describe('ContentOrchestrator', () => {
           generator: mockGenerator,
         };
 
-        // Provider throws before content is generated
-        const rateLimitError = new RateLimitError('Rate limit exceeded');
-
-        const fallbackContent: GeneratedContent = {
-          text: 'Static fallback content',
-          outputMode: 'text',
-        };
-
-        mockSelector.select.mockReturnValue(registeredGenerator);
-        (generateWithRetry as jest.Mock).mockRejectedValue(rateLimitError);
-        mockFallbackGenerator.generate.mockResolvedValue(fallbackContent);
-        mockDecorator.decorate.mockResolvedValue({
-          layout: [[1, 2, 3]],
-          warnings: [],
-        });
-
-        // Act
-        await orchestrator.generateAndSend(context);
-
-        // Wait for fire-and-forget promise
-        await new Promise(resolve => setImmediate(resolve));
-
-        // Assert - Should save with empty text and aiProvider when no content was generated
-        expect(mockContentRepository.saveContent).toHaveBeenCalledWith(
-          expect.objectContaining({
-            text: '',
-            status: 'failed',
-            aiProvider: '',
-            errorType: 'RateLimitError',
-            errorMessage: 'Rate limit exceeded',
-          })
-        );
-      });
-
-      it('should save failed generation when retry exhaustion triggers P3 fallback', async () => {
-        // Arrange
-        const context: GenerationContext = {
-          updateType: 'major',
-          timestamp: new Date('2025-01-15T10:30:00Z'),
-        };
-
-        const mockGenerator: ContentGenerator = {
-          generate: jest.fn(),
-          validate: jest.fn().mockReturnValue({ valid: true }),
-        };
-
-        const registeredGenerator: RegisteredGenerator = {
-          registration: {
-            id: 'news',
-            name: 'Global News',
-            priority: 2,
-            modelTier: ModelTier.MEDIUM,
-            applyFrame: true,
-          },
-          generator: mockGenerator,
-        };
-
+        // Provider throws before content is generated (rate limit)
         const rateLimitError = new RateLimitError('Both providers rate limited');
 
         const fallbackContent: GeneratedContent = {
           text: 'Static fallback content',
           outputMode: 'text',
-          metadata: {
-            source: 'static-fallback',
-          },
         };
 
         mockSelector.select.mockReturnValue(registeredGenerator);
@@ -1010,74 +939,9 @@ describe('ContentOrchestrator', () => {
         // Wait for fire-and-forget promise
         await new Promise(resolve => setImmediate(resolve));
 
-        // Assert - Should save the ORIGINAL failure, not the fallback success
-        expect(mockContentRepository.saveContent).toHaveBeenCalledWith(
-          expect.objectContaining({
-            text: expect.any(String), // Could be empty or partial
-            type: 'major',
-            generatedAt: context.timestamp,
-            status: 'failed',
-            generatorId: 'news',
-            generatorName: 'Global News',
-            priority: 2,
-            errorType: 'RateLimitError',
-            errorMessage: 'Both providers rate limited',
-          })
-        );
-      });
-
-      it('should save failed generation with authentication error details', async () => {
-        // Arrange
-        const context: GenerationContext = {
-          updateType: 'major',
-          timestamp: new Date('2025-01-15T10:30:00Z'),
-        };
-
-        const mockGenerator: ContentGenerator = {
-          generate: jest.fn(),
-          validate: jest.fn().mockReturnValue({ valid: true }),
-        };
-
-        const registeredGenerator: RegisteredGenerator = {
-          registration: {
-            id: 'tech-news',
-            name: 'Tech News',
-            priority: 2,
-            modelTier: ModelTier.MEDIUM,
-            applyFrame: true,
-          },
-          generator: mockGenerator,
-        };
-
-        const authError = new AuthenticationError('Invalid API key');
-
-        const fallbackContent: GeneratedContent = {
-          text: 'Static fallback content',
-          outputMode: 'text',
-        };
-
-        mockSelector.select.mockReturnValue(registeredGenerator);
-        (generateWithRetry as jest.Mock).mockRejectedValue(authError);
-        mockFallbackGenerator.generate.mockResolvedValue(fallbackContent);
-        mockDecorator.decorate.mockResolvedValue({
-          layout: [[1, 2, 3]],
-          warnings: [],
-        });
-
-        // Act
-        await orchestrator.generateAndSend(context);
-
-        // Wait for fire-and-forget promise
-        await new Promise(resolve => setImmediate(resolve));
-
-        // Assert
-        expect(mockContentRepository.saveContent).toHaveBeenCalledWith(
-          expect.objectContaining({
-            status: 'failed',
-            errorType: 'AuthenticationError',
-            errorMessage: 'Invalid API key',
-          })
-        );
+        // Assert - Failed generations should NOT be saved to database
+        // Only successful content should be persisted
+        expect(mockContentRepository.saveContent).not.toHaveBeenCalled();
       });
     });
 
@@ -1194,127 +1058,6 @@ describe('ContentOrchestrator', () => {
           })
         );
       });
-
-      it('should save outputMode on failed generation when content is available', async () => {
-        // Arrange
-        const context: GenerationContext = {
-          updateType: 'major',
-          timestamp: new Date('2025-01-15T10:30:00Z'),
-        };
-
-        const mockGenerator: ContentGenerator = {
-          generate: jest.fn(),
-          validate: jest.fn().mockReturnValue({ valid: true }),
-        };
-
-        const registeredGenerator: RegisteredGenerator = {
-          registration: {
-            id: 'failing-gen',
-            name: 'Failing Generator',
-            priority: 2,
-            modelTier: ModelTier.LIGHT,
-            applyFrame: true,
-          },
-          generator: mockGenerator,
-        };
-
-        // Content that fails validation
-        const generatedContent: GeneratedContent = {
-          text: 'INVALID CONTENT',
-          outputMode: 'text',
-          metadata: {
-            provider: 'openai',
-            model: 'gpt-4.1-nano',
-          },
-        };
-
-        mockSelector.select.mockReturnValue(registeredGenerator);
-        (generateWithRetry as jest.Mock).mockResolvedValue(generatedContent);
-
-        // Mock validation to throw error
-        mockValidateGeneratorOutput.mockImplementation(() => {
-          throw new ContentValidationError('Content validation failed');
-        });
-
-        const fallbackContent: GeneratedContent = {
-          text: 'Static fallback content',
-          outputMode: 'text',
-        };
-
-        mockFallbackGenerator.generate.mockResolvedValue(fallbackContent);
-        mockDecorator.decorate.mockResolvedValue({
-          layout: [[1, 2, 3]],
-          warnings: [],
-        });
-
-        // Act
-        await orchestrator.generateAndSend(context);
-
-        // Wait for fire-and-forget promise
-        await new Promise(resolve => setImmediate(resolve));
-
-        // Assert - outputMode should be saved even on failure
-        expect(mockContentRepository.saveContent).toHaveBeenCalledWith(
-          expect.objectContaining({
-            status: 'failed',
-            outputMode: 'text',
-          })
-        );
-      });
-
-      it('should save undefined outputMode when content has no outputMode (provider failure)', async () => {
-        // Arrange
-        const context: GenerationContext = {
-          updateType: 'major',
-          timestamp: new Date('2025-01-15T10:30:00Z'),
-        };
-
-        const mockGenerator: ContentGenerator = {
-          generate: jest.fn(),
-          validate: jest.fn().mockReturnValue({ valid: true }),
-        };
-
-        const registeredGenerator: RegisteredGenerator = {
-          registration: {
-            id: 'error-gen',
-            name: 'Error Generator',
-            priority: 2,
-            modelTier: ModelTier.MEDIUM,
-            applyFrame: true,
-          },
-          generator: mockGenerator,
-        };
-
-        // Provider fails before generating any content
-        const rateLimitError = new RateLimitError('Rate limit exceeded');
-
-        const fallbackContent: GeneratedContent = {
-          text: 'Static fallback content',
-          outputMode: 'text',
-        };
-
-        mockSelector.select.mockReturnValue(registeredGenerator);
-        (generateWithRetry as jest.Mock).mockRejectedValue(rateLimitError);
-        mockFallbackGenerator.generate.mockResolvedValue(fallbackContent);
-        mockDecorator.decorate.mockResolvedValue({
-          layout: [[1, 2, 3]],
-          warnings: [],
-        });
-
-        // Act
-        await orchestrator.generateAndSend(context);
-
-        // Wait for fire-and-forget promise
-        await new Promise(resolve => setImmediate(resolve));
-
-        // Assert - outputMode should be undefined when no content was generated
-        expect(mockContentRepository.saveContent).toHaveBeenCalledWith(
-          expect.objectContaining({
-            status: 'failed',
-            outputMode: undefined,
-          })
-        );
-      });
     });
 
     describe('Fire-and-Forget Pattern', () => {
@@ -1365,7 +1108,7 @@ describe('ContentOrchestrator', () => {
         expect(result.success).toBe(true);
       });
 
-      it('should not throw error if database save fails on failure path', async () => {
+      it('should not attempt database save on failure path (fallback content)', async () => {
         // Arrange
         const context: GenerationContext = {
           updateType: 'major',
@@ -1401,12 +1144,15 @@ describe('ContentOrchestrator', () => {
           warnings: [],
         });
 
-        // Database save fails
-        mockContentRepository.saveContent.mockRejectedValue(new Error('Database error'));
-
-        // Act & Assert - Should not throw, and should return success result
+        // Act
         const result = await orchestrator.generateAndSend(context);
+
+        // Wait for any fire-and-forget promises
+        await new Promise(resolve => setImmediate(resolve));
+
+        // Assert - Should succeed and NOT attempt any database save
         expect(result.success).toBe(true);
+        expect(mockContentRepository.saveContent).not.toHaveBeenCalled();
       });
     });
 
