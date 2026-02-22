@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { parseMySQLDateTime } from '@/storage/parse-datetime.js';
 
 /**
  * Represents a user record in the database
@@ -68,8 +69,8 @@ export class UserModel {
       id: row.id as number,
       email: row.email as string,
       name: (row.name as string) || null,
-      createdAt: new Date(row.created_at as string | Date),
-      updatedAt: new Date(row.updated_at as string | Date),
+      createdAt: parseMySQLDateTime(row.created_at as string | Date),
+      updatedAt: parseMySQLDateTime(row.updated_at as string | Date),
     };
   }
 

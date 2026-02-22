@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { parseMySQLDateTime } from '@/storage/parse-datetime.js';
 
 /**
  * Represents a rejection reason for a validation attempt
@@ -299,8 +300,8 @@ export class ContentModel {
       id: row.id as number,
       text: row.text as string,
       type: row.type as 'major' | 'minor',
-      generatedAt: new Date(row.generatedAt as string),
-      sentAt: row.sentAt ? new Date(row.sentAt as string) : null,
+      generatedAt: parseMySQLDateTime(row.generatedAt as string),
+      sentAt: row.sentAt ? parseMySQLDateTime(row.sentAt as string) : null,
       aiProvider: row.aiProvider as string,
       metadata,
       status: (row.status as 'success' | 'failed') || 'success',

@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { parseMySQLDateTime } from '@/storage/parse-datetime.js';
 
 /**
  * Represents a WebAuthn credential record in the database
@@ -240,8 +241,8 @@ export class CredentialModel {
       counter: row.counter as number,
       deviceType: row.device_type as string | undefined,
       name: row.name as string | undefined,
-      createdAt: new Date(row.created_at as string),
-      lastUsedAt: row.last_used_at ? new Date(row.last_used_at as string) : null,
+      createdAt: parseMySQLDateTime(row.created_at as string),
+      lastUsedAt: row.last_used_at ? parseMySQLDateTime(row.last_used_at as string) : null,
     };
   }
 }

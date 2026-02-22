@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { parseMySQLDateTime } from '@/storage/parse-datetime.js';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
@@ -147,7 +148,7 @@ export class LogModel {
       id: row.id as number,
       level: row.level as LogLevel,
       message: row.message as string,
-      created_at: new Date(row.created_at as string),
+      created_at: parseMySQLDateTime(row.created_at as string),
       metadata,
     };
   }
