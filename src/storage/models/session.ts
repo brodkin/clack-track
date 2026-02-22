@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { parseMySQLDateTime } from '@/storage/parse-datetime.js';
 
 /**
  * Represents a session record in the database
@@ -291,9 +292,9 @@ export class SessionModel {
       id: row.id as number,
       token: row.token as string,
       userId: row.user_id as number,
-      expiresAt: new Date(row.expires_at as string | Date),
-      createdAt: new Date(row.created_at as string | Date),
-      lastAccessedAt: new Date(row.last_accessed_at as string | Date),
+      expiresAt: parseMySQLDateTime(row.expires_at as string | Date),
+      createdAt: parseMySQLDateTime(row.created_at as string | Date),
+      lastAccessedAt: parseMySQLDateTime(row.last_accessed_at as string | Date),
       data,
     };
   }

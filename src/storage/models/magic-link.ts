@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { parseMySQLDateTime } from '@/storage/parse-datetime.js';
 
 /**
  * Represents a magic link record for user registration invites
@@ -195,10 +196,10 @@ export class MagicLinkModel {
       id: row.id as number,
       token: row.token as string,
       email: row.email as string,
-      expiresAt: new Date(row.expires_at as string),
-      usedAt: row.used_at ? new Date(row.used_at as string) : null,
+      expiresAt: parseMySQLDateTime(row.expires_at as string),
+      usedAt: row.used_at ? parseMySQLDateTime(row.used_at as string) : null,
       createdBy: row.created_by as number | null,
-      createdAt: new Date(row.created_at as string),
+      createdAt: parseMySQLDateTime(row.created_at as string),
     };
   }
 }

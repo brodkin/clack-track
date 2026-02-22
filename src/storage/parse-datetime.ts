@@ -25,6 +25,7 @@ export function parseMySQLDateTime(value: null): null;
 export function parseMySQLDateTime(value: undefined): undefined;
 export function parseMySQLDateTime(value: Date): Date;
 export function parseMySQLDateTime(value: string): Date;
+export function parseMySQLDateTime(value: string | Date): Date;
 export function parseMySQLDateTime(
   value: string | Date | null | undefined
 ): Date | null | undefined;

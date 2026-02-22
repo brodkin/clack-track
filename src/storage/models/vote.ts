@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { parseMySQLDateTime } from '@/storage/parse-datetime.js';
 
 export interface Vote {
   id: number;
@@ -102,7 +103,7 @@ export class VoteModel {
       id: row.id as number,
       content_id: row.content_id as number,
       vote_type: row.vote_type as 'good' | 'bad',
-      created_at: new Date(row.created_at as string),
+      created_at: parseMySQLDateTime(row.created_at as string),
       userAgent: row.userAgent as string | undefined,
       ipAddress: row.ipAddress as string | undefined,
     };
