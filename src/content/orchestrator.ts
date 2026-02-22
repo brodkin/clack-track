@@ -11,7 +11,8 @@
  * 3. On retry failure → fall back to StaticFallbackGenerator (P3)
  * 4. If outputMode === 'text' → apply FrameDecorator
  * 5. Cache successful content for minor updates
- * 6. Send to VestaboardClient
+ * 6. Save to database (fire-and-forget, before send to prevent data loss)
+ * 7. Send to VestaboardClient
  *
  * @module content/orchestrator
  */
@@ -129,7 +130,8 @@ export class ContentOrchestrator {
    * 4. On failure → P3 fallback (StaticFallbackGenerator)
    * 5. Decorate with frame if outputMode === 'text', passing pre-fetched data
    * 6. Cache successful content
-   * 7. Send to Vestaboard
+   * 7. Save to database (fire-and-forget, before send to prevent data loss)
+   * 8. Send to Vestaboard
    *
    * @param context - Generation context with update type and metadata
    * @returns Result object with success status and optional content/blocking info
@@ -261,15 +263,6 @@ export class ContentOrchestrator {
           error instanceof Error ? error.message : 'Unknown error'
         );
 
-        // Save failed generation to database (fire-and-forget)
-        if (this.contentRepository && context.updateType === 'major') {
-          this.saveFailedContent(context, registeredGenerator, generationError, content).catch(
-            () => {
-              // Silently catch database errors - don't block content delivery
-            }
-          );
-        }
-
         content = await this.fallbackGenerator.generate(context);
       }
     } else {
@@ -304,16 +297,16 @@ export class ContentOrchestrator {
     // Step 6: Cache successful content
     this.cachedContent = content;
 
-    // Step 7: Send to Vestaboard
-    await this.vestaboardClient.sendLayout(layoutToSend);
-
-    // Step 8: Save successful major update to database (fire-and-forget)
-    // Only save if no generation error occurred (successful path)
+    // Step 7: Save successful major update to database (fire-and-forget)
+    // Only save if no generation error occurred (successful path, not fallback)
     if (this.contentRepository && context.updateType === 'major' && !generationError) {
       this.saveSuccessfulContent(context, registeredGenerator, content).catch(() => {
         // Silently catch database errors - don't block content delivery
       });
     }
+
+    // Step 8: Send to Vestaboard
+    await this.vestaboardClient.sendLayout(layoutToSend);
 
     return {
       success: true,
@@ -353,45 +346,6 @@ export class ContentOrchestrator {
       primaryError: (content.metadata?.primaryError as string) || undefined,
       metadata: content.metadata ? content.metadata : undefined,
       outputMode: content.outputMode,
-    });
-  }
-
-  /**
-   * Save failed content generation to database (fire-and-forget)
-   *
-   * @param context - Generation context
-   * @param registeredGenerator - Generator metadata
-   * @param error - Error that caused generation failure
-   * @param content - Generated content (optional, available for validation failures)
-   */
-  private async saveFailedContent(
-    context: GenerationContext,
-    registeredGenerator: { registration: { id: string; name: string; priority: number } },
-    error: Error,
-    content?: GeneratedContent
-  ): Promise<void> {
-    if (!this.contentRepository) return;
-
-    await this.contentRepository.saveContent({
-      text: content?.text || '', // Use generated text if available, otherwise empty
-      type: context.updateType,
-      generatedAt: context.timestamp,
-      sentAt: null,
-      status: 'failed',
-      generatorId: registeredGenerator.registration.id,
-      generatorName: registeredGenerator.registration.name,
-      priority: registeredGenerator.registration.priority,
-      errorType: error.name,
-      errorMessage: error.message,
-      aiProvider: (content?.metadata?.provider as string) || '', // Extract from content metadata if available
-      aiModel: (content?.metadata?.model as string) || undefined,
-      modelTier: (content?.metadata?.tier as string) || undefined,
-      tokensUsed: (content?.metadata?.tokensUsed as number) || undefined,
-      failedOver: (content?.metadata?.failedOver as boolean) || false,
-      primaryProvider: (content?.metadata?.primaryProvider as string) || undefined,
-      primaryError: (content?.metadata?.primaryError as string) || undefined,
-      metadata: content?.metadata || undefined,
-      outputMode: content?.outputMode,
     });
   }
 
