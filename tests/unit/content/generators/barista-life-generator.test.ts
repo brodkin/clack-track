@@ -111,9 +111,7 @@ describe('BaristaLifeGenerator', () => {
     });
 
     it('should have universally relatable scenarios', () => {
-      expect(BARISTA_SCENARIOS.PEAK_HOUR).toContain(
-        'the morning rush with 47 mobile orders'
-      );
+      expect(BARISTA_SCENARIOS.PEAK_HOUR).toContain('the morning rush with 47 mobile orders');
       expect(BARISTA_SCENARIOS.SHIFTS).toContain('clopening as a lifestyle choice');
       expect(BARISTA_SCENARIOS.MODIFICATIONS).toContain(
         'a 17-modification drink that prints a receipt-length sticker'
@@ -170,8 +168,7 @@ describe('BaristaLifeGenerator', () => {
       const { category, scenario } = generator.selectRandomScenario();
 
       expect(Object.keys(BARISTA_SCENARIOS)).toContain(category);
-      const categoryScenarios =
-        BARISTA_SCENARIOS[category as keyof typeof BARISTA_SCENARIOS];
+      const categoryScenarios = BARISTA_SCENARIOS[category as keyof typeof BARISTA_SCENARIOS];
       expect(categoryScenarios).toContain(scenario);
     });
 
@@ -238,8 +235,7 @@ describe('BaristaLifeGenerator', () => {
       expect(DELIVERY_STYLES).toContain(style);
 
       // Scenario should be from the selected category
-      const categoryScenarios =
-        BARISTA_SCENARIOS[category as keyof typeof BARISTA_SCENARIOS];
+      const categoryScenarios = BARISTA_SCENARIOS[category as keyof typeof BARISTA_SCENARIOS];
       expect(categoryScenarios).toContain(scenario);
     });
 

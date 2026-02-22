@@ -11,6 +11,7 @@ services:
       - clack-track-userdata:/home/vscode
       # Beads database volume (ext4 mount to support Unix sockets)
       - beads-db-clack-track:/workspace/.beads
+    init: true
     command: ['sleep', 'infinity']
     environment:
       # Claude Code environment variables

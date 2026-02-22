@@ -1,0 +1,118 @@
+Generate intercepted walkie-talkie radio chatter between Cast Members at the original Disneyland in Anaheim.
+
+RADIO PARAMETERS:
+- Calling Station: {{callerStation}}
+- Situation Type: {{situationDomain}}
+- Urgency: {{urgencyLevel}}
+- Shift Moment: {{shiftMoment}}
+
+THE SCENARIO:
+A Cast Member is radioing in about a situation at their station. The viewer is overhearing
+a fragment of real park operations - the mundane, absurd, and sometimes alarming reality
+behind the Disney magic. This is the stuff guests are never supposed to hear.
+
+REQUIRED FORMAT - MUST START WITH RADIO CALL SIGN:
+The message MUST begin with a radio call sign identifying the station and who they're calling.
+This framing is what sells the bit - it tells the viewer "you're hearing something you shouldn't."
+
+DISNEYLAND RADIO CALL SIGN PROTOCOL:
+Disney central operations is called "CONTROL" (never "base" or "HQ").
+Ride leads are identified by attraction name + "1" (e.g., "MANSION 1", "SPACE 1", "THUNDER 1").
+Land leads are identified by land name + "1" (e.g., "TOMORROWLAND 1", "FRONTIER 1", "ADVENTURE 1").
+Head of security is "SECURITY 1". Head of the park is "THEME PARK 1".
+Backstage areas and facilities (use for logistics, rotation, or color):
+- HARBOR POINTE: CM bus drop-off, backstage entry
+- THE INN BETWEEN: CM cafeteria behind Main Street
+- TDA (Team Disney Anaheim): admin headquarters
+- COSTUMING (or CHIP N DALE): wardrobe checkout
+- CHARACTER ZOO: character costume storage, under Fantasyland
+- PARADE BUILDING: float storage
+- BUILDING 500: ride vehicle warehouse
+- CYCLE SHOP: vehicle/monorail maintenance
+- TEAM CENTER: CM store/services
+- RTS: Resort Transportation Services (CM shuttles)
+
+DISNEY RADIO CODES (use sparingly, in correct context):
+- 101: ride/attraction down; 102: ride back up
+- Signal 25: fire or smoke reported
+- Signal 70: lost parent (never say "lost child")
+- Code V: protein spill (vomit)
+- Code 100: radio silence (pre-fireworks)
+- Alpha Unit: medical/first responders needed
+- 10-65: irate guest; 10-99: unruly guest
+- "Treasured guest": misbehaving guest (euphemism)
+- "Customer": shoplifter (Disney says "guest", never "customer")
+These codes add authenticity when woven naturally into the transmission.
+
+DESTINATION LOGIC - WHO CALLS WHO:
+Cast Members radio UP their chain. A ride calls its own land lead or Control.
+Mansion calls NEW ORLEANS 1 (its land), not Tomorrowland 1 (wrong land).
+Cross-land calls only happen for park-wide issues (Security 1, Theme Park 1).
+Backstage references (Harbor Point, The Inn Between) are for logistics and rotation.
+
+Examples of radio call sign openers:
+- "JUNGLE CRUISE TO ADVENTURE 1"
+- "MANSION 1 TO CONTROL WE HAVE A 101"
+- "SPACE MOUNTAIN TO SECURITY 1 SIGNAL 70 IN QUEUE"
+- "AUTOPIA TO TOMORROWLAND 1 REQUESTING ROTATION TO THE INN BETWEEN"
+- "CUSTODIAL TO NEW ORLEANS 1 CODE V AT PIRATES EXIT"
+
+RADIO CHATTER CONVENTIONS:
+- ALWAYS open with a station-to-destination call sign
+- VARY the destination: Control, land leads (#1), ride leads (#1), Security 1, backstage areas
+- Use clipped, professional radio cadence (short phrases, no flowery language)
+- Reference specific Disneyland locations, attractions, or lore naturally
+- One detail should be unexpectedly specific or absurd
+- Imply this is not the first time ("again", "the same one", "per usual")
+- Can end with a request, a status update, or trail off mid-transmission
+- Disney radio codes can be dropped in naturally when they fit the situation
+
+WHAT MAKES IT FUNNY:
+- Professional radio protocol applied to absurd theme park situations
+- The gap between "maintaining the magic" and operational chaos
+- Weary familiarity with recurring problems ("hippo 3 is stuck AGAIN")
+- Cast Members who are extremely over it but staying professional
+- Details that raise questions (why does this keep happening?)
+- The mundane reality behind beloved attractions
+
+DISNEYLAND SPECIFICITY:
+This is ONLY the original Disneyland in Anaheim, California. Use real attraction names,
+real land names, real park geography. The Matterhorn, not Expedition Everest. Pirates of
+the Caribbean, not the movie. Space Mountain, Jungle Cruise, Haunted Mansion, Its a
+Small World, Big Thunder Mountain, Splash Mountain, Indiana Jones, Star Tours, the
+Mark Twain, Autopia. Main Street USA, Adventureland, Fantasyland, Tomorrowland,
+Frontierland, New Orleans Square, Critter Country, Galaxys Edge.
+
+URGENCY INTERPRETATION:
+- ROUTINE_CHECK_IN: Business as usual, almost bored ("Just a heads up...")
+- MILDLY_CONCERNED: Something is off but manageable ("So... we have a situation")
+- INCREASINGLY_WORRIED: Escalating, needs backup ("Gonna need some help over here")
+- FULL_CODE_DISNEY: All hands, this is serious ("Code Disney, I repeat, code Disney")
+- SUSPICIOUSLY_CALM: Way too calm for what they're describing ("Everything is fine. Mostly.")
+
+SHIFT MOMENT INTERPRETATION:
+The time-of-day shapes everything: who's on radio, what goes wrong, and the energy.
+- ROPE_DROP: Gates just opened, fresh chaos, guests sprinting, crowd control
+- MIDDAY_RUSH: Peak capacity, lines everywhere, heat, exhaustion setting in
+- PARADE_STAGING: Pre-parade scramble, floats not ready, route clearance, performer issues
+- FIREWORKS_COUNTDOWN: Code 100 (radio silence) about to hit, last-minute emergencies
+- PARK_CLOSE: "Kiss goodnight" mode, stragglers who won't leave, end-of-day exhaustion
+- AFTER_HOURS_MAINTENANCE: 2am energy, skeleton crew, discovering things in the dark
+- EARLY_MORNING_PREP: Pre-opening, testing rides, stocking, finding overnight surprises
+- SHIFT_CHANGE: Handoff chaos, outgoing crew briefing incoming, things falling through cracks
+
+RADIO FORMAT VARIETY:
+Not every transmission is an initial call-in. Vary the format:
+- Initial report: standard "STATION TO DESTINATION, we have a situation..."
+- Status update: "UPDATE ON THE HIPPO SITUATION, IT'S WORSE"
+- Response/pushback: "COPY THAT CONTROL BUT WE'RE DOWN TWO SKIPPERS"
+- Hot mic: someone keyed their radio by accident and you hear backstage chatter
+- Handoff: outgoing shift briefing the next person on an ongoing situation
+
+DO NOT:
+- Reference Walt Disney World, Tokyo Disney, Disneyland Paris, or any non-Anaheim park
+- Invent fake radio codes (use the real ones listed above, or omit codes entirely)
+- Make the situation genuinely dangerous or upsetting (keep it absurd, not alarming)
+- Break character - the Cast Member believes this is a real radio call
+- Explain the joke or provide commentary outside the radio transmission
+- Reference Disney movies, shows, or streaming content (this is about the PARK)
