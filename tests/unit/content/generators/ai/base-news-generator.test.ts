@@ -7,8 +7,15 @@
  * - BLUE: Refactor for quality
  *
  * Uses Template Method hooks:
- * - getTemplateVariables() for headlines injection
- * - getCustomMetadata() for feedUrls tracking
+ * - getTemplateVariables() for single-story injection
+ * - getCustomMetadata() for feedUrls and selection tracking
+ *
+ * Story selection behavior:
+ * - Fetches ALL items from RSS feeds (no limit)
+ * - Filters to items within 12-hour window of context timestamp
+ * - Selects one item at random from filtered set
+ * - Falls back to 5 most recent if no items in 12h window
+ * - Injects single headline via {{headlines}} and snippet via {{snippet}}
  */
 
 import { BaseNewsGenerator } from '@/content/generators/ai/base-news-generator';
@@ -60,29 +67,68 @@ describe('BaseNewsGenerator', () => {
   let generator: TestNewsGenerator;
   let feedUrls: string[];
 
-  const mockRSSItems: RSSItem[] = [
-    {
-      title: 'Breaking: Major Tech Announcement',
-      link: 'https://example.com/article1',
-      pubDate: new Date('2025-11-27T10:00:00Z'),
+  // Base timestamp for tests: 2025-11-27T10:00:00Z
+  const baseTimestamp = new Date('2025-11-27T10:00:00Z');
+
+  // Helper to create RSSItem with relative hours offset from baseTimestamp
+  const makeItem = (title: string, hoursAgo: number, opts: Partial<RSSItem> = {}): RSSItem => ({
+    title,
+    link: `https://example.com/${title.toLowerCase().replace(/\s+/g, '-')}`,
+    pubDate: new Date(baseTimestamp.getTime() - hoursAgo * 60 * 60 * 1000),
+    contentSnippet: opts.contentSnippet,
+    source: opts.source || 'Test Source',
+    ...opts,
+  });
+
+  // Items within 12-hour window (0-11 hours ago)
+  const recentItems: RSSItem[] = [
+    makeItem('Breaking: Major Tech Announcement', 1, {
       contentSnippet: 'Tech company announces new product',
       source: 'Tech News',
-    },
-    {
-      title: 'Market Update: Stocks Rise',
-      link: 'https://example.com/article2',
-      pubDate: new Date('2025-11-27T09:30:00Z'),
+      link: 'https://example.com/article1',
+    }),
+    makeItem('Market Update: Stocks Rise', 3, {
       contentSnippet: 'Markets show positive gains',
       source: 'Financial Times',
-    },
-    {
-      title: 'Sports: Championship Game Tonight',
-      link: 'https://example.com/article3',
-      pubDate: new Date('2025-11-27T09:00:00Z'),
+      link: 'https://example.com/article2',
+    }),
+    makeItem('Sports: Championship Game Tonight', 6, {
       contentSnippet: 'Local team competes for title',
       source: 'Sports Daily',
-    },
+      link: 'https://example.com/article3',
+    }),
   ];
+
+  // Items outside 12-hour window (13+ hours ago)
+  const oldItems: RSSItem[] = [
+    makeItem('Old Story One', 14, {
+      link: 'https://example.com/old1',
+      source: 'Old Source',
+    }),
+    makeItem('Old Story Two', 20, {
+      link: 'https://example.com/old2',
+      source: 'Old Source',
+    }),
+    makeItem('Old Story Three', 24, {
+      link: 'https://example.com/old3',
+      source: 'Old Source',
+    }),
+    makeItem('Old Story Four', 30, {
+      link: 'https://example.com/old4',
+      source: 'Old Source',
+    }),
+    makeItem('Old Story Five', 36, {
+      link: 'https://example.com/old5',
+      source: 'Old Source',
+    }),
+    makeItem('Old Story Six', 48, {
+      link: 'https://example.com/old6',
+      source: 'Old Source',
+    }),
+  ];
+
+  // All items combined (sorted newest-first, as RSSClient returns)
+  const allItems: RSSItem[] = [...recentItems, ...oldItems];
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -100,11 +146,10 @@ describe('BaseNewsGenerator', () => {
         if (type === 'system') {
           return Promise.resolve('System prompt for Vestaboard content generation.');
         }
-        // Simulate simple {{headlines}} variable substitution
-        // The headlines are pre-formatted as a string by base-news-generator
         const headlines = variables?.headlines || '';
+        const snippet = variables?.snippet || '';
         return Promise.resolve(
-          `Pretend you are a late night comic. Select a random current event from the list below.\n\n${headlines}`
+          `Write about this news story.\n\nHeadline: ${headlines}\nSnippet: ${snippet}`
         );
       }),
     } as unknown as jest.Mocked<PromptLoader>;
@@ -143,79 +188,233 @@ describe('BaseNewsGenerator', () => {
     );
   });
 
-  describe('RSS Fetching and Injection', () => {
-    it('should fetch headlines from RSS feeds before generating', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
+  describe('RSS Fetching', () => {
+    it('should fetch all items from RSS feeds without a limit', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(allItems);
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       await generator.generate(context);
 
-      // Verify RSS fetch was called with correct parameters
-      expect(mockRSSClient.getLatestItems).toHaveBeenCalledWith(feedUrls, 5);
+      // Should call without limit parameter to get all items
+      expect(mockRSSClient.getLatestItems).toHaveBeenCalledWith(feedUrls);
       expect(mockRSSClient.getLatestItems).toHaveBeenCalledTimes(1);
     });
+  });
 
-    it('should inject headlines into user prompt via getTemplateVariables() hook', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
+  describe('12-Hour Filtering and Single Story Selection', () => {
+    it('should filter items to the 12-hour window and select one', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(allItems);
+
+      // Seed Math.random to get deterministic selection
+      const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0);
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       await generator.generate(context);
 
-      // Verify loadPromptWithVariables was called with headlines
-      expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
-        'user',
-        'news-summary.txt',
-        expect.objectContaining({
-          headlines: expect.stringContaining('Breaking: Major Tech Announcement'),
-        })
-      );
-    });
-
-    it('should format headlines as bullet list', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
-
-      const context: GenerationContext = {
-        updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
-      };
-
-      await generator.generate(context);
-
-      // Verify headlines are formatted as bullet list
+      // Should inject a single headline (from the recent items), not a bullet list
       const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
         call => call[0] === 'user'
       );
       expect(userPromptCall).toBeDefined();
       const templateVars = userPromptCall![2] as Record<string, string>;
-      expect(templateVars.headlines).toContain('  - Breaking: Major Tech Announcement');
-      expect(templateVars.headlines).toContain('  - Market Update: Stocks Rise');
+
+      // With Math.random() = 0, should pick first recent item
+      expect(templateVars.headlines).toBe('Breaking: Major Tech Announcement');
+      // Should NOT contain bullet list formatting
+      expect(templateVars.headlines).not.toContain('  - ');
+      // Should NOT contain multiple headlines
+      expect(templateVars.headlines).not.toContain('\n');
+
+      randomSpy.mockRestore();
     });
 
-    it('should return generated content from AI provider', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
+    it('should include contentSnippet as {{snippet}} template variable when available', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(allItems);
+      jest.spyOn(Math, 'random').mockReturnValue(0);
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
-      const result = await generator.generate(context);
+      await generator.generate(context);
 
-      expect(result.text).toBe('TECH NEWS\nBREAKING ANNOUNCEMENT\nMARKETS UP TODAY');
-      expect(result.outputMode).toBe('text');
-      expect(result.metadata).toMatchObject({
-        model: 'gpt-4o-mini',
-        tier: 'medium',
-        provider: 'openai',
+      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
+        call => call[0] === 'user'
+      );
+      const templateVars = userPromptCall![2] as Record<string, string>;
+
+      expect(templateVars.snippet).toBe('Tech company announces new product');
+
+      jest.spyOn(Math, 'random').mockRestore();
+    });
+
+    it('should set snippet to empty string when contentSnippet is not available', async () => {
+      const itemsWithoutSnippets = recentItems.map(item => ({
+        ...item,
+        contentSnippet: undefined,
+      }));
+      mockRSSClient.getLatestItems.mockResolvedValue(itemsWithoutSnippets);
+      jest.spyOn(Math, 'random').mockReturnValue(0);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: baseTimestamp,
+      };
+
+      await generator.generate(context);
+
+      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
+        call => call[0] === 'user'
+      );
+      const templateVars = userPromptCall![2] as Record<string, string>;
+
+      expect(templateVars.snippet).toBe('');
+
+      jest.spyOn(Math, 'random').mockRestore();
+    });
+
+    it('should select different items based on random value', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(allItems);
+
+      // Math.random() = 0.99 should select the last recent item (index 2 of 3)
+      jest.spyOn(Math, 'random').mockReturnValue(0.99);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: baseTimestamp,
+      };
+
+      await generator.generate(context);
+
+      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
+        call => call[0] === 'user'
+      );
+      const templateVars = userPromptCall![2] as Record<string, string>;
+
+      // With Math.random() = 0.99, floor(0.99 * 3) = 2, third item
+      expect(templateVars.headlines).toBe('Sports: Championship Game Tonight');
+
+      jest.spyOn(Math, 'random').mockRestore();
+    });
+
+    it('should only include items within the 12-hour window', async () => {
+      // Item exactly at the boundary (12h ago) should be EXCLUDED
+      const boundaryItem = makeItem('Boundary Story', 12, {
+        contentSnippet: 'Right at the boundary',
+        link: 'https://example.com/boundary',
       });
+
+      // Item just inside the boundary (11h59m ago) should be INCLUDED
+      const justInsideItem: RSSItem = {
+        title: 'Just Inside Story',
+        link: 'https://example.com/just-inside',
+        pubDate: new Date(baseTimestamp.getTime() - (12 * 60 * 60 * 1000 - 60 * 1000)), // 11h59m ago
+        contentSnippet: 'Just inside window',
+        source: 'Test Source',
+      };
+
+      mockRSSClient.getLatestItems.mockResolvedValue([justInsideItem, boundaryItem, ...oldItems]);
+      jest.spyOn(Math, 'random').mockReturnValue(0);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: baseTimestamp,
+      };
+
+      await generator.generate(context);
+
+      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
+        call => call[0] === 'user'
+      );
+      const templateVars = userPromptCall![2] as Record<string, string>;
+
+      // Only the just-inside item should be in the recent window
+      expect(templateVars.headlines).toBe('Just Inside Story');
+
+      jest.spyOn(Math, 'random').mockRestore();
+    });
+  });
+
+  describe('Fallback to 5 Most Recent', () => {
+    it('should fall back to selecting from 5 most recent when no items in 12h window', async () => {
+      // All items are older than 12 hours
+      mockRSSClient.getLatestItems.mockResolvedValue(oldItems);
+      jest.spyOn(Math, 'random').mockReturnValue(0);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: baseTimestamp,
+      };
+
+      await generator.generate(context);
+
+      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
+        call => call[0] === 'user'
+      );
+      const templateVars = userPromptCall![2] as Record<string, string>;
+
+      // Should pick from the 5 most recent old items (first one with random=0)
+      expect(templateVars.headlines).toBe('Old Story One');
+
+      jest.spyOn(Math, 'random').mockRestore();
+    });
+
+    it('should use at most 5 items in fallback even if more are available', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(oldItems); // 6 old items
+
+      // Math.random() = 0.99 should pick the 5th item (index 4)
+      jest.spyOn(Math, 'random').mockReturnValue(0.99);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: baseTimestamp,
+      };
+
+      await generator.generate(context);
+
+      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
+        call => call[0] === 'user'
+      );
+      const templateVars = userPromptCall![2] as Record<string, string>;
+
+      // floor(0.99 * 5) = 4, so 5th item of 5 most recent old items
+      expect(templateVars.headlines).toBe('Old Story Five');
+      // Should NOT select the 6th item (Old Story Six)
+
+      jest.spyOn(Math, 'random').mockRestore();
+    });
+
+    it('should handle fewer than 5 items in fallback', async () => {
+      // Only 2 old items
+      const fewOldItems = oldItems.slice(0, 2);
+      mockRSSClient.getLatestItems.mockResolvedValue(fewOldItems);
+      jest.spyOn(Math, 'random').mockReturnValue(0.99);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: baseTimestamp,
+      };
+
+      await generator.generate(context);
+
+      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
+        call => call[0] === 'user'
+      );
+      const templateVars = userPromptCall![2] as Record<string, string>;
+
+      // floor(0.99 * 2) = 1, second of 2 items
+      expect(templateVars.headlines).toBe('Old Story Two');
+
+      jest.spyOn(Math, 'random').mockRestore();
     });
   });
 
@@ -225,7 +424,7 @@ describe('BaseNewsGenerator', () => {
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       const result = await generator.generate(context);
@@ -242,35 +441,34 @@ describe('BaseNewsGenerator', () => {
       expect(templateVars.headlines).toContain('No news available at this time');
     });
 
-    it('should handle empty RSS results with fallback', async () => {
+    it('should handle empty RSS results gracefully', async () => {
       mockRSSClient.getLatestItems.mockResolvedValue([]);
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       const result = await generator.generate(context);
 
       expect(result.text).toBeDefined();
 
-      // Empty array results in empty headlines string
       const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
         call => call[0] === 'user'
       );
       expect(userPromptCall).toBeDefined();
       const templateVars = userPromptCall![2] as Record<string, string>;
-      // Empty headlines (no items to format)
-      expect(templateVars.headlines).toBe('');
+      expect(templateVars.headlines).toContain('No news available at this time');
     });
 
     it('should handle partial RSS failures gracefully', async () => {
       // Simulate some feeds failing but at least one succeeding
-      mockRSSClient.getLatestItems.mockResolvedValue([mockRSSItems[0]]);
+      mockRSSClient.getLatestItems.mockResolvedValue([recentItems[0]]);
+      jest.spyOn(Math, 'random').mockReturnValue(0);
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       const result = await generator.generate(context);
@@ -282,41 +480,9 @@ describe('BaseNewsGenerator', () => {
       );
       expect(userPromptCall).toBeDefined();
       const templateVars = userPromptCall![2] as Record<string, string>;
-      expect(templateVars.headlines).toContain('Breaking: Major Tech Announcement');
-    });
-  });
+      expect(templateVars.headlines).toBe('Breaking: Major Tech Announcement');
 
-  describe('Headline Formatting', () => {
-    it('should include late night comic style instructions', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
-
-      const context: GenerationContext = {
-        updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
-      };
-
-      await generator.generate(context);
-
-      // User prompt should be loaded
-      expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
-        'user',
-        'news-summary.txt',
-        expect.any(Object)
-      );
-    });
-
-    it('should limit headlines to requested count', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
-
-      const context: GenerationContext = {
-        updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
-      };
-
-      await generator.generate(context);
-
-      // Verify limit of 5 was requested
-      expect(mockRSSClient.getLatestItems).toHaveBeenCalledWith(feedUrls, 5);
+      jest.spyOn(Math, 'random').mockRestore();
     });
   });
 
@@ -361,7 +527,7 @@ describe('BaseNewsGenerator', () => {
 
   describe('Dimension Substitution', () => {
     it('should apply dimension substitution to system prompt', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
+      mockRSSClient.getLatestItems.mockResolvedValue(recentItems);
 
       // Track what gets passed to createAIProvider
       const mockProvider = createMockAIProvider({
@@ -385,7 +551,7 @@ describe('BaseNewsGenerator', () => {
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       await generator.generate(context);
@@ -404,11 +570,11 @@ describe('BaseNewsGenerator', () => {
 
   describe('Template Variables', () => {
     it('should include date template variable in system prompt loading', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
+      mockRSSClient.getLatestItems.mockResolvedValue(recentItems);
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       await generator.generate(context);
@@ -428,11 +594,35 @@ describe('BaseNewsGenerator', () => {
       expect(templateVars.date).toContain('27');
       expect(templateVars.date).toContain('2025');
     });
+
+    it('should inject single headline via {{headlines}} template variable', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(recentItems);
+      jest.spyOn(Math, 'random').mockReturnValue(0);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: baseTimestamp,
+      };
+
+      await generator.generate(context);
+
+      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
+        call => call[0] === 'user'
+      );
+      expect(userPromptCall).toBeDefined();
+      const templateVars = userPromptCall![2] as Record<string, string>;
+
+      // Should be a single headline, not a bullet list
+      expect(templateVars.headlines).toBe('Breaking: Major Tech Announcement');
+      expect(templateVars).toHaveProperty('snippet');
+
+      jest.spyOn(Math, 'random').mockRestore();
+    });
   });
 
   describe('Provider Failover', () => {
     it('should try alternate provider when primary fails', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
+      mockRSSClient.getLatestItems.mockResolvedValue(recentItems);
 
       // Create generator with both API keys
       const generatorWithBothKeys = new TestNewsGenerator(
@@ -470,7 +660,7 @@ describe('BaseNewsGenerator', () => {
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       const result = await generatorWithBothKeys.generate(context);
@@ -483,7 +673,7 @@ describe('BaseNewsGenerator', () => {
     });
 
     it('should throw error when all providers fail', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
+      mockRSSClient.getLatestItems.mockResolvedValue(recentItems);
 
       // Create generator with both API keys
       const generatorWithBothKeys = new TestNewsGenerator(
@@ -511,7 +701,7 @@ describe('BaseNewsGenerator', () => {
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       await expect(generatorWithBothKeys.generate(context)).rejects.toThrow(
@@ -522,45 +712,48 @@ describe('BaseNewsGenerator', () => {
 
   describe('getCustomMetadata() hook', () => {
     it('should include feedUrls in metadata', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
+      mockRSSClient.getLatestItems.mockResolvedValue(recentItems);
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       const result = await generator.generate(context);
 
-      // feedUrls should be in metadata from getCustomMetadata() hook
       expect(result.metadata?.feedUrls).toEqual(feedUrls);
     });
 
-    it('should include headlineCount in metadata', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
+    it('should include headlineCount of 1 for single selected story', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(recentItems);
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       const result = await generator.generate(context);
 
-      // headlineCount should be in metadata from getCustomMetadata() hook
-      expect(result.metadata?.headlineCount).toBe(3);
+      // headlineCount should be 1 since we select a single story
+      expect(result.metadata?.headlineCount).toBe(1);
     });
 
-    it('should include moreInfoUrl from first RSS item link', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(mockRSSItems);
+    it('should track moreInfoUrl from the selected story link', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(allItems);
+      // Select the second recent item
+      jest.spyOn(Math, 'random').mockReturnValue(0.5);
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       const result = await generator.generate(context);
 
-      // moreInfoUrl should be the first RSS item's link
-      expect(result.metadata?.moreInfoUrl).toBe('https://example.com/article1');
+      // floor(0.5 * 3) = 1, so second recent item
+      expect(result.metadata?.moreInfoUrl).toBe('https://example.com/article2');
+
+      jest.spyOn(Math, 'random').mockRestore();
     });
 
     it('should not include moreInfoUrl when no RSS items fetched', async () => {
@@ -568,7 +761,7 @@ describe('BaseNewsGenerator', () => {
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       const result = await generator.generate(context);
@@ -582,7 +775,7 @@ describe('BaseNewsGenerator', () => {
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       const result = await generator.generate(context);
@@ -591,37 +784,84 @@ describe('BaseNewsGenerator', () => {
       expect(result.metadata?.moreInfoUrl).toBeUndefined();
     });
 
-    it('should cache first RSS link between getTemplateVariables and getCustomMetadata', async () => {
-      // Use 5 items to verify we only cache the first one
-      const manyItems = [
-        ...mockRSSItems,
-        {
-          title: 'Fourth Article',
-          link: 'https://example.com/article4',
-          pubDate: new Date('2025-11-27T08:30:00Z'),
-          contentSnippet: 'Fourth article content',
-          source: 'Test Source',
-        },
-        {
-          title: 'Fifth Article',
-          link: 'https://example.com/article5',
-          pubDate: new Date('2025-11-27T08:00:00Z'),
-          contentSnippet: 'Fifth article content',
-          source: 'Test Source',
-        },
-      ];
-      mockRSSClient.getLatestItems.mockResolvedValue(manyItems);
+    it('should include selectionStrategy "recent" when items found in 12h window', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(allItems);
 
       const context: GenerationContext = {
         updateType: 'major',
-        timestamp: new Date('2025-11-27T10:00:00Z'),
+        timestamp: baseTimestamp,
       };
 
       const result = await generator.generate(context);
 
-      // Should cache only the FIRST link from fetched items
-      expect(result.metadata?.moreInfoUrl).toBe('https://example.com/article1');
-      expect(result.metadata?.headlineCount).toBe(5);
+      expect(result.metadata?.selectionStrategy).toBe('recent');
+    });
+
+    it('should include selectionStrategy "fallback" when no items in 12h window', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(oldItems);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: baseTimestamp,
+      };
+
+      const result = await generator.generate(context);
+
+      expect(result.metadata?.selectionStrategy).toBe('fallback');
+    });
+
+    it('should include totalItemsFetched with total number of items from RSS', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(allItems);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: baseTimestamp,
+      };
+
+      const result = await generator.generate(context);
+
+      expect(result.metadata?.totalItemsFetched).toBe(allItems.length);
+    });
+
+    it('should include recentItemCount with count of items in 12h window', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(allItems);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: baseTimestamp,
+      };
+
+      const result = await generator.generate(context);
+
+      expect(result.metadata?.recentItemCount).toBe(3); // 3 recent items within 12h
+    });
+
+    it('should report recentItemCount 0 when no items in 12h window', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue(oldItems);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: baseTimestamp,
+      };
+
+      const result = await generator.generate(context);
+
+      expect(result.metadata?.recentItemCount).toBe(0);
+    });
+
+    it('should set headlineCount to 0 and omit selectionStrategy when feed is empty', async () => {
+      mockRSSClient.getLatestItems.mockResolvedValue([]);
+
+      const context: GenerationContext = {
+        updateType: 'major',
+        timestamp: baseTimestamp,
+      };
+
+      const result = await generator.generate(context);
+
+      expect(result.metadata?.headlineCount).toBe(0);
+      expect(result.metadata?.totalItemsFetched).toBe(0);
+      expect(result.metadata?.recentItemCount).toBe(0);
     });
   });
 });
