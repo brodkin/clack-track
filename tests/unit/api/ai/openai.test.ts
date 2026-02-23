@@ -374,6 +374,105 @@ describe('OpenAIClient', () => {
       });
     });
 
+    describe('toolChoice pass-through', () => {
+      it('should pass tool_choice "required" to API when toolChoice is "required"', async () => {
+        mockOpenAI.chat.completions.create.mockResolvedValue(
+          openaiFixtures.toolCalling.singleToolCall as never
+        );
+
+        const request: AIGenerationRequest = {
+          systemPrompt: 'You are a helpful assistant.',
+          userPrompt: 'What is the weather in San Francisco?',
+          tools: [weatherTool],
+          toolChoice: 'required',
+        };
+
+        await client.generate(request);
+
+        expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tool_choice: 'required',
+          })
+        );
+      });
+
+      it('should pass tool_choice "auto" to API when toolChoice is "auto"', async () => {
+        mockOpenAI.chat.completions.create.mockResolvedValue(
+          openaiFixtures.toolCalling.singleToolCall as never
+        );
+
+        const request: AIGenerationRequest = {
+          systemPrompt: 'You are a helpful assistant.',
+          userPrompt: 'What is the weather?',
+          tools: [weatherTool],
+          toolChoice: 'auto',
+        };
+
+        await client.generate(request);
+
+        expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tool_choice: 'auto',
+          })
+        );
+      });
+
+      it('should pass tool_choice "none" to API when toolChoice is "none"', async () => {
+        mockOpenAI.chat.completions.create.mockResolvedValue(
+          openaiFixtures.chatCompletion.success as never
+        );
+
+        const request: AIGenerationRequest = {
+          systemPrompt: 'You are a helpful assistant.',
+          userPrompt: 'Just respond with text.',
+          tools: [weatherTool],
+          toolChoice: 'none',
+        };
+
+        await client.generate(request);
+
+        expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tool_choice: 'none',
+          })
+        );
+      });
+
+      it('should not include tool_choice when toolChoice is undefined', async () => {
+        mockOpenAI.chat.completions.create.mockResolvedValue(
+          openaiFixtures.toolCalling.singleToolCall as never
+        );
+
+        const request: AIGenerationRequest = {
+          systemPrompt: 'You are a helpful assistant.',
+          userPrompt: 'What is the weather?',
+          tools: [weatherTool],
+        };
+
+        await client.generate(request);
+
+        const callArgs = mockOpenAI.chat.completions.create.mock.calls[0][0];
+        expect(callArgs).not.toHaveProperty('tool_choice');
+      });
+
+      it('should not include tool_choice when tools are not provided', async () => {
+        mockOpenAI.chat.completions.create.mockResolvedValue(
+          openaiFixtures.chatCompletion.success as never
+        );
+
+        const request: AIGenerationRequest = {
+          systemPrompt: 'You are a helpful assistant.',
+          userPrompt: 'Generate a quote.',
+          toolChoice: 'required',
+        };
+
+        await client.generate(request);
+
+        const callArgs = mockOpenAI.chat.completions.create.mock.calls[0][0];
+        expect(callArgs).not.toHaveProperty('tool_choice');
+      });
+    });
+
     describe('parsing tool_calls from response', () => {
       it('should parse single tool call from response', async () => {
         mockOpenAI.chat.completions.create.mockResolvedValue(

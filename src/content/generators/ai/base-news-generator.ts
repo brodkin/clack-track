@@ -4,9 +4,16 @@
  * Abstract base class for news-related content generators that fetch
  * headlines from RSS feeds before generating AI-powered content.
  *
+ * Story selection pipeline:
+ * 1. Fetch ALL items from configured RSS feeds (no limit)
+ * 2. Filter to items published within the last 12 hours
+ * 3. Select one item at random from the filtered set
+ * 4. If no recent items, fall back to random selection from 5 most recent
+ * 5. Inject the single selected headline and snippet into the prompt
+ *
  * All news generators use the same user prompt (news-summary.txt) with
- * different RSS feed URLs. The prompt uses mustache templating with
- * {{#payload}} to iterate over headlines.
+ * different RSS feed URLs. The selected story's title is injected via
+ * {{headlines}} and its content snippet via {{snippet}}.
  *
  * @example
  * ```typescript
@@ -33,20 +40,43 @@
 import { AIPromptGenerator, type AIProviderAPIKeys } from '../ai-prompt-generator.js';
 import { PromptLoader } from '../../prompt-loader.js';
 import { ModelTierSelector } from '../../../api/ai/model-tier-selector.js';
-import { RSSClient } from '../../../api/data-sources/rss-client.js';
+import { RSSClient, type RSSItem } from '../../../api/data-sources/rss-client.js';
 import type { GenerationContext, ModelTier } from '../../../types/content-generator.js';
+
+/** Number of hours to consider an item "recent" */
+const RECENT_WINDOW_HOURS = 12;
+
+/** Maximum number of items to consider in fallback mode */
+const FALLBACK_ITEM_COUNT = 5;
+
+/**
+ * Metadata about the story selection process, cached between
+ * getTemplateVariables() and getCustomMetadata() calls.
+ */
+interface StorySelectionState {
+  /** The selected story's link, used for moreInfoUrl metadata */
+  selectedLink: string | undefined;
+  /** Number of headlines selected (0 or 1) */
+  headlineCount: number;
+  /** "recent" if selected from 12h window, "fallback" if from top-5 most recent */
+  selectionStrategy: 'recent' | 'fallback' | undefined;
+  /** Total number of items fetched from all RSS feeds */
+  totalItemsFetched: number;
+  /** Number of items that fell within the 12-hour window */
+  recentItemCount: number;
+}
 
 /**
  * Abstract base class for news generators with RSS feed integration
  *
- * Fetches RSS headlines and passes them as `payload` array to the
- * news-summary.txt prompt for mustache rendering.
+ * Fetches all RSS items, filters to a 12-hour recency window, selects
+ * one story at random, and injects it into the prompt template.
  *
  * Uses Template Method hooks:
- * - getTemplateVariables(): Injects headlines into prompt, caches first RSS link
- * - getCustomMetadata(): Adds feedUrls, headlineCount, and moreInfoUrl to metadata
+ * - getTemplateVariables(): Fetches items, filters, selects, injects headline + snippet
+ * - getCustomMetadata(): Adds feedUrls, headlineCount, moreInfoUrl, and selection metadata
  *
- * The first RSS item's link is cached and exposed as moreInfoUrl in metadata
+ * The selected story's link is cached and exposed as moreInfoUrl in metadata
  * to enable frontend "Learn More" functionality. If RSS fetch fails or returns
  * no items, moreInfoUrl is omitted from metadata.
  */
@@ -54,15 +84,19 @@ export abstract class BaseNewsGenerator extends AIPromptGenerator {
   protected readonly rssClient: RSSClient;
   protected readonly feedUrls: string[];
 
-  /**
-   * Cached headlines from the last fetch, used by getCustomMetadata
-   */
-  private lastFetchedHeadlines: string[] = [];
+  /** Default empty state for when no stories are available */
+  private static readonly EMPTY_STATE: StorySelectionState = {
+    selectedLink: undefined,
+    headlineCount: 0,
+    selectionStrategy: undefined,
+    totalItemsFetched: 0,
+    recentItemCount: 0,
+  };
 
   /**
-   * Cached first RSS link from the last fetch, used by getCustomMetadata for moreInfoUrl
+   * Cached state from the last story selection, used by getCustomMetadata
    */
-  private lastFetchedLink: string | undefined;
+  private selectionState: StorySelectionState = { ...BaseNewsGenerator.EMPTY_STATE };
 
   /**
    * Creates a new BaseNewsGenerator instance
@@ -102,54 +136,109 @@ export abstract class BaseNewsGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Hook: Fetches RSS headlines and returns as template variable.
+   * Hook: Fetches RSS items, filters to 12h window, selects one at random,
+   * and returns the single headline and snippet as template variables.
    *
-   * Fetches latest headlines from configured RSS feeds and formats
-   * them as a bullet list for prompt injection via {{headlines}}.
+   * Selection pipeline:
+   * 1. Fetch all items from RSS feeds (no limit)
+   * 2. Filter to items with pubDate < 12 hours before context timestamp
+   * 3. If recent items exist, select one at random ("recent" strategy)
+   * 4. If no recent items, select from the 5 most recent ("fallback" strategy)
+   * 5. If no items at all, use a fallback message
    *
-   * @param _context - Generation context (unused, but required by hook signature)
-   * @returns Template variables with headlines string
+   * @param context - Generation context with timestamp for recency calculation
+   * @returns Template variables with headlines (single title) and snippet
    */
   protected async getTemplateVariables(
-    _context: GenerationContext
+    context: GenerationContext
   ): Promise<Record<string, string>> {
-    // Fetch headlines from RSS feeds
-    let headlines: string[] = [];
-    try {
-      const items = await this.rssClient.getLatestItems(this.feedUrls, 5);
-      headlines = items.map(item => item.title);
+    let items: RSSItem[];
 
-      // Cache first RSS link for moreInfoUrl metadata
-      this.lastFetchedLink = items.length > 0 ? items[0].link : undefined;
+    try {
+      items = await this.rssClient.getLatestItems(this.feedUrls);
     } catch (error) {
       console.error('Failed to fetch RSS headlines:', error);
-      headlines = ['No news available at this time.'];
-      this.lastFetchedLink = undefined;
+      this.selectionState = { ...BaseNewsGenerator.EMPTY_STATE };
+      return { headlines: 'No news available at this time.', snippet: '' };
     }
 
-    // Cache headlines for metadata
-    this.lastFetchedHeadlines = headlines;
+    if (items.length === 0) {
+      this.selectionState = { ...BaseNewsGenerator.EMPTY_STATE };
+      return { headlines: 'No news available at this time.', snippet: '' };
+    }
 
-    // Format headlines as bullet list for prompt
-    const headlinesFormatted = headlines.map(h => `  - ${h}`).join('\n');
+    const selected = this.selectStory(items, context.timestamp);
 
-    return { headlines: headlinesFormatted };
+    this.selectionState = {
+      selectedLink: selected.item.link,
+      headlineCount: 1,
+      selectionStrategy: selected.strategy,
+      totalItemsFetched: items.length,
+      recentItemCount: selected.recentCount,
+    };
+
+    return {
+      headlines: selected.item.title,
+      snippet: selected.item.contentSnippet || '',
+    };
   }
 
   /**
-   * Hook: Returns feed URLs, headline count, and moreInfoUrl in metadata.
+   * Selects a single story from the fetched items using the recency-based
+   * selection pipeline.
    *
-   * @returns Metadata with feedUrls array, headlineCount, and optional moreInfoUrl
+   * @param items - All fetched RSS items, sorted newest-first by RSSClient
+   * @param timestamp - Context timestamp for the 12-hour window calculation
+   * @returns The selected item, strategy used, and count of recent items
+   */
+  private selectStory(
+    items: RSSItem[],
+    timestamp: Date
+  ): { item: RSSItem; strategy: 'recent' | 'fallback'; recentCount: number } {
+    const cutoff = new Date(timestamp.getTime() - RECENT_WINDOW_HOURS * 60 * 60 * 1000);
+    const recentItems = items.filter(item => item.pubDate.getTime() > cutoff.getTime());
+
+    if (recentItems.length > 0) {
+      const index = Math.floor(Math.random() * recentItems.length);
+      return {
+        item: recentItems[index],
+        strategy: 'recent',
+        recentCount: recentItems.length,
+      };
+    }
+
+    // Fallback: select from the 5 most recent items (already sorted newest-first)
+    const fallbackPool = items.slice(0, FALLBACK_ITEM_COUNT);
+    const index = Math.floor(Math.random() * fallbackPool.length);
+    return {
+      item: fallbackPool[index],
+      strategy: 'fallback',
+      recentCount: 0,
+    };
+  }
+
+  /**
+   * Hook: Returns feed URLs, selection metadata, and moreInfoUrl in metadata.
+   *
+   * @returns Metadata with feedUrls, headlineCount, selectionStrategy,
+   *          totalItemsFetched, recentItemCount, and optional moreInfoUrl
    */
   protected getCustomMetadata(): Record<string, unknown> {
     const metadata: Record<string, unknown> = {
       feedUrls: this.feedUrls,
-      headlineCount: this.lastFetchedHeadlines.length,
+      headlineCount: this.selectionState.headlineCount,
+      totalItemsFetched: this.selectionState.totalItemsFetched,
+      recentItemCount: this.selectionState.recentItemCount,
     };
 
-    // Include moreInfoUrl only if we have a cached link
-    if (this.lastFetchedLink) {
-      metadata.moreInfoUrl = this.lastFetchedLink;
+    // Include selection strategy only if a story was selected
+    if (this.selectionState.selectionStrategy) {
+      metadata.selectionStrategy = this.selectionState.selectionStrategy;
+    }
+
+    // Include moreInfoUrl only if we have a selected link
+    if (this.selectionState.selectedLink) {
+      metadata.moreInfoUrl = this.selectionState.selectedLink;
     }
 
     return metadata;

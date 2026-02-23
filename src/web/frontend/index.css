@@ -44,13 +44,13 @@
   --font-brush: 'Pacifico', 'Pacifico Fallback', cursive;
   --font-display: 'Bebas Neue', 'Bebas Neue Fallback', sans-serif;
 
-  /* Brand Colors (OKLCH) */
-  --brand-red: oklch(0.55 0.22 25);
-  --brand-red-light: oklch(0.7 0.18 25);
+  /* Brand Colors (OKLCH) - Mid-Century Gold */
+  --brand-gold: oklch(0.65 0.17 80);
+  --brand-gold-light: oklch(0.78 0.14 82);
   --brand-yellow: oklch(0.88 0.18 90);
   --brand-yellow-light: oklch(0.93 0.12 90);
   --brand-glass: oklch(1 0 0 / 60%);
-  --brand-glass-border: oklch(0.55 0.22 25 / 15%);
+  --brand-glass-border: oklch(0.65 0.17 80 / 15%);
 
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -113,8 +113,8 @@ h1 {
 @theme inline {
   --font-family-brush: var(--font-brush);
   --font-family-display: var(--font-display);
-  --color-brand-red: var(--brand-red);
-  --color-brand-red-light: var(--brand-red-light);
+  --color-brand-gold: var(--brand-gold);
+  --color-brand-gold-light: var(--brand-gold-light);
   --color-brand-yellow: var(--brand-yellow);
   --color-brand-yellow-light: var(--brand-yellow-light);
   --color-brand-glass: var(--brand-glass);
@@ -157,13 +157,13 @@ h1 {
 }
 
 .dark {
-  /* Brand Colors - Dark Mode */
-  --brand-red: oklch(0.62 0.2 25);
-  --brand-red-light: oklch(0.75 0.16 25);
+  /* Brand Colors - Dark Mode (Mid-Century Gold) */
+  --brand-gold: oklch(0.72 0.15 80);
+  --brand-gold-light: oklch(0.82 0.12 82);
   --brand-yellow: oklch(0.9 0.16 90);
   --brand-yellow-light: oklch(0.95 0.1 90);
   --brand-glass: oklch(0.15 0 0 / 60%);
-  --brand-glass-border: oklch(0.7 0.18 25 / 20%);
+  --brand-glass-border: oklch(0.72 0.15 80 / 20%);
 
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
