@@ -2,8 +2,8 @@
  * FloatingLogo Component Tests
  *
  * Tests for the sticky glassmorphism header with gradient brand text.
- * Verifies the new design: sticky positioning, heavy blur, saturation boost,
- * crisp border, gradient logo text, and absence of old broken patterns.
+ * Verifies the design: sticky positioning, heavy blur, saturation boost,
+ * crisp border, gold gradient logo text, and absence of old broken patterns.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -109,22 +109,34 @@ describe('FloatingLogo', () => {
       expect(container).toHaveClass('border-b');
     });
 
-    it('has red-tinted border color', () => {
+    it('has gold-tinted border color', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
-      expect(container.className).toContain('border-red-200/30');
+      expect(container.className).toContain('border-amber-300/30');
     });
 
-    it('has dark mode border color', () => {
+    it('has dark mode gold border color', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
-      expect(container.className).toContain('dark:border-red-500/20');
+      expect(container.className).toContain('dark:border-amber-500/20');
     });
 
-    it('has red-tinted shadow', () => {
+    it('has gold-tinted shadow', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
       expect(container.className).toContain('shadow-');
+    });
+
+    it('does not have red-tinted border', () => {
+      render(<FloatingLogo />);
+      const container = screen.getByTestId('floating-logo');
+      expect(container.className).not.toContain('border-red-');
+    });
+
+    it('does not have red-tinted dark border', () => {
+      render(<FloatingLogo />);
+      const container = screen.getByTestId('floating-logo');
+      expect(container.className).not.toContain('dark:border-red-');
     });
   });
 
@@ -158,13 +170,20 @@ describe('FloatingLogo', () => {
       expect(mainText).toHaveClass('bg-clip-text');
     });
 
-    it('applies red-yellow-red gradient to logo', () => {
+    it('applies amber-yellow-amber gold gradient to logo', () => {
       render(<FloatingLogo />);
       const mainText = screen.getByText('Clack Track');
       expect(mainText.className).toContain('bg-gradient-to-r');
-      expect(mainText.className).toContain('from-red-500');
+      expect(mainText.className).toContain('from-amber-600');
       expect(mainText.className).toContain('via-yellow-400');
-      expect(mainText.className).toContain('to-red-500');
+      expect(mainText.className).toContain('to-amber-600');
+    });
+
+    it('does not use old red gradient on logo', () => {
+      render(<FloatingLogo />);
+      const mainText = screen.getByText('Clack Track');
+      expect(mainText.className).not.toContain('from-red-');
+      expect(mainText.className).not.toContain('to-red-');
     });
 
     it('does not use old solid text colors on logo', () => {
@@ -176,16 +195,23 @@ describe('FloatingLogo', () => {
   });
 
   describe('byline styling', () => {
-    it('has red-tinted color in light mode', () => {
+    it('has gold-tinted color in light mode', () => {
       render(<FloatingLogo />);
       const byline = screen.getByText('BY HOUSEBOY');
-      expect(byline.className).toContain('text-red-800/60');
+      expect(byline.className).toContain('text-amber-800/60');
     });
 
-    it('has red-tinted color in dark mode', () => {
+    it('has gold-tinted color in dark mode', () => {
       render(<FloatingLogo />);
       const byline = screen.getByText('BY HOUSEBOY');
-      expect(byline.className).toContain('dark:text-red-300/50');
+      expect(byline.className).toContain('dark:text-amber-300/50');
+    });
+
+    it('does not use old red-tinted byline colors', () => {
+      render(<FloatingLogo />);
+      const byline = screen.getByText('BY HOUSEBOY');
+      expect(byline.className).not.toContain('text-red-');
+      expect(byline.className).not.toContain('dark:text-red-');
     });
 
     it('has wide letter spacing', () => {
