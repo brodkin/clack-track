@@ -42,8 +42,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         runtimeCaching: [
           {
+            // Google Fonts CSS (User-Agent dependent, must revalidate)
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'google-fonts-cache',
               expiration: {
@@ -51,11 +52,12 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
               },
               cacheableResponse: {
-                statuses: [0, 200],
+                statuses: [200],
               },
             },
           },
           {
+            // Font files (immutable content-addressed, safe to cache aggressively)
             urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
@@ -65,7 +67,7 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
               },
               cacheableResponse: {
-                statuses: [0, 200],
+                statuses: [200],
               },
             },
           },
