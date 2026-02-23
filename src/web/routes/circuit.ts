@@ -11,12 +11,16 @@
  */
 
 import { Router } from 'express';
+import cookieParser from 'cookie-parser';
 import { Request, Response, WebDependencies } from '../types.js';
 import type { CircuitBreakerService } from '../../services/circuit-breaker-service.js';
-import { requireAuth } from './account.js';
+import { requireAuth } from '../middleware/session.js';
 
 /**
  * Extended WebDependencies with circuit breaker service
+ *
+ * Inherits sessionRepository and userRepository from WebDependencies
+ * for database-backed authentication via requireAuth middleware.
  */
 export interface CircuitDependencies extends WebDependencies {
   /** Circuit breaker service for state management */
@@ -286,11 +290,16 @@ export async function resetCircuit(
  */
 export function createCircuitRouter(dependencies: CircuitDependencies = {}): Router {
   const router = Router();
-  const { circuitBreakerService } = dependencies;
+  const { circuitBreakerService, sessionRepository, userRepository } = dependencies;
 
-  // All circuit routes require authentication
+  // Parse cookies for session token
+  router.use(cookieParser());
+
+  // All circuit routes require database-backed authentication
   // This protects admin operations like enabling/disabling MASTER circuit
-  router.use(requireAuth);
+  if (sessionRepository && userRepository) {
+    router.use(requireAuth(sessionRepository, userRepository));
+  }
 
   // GET /api/circuits - List all circuits
   router.get('/', (req, res) =>

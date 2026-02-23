@@ -4,8 +4,13 @@
  * Tests GET /api/circuits, GET /api/circuits/:id,
  * POST /api/circuits/:id/on, POST /api/circuits/:id/off,
  * POST /api/circuits/:id/reset endpoints
+ *
+ * Authentication uses database-backed session middleware (requireAuth from session.js)
  */
 
+import request from 'supertest';
+import express, { Express } from 'express';
+import cookieParser from 'cookie-parser';
 import {
   getAllCircuits,
   getCircuitById,
@@ -17,9 +22,104 @@ import {
 import { CircuitBreakerService } from '../../../src/services/circuit-breaker-service.js';
 import type { CircuitBreakerState } from '../../../src/types/circuit-breaker.js';
 import type { Request, Response } from '../../../src/web/types.js';
+import type { SessionRepository } from '../../../src/storage/repositories/session-repo.js';
+import type { UserRepository } from '../../../src/storage/repositories/user-repo.js';
+import { SESSION_COOKIE_NAME } from '../../../src/web/middleware/session.js';
 
 // Mock CircuitBreakerService
 jest.mock('../../../src/services/circuit-breaker-service.js');
+
+/**
+ * Helper to create mock session and user repositories for database-backed auth
+ */
+function createMockRepos(opts?: { validToken?: string; userId?: number }) {
+  const validToken = opts?.validToken ?? 'valid-session-token';
+  const userId = opts?.userId ?? 1;
+
+  const mockSessionRepo = {
+    getValidSessionByToken: jest.fn().mockImplementation(async (token: string) => {
+      if (token === validToken) {
+        return {
+          id: 100,
+          token: validToken,
+          userId,
+          expiresAt: new Date(Date.now() + 86400000),
+          createdAt: new Date(),
+          lastAccessedAt: new Date(),
+        };
+      }
+      return null;
+    }),
+    touchSession: jest.fn().mockResolvedValue(undefined),
+    deleteSession: jest.fn().mockResolvedValue(true),
+    createSession: jest.fn().mockResolvedValue(null),
+  } as unknown as SessionRepository;
+
+  const mockUserRepo = {
+    findById: jest.fn().mockImplementation(async (id: number) => {
+      if (id === userId) {
+        return {
+          id: userId,
+          email: 'test@example.com',
+          name: 'Test User',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+      }
+      return null;
+    }),
+  } as unknown as UserRepository;
+
+  return { mockSessionRepo, mockUserRepo };
+}
+
+/**
+ * Helper to create a mock CircuitBreakerService with all methods
+ */
+function createMockCircuitService(overrides?: Partial<Record<string, jest.Mock>>) {
+  return {
+    getAllCircuits: jest.fn().mockResolvedValue([]),
+    getCircuitStatus: jest.fn().mockResolvedValue(null),
+    setCircuitState: jest.fn().mockResolvedValue(undefined),
+    resetProviderCircuit: jest.fn().mockResolvedValue(undefined),
+    ...overrides,
+  } as unknown as CircuitBreakerService;
+}
+
+/** Reusable mock circuit data */
+const MOCK_MASTER_CIRCUIT: CircuitBreakerState = {
+  id: 1,
+  circuitId: 'MASTER',
+  circuitType: 'manual',
+  state: 'on',
+  defaultState: 'on',
+  description: 'Global kill switch',
+  failureCount: 0,
+  successCount: 0,
+  failureThreshold: 5,
+  lastFailureAt: null,
+  lastSuccessAt: null,
+  stateChangedAt: '2025-01-15T10:00:00Z',
+  createdAt: '2025-01-01T00:00:00Z',
+  updatedAt: '2025-01-15T10:00:00Z',
+};
+
+const MOCK_PROVIDER_CIRCUIT: CircuitBreakerState = {
+  id: 3,
+  circuitId: 'PROVIDER_OPENAI',
+  circuitType: 'provider',
+  state: 'on',
+  defaultState: 'on',
+  description: 'OpenAI provider circuit',
+  failureCount: 0,
+  successCount: 0,
+  failureThreshold: 5,
+  lastFailureAt: null,
+  lastSuccessAt: null,
+  stateChangedAt: '2025-01-15T10:00:00Z',
+  createdAt: '2025-01-01T00:00:00Z',
+  updatedAt: '2025-01-15T10:00:00Z',
+};
 
 describe('Circuit Breaker API Routes', () => {
   let mockRequest: Request;
@@ -51,37 +151,14 @@ describe('Circuit Breaker API Routes', () => {
   describe('GET /api/circuits', () => {
     it('should return all circuits successfully', async () => {
       const mockCircuits: CircuitBreakerState[] = [
+        MOCK_MASTER_CIRCUIT,
         {
-          id: 1,
-          circuitId: 'MASTER',
-          circuitType: 'manual',
-          state: 'on',
-          defaultState: 'on',
-          description: 'Global kill switch',
-          failureCount: 0,
-          successCount: 0,
-          failureThreshold: 5,
-          lastFailureAt: null,
-          lastSuccessAt: null,
-          stateChangedAt: '2025-01-15T10:00:00Z',
-          createdAt: '2025-01-01T00:00:00Z',
-          updatedAt: '2025-01-15T10:00:00Z',
-        },
-        {
+          ...MOCK_MASTER_CIRCUIT,
           id: 2,
           circuitId: 'SLEEP_MODE',
-          circuitType: 'manual',
           state: 'off',
           defaultState: 'off',
           description: 'Quiet hours mode',
-          failureCount: 0,
-          successCount: 0,
-          failureThreshold: 5,
-          lastFailureAt: null,
-          lastSuccessAt: null,
-          stateChangedAt: '2025-01-15T10:00:00Z',
-          createdAt: '2025-01-01T00:00:00Z',
-          updatedAt: '2025-01-15T10:00:00Z',
         },
       ];
 
@@ -142,26 +219,9 @@ describe('Circuit Breaker API Routes', () => {
 
   describe('GET /api/circuits/:id', () => {
     it('should return a single circuit by ID', async () => {
-      const mockCircuit: CircuitBreakerState = {
-        id: 1,
-        circuitId: 'MASTER',
-        circuitType: 'manual',
-        state: 'on',
-        defaultState: 'on',
-        description: 'Global kill switch',
-        failureCount: 0,
-        successCount: 0,
-        failureThreshold: 5,
-        lastFailureAt: null,
-        lastSuccessAt: null,
-        stateChangedAt: '2025-01-15T10:00:00Z',
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-15T10:00:00Z',
-      };
-
       mockRequest.params = { id: 'MASTER' };
 
-      const mockGetCircuitStatus = jest.fn().mockResolvedValue(mockCircuit);
+      const mockGetCircuitStatus = jest.fn().mockResolvedValue(MOCK_MASTER_CIRCUIT);
       const mockService = {
         getCircuitStatus: mockGetCircuitStatus,
       } as unknown as CircuitBreakerService;
@@ -171,7 +231,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockGetCircuitStatus).toHaveBeenCalledWith('MASTER');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: mockCircuit,
+        data: MOCK_MASTER_CIRCUIT,
       });
       expect(statusSpy).not.toHaveBeenCalled();
     });
@@ -226,27 +286,10 @@ describe('Circuit Breaker API Routes', () => {
 
   describe('POST /api/circuits/:id/on', () => {
     it('should enable a circuit successfully', async () => {
-      const mockCircuit: CircuitBreakerState = {
-        id: 1,
-        circuitId: 'MASTER',
-        circuitType: 'manual',
-        state: 'on',
-        defaultState: 'on',
-        description: 'Global kill switch',
-        failureCount: 0,
-        successCount: 0,
-        failureThreshold: 5,
-        lastFailureAt: null,
-        lastSuccessAt: null,
-        stateChangedAt: '2025-01-15T10:00:00Z',
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-15T10:00:00Z',
-      };
-
       mockRequest.params = { id: 'MASTER' };
 
       const mockSetCircuitState = jest.fn().mockResolvedValue(undefined);
-      const mockGetCircuitStatus = jest.fn().mockResolvedValue(mockCircuit);
+      const mockGetCircuitStatus = jest.fn().mockResolvedValue(MOCK_MASTER_CIRCUIT);
       const mockService = {
         setCircuitState: mockSetCircuitState,
         getCircuitStatus: mockGetCircuitStatus,
@@ -258,7 +301,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockGetCircuitStatus).toHaveBeenCalledWith('MASTER');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: mockCircuit,
+        data: MOCK_MASTER_CIRCUIT,
         message: 'Circuit MASTER enabled',
       });
       expect(statusSpy).not.toHaveBeenCalled();
@@ -316,27 +359,11 @@ describe('Circuit Breaker API Routes', () => {
 
   describe('POST /api/circuits/:id/off', () => {
     it('should disable a circuit successfully', async () => {
-      const mockCircuit: CircuitBreakerState = {
-        id: 1,
-        circuitId: 'MASTER',
-        circuitType: 'manual',
-        state: 'off',
-        defaultState: 'on',
-        description: 'Global kill switch',
-        failureCount: 0,
-        successCount: 0,
-        failureThreshold: 5,
-        lastFailureAt: null,
-        lastSuccessAt: null,
-        stateChangedAt: '2025-01-15T10:00:00Z',
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-15T10:00:00Z',
-      };
-
+      const disabledCircuit = { ...MOCK_MASTER_CIRCUIT, state: 'off' };
       mockRequest.params = { id: 'MASTER' };
 
       const mockSetCircuitState = jest.fn().mockResolvedValue(undefined);
-      const mockGetCircuitStatus = jest.fn().mockResolvedValue(mockCircuit);
+      const mockGetCircuitStatus = jest.fn().mockResolvedValue(disabledCircuit);
       const mockService = {
         setCircuitState: mockSetCircuitState,
         getCircuitStatus: mockGetCircuitStatus,
@@ -348,7 +375,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockGetCircuitStatus).toHaveBeenCalledWith('MASTER');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: mockCircuit,
+        data: disabledCircuit,
         message: 'Circuit MASTER disabled',
       });
       expect(statusSpy).not.toHaveBeenCalled();
@@ -406,30 +433,13 @@ describe('Circuit Breaker API Routes', () => {
 
   describe('POST /api/circuits/:id/reset', () => {
     it('should reset a provider circuit successfully', async () => {
-      const mockCircuit: CircuitBreakerState = {
-        id: 3,
-        circuitId: 'PROVIDER_OPENAI',
-        circuitType: 'provider',
-        state: 'on',
-        defaultState: 'on',
-        description: 'OpenAI provider circuit',
-        failureCount: 0,
-        successCount: 0,
-        failureThreshold: 5,
-        lastFailureAt: null,
-        lastSuccessAt: null,
-        stateChangedAt: '2025-01-15T10:00:00Z',
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-15T10:00:00Z',
-      };
-
       mockRequest.params = { id: 'PROVIDER_OPENAI' };
 
       const mockResetProviderCircuit = jest.fn().mockResolvedValue(undefined);
       const mockGetCircuitStatus = jest
         .fn()
-        .mockResolvedValueOnce({ ...mockCircuit, circuitType: 'provider' })
-        .mockResolvedValueOnce(mockCircuit);
+        .mockResolvedValueOnce({ ...MOCK_PROVIDER_CIRCUIT, circuitType: 'provider' })
+        .mockResolvedValueOnce(MOCK_PROVIDER_CIRCUIT);
       const mockService = {
         resetProviderCircuit: mockResetProviderCircuit,
         getCircuitStatus: mockGetCircuitStatus,
@@ -440,33 +450,16 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockResetProviderCircuit).toHaveBeenCalledWith('PROVIDER_OPENAI');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: mockCircuit,
+        data: MOCK_PROVIDER_CIRCUIT,
         message: 'Circuit PROVIDER_OPENAI reset',
       });
       expect(statusSpy).not.toHaveBeenCalled();
     });
 
     it('should return 400 when attempting to reset a manual circuit', async () => {
-      const mockCircuit: CircuitBreakerState = {
-        id: 1,
-        circuitId: 'MASTER',
-        circuitType: 'manual',
-        state: 'on',
-        defaultState: 'on',
-        description: 'Global kill switch',
-        failureCount: 0,
-        successCount: 0,
-        failureThreshold: 5,
-        lastFailureAt: null,
-        lastSuccessAt: null,
-        stateChangedAt: '2025-01-15T10:00:00Z',
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-15T10:00:00Z',
-      };
-
       mockRequest.params = { id: 'MASTER' };
 
-      const mockGetCircuitStatus = jest.fn().mockResolvedValue(mockCircuit);
+      const mockGetCircuitStatus = jest.fn().mockResolvedValue(MOCK_MASTER_CIRCUIT);
       const mockService = {
         resetProviderCircuit: jest.fn(),
         getCircuitStatus: mockGetCircuitStatus,
@@ -534,41 +527,170 @@ describe('Circuit Breaker API Routes', () => {
     });
   });
 
-  describe('Authentication', () => {
-    it('should add requireAuth middleware to router', () => {
-      const mockService = {
-        getAllCircuits: jest.fn(),
-        getCircuitStatus: jest.fn(),
-        setCircuitState: jest.fn(),
-        resetProviderCircuit: jest.fn(),
-      } as unknown as CircuitBreakerService;
+  describe('Database-backed Authentication', () => {
+    let app: Express;
+    let mockService: CircuitBreakerService;
 
-      const router = createCircuitRouter({ circuitBreakerService: mockService });
-
-      // Get the router stack to check for middleware
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const routerStack = (router as any).stack as Array<{
-        name?: string;
-        handle?: { name: string };
-        route?: { path: string };
-      }>;
-
-      // The first item should be the requireAuth middleware (no route property)
-      const middlewareLayer = routerStack.find(layer => !layer.route);
-      expect(middlewareLayer).toBeDefined();
-      // Middleware function is named 'requireAuth'
-      expect(middlewareLayer?.handle?.name).toBe('requireAuth');
+    beforeEach(() => {
+      mockService = createMockCircuitService({
+        getAllCircuits: jest.fn().mockResolvedValue([MOCK_MASTER_CIRCUIT]),
+        getCircuitStatus: jest.fn().mockResolvedValue(MOCK_MASTER_CIRCUIT),
+        setCircuitState: jest.fn().mockResolvedValue(undefined),
+      });
     });
 
-    it('should protect all routes with authentication', () => {
-      const mockService = {
-        getAllCircuits: jest.fn(),
-        getCircuitStatus: jest.fn(),
-        setCircuitState: jest.fn(),
-        resetProviderCircuit: jest.fn(),
-      } as unknown as CircuitBreakerService;
+    it('should return 401 when no session cookie is provided', async () => {
+      const { mockSessionRepo, mockUserRepo } = createMockRepos();
 
-      const router = createCircuitRouter({ circuitBreakerService: mockService });
+      app = express();
+      app.use(cookieParser());
+      app.use(express.json());
+      app.use(
+        '/api/circuits',
+        createCircuitRouter({
+          circuitBreakerService: mockService,
+          sessionRepository: mockSessionRepo,
+          userRepository: mockUserRepo,
+        })
+      );
+
+      const response = await request(app).get('/api/circuits');
+
+      expect(response.status).toBe(401);
+      expect(response.body.error).toBe('Authentication required');
+    });
+
+    it('should return 401 when session cookie has invalid token', async () => {
+      const { mockSessionRepo, mockUserRepo } = createMockRepos();
+
+      app = express();
+      app.use(cookieParser());
+      app.use(express.json());
+      app.use(
+        '/api/circuits',
+        createCircuitRouter({
+          circuitBreakerService: mockService,
+          sessionRepository: mockSessionRepo,
+          userRepository: mockUserRepo,
+        })
+      );
+
+      const response = await request(app)
+        .get('/api/circuits')
+        .set('Cookie', `${SESSION_COOKIE_NAME}=invalid-token`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.error).toBe('Invalid or expired session');
+    });
+
+    it('should allow authenticated requests with valid session cookie', async () => {
+      const { mockSessionRepo, mockUserRepo } = createMockRepos({
+        validToken: 'my-valid-token',
+      });
+
+      app = express();
+      app.use(cookieParser());
+      app.use(express.json());
+      app.use(
+        '/api/circuits',
+        createCircuitRouter({
+          circuitBreakerService: mockService,
+          sessionRepository: mockSessionRepo,
+          userRepository: mockUserRepo,
+        })
+      );
+
+      const response = await request(app)
+        .get('/api/circuits')
+        .set('Cookie', `${SESSION_COOKIE_NAME}=my-valid-token`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toEqual([MOCK_MASTER_CIRCUIT]);
+    });
+
+    it('should protect POST routes with database-backed auth', async () => {
+      const { mockSessionRepo, mockUserRepo } = createMockRepos();
+
+      app = express();
+      app.use(cookieParser());
+      app.use(express.json());
+      app.use(
+        '/api/circuits',
+        createCircuitRouter({
+          circuitBreakerService: mockService,
+          sessionRepository: mockSessionRepo,
+          userRepository: mockUserRepo,
+        })
+      );
+
+      // POST without auth should be rejected
+      const response = await request(app).post('/api/circuits/MASTER/on');
+      expect(response.status).toBe(401);
+    });
+
+    it('should allow authenticated POST requests', async () => {
+      const { mockSessionRepo, mockUserRepo } = createMockRepos({
+        validToken: 'admin-token',
+      });
+
+      app = express();
+      app.use(cookieParser());
+      app.use(express.json());
+      app.use(
+        '/api/circuits',
+        createCircuitRouter({
+          circuitBreakerService: mockService,
+          sessionRepository: mockSessionRepo,
+          userRepository: mockUserRepo,
+        })
+      );
+
+      const response = await request(app)
+        .post('/api/circuits/MASTER/on')
+        .set('Cookie', `${SESSION_COOKIE_NAME}=admin-token`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+    });
+  });
+
+  describe('createCircuitRouter', () => {
+    it('should create router with injected service and auth repositories', () => {
+      const { mockSessionRepo, mockUserRepo } = createMockRepos();
+      const mockService = createMockCircuitService();
+
+      const router = createCircuitRouter({
+        circuitBreakerService: mockService,
+        sessionRepository: mockSessionRepo,
+        userRepository: mockUserRepo,
+      });
+
+      expect(router).toBeDefined();
+      expect(typeof router).toBe('function'); // Express Router is a function
+    });
+
+    it('should create router without service (graceful degradation)', () => {
+      const { mockSessionRepo, mockUserRepo } = createMockRepos();
+
+      const router = createCircuitRouter({
+        sessionRepository: mockSessionRepo,
+        userRepository: mockUserRepo,
+      });
+
+      expect(router).toBeDefined();
+      expect(typeof router).toBe('function');
+    });
+
+    it('should register expected routes', () => {
+      const { mockSessionRepo, mockUserRepo } = createMockRepos();
+      const mockService = createMockCircuitService();
+
+      const router = createCircuitRouter({
+        circuitBreakerService: mockService,
+        sessionRepository: mockSessionRepo,
+        userRepository: mockUserRepo,
+      });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const routerStack = (router as any).stack as Array<{
@@ -590,63 +712,22 @@ describe('Circuit Breaker API Routes', () => {
       // Should have at least 1 middleware (requireAuth)
       expect(middleware.length).toBeGreaterThanOrEqual(1);
     });
-  });
-
-  describe('createCircuitRouter', () => {
-    it('should create router with injected service', () => {
-      const mockService = {
-        getAllCircuits: jest.fn(),
-        getCircuitStatus: jest.fn(),
-        setCircuitState: jest.fn(),
-        resetProviderCircuit: jest.fn(),
-      } as unknown as CircuitBreakerService;
-
-      const router = createCircuitRouter({ circuitBreakerService: mockService });
-
-      expect(router).toBeDefined();
-      expect(typeof router).toBe('function'); // Express Router is a function
-    });
-
-    it('should create router without service (graceful degradation)', () => {
-      const router = createCircuitRouter({});
-
-      expect(router).toBeDefined();
-      expect(typeof router).toBe('function');
-    });
-
-    it('should create router with no dependencies argument', () => {
-      const router = createCircuitRouter();
-
-      expect(router).toBeDefined();
-      expect(typeof router).toBe('function');
-    });
 
     it('should wire GET / route to getAllCircuits handler', async () => {
-      const mockCircuits: CircuitBreakerState[] = [
-        {
-          id: 1,
-          circuitId: 'MASTER',
-          circuitType: 'manual',
-          state: 'on',
-          defaultState: 'on',
-          description: 'Global kill switch',
-          failureCount: 0,
-          successCount: 0,
-          failureThreshold: 5,
-          lastFailureAt: null,
-          lastSuccessAt: null,
-          stateChangedAt: '2025-01-15T10:00:00Z',
-          createdAt: '2025-01-01T00:00:00Z',
-          updatedAt: '2025-01-15T10:00:00Z',
-        },
-      ];
+      const mockCircuits: CircuitBreakerState[] = [MOCK_MASTER_CIRCUIT];
 
       const mockGetAllCircuits = jest.fn().mockResolvedValue(mockCircuits);
       const mockService = {
         getAllCircuits: mockGetAllCircuits,
       } as unknown as CircuitBreakerService;
 
-      const router = createCircuitRouter({ circuitBreakerService: mockService });
+      const { mockSessionRepo, mockUserRepo } = createMockRepos();
+
+      const router = createCircuitRouter({
+        circuitBreakerService: mockService,
+        sessionRepository: mockSessionRepo,
+        userRepository: mockUserRepo,
+      });
 
       // Simulate Express route execution
       const req = {
@@ -686,29 +767,18 @@ describe('Circuit Breaker API Routes', () => {
     });
 
     it('should wire GET /:id route to getCircuitById handler', async () => {
-      const mockCircuit: CircuitBreakerState = {
-        id: 1,
-        circuitId: 'MASTER',
-        circuitType: 'manual',
-        state: 'on',
-        defaultState: 'on',
-        description: 'Global kill switch',
-        failureCount: 0,
-        successCount: 0,
-        failureThreshold: 5,
-        lastFailureAt: null,
-        lastSuccessAt: null,
-        stateChangedAt: '2025-01-15T10:00:00Z',
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-15T10:00:00Z',
-      };
-
-      const mockGetCircuitStatus = jest.fn().mockResolvedValue(mockCircuit);
+      const mockGetCircuitStatus = jest.fn().mockResolvedValue(MOCK_MASTER_CIRCUIT);
       const mockService = {
         getCircuitStatus: mockGetCircuitStatus,
       } as unknown as CircuitBreakerService;
 
-      const router = createCircuitRouter({ circuitBreakerService: mockService });
+      const { mockSessionRepo, mockUserRepo } = createMockRepos();
+
+      const router = createCircuitRouter({
+        circuitBreakerService: mockService,
+        sessionRepository: mockSessionRepo,
+        userRepository: mockUserRepo,
+      });
 
       // Simulate Express route execution
       const req = {
@@ -743,36 +813,25 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockGetCircuitStatus).toHaveBeenCalledWith('MASTER');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: mockCircuit,
+        data: MOCK_MASTER_CIRCUIT,
       });
     });
 
     it('should wire POST /:id/on route to enableCircuit handler', async () => {
-      const mockCircuit: CircuitBreakerState = {
-        id: 1,
-        circuitId: 'MASTER',
-        circuitType: 'manual',
-        state: 'on',
-        defaultState: 'on',
-        description: 'Global kill switch',
-        failureCount: 0,
-        successCount: 0,
-        failureThreshold: 5,
-        lastFailureAt: null,
-        lastSuccessAt: null,
-        stateChangedAt: '2025-01-15T10:00:00Z',
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-15T10:00:00Z',
-      };
-
       const mockSetCircuitState = jest.fn().mockResolvedValue(undefined);
-      const mockGetCircuitStatus = jest.fn().mockResolvedValue(mockCircuit);
+      const mockGetCircuitStatus = jest.fn().mockResolvedValue(MOCK_MASTER_CIRCUIT);
       const mockService = {
         setCircuitState: mockSetCircuitState,
         getCircuitStatus: mockGetCircuitStatus,
       } as unknown as CircuitBreakerService;
 
-      const router = createCircuitRouter({ circuitBreakerService: mockService });
+      const { mockSessionRepo, mockUserRepo } = createMockRepos();
+
+      const router = createCircuitRouter({
+        circuitBreakerService: mockService,
+        sessionRepository: mockSessionRepo,
+        userRepository: mockUserRepo,
+      });
 
       // Simulate Express route execution
       const req = {
@@ -807,37 +866,27 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockSetCircuitState).toHaveBeenCalledWith('MASTER', 'on');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: mockCircuit,
+        data: MOCK_MASTER_CIRCUIT,
         message: 'Circuit MASTER enabled',
       });
     });
 
     it('should wire POST /:id/off route to disableCircuit handler', async () => {
-      const mockCircuit: CircuitBreakerState = {
-        id: 1,
-        circuitId: 'MASTER',
-        circuitType: 'manual',
-        state: 'off',
-        defaultState: 'on',
-        description: 'Global kill switch',
-        failureCount: 0,
-        successCount: 0,
-        failureThreshold: 5,
-        lastFailureAt: null,
-        lastSuccessAt: null,
-        stateChangedAt: '2025-01-15T10:00:00Z',
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-15T10:00:00Z',
-      };
-
+      const disabledCircuit = { ...MOCK_MASTER_CIRCUIT, state: 'off' };
       const mockSetCircuitState = jest.fn().mockResolvedValue(undefined);
-      const mockGetCircuitStatus = jest.fn().mockResolvedValue(mockCircuit);
+      const mockGetCircuitStatus = jest.fn().mockResolvedValue(disabledCircuit);
       const mockService = {
         setCircuitState: mockSetCircuitState,
         getCircuitStatus: mockGetCircuitStatus,
       } as unknown as CircuitBreakerService;
 
-      const router = createCircuitRouter({ circuitBreakerService: mockService });
+      const { mockSessionRepo, mockUserRepo } = createMockRepos();
+
+      const router = createCircuitRouter({
+        circuitBreakerService: mockService,
+        sessionRepository: mockSessionRepo,
+        userRepository: mockUserRepo,
+      });
 
       // Simulate Express route execution
       const req = {
@@ -872,40 +921,29 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockSetCircuitState).toHaveBeenCalledWith('MASTER', 'off');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: mockCircuit,
+        data: disabledCircuit,
         message: 'Circuit MASTER disabled',
       });
     });
 
     it('should wire POST /:id/reset route to resetCircuit handler', async () => {
-      const mockCircuit: CircuitBreakerState = {
-        id: 3,
-        circuitId: 'PROVIDER_OPENAI',
-        circuitType: 'provider',
-        state: 'on',
-        defaultState: 'on',
-        description: 'OpenAI provider circuit',
-        failureCount: 0,
-        successCount: 0,
-        failureThreshold: 5,
-        lastFailureAt: null,
-        lastSuccessAt: null,
-        stateChangedAt: '2025-01-15T10:00:00Z',
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-15T10:00:00Z',
-      };
-
       const mockResetProviderCircuit = jest.fn().mockResolvedValue(undefined);
       const mockGetCircuitStatus = jest
         .fn()
-        .mockResolvedValueOnce({ ...mockCircuit, circuitType: 'provider' })
-        .mockResolvedValueOnce(mockCircuit);
+        .mockResolvedValueOnce({ ...MOCK_PROVIDER_CIRCUIT, circuitType: 'provider' })
+        .mockResolvedValueOnce(MOCK_PROVIDER_CIRCUIT);
       const mockService = {
         resetProviderCircuit: mockResetProviderCircuit,
         getCircuitStatus: mockGetCircuitStatus,
       } as unknown as CircuitBreakerService;
 
-      const router = createCircuitRouter({ circuitBreakerService: mockService });
+      const { mockSessionRepo, mockUserRepo } = createMockRepos();
+
+      const router = createCircuitRouter({
+        circuitBreakerService: mockService,
+        sessionRepository: mockSessionRepo,
+        userRepository: mockUserRepo,
+      });
 
       // Simulate Express route execution
       const req = {
@@ -940,7 +978,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockResetProviderCircuit).toHaveBeenCalledWith('PROVIDER_OPENAI');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: mockCircuit,
+        data: MOCK_PROVIDER_CIRCUIT,
         message: 'Circuit PROVIDER_OPENAI reset',
       });
     });
