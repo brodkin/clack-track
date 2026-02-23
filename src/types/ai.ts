@@ -93,6 +93,8 @@ export interface AIGenerationRequest {
   tools?: ToolDefinition[];
   /** Optional tool results from previous tool calls (for multi-turn tool use) */
   toolResults?: ToolResult[];
+  /** Optional tool choice mode: 'auto' (default), 'required' (must call a tool), 'none' (no tools) */
+  toolChoice?: 'auto' | 'required' | 'none';
 }
 
 export interface AIGenerationResponse {

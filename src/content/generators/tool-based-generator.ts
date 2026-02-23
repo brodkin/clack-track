@@ -178,8 +178,14 @@ export class ToolBasedGenerator implements ContentGenerator {
     });
 
     // Use the system and user prompts from base generator metadata if available
-    const systemPrompt = (baseResult.metadata?.systemPrompt as string) || '';
+    const baseSystemPrompt = (baseResult.metadata?.systemPrompt as string) || '';
     const userPrompt = (baseResult.metadata?.userPrompt as string) || '';
+
+    // Augment system prompt with tool-use instruction to override any conflicting
+    // "text only" OUTPUT FORMAT guidance. The base system prompt may instruct the LLM
+    // to respond with plain text only, but tool-based generation requires the LLM to
+    // call submit_content. This override is appended last so it takes precedence.
+    const systemPrompt = this.augmentSystemPromptForToolUse(baseSystemPrompt);
 
     // Start the tool-based generation loop
     let attempts = 0;
@@ -191,10 +197,13 @@ export class ToolBasedGenerator implements ContentGenerator {
       attempts++;
 
       // Build the request with tools
+      // toolChoice: 'required' forces the model to call submit_content
+      // This is the primary enforcement mechanism; prompt augmentation is the backup
       const request: AIGenerationRequest = {
         systemPrompt,
         userPrompt,
         tools: [submitContentToolDefinition],
+        toolChoice: 'required',
         ...(conversationHistory.length > 0 && { toolResults: conversationHistory }),
       };
 
@@ -302,6 +311,32 @@ export class ToolBasedGenerator implements ContentGenerator {
       attempts,
       baseResult.metadata
     );
+  }
+
+  /**
+   * Augments the system prompt with a tool-use instruction that overrides any
+   * conflicting "text only" OUTPUT FORMAT guidance from the base prompt.
+   *
+   * The base system prompt (major-update-base.txt) instructs the LLM to respond
+   * with plain text only. When tool-based generation is active, the LLM must
+   * instead call the submit_content tool. This method appends a clear override
+   * so the LLM receives unambiguous direction.
+   *
+   * @param basePrompt - The original system prompt from the base generator
+   * @returns The augmented system prompt with tool-use instruction appended
+   */
+  private augmentSystemPromptForToolUse(basePrompt: string): string {
+    const toolUseInstruction =
+      '\n\n---\n\n' +
+      'IMPORTANT - OUTPUT FORMAT OVERRIDE:\n' +
+      'You MUST use the submit_content tool to submit your content. ' +
+      'Do NOT respond with plain text. Instead, call the submit_content tool ' +
+      'with your generated content as the "content" parameter. ' +
+      'The tool will validate your content and provide feedback if corrections are needed. ' +
+      'Any previous instructions about responding with "only display text" or "plain text" ' +
+      'are superseded by this requirement to use the submit_content tool.';
+
+    return basePrompt + toolUseInstruction;
   }
 
   /**
