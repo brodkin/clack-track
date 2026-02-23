@@ -101,6 +101,7 @@ export class AnthropicClient implements AIProvider {
         max_tokens: number;
         temperature?: number;
         tools?: AnthropicTool[];
+        tool_choice?: { type: 'auto' | 'any' };
       } = {
         model: this.model,
         system: request.systemPrompt,
@@ -112,6 +113,17 @@ export class AnthropicClient implements AIProvider {
       // Add tools if provided and not empty
       if (request.tools && request.tools.length > 0) {
         apiParams.tools = this.convertTools(request.tools);
+
+        // Map toolChoice to Anthropic's tool_choice format
+        // Anthropic uses { type: 'auto' } for auto, { type: 'any' } for required
+        // 'none' is handled by not sending tools, so we skip it here
+        if (request.toolChoice && request.toolChoice !== 'none') {
+          const toolChoiceMap: Record<string, { type: 'auto' | 'any' }> = {
+            auto: { type: 'auto' },
+            required: { type: 'any' },
+          };
+          apiParams.tool_choice = toolChoiceMap[request.toolChoice];
+        }
       }
 
       const response = await this.client.messages.create(apiParams);

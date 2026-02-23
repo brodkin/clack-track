@@ -401,6 +401,82 @@ describe('AnthropicClient', () => {
       });
     });
 
+    describe('toolChoice pass-through', () => {
+      it('should pass tool_choice { type: "any" } when toolChoice is "required"', async () => {
+        mockAnthropic.messages.create.mockResolvedValue(
+          anthropicFixtures.toolCalling.singleToolUse as never
+        );
+
+        const request: AIGenerationRequest = {
+          systemPrompt: 'You are a helpful assistant.',
+          userPrompt: 'What is the weather?',
+          tools: [weatherTool],
+          toolChoice: 'required',
+        };
+
+        await client.generate(request);
+
+        expect(mockAnthropic.messages.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tool_choice: { type: 'any' },
+          })
+        );
+      });
+
+      it('should pass tool_choice { type: "auto" } when toolChoice is "auto"', async () => {
+        mockAnthropic.messages.create.mockResolvedValue(
+          anthropicFixtures.toolCalling.singleToolUse as never
+        );
+
+        const request: AIGenerationRequest = {
+          systemPrompt: 'You are a helpful assistant.',
+          userPrompt: 'What is the weather?',
+          tools: [weatherTool],
+          toolChoice: 'auto',
+        };
+
+        await client.generate(request);
+
+        expect(mockAnthropic.messages.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tool_choice: { type: 'auto' },
+          })
+        );
+      });
+
+      it('should not include tool_choice when toolChoice is undefined', async () => {
+        mockAnthropic.messages.create.mockResolvedValue(
+          anthropicFixtures.toolCalling.singleToolUse as never
+        );
+
+        const request: AIGenerationRequest = {
+          systemPrompt: 'You are a helpful assistant.',
+          userPrompt: 'What is the weather?',
+          tools: [weatherTool],
+        };
+
+        await client.generate(request);
+
+        const callArgs = mockAnthropic.messages.create.mock.calls[0][0];
+        expect(callArgs).not.toHaveProperty('tool_choice');
+      });
+
+      it('should not include tool_choice when tools are not provided', async () => {
+        mockAnthropic.messages.create.mockResolvedValue(anthropicFixtures.message.success as never);
+
+        const request: AIGenerationRequest = {
+          systemPrompt: 'You are a helpful assistant.',
+          userPrompt: 'Generate a quote.',
+          toolChoice: 'required',
+        };
+
+        await client.generate(request);
+
+        const callArgs = mockAnthropic.messages.create.mock.calls[0][0];
+        expect(callArgs).not.toHaveProperty('tool_choice');
+      });
+    });
+
     describe('parsing tool_use content blocks', () => {
       it('should parse single tool_use content block from response', async () => {
         const request: AIGenerationRequest = {

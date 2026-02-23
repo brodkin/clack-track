@@ -45,6 +45,11 @@ export class OpenAIClient implements AIProvider {
       // Add tools if provided
       if (request.tools && request.tools.length > 0) {
         apiParams.tools = this.convertTools(request.tools);
+
+        // Pass tool_choice if specified (OpenAI accepts 'auto' | 'required' | 'none' directly)
+        if (request.toolChoice) {
+          apiParams.tool_choice = request.toolChoice;
+        }
       }
 
       const response = await this.client.chat.completions.create(apiParams);

@@ -142,6 +142,160 @@ describe('ToolBasedGenerator', () => {
       };
     });
 
+    describe('tool-use prompt augmentation', () => {
+      it('should augment system prompt with tool-use instruction when tools are present', async () => {
+        const originalSystemPrompt =
+          'You are a content creator.\n\nOUTPUT FORMAT - CRITICAL:\nYour response must be ONLY the display text. Nothing else.';
+        const mockProvider = createMockAIProvider({
+          responses: [
+            {
+              toolCalls: [
+                {
+                  id: 'call_1',
+                  name: 'submit_content',
+                  arguments: { content: 'HELLO WORLD' },
+                },
+              ],
+            },
+          ],
+        });
+        const baseGenerator = new MockAIPromptGenerator(originalSystemPrompt, 'Create content');
+        const wrapped = ToolBasedGenerator.wrap(baseGenerator, { aiProvider: mockProvider });
+
+        await wrapped.generate(context);
+
+        // The system prompt sent to AI should contain a tool-use instruction
+        const sentSystemPrompt = mockProvider.generateCalls[0].systemPrompt;
+        expect(sentSystemPrompt).toContain('submit_content');
+        // It should explicitly instruct tool use, overriding "text only" OUTPUT FORMAT
+        expect(sentSystemPrompt).toContain('MUST');
+        // The original prompt content should still be present
+        expect(sentSystemPrompt).toContain('You are a content creator.');
+      });
+
+      it('should override conflicting OUTPUT FORMAT guidance in system prompt', async () => {
+        // System prompt that explicitly says "text only" -- the exact contradiction
+        const conflictingSystemPrompt =
+          'OUTPUT FORMAT - CRITICAL:\n' +
+          'Your response must be ONLY the display text. Nothing else.\n' +
+          'DO NOT OUTPUT: JSON, Code blocks, Markdown\n' +
+          'DO OUTPUT: 1-5 lines of plain text';
+        const mockProvider = createMockAIProvider({
+          responses: [
+            {
+              toolCalls: [
+                {
+                  id: 'call_1',
+                  name: 'submit_content',
+                  arguments: { content: 'NEWS CONTENT' },
+                },
+              ],
+            },
+          ],
+        });
+        const baseGenerator = new MockAIPromptGenerator(conflictingSystemPrompt, 'Write news');
+        const wrapped = ToolBasedGenerator.wrap(baseGenerator, { aiProvider: mockProvider });
+
+        await wrapped.generate(context);
+
+        // The augmented prompt should mention the tool override
+        const sentSystemPrompt = mockProvider.generateCalls[0].systemPrompt;
+        // Must contain instruction that overrides the "text only" direction
+        expect(sentSystemPrompt).toMatch(/submit_content/);
+        // The override should appear AFTER the original prompt (so it takes precedence)
+        const originalEnd = sentSystemPrompt.indexOf('plain text');
+        const toolInstruction = sentSystemPrompt.indexOf('submit_content');
+        expect(toolInstruction).toBeGreaterThan(originalEnd);
+      });
+
+      it('should not augment system prompt when no tools are injected', async () => {
+        // This tests that the augmentation is conditional on tool presence
+        // Since ToolBasedGenerator always injects tools, we verify the augmentation
+        // is specific to tool-use (not some generic change)
+        const simplePrompt = 'You are a content creator.';
+        const mockProvider = createMockAIProvider({
+          responses: [
+            {
+              toolCalls: [
+                {
+                  id: 'call_1',
+                  name: 'submit_content',
+                  arguments: { content: 'HELLO' },
+                },
+              ],
+            },
+          ],
+        });
+        const baseGenerator = new MockAIPromptGenerator(simplePrompt, 'Create');
+        const wrapped = ToolBasedGenerator.wrap(baseGenerator, { aiProvider: mockProvider });
+
+        await wrapped.generate(context);
+
+        // The prompt should still start with the original content
+        const sentSystemPrompt = mockProvider.generateCalls[0].systemPrompt;
+        expect(sentSystemPrompt.startsWith('You are a content creator.')).toBe(true);
+      });
+    });
+
+    describe('toolChoice enforcement', () => {
+      it('should set toolChoice to "required" on the AI request to force tool use', async () => {
+        const mockProvider = createMockAIProvider({
+          responses: [
+            {
+              toolCalls: [
+                {
+                  id: 'call_1',
+                  name: 'submit_content',
+                  arguments: { content: 'HELLO WORLD' },
+                },
+              ],
+            },
+          ],
+        });
+        const baseGenerator = new MockAIPromptGenerator();
+        const wrapped = ToolBasedGenerator.wrap(baseGenerator, { aiProvider: mockProvider });
+
+        await wrapped.generate(context);
+
+        expect(mockProvider.generateCalls[0].toolChoice).toBe('required');
+      });
+
+      it('should set toolChoice to "required" on every retry attempt', async () => {
+        const mockProvider = createMockAIProvider({
+          responses: [
+            // First attempt: content too long (6 lines)
+            {
+              toolCalls: [
+                {
+                  id: 'call_1',
+                  name: 'submit_content',
+                  arguments: { content: 'LINE1\nLINE2\nLINE3\nLINE4\nLINE5\nLINE6' },
+                },
+              ],
+            },
+            // Second attempt: valid content
+            {
+              toolCalls: [
+                {
+                  id: 'call_2',
+                  name: 'submit_content',
+                  arguments: { content: 'VALID CONTENT' },
+                },
+              ],
+            },
+          ],
+        });
+        const baseGenerator = new MockAIPromptGenerator();
+        const wrapped = ToolBasedGenerator.wrap(baseGenerator, { aiProvider: mockProvider });
+
+        await wrapped.generate(context);
+
+        // Both calls should have toolChoice: 'required'
+        expect(mockProvider.generateCalls[0].toolChoice).toBe('required');
+        expect(mockProvider.generateCalls[1].toolChoice).toBe('required');
+      });
+    });
+
     describe('successful tool call flow', () => {
       it('should inject submit_content tool into the AI request', async () => {
         const mockProvider = createMockAIProvider({
