@@ -178,13 +178,19 @@ export class WebServer {
     });
     this.app.use('/api/auth', authRouter);
 
-    // Account management routes
-    const accountRouter = createAccountRouter({
-      sessionRepository: this.dependencies.sessionRepository,
-      userRepository: this.dependencies.userRepository,
-      credentialRepository: this.dependencies.credentialRepository,
-    });
-    this.app.use('/api/account', accountRouter);
+    // Account management routes (conditional - only if all auth dependencies available)
+    if (
+      this.dependencies.sessionRepository &&
+      this.dependencies.userRepository &&
+      this.dependencies.credentialRepository
+    ) {
+      const accountRouter = createAccountRouter({
+        sessionRepository: this.dependencies.sessionRepository,
+        userRepository: this.dependencies.userRepository,
+        credentialRepository: this.dependencies.credentialRepository,
+      });
+      this.app.use('/api/account', accountRouter);
+    }
 
     // Push notification routes
     this.app.use('/api/push', pushRouter);
