@@ -918,8 +918,9 @@ describe('BaseNewsGenerator', () => {
       expect(findUnresolvedVariables(resolved)).toEqual([]);
     });
 
-    it('should preserve the "This just in..." prefix requirement', () => {
-      expect(promptContent).toContain('This just in');
+    it('should require the red tile emoji prefix for news indicator', () => {
+      expect(promptContent).toContain('🟥');
+      expect(promptContent).not.toContain('This just in');
     });
 
     it('should resolve all template variables with headline and snippet', () => {
@@ -953,7 +954,7 @@ describe('BaseNewsGenerator', () => {
 
       expect(resolved).toContain('Tech Giant Launches Product');
       expect(resolved).toContain('revolutionary device');
-      expect(resolved).toContain('This just in');
+      expect(resolved).toContain('🟥');
       expect(findUnresolvedVariables(resolved)).toEqual([]);
     });
   });

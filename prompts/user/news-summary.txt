@@ -1,6 +1,6 @@
 Pretend you are a late night comic. Give your humorous take on the following news headline.
 
-Your response must begin with "This just in..."
+Your response must begin with 🟥 (this displays as a red tile on the board to signal news). Follow it with a space, then your content on the same line. Do NOT write "this just in" or any other text prefix.
 
 Headline: {{headlines}}
 {{snippet}}
