@@ -4,8 +4,21 @@ const request = require('supertest');
 import { Express } from 'express';
 import { WebServer } from '@/web/server';
 import { getKnexInstance, closeKnexInstance, resetKnexInstance, type Knex } from '@/storage/knex';
-import { ContentModel, VoteModel, LogModel } from '@/storage/models/index';
-import { ContentRepository, VoteRepository } from '@/storage/repositories/index';
+import {
+  ContentModel,
+  VoteModel,
+  LogModel,
+  SessionModel,
+  UserModel,
+  CredentialModel,
+} from '@/storage/models/index';
+import {
+  ContentRepository,
+  VoteRepository,
+  SessionRepository,
+  UserRepository,
+  CredentialRepository,
+} from '@/storage/repositories/index';
 import type { WebDependencies } from '@/web/types';
 
 describe('WebServer Database Integration Tests', () => {
@@ -13,6 +26,9 @@ describe('WebServer Database Integration Tests', () => {
   let knex: Knex;
   let contentRepository: ContentRepository;
   let voteRepository: VoteRepository;
+  let sessionRepository: SessionRepository;
+  let userRepository: UserRepository;
+  let credentialRepository: CredentialRepository;
   let logModel: LogModel;
   let app: Express;
 
@@ -80,20 +96,76 @@ describe('WebServer Database Integration Tests', () => {
       });
     }
 
+    // Create users table
+    const usersTableExists = await knex.schema.hasTable('users');
+    if (!usersTableExists) {
+      await knex.schema.createTable('users', table => {
+        table.increments('id').primary();
+        table.string('email', 255).notNullable().unique();
+        table.string('name', 255).notNullable();
+        table.timestamp('created_at').defaultTo(knex.fn.now());
+        table.timestamp('updated_at').defaultTo(knex.fn.now());
+      });
+    }
+
+    // Create sessions table
+    const sessionsTableExists = await knex.schema.hasTable('sessions');
+    if (!sessionsTableExists) {
+      await knex.schema.createTable('sessions', table => {
+        table.increments('id').primary();
+        table.string('token', 255).notNullable().unique();
+        table.integer('user_id').unsigned().notNullable();
+        table.foreign('user_id').references('id').inTable('users').onDelete('CASCADE');
+        table.dateTime('expires_at').notNullable();
+        table.timestamp('created_at').defaultTo(knex.fn.now());
+        table.timestamp('last_accessed_at').defaultTo(knex.fn.now());
+        table.index('token', 'idx_sessions_token');
+        table.index('user_id', 'idx_sessions_user_id');
+        table.index('expires_at', 'idx_sessions_expires_at');
+      });
+    }
+
+    // Create credentials table (WebAuthn)
+    const credentialsTableExists = await knex.schema.hasTable('credentials');
+    if (!credentialsTableExists) {
+      await knex.schema.createTable('credentials', table => {
+        table.increments('id').primary();
+        table.integer('user_id').unsigned().notNullable();
+        table.foreign('user_id').references('id').inTable('users').onDelete('CASCADE');
+        table.string('credential_id', 255).notNullable().unique();
+        table.text('public_key').notNullable();
+        table.integer('counter').notNullable().defaultTo(0);
+        table.string('transports', 255).nullable();
+        table.string('name', 255).notNullable();
+        table.timestamp('created_at').defaultTo(knex.fn.now());
+        table.timestamp('updated_at').defaultTo(knex.fn.now());
+        table.index('user_id', 'idx_credentials_user_id');
+      });
+    }
+
     // Create all models
     const contentModel = new ContentModel(knex);
     const voteModel = new VoteModel(knex);
     logModel = new LogModel(knex);
+    const sessionModel = new SessionModel(knex);
+    const userModel = new UserModel(knex);
+    const credentialModel = new CredentialModel(knex);
 
     // Create repositories
     contentRepository = new ContentRepository(contentModel);
     voteRepository = new VoteRepository(voteModel);
+    sessionRepository = new SessionRepository(sessionModel);
+    userRepository = new UserRepository(userModel);
+    credentialRepository = new CredentialRepository(credentialModel);
 
     // Create dependencies object
     const dependencies: WebDependencies = {
       contentRepository,
       voteRepository,
       logModel,
+      sessionRepository,
+      userRepository,
+      credentialRepository,
     };
 
     // Create WebServer with dependencies

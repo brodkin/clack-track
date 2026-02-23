@@ -23,7 +23,21 @@ import request from 'supertest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import type { Express } from 'express';
 import { WebServer } from '@/web/server';
+import type { WebDependencies } from '@/web/types';
+
+// Create mock repositories for testing
+function createMockDependencies(): WebDependencies {
+  return {
+    contentRepository: {} as Record<string, unknown>,
+    voteRepository: {} as Record<string, unknown>,
+    sessionRepository: {} as Record<string, unknown>,
+    userRepository: {} as Record<string, unknown>,
+    credentialRepository: {} as Record<string, unknown>,
+    logModel: {} as Record<string, unknown>,
+  };
+}
 
 describe('WebServer', () => {
   let server: WebServer;
@@ -55,19 +69,25 @@ describe('WebServer', () => {
 
   describe('start', () => {
     it('should start server successfully and listen on configured port', async () => {
-      server = new WebServer({
-        port: 0, // Use random available port
-        host: '127.0.0.1',
-      });
+      server = new WebServer(
+        {
+          port: 0, // Use random available port
+          host: '127.0.0.1',
+        },
+        createMockDependencies()
+      );
 
       await expect(server.start()).resolves.not.toThrow();
     });
 
     it('should throw error if already started', async () => {
-      server = new WebServer({
-        port: 0,
-        host: '127.0.0.1',
-      });
+      server = new WebServer(
+        {
+          port: 0,
+          host: '127.0.0.1',
+        },
+        createMockDependencies()
+      );
 
       await server.start();
 
@@ -77,20 +97,26 @@ describe('WebServer', () => {
 
   describe('stop', () => {
     it('should gracefully shutdown the server', async () => {
-      server = new WebServer({
-        port: 0,
-        host: '127.0.0.1',
-      });
+      server = new WebServer(
+        {
+          port: 0,
+          host: '127.0.0.1',
+        },
+        createMockDependencies()
+      );
 
       await server.start();
       await expect(server.stop()).resolves.not.toThrow();
     });
 
     it('should do nothing if server not started', async () => {
-      server = new WebServer({
-        port: 0,
-        host: '127.0.0.1',
-      });
+      server = new WebServer(
+        {
+          port: 0,
+          host: '127.0.0.1',
+        },
+        createMockDependencies()
+      );
 
       await expect(server.stop()).resolves.not.toThrow();
     });
@@ -98,15 +124,18 @@ describe('WebServer', () => {
 
   describe('middleware configuration', () => {
     it('should apply security headers via helmet', async () => {
-      server = new WebServer({
-        port: 0,
-        host: '127.0.0.1',
-      });
+      server = new WebServer(
+        {
+          port: 0,
+          host: '127.0.0.1',
+        },
+        createMockDependencies()
+      );
 
       await server.start();
 
       // Access internal app for supertest (test-only pattern)
-      const app = (server as unknown as { app: Express.Application }).app;
+      const app = (server as unknown as { app: Express }).app;
       const response = await request(app).get('/api/nonexistent');
 
       // Helmet adds security headers
@@ -118,15 +147,18 @@ describe('WebServer', () => {
       let csp: string;
 
       beforeEach(async () => {
-        server = new WebServer({
-          port: 0,
-          host: '127.0.0.1',
-        });
+        server = new WebServer(
+          {
+            port: 0,
+            host: '127.0.0.1',
+          },
+          createMockDependencies()
+        );
 
         await server.start();
 
         // Use a valid route to get Helmet CSP (404 responses override CSP with default-src 'none')
-        const app = (server as unknown as { app: Express.Application }).app;
+        const app = (server as unknown as { app: Express }).app;
         const response = await request(app).get('/api/auth/session');
         csp = response.headers['content-security-policy'];
       });
@@ -163,15 +195,18 @@ describe('WebServer', () => {
       });
 
       it('should set Cache-Control with max-age and immutable for static assets', async () => {
-        server = new WebServer({
-          port: 0,
-          host: '127.0.0.1',
-          staticPath: tmpDir,
-        });
+        server = new WebServer(
+          {
+            port: 0,
+            host: '127.0.0.1',
+            staticPath: tmpDir,
+          },
+          createMockDependencies()
+        );
 
         await server.start();
 
-        const app = (server as unknown as { app: Express.Application }).app;
+        const app = (server as unknown as { app: Express }).app;
         const response = await request(app).get('/assets/index-abc123.js');
 
         expect(response.status).toBe(200);
@@ -185,14 +220,17 @@ describe('WebServer', () => {
     });
 
     it('should apply compression middleware', async () => {
-      server = new WebServer({
-        port: 0,
-        host: '127.0.0.1',
-      });
+      server = new WebServer(
+        {
+          port: 0,
+          host: '127.0.0.1',
+        },
+        createMockDependencies()
+      );
 
       await server.start();
 
-      const app = (server as unknown as { app: Express.Application }).app;
+      const app = (server as unknown as { app: Express }).app;
       const response = await request(app).get('/api/nonexistent').set('Accept-Encoding', 'gzip');
 
       // Request was processed (compression is transparent but enabled)
@@ -200,15 +238,18 @@ describe('WebServer', () => {
     });
 
     it('should enable CORS when corsEnabled is true', async () => {
-      server = new WebServer({
-        port: 0,
-        host: '127.0.0.1',
-        corsEnabled: true,
-      });
+      server = new WebServer(
+        {
+          port: 0,
+          host: '127.0.0.1',
+          corsEnabled: true,
+        },
+        createMockDependencies()
+      );
 
       await server.start();
 
-      const app = (server as unknown as { app: Express.Application }).app;
+      const app = (server as unknown as { app: Express }).app;
       const response = await request(app)
         .options('/api/auth/session')
         .set('Origin', 'http://example.com')
@@ -219,15 +260,18 @@ describe('WebServer', () => {
     });
 
     it('should not include CORS headers when corsEnabled is false', async () => {
-      server = new WebServer({
-        port: 0,
-        host: '127.0.0.1',
-        corsEnabled: false,
-      });
+      server = new WebServer(
+        {
+          port: 0,
+          host: '127.0.0.1',
+          corsEnabled: false,
+        },
+        createMockDependencies()
+      );
 
       await server.start();
 
-      const app = (server as unknown as { app: Express.Application }).app;
+      const app = (server as unknown as { app: Express }).app;
       const response = await request(app)
         .get('/api/auth/session')
         .set('Origin', 'http://example.com');
@@ -237,14 +281,17 @@ describe('WebServer', () => {
     });
 
     it('should parse JSON request bodies', async () => {
-      server = new WebServer({
-        port: 0,
-        host: '127.0.0.1',
-      });
+      server = new WebServer(
+        {
+          port: 0,
+          host: '127.0.0.1',
+        },
+        createMockDependencies()
+      );
 
       await server.start();
 
-      const app = (server as unknown as { app: Express.Application }).app;
+      const app = (server as unknown as { app: Express }).app;
       const response = await request(app)
         .post('/api/auth/login/verify')
         .send({ test: 'data' })
@@ -257,14 +304,17 @@ describe('WebServer', () => {
 
   describe('API routes', () => {
     it('should respond to auth session endpoint', async () => {
-      server = new WebServer({
-        port: 0,
-        host: '127.0.0.1',
-      });
+      server = new WebServer(
+        {
+          port: 0,
+          host: '127.0.0.1',
+        },
+        createMockDependencies()
+      );
 
       await server.start();
 
-      const app = (server as unknown as { app: Express.Application }).app;
+      const app = (server as unknown as { app: Express }).app;
       const response = await request(app).get('/api/auth/session');
 
       expect(response.status).toBe(200);
@@ -272,14 +322,17 @@ describe('WebServer', () => {
     });
 
     it('should respond to push VAPID key endpoint', async () => {
-      server = new WebServer({
-        port: 0,
-        host: '127.0.0.1',
-      });
+      server = new WebServer(
+        {
+          port: 0,
+          host: '127.0.0.1',
+        },
+        createMockDependencies()
+      );
 
       await server.start();
 
-      const app = (server as unknown as { app: Express.Application }).app;
+      const app = (server as unknown as { app: Express }).app;
       const response = await request(app).get('/api/push/vapid-public-key');
 
       // Returns 500 when VAPID not configured (expected in test env)
@@ -297,7 +350,7 @@ describe('WebServer', () => {
 
       await server.start();
 
-      const app = (server as unknown as { app: Express.Application }).app;
+      const app = (server as unknown as { app: Express }).app;
       const response = await request(app).get('/api/content/latest');
 
       expect(response.status).toBe(503);
@@ -315,7 +368,7 @@ describe('WebServer', () => {
 
       await server.start();
 
-      const app = (server as unknown as { app: Express.Application }).app;
+      const app = (server as unknown as { app: Express }).app;
       const response = await request(app).get('/api/logs');
 
       expect(response.status).toBe(503);
@@ -333,7 +386,7 @@ describe('WebServer', () => {
 
       await server.start();
 
-      const app = (server as unknown as { app: Express.Application }).app;
+      const app = (server as unknown as { app: Express }).app;
       const response = await request(app).post('/api/vote').send({ contentId: 1, value: 1 });
 
       expect(response.status).toBe(503);
@@ -356,10 +409,13 @@ describe('WebServer', () => {
     });
 
     it('should register SIGTERM and SIGINT handlers on start', async () => {
-      server = new WebServer({
-        port: 0,
-        host: '127.0.0.1',
-      });
+      server = new WebServer(
+        {
+          port: 0,
+          host: '127.0.0.1',
+        },
+        createMockDependencies()
+      );
 
       await server.start();
 
@@ -368,10 +424,13 @@ describe('WebServer', () => {
     });
 
     it('should clean up signal handlers on stop', async () => {
-      server = new WebServer({
-        port: 0,
-        host: '127.0.0.1',
-      });
+      server = new WebServer(
+        {
+          port: 0,
+          host: '127.0.0.1',
+        },
+        createMockDependencies()
+      );
 
       await server.start();
       processOffSpy.mockClear();

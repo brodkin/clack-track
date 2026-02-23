@@ -10,7 +10,7 @@
  * - Open/Closed: Extensible via middleware without modifying route handlers
  */
 
-import { Router, type Request, type Response, type NextFunction } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { generateRegistrationOptions, verifyRegistrationResponse } from '@simplewebauthn/server';
 import type {
   RegistrationResponseJSON,
@@ -19,11 +19,15 @@ import type {
 import type { SessionRepository } from '@/storage/repositories/session-repo.js';
 import type { UserRepository } from '@/storage/repositories/user-repo.js';
 import type { CredentialRepository } from '@/storage/repositories/credential-repo.js';
-import { requireAuth as dbRequireAuth } from '../middleware/session.js';
+import { requireAuth } from '../middleware/session.js';
 import { config } from '../../config/env.js';
 
 /**
  * Dependencies for account routes
+ *
+ * All three repositories are required at runtime. The properties are typed as optional
+ * to maintain compatibility with WebDependencies (which uses optional fields for
+ * graceful degradation). createAccountRouter will throw if any are missing.
  */
 export interface AccountDependencies {
   sessionRepository?: SessionRepository;
@@ -32,97 +36,10 @@ export interface AccountDependencies {
 }
 
 /**
- * In-memory session storage (legacy fallback)
- * Used when database repositories are not provided
+ * Internal type with all dependencies guaranteed present.
+ * Used by handler factories after createAccountRouter validates deps.
  */
-interface SessionStore {
-  [sessionId: string]: {
-    authenticated: boolean;
-    user: { name: string; email: string; createdAt: string } | null;
-    challenge?: string;
-  };
-}
-
-/**
- * In-memory passkey storage for demonstration
- * In production, this would be stored in a database
- */
-interface PasskeyStore {
-  [sessionId: string]: Array<{
-    id: string;
-    name: string;
-    deviceType: 'phone' | 'tablet' | 'laptop' | 'desktop' | 'security-key';
-    createdAt: string;
-    lastUsed: string;
-    credentialID: string;
-    credentialPublicKey: string;
-  }>;
-}
-
-// Use a module-level store that can be accessed by tests
-// In production, this would be a proper session store
-const sessions: SessionStore = {};
-let sessionCounter = 0;
-
-const passkeys: PasskeyStore = {};
-
-/**
- * Get or create session ID from request
- */
-function getSessionId(req: Request): string {
-  let sessionId = req.headers['x-session-id'] as string | undefined;
-  if (!sessionId) {
-    sessionId = `session-${++sessionCounter}`;
-  }
-  if (!sessions[sessionId]) {
-    sessions[sessionId] = {
-      authenticated: false,
-      user: null,
-    };
-  }
-  return sessionId;
-}
-
-/**
- * Initialize authenticated session for testing
- */
-function initAuthenticatedSession(sessionId: string): void {
-  // Only initialize if session doesn't exist or is not authenticated
-  if (!sessions[sessionId] || !sessions[sessionId].authenticated) {
-    sessions[sessionId] = {
-      authenticated: true,
-      user: {
-        name: 'Demo User',
-        email: 'demo@example.com',
-        createdAt: new Date('2024-01-01').toISOString(),
-      },
-    };
-
-    // Initialize passkeys only once per session
-    if (!passkeys[sessionId]) {
-      passkeys[sessionId] = [
-        {
-          id: 'passkey-123',
-          name: 'iPhone 15 Pro',
-          deviceType: 'phone',
-          createdAt: new Date('2024-01-01').toISOString(),
-          lastUsed: new Date().toISOString(),
-          credentialID: 'mock-credential-1',
-          credentialPublicKey: 'mock-public-key-1',
-        },
-        {
-          id: 'passkey-456',
-          name: 'MacBook Pro',
-          deviceType: 'laptop',
-          createdAt: new Date('2024-02-01').toISOString(),
-          lastUsed: new Date('2024-11-01').toISOString(),
-          credentialID: 'mock-credential-2',
-          credentialPublicKey: 'mock-public-key-2',
-        },
-      ];
-    }
-  }
-}
+type ValidatedDeps = Required<AccountDependencies>;
 
 /** Relying Party configuration - sourced from centralized config (shared with auth.ts) */
 const RP_NAME = config.webauthn.rpName;
@@ -130,79 +47,97 @@ const RP_ID = config.webauthn.rpId;
 const EXPECTED_ORIGIN = config.webauthn.origin;
 
 /**
- * requireAuth middleware
- * Validates session and returns 401 if not authenticated
- *
- * @param req - Express request object
- * @param res - Express response object
- * @param next - Express next function
+ * Challenge storage for passkey registration (keyed by challenge string)
+ * Used to verify registration responses
  */
-export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const sessionId = getSessionId(req);
-
-    // Special handling for test sessions
-    if (sessionId.includes('authenticated') || sessionId.includes('test-session')) {
-      initAuthenticatedSession(sessionId);
-    }
-
-    // Special error handling for error simulation
-    if (sessionId === 'error-session') {
-      res.status(500).json({ error: 'Internal server error' });
-      return;
-    }
-
-    const session = sessions[sessionId];
-
-    if (!session || !session.authenticated) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-
-    next();
-  } catch (error) {
-    console.error('Error in requireAuth middleware:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-}
-
-// getProfile is now created by createGetProfile factory function
+const registrationChallenges: { [challenge: string]: { usedId: number; email: string } } = {};
 
 /**
- * Create passkeys handler with database support
+ * Create and configure account router
+ *
+ * Requires all three repositories (session, user, credential).
+ * Throws if any dependency is missing -- no legacy fallback.
+ *
+ * @param deps - Dependencies for database-backed sessions
+ * @returns Express router with account management routes
+ * @throws Error if sessionRepository, userRepository, or credentialRepository is missing
  */
-function createGetPasskeys(deps: AccountDependencies) {
-  return async function getPasskeysHandler(req: Request, res: Response): Promise<void> {
+export function createAccountRouter(deps: AccountDependencies = {}): Router {
+  if (!deps.sessionRepository || !deps.userRepository || !deps.credentialRepository) {
+    throw new Error(
+      'Account routes require sessionRepository, userRepository, and credentialRepository'
+    );
+  }
+
+  // Narrow types for downstream handler factories
+  const validatedDeps: ValidatedDeps = {
+    sessionRepository: deps.sessionRepository,
+    userRepository: deps.userRepository,
+    credentialRepository: deps.credentialRepository,
+  };
+
+  const router = Router();
+
+  // Database-backed authentication middleware
+  router.use(requireAuth(validatedDeps.sessionRepository, validatedDeps.userRepository));
+
+  // Profile routes
+  router.get('/profile', createGetProfile(validatedDeps));
+
+  // Passkey management routes
+  router.get('/passkeys', createGetPasskeys(validatedDeps));
+  router.post('/passkey/register/start', createStartPasskeyRegistration(validatedDeps));
+  router.post('/passkey/register/verify', createVerifyPasskeyRegistration(validatedDeps));
+  router.delete('/passkey/:id', createRemovePasskey(validatedDeps));
+  router.patch('/passkey/:id', createRenamePasskey(validatedDeps));
+
+  return router;
+}
+
+/**
+ * Create profile handler
+ */
+function createGetProfile(_deps: ValidatedDeps) {
+  return async function getProfileHandler(req: Request, res: Response): Promise<void> {
     try {
-      // If using database, get passkeys from credential repository
-      if (deps.credentialRepository) {
-        const user = (req as Request & { user?: { id: number } }).user;
-        if (user) {
-          const credentials = await deps.credentialRepository.findByUserId(user.id);
-          res.status(200).json({
-            passkeys: credentials.map(cred => ({
-              id: cred.id,
-              name: cred.name || 'Passkey',
-              deviceType: cred.deviceType || 'platform',
-              createdAt: cred.createdAt?.toISOString() || new Date().toISOString(),
-              lastUsed: cred.lastUsedAt?.toISOString() || null,
-            })),
-          });
-          return;
-        }
+      const user = (req as Request & { user?: { id: number; email: string; name?: string } }).user;
+      if (!user) {
+        res.status(404).json({ error: 'User not found' });
+        return;
       }
 
-      // Fall back to legacy in-memory passkeys
-      const sessionId = getSessionId(req);
-      const userPasskeys = passkeys[sessionId] || [];
-
       res.status(200).json({
-        passkeys: userPasskeys.map(pk => ({
-          id: pk.id,
-          name: pk.name,
-          deviceType: pk.deviceType,
-          createdAt: pk.createdAt,
-          lastUsed: pk.lastUsed,
+        name: user.name || user.email.split('@')[0],
+        email: user.email,
+        createdAt: new Date().toISOString(), // TODO: Add createdAt to user model
+      });
+    } catch (error) {
+      console.error('Error getting profile:', error);
+      res.status(500).json({ error: 'Failed to get profile' });
+    }
+  };
+}
+
+/**
+ * Create passkeys handler
+ */
+function createGetPasskeys(deps: ValidatedDeps) {
+  return async function getPasskeysHandler(req: Request, res: Response): Promise<void> {
+    try {
+      const user = (req as Request & { user?: { id: number } }).user;
+      if (!user) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+      }
+
+      const credentials = await deps.credentialRepository.findByUserId(user.id);
+      res.status(200).json({
+        passkeys: credentials.map(cred => ({
+          id: cred.id,
+          name: cred.name || 'Passkey',
+          deviceType: cred.deviceType || 'platform',
+          createdAt: cred.createdAt?.toISOString() || new Date().toISOString(),
+          lastUsed: cred.lastUsedAt?.toISOString() || null,
         })),
       });
     } catch (error) {
@@ -213,54 +148,16 @@ function createGetPasskeys(deps: AccountDependencies) {
 }
 
 /**
- * Challenge storage for passkey registration (keyed by challenge string)
- * Used to verify registration responses
+ * Create passkey registration start handler
  */
-const registrationChallenges: { [challenge: string]: { usedId: number; email: string } } = {};
-
-/**
- * Create passkey registration start handler with database support
- */
-function createStartPasskeyRegistration(deps: AccountDependencies) {
+function createStartPasskeyRegistration(_deps: ValidatedDeps) {
   return async function startPasskeyRegistrationHandler(
     req: Request,
     res: Response
   ): Promise<void> {
     try {
-      // If using database sessions, get user from request (set by middleware)
-      if (deps.sessionRepository && deps.userRepository) {
-        const user = (req as Request & { user?: { id: number; email: string; name?: string } })
-          .user;
-        if (user) {
-          // Generate registration options
-          const options: PublicKeyCredentialCreationOptionsJSON = await generateRegistrationOptions(
-            {
-              rpName: RP_NAME,
-              rpID: RP_ID,
-              userName: user.email,
-              userDisplayName: user.name || user.email.split('@')[0],
-              timeout: 60000, // 60 seconds
-              attestationType: 'none',
-              authenticatorSelection: {
-                residentKey: 'preferred',
-                userVerification: 'preferred',
-              },
-            }
-          );
-
-          // Store challenge for verification (keyed by challenge string)
-          registrationChallenges[options.challenge] = { usedId: user.id, email: user.email };
-
-          res.status(200).json(options);
-          return;
-        }
-      }
-
-      // Fall back to legacy in-memory session
-      const sessionId = getSessionId(req);
-      const session = sessions[sessionId];
-
-      if (!session || !session.user) {
+      const user = (req as Request & { user?: { id: number; email: string; name?: string } }).user;
+      if (!user) {
         res.status(500).json({ error: 'Session data not available' });
         return;
       }
@@ -269,8 +166,8 @@ function createStartPasskeyRegistration(deps: AccountDependencies) {
       const options: PublicKeyCredentialCreationOptionsJSON = await generateRegistrationOptions({
         rpName: RP_NAME,
         rpID: RP_ID,
-        userName: session.user.email,
-        userDisplayName: session.user.name,
+        userName: user.email,
+        userDisplayName: user.name || user.email.split('@')[0],
         timeout: 60000, // 60 seconds
         attestationType: 'none',
         authenticatorSelection: {
@@ -279,8 +176,8 @@ function createStartPasskeyRegistration(deps: AccountDependencies) {
         },
       });
 
-      // Store challenge in session for verification
-      sessions[sessionId].challenge = options.challenge;
+      // Store challenge for verification (keyed by challenge string)
+      registrationChallenges[options.challenge] = { usedId: user.id, email: user.email };
 
       res.status(200).json(options);
     } catch (error) {
@@ -291,9 +188,9 @@ function createStartPasskeyRegistration(deps: AccountDependencies) {
 }
 
 /**
- * Create passkey registration verify handler with database support
+ * Create passkey registration verify handler
  */
-function createVerifyPasskeyRegistration(deps: AccountDependencies) {
+function createVerifyPasskeyRegistration(deps: ValidatedDeps) {
   return async function verifyPasskeyRegistrationHandler(
     req: Request,
     res: Response
@@ -324,136 +221,76 @@ function createVerifyPasskeyRegistration(deps: AccountDependencies) {
         return;
       }
 
-      // If using database, use challenge storage and credential repository
-      if (deps.credentialRepository) {
-        const user = (req as Request & { user?: { id: number; email: string } }).user;
+      const user = (req as Request & { user?: { id: number; email: string } }).user;
 
-        // Get the challenge from the credential's clientDataJSON
-        let storedChallenge: string | undefined;
-        try {
-          const clientDataBuffer = Buffer.from(credential.response.clientDataJSON, 'base64url');
-          const clientData = JSON.parse(clientDataBuffer.toString('utf-8'));
-          storedChallenge = clientData.challenge;
-        } catch {
-          res.status(400).json({ error: 'Invalid credential: could not parse clientDataJSON' });
-          return;
-        }
-
-        // Verify the challenge exists
-        if (!storedChallenge || !registrationChallenges[storedChallenge]) {
-          res.status(400).json({ error: 'No registration challenge found' });
-          return;
-        }
-
-        // Verify registration response
-        const regResponse: RegistrationResponseJSON = credential;
-        let registrationInfo;
-        try {
-          const verification = await verifyRegistrationResponse({
-            response: regResponse,
-            expectedChallenge: storedChallenge,
-            expectedOrigin: EXPECTED_ORIGIN,
-            expectedRPID: RP_ID,
-            requireUserVerification: false,
-          });
-
-          if (!verification.verified || !verification.registrationInfo) {
-            res.status(400).json({ error: 'Registration verification failed' });
-            return;
-          }
-
-          registrationInfo = verification.registrationInfo;
-        } catch (verifyError) {
-          console.error('Registration verification error:', verifyError);
-          res.status(400).json({ error: 'Registration verification failed' });
-          return;
-        }
-
-        // Extract credential data from v13 API format
-        const { credential: verifiedCredential } = registrationInfo;
-        const publicKeyBase64 = Buffer.from(verifiedCredential.publicKey).toString('base64');
-
-        // Store credential in database
-        const savedCredential = await deps.credentialRepository.save({
-          userId: user!.id,
-          credentialId: verifiedCredential.id,
-          publicKey: publicKeyBase64,
-          counter: verifiedCredential.counter,
-          deviceType: 'platform',
-          name,
-          createdAt: new Date(),
-          lastUsedAt: null,
-        });
-
-        // Clean up challenge
-        delete registrationChallenges[storedChallenge];
-
-        res.status(200).json({
-          verified: true,
-          passkey: {
-            id: savedCredential?.id || verifiedCredential.id,
-            name,
-            deviceType: 'platform',
-            createdAt: new Date().toISOString(),
-            lastUsed: null,
-          },
-        });
+      // Get the challenge from the credential's clientDataJSON
+      let storedChallenge: string | undefined;
+      try {
+        const clientDataBuffer = Buffer.from(credential.response.clientDataJSON, 'base64url');
+        const clientData = JSON.parse(clientDataBuffer.toString('utf-8'));
+        storedChallenge = clientData.challenge;
+      } catch {
+        res.status(400).json({ error: 'Invalid credential: could not parse clientDataJSON' });
         return;
       }
 
-      // Fall back to legacy in-memory storage
-      const sessionId = getSessionId(req);
-      const session = sessions[sessionId];
-
-      if (!session || !session.challenge) {
+      // Verify the challenge exists
+      if (!storedChallenge || !registrationChallenges[storedChallenge]) {
         res.status(400).json({ error: 'No registration challenge found' });
         return;
       }
 
-      // MOCK VERIFICATION: In production, verify against challenge
+      // Verify registration response
       const regResponse: RegistrationResponseJSON = credential;
-
+      let registrationInfo;
       try {
-        await verifyRegistrationResponse({
+        const verification = await verifyRegistrationResponse({
           response: regResponse,
-          expectedChallenge: session.challenge,
+          expectedChallenge: storedChallenge,
           expectedOrigin: EXPECTED_ORIGIN,
           expectedRPID: RP_ID,
           requireUserVerification: false,
         });
-      } catch {
-        // In mock mode, ignore verification errors
-        console.log('Mock mode: Accepting credential without full verification');
+
+        if (!verification.verified || !verification.registrationInfo) {
+          res.status(400).json({ error: 'Registration verification failed' });
+          return;
+        }
+
+        registrationInfo = verification.registrationInfo;
+      } catch (verifyError) {
+        console.error('Registration verification error:', verifyError);
+        res.status(400).json({ error: 'Registration verification failed' });
+        return;
       }
 
-      // Create new passkey
-      const newPasskey = {
-        id: `passkey-${Date.now()}`,
+      // Extract credential data from v13 API format
+      const { credential: verifiedCredential } = registrationInfo;
+      const publicKeyBase64 = Buffer.from(verifiedCredential.publicKey).toString('base64');
+
+      // Store credential in database
+      const savedCredential = await deps.credentialRepository.save({
+        userId: user!.id,
+        credentialId: verifiedCredential.id,
+        publicKey: publicKeyBase64,
+        counter: verifiedCredential.counter,
+        deviceType: 'platform',
         name,
-        deviceType: 'laptop' as const,
-        createdAt: new Date().toISOString(),
-        lastUsed: new Date().toISOString(),
-        credentialID: credential.id,
-        credentialPublicKey: credential.rawId,
-      };
+        createdAt: new Date(),
+        lastUsedAt: null,
+      });
 
-      // Store passkey
-      if (!passkeys[sessionId]) {
-        passkeys[sessionId] = [];
-      }
-      passkeys[sessionId].push(newPasskey);
-
-      // Clear challenge
-      delete sessions[sessionId].challenge;
+      // Clean up challenge
+      delete registrationChallenges[storedChallenge];
 
       res.status(200).json({
         verified: true,
         passkey: {
-          id: newPasskey.id,
-          name: newPasskey.name,
-          deviceType: newPasskey.deviceType,
-          createdAt: newPasskey.createdAt,
-          lastUsed: newPasskey.lastUsed,
+          id: savedCredential?.id || verifiedCredential.id,
+          name,
+          deviceType: 'platform',
+          createdAt: new Date().toISOString(),
+          lastUsed: null,
         },
       });
     } catch (error) {
@@ -464,73 +301,40 @@ function createVerifyPasskeyRegistration(deps: AccountDependencies) {
 }
 
 /**
- * Create remove passkey handler with database support
+ * Create remove passkey handler
  */
-function createRemovePasskey(deps: AccountDependencies) {
+function createRemovePasskey(deps: ValidatedDeps) {
   return async function removePasskeyHandler(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-
-      // If using database, remove from credential repository
-      if (deps.credentialRepository) {
-        const user = (req as Request & { user?: { id: number } }).user;
-        if (user) {
-          // Get all credentials for user to check if this is the last one
-          const credentials = await deps.credentialRepository.findByUserId(user.id);
-
-          // Find the credential to remove
-          const credentialId = parseInt(id, 10);
-          const credential = credentials.find(c => c.id === credentialId);
-
-          if (!credential) {
-            res.status(404).json({ error: 'Passkey not found' });
-            return;
-          }
-
-          // Prevent removing last passkey
-          if (credentials.length === 1) {
-            res.status(400).json({
-              error: 'Cannot remove last passkey. Add another passkey before removing this one.',
-            });
-            return;
-          }
-
-          // Remove from database
-          await deps.credentialRepository.delete(credentialId);
-
-          res.status(200).json({ success: true });
-          return;
-        }
+      const user = (req as Request & { user?: { id: number } }).user;
+      if (!user) {
+        res.status(404).json({ error: 'User not found' });
+        return;
       }
 
-      // Fall back to legacy in-memory storage
-      const sessionId = getSessionId(req);
+      // Get all credentials for user to check if this is the last one
+      const credentials = await deps.credentialRepository.findByUserId(user.id);
 
-      if (!passkeys[sessionId]) {
+      // Find the credential to remove
+      const credentialId = parseInt(id, 10);
+      const credential = credentials.find(c => c.id === credentialId);
+
+      if (!credential) {
         res.status(404).json({ error: 'Passkey not found' });
         return;
       }
 
-      const userPasskeys = passkeys[sessionId];
-
-      // Find passkey index first
-      const passkeyIndex = userPasskeys.findIndex(pk => pk.id === id);
-
-      if (passkeyIndex === -1) {
-        res.status(404).json({ error: 'Passkey not found' });
-        return;
-      }
-
-      // Check if trying to remove last passkey
-      if (id === 'last-passkey' || userPasskeys.length === 1) {
+      // Prevent removing last passkey
+      if (credentials.length === 1) {
         res.status(400).json({
           error: 'Cannot remove last passkey. Add another passkey before removing this one.',
         });
         return;
       }
 
-      // Remove passkey
-      userPasskeys.splice(passkeyIndex, 1);
+      // Remove from database
+      await deps.credentialRepository.delete(credentialId);
 
       res.status(200).json({ success: true });
     } catch (error) {
@@ -541,9 +345,9 @@ function createRemovePasskey(deps: AccountDependencies) {
 }
 
 /**
- * Create rename passkey handler with database support
+ * Create rename passkey handler
  */
-function createRenamePasskey(deps: AccountDependencies) {
+function createRenamePasskey(deps: ValidatedDeps) {
   return async function renamePasskeyHandler(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
@@ -554,133 +358,37 @@ function createRenamePasskey(deps: AccountDependencies) {
         return;
       }
 
-      // If using database, update in credential repository
-      if (deps.credentialRepository) {
-        const user = (req as Request & { user?: { id: number } }).user;
-        if (user) {
-          const credentialId = parseInt(id, 10);
-
-          // Update the credential name
-          const updated = await deps.credentialRepository.updateName(credentialId, name);
-
-          if (!updated) {
-            res.status(404).json({ error: 'Passkey not found' });
-            return;
-          }
-
-          // Fetch the updated credential
-          const credential = await deps.credentialRepository.findById(credentialId);
-
-          res.status(200).json({
-            passkey: {
-              id: credential?.id || credentialId,
-              name: credential?.name || name,
-              deviceType: credential?.deviceType || 'platform',
-              createdAt: credential?.createdAt?.toISOString() || new Date().toISOString(),
-              lastUsed: credential?.lastUsedAt?.toISOString() || null,
-            },
-          });
-          return;
-        }
+      const user = (req as Request & { user?: { id: number } }).user;
+      if (!user) {
+        res.status(404).json({ error: 'User not found' });
+        return;
       }
 
-      // Fall back to legacy in-memory storage
-      const sessionId = getSessionId(req);
+      const credentialId = parseInt(id, 10);
 
-      if (!passkeys[sessionId]) {
+      // Update the credential name
+      const updated = await deps.credentialRepository.updateName(credentialId, name);
+
+      if (!updated) {
         res.status(404).json({ error: 'Passkey not found' });
         return;
       }
 
-      const userPasskeys = passkeys[sessionId];
-      const passkey = userPasskeys.find(pk => pk.id === id);
-
-      if (!passkey) {
-        res.status(404).json({ error: 'Passkey not found' });
-        return;
-      }
-
-      // Update passkey name
-      passkey.name = name;
+      // Fetch the updated credential
+      const credential = await deps.credentialRepository.findById(credentialId);
 
       res.status(200).json({
         passkey: {
-          id: passkey.id,
-          name: passkey.name,
-          deviceType: passkey.deviceType,
-          createdAt: passkey.createdAt,
-          lastUsed: passkey.lastUsed,
+          id: credential?.id || credentialId,
+          name: credential?.name || name,
+          deviceType: credential?.deviceType || 'platform',
+          createdAt: credential?.createdAt?.toISOString() || new Date().toISOString(),
+          lastUsed: credential?.lastUsedAt?.toISOString() || null,
         },
       });
     } catch (error) {
       console.error('Error renaming passkey:', error);
       res.status(500).json({ error: 'Failed to rename passkey' });
-    }
-  };
-}
-
-/**
- * Create and configure account router
- *
- * @param deps - Optional dependencies for database-backed sessions
- * @returns Express router with account management routes
- */
-export function createAccountRouter(deps: AccountDependencies = {}): Router {
-  const router = Router();
-
-  // Use database-backed auth if repositories are provided, otherwise legacy
-  if (deps.sessionRepository && deps.userRepository) {
-    router.use(dbRequireAuth(deps.sessionRepository, deps.userRepository));
-  } else {
-    router.use(requireAuth);
-  }
-
-  // Profile routes - use database if available
-  router.get('/profile', createGetProfile(deps));
-
-  // Passkey management routes - use database if available
-  router.get('/passkeys', createGetPasskeys(deps));
-  router.post('/passkey/register/start', createStartPasskeyRegistration(deps));
-  router.post('/passkey/register/verify', createVerifyPasskeyRegistration(deps));
-  router.delete('/passkey/:id', createRemovePasskey(deps));
-  router.patch('/passkey/:id', createRenamePasskey(deps));
-
-  return router;
-}
-
-/**
- * Create profile handler with optional database support
- */
-function createGetProfile(deps: AccountDependencies) {
-  return async function getProfileHandler(req: Request, res: Response): Promise<void> {
-    try {
-      // If using database sessions, get user from request (set by middleware)
-      if (deps.sessionRepository && deps.userRepository) {
-        const user = (req as Request & { user?: { id: number; email: string; name?: string } })
-          .user;
-        if (user) {
-          res.status(200).json({
-            name: user.name || user.email.split('@')[0],
-            email: user.email,
-            createdAt: new Date().toISOString(), // TODO: Add createdAt to user model
-          });
-          return;
-        }
-      }
-
-      // Fall back to legacy session
-      const sessionId = getSessionId(req);
-      const session = sessions[sessionId];
-
-      if (!session?.user) {
-        res.status(404).json({ error: 'User not found' });
-        return;
-      }
-
-      res.status(200).json(session.user);
-    } catch (error) {
-      console.error('Error getting profile:', error);
-      res.status(500).json({ error: 'Failed to get profile' });
     }
   };
 }
