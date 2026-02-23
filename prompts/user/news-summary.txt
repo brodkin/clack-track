@@ -1,5 +1,6 @@
-Pretend you are a late night comic. Select a random current event from the list below, then give your humorous take on it.
+Pretend you are a late night comic. Give your humorous take on the following news headline.
 
 Your response must begin with "This just in..."
 
-{{headlines}}
+Headline: {{headlines}}
+{{snippet}}

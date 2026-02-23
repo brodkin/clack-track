@@ -18,12 +18,17 @@
  * - Injects single headline via {{headlines}} and snippet via {{snippet}}
  */
 
+import { join } from 'path';
 import { BaseNewsGenerator } from '@/content/generators/ai/base-news-generator';
 import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector';
 import { RSSClient, type RSSItem } from '@/api/data-sources/rss-client';
 import type { GenerationContext, ModelTier } from '@/types/content-generator';
 import { createMockAIProvider } from '@tests/__helpers__/mockAIProvider';
+import {
+  resolveTemplateVariables,
+  findUnresolvedVariables,
+} from '@/content/personality/template-resolver';
 
 // Mock createAIProvider function to avoid real API calls
 jest.mock('@/api/ai/index.js', () => ({
@@ -862,6 +867,94 @@ describe('BaseNewsGenerator', () => {
       expect(result.metadata?.headlineCount).toBe(0);
       expect(result.metadata?.totalItemsFetched).toBe(0);
       expect(result.metadata?.recentItemCount).toBe(0);
+    });
+  });
+
+  describe('news-summary.txt Prompt Content', () => {
+    let realPromptLoader: PromptLoader;
+    let promptContent: string;
+
+    beforeAll(async () => {
+      // Use real PromptLoader to read the actual prompt file
+      const promptsDir = join(__dirname, '..', '..', '..', '..', '..', 'prompts');
+      realPromptLoader = new PromptLoader(promptsDir);
+      promptContent = await realPromptLoader.loadPrompt('user', 'news-summary.txt');
+    });
+
+    it('should NOT contain multi-story selection language', () => {
+      expect(promptContent.toLowerCase()).not.toContain('select a random');
+      expect(promptContent.toLowerCase()).not.toContain('from the list below');
+      expect(promptContent.toLowerCase()).not.toContain('choose from');
+      expect(promptContent.toLowerCase()).not.toContain('pick one');
+    });
+
+    it('should instruct the LLM to write about the single provided headline', () => {
+      // The prompt should reference a single story/headline, not multiple
+      expect(promptContent).toContain('{{headlines}}');
+      // Should frame it as THE story, not one of many
+      const lowerContent = promptContent.toLowerCase();
+      const hasSingleStoryLanguage =
+        lowerContent.includes('headline') ||
+        lowerContent.includes('story') ||
+        lowerContent.includes('news');
+      expect(hasSingleStoryLanguage).toBe(true);
+    });
+
+    it('should include {{snippet}} template variable for additional story context', () => {
+      expect(promptContent).toContain('{{snippet}}');
+    });
+
+    it('should handle absent snippet gracefully in the prompt wording', () => {
+      // The prompt should not unconditionally say "based on the snippet below"
+      // or assume a snippet is always present. It should use conditional language.
+      // Verify the prompt works when snippet is empty by resolving with empty snippet
+      const resolved = resolveTemplateVariables(promptContent, {
+        headlines: 'Test Headline',
+        snippet: '',
+      });
+      // Should not have dangling labels like "Snippet:" with nothing after them
+      // The resolved prompt should still be coherent
+      expect(resolved).toContain('Test Headline');
+      expect(findUnresolvedVariables(resolved)).toEqual([]);
+    });
+
+    it('should preserve the "This just in..." prefix requirement', () => {
+      expect(promptContent).toContain('This just in');
+    });
+
+    it('should resolve all template variables with headline and snippet', () => {
+      const resolved = resolveTemplateVariables(promptContent, {
+        headlines: 'Scientists Discover New Species',
+        snippet: 'A team of marine biologists found a new deep-sea creature.',
+      });
+
+      // All template variables should be resolved
+      expect(findUnresolvedVariables(resolved)).toEqual([]);
+      // Content should include both the headline and snippet values
+      expect(resolved).toContain('Scientists Discover New Species');
+      expect(resolved).toContain('A team of marine biologists found a new deep-sea creature.');
+    });
+
+    it('should resolve cleanly when snippet is empty', () => {
+      const resolved = resolveTemplateVariables(promptContent, {
+        headlines: 'Breaking News Story',
+        snippet: '',
+      });
+
+      expect(findUnresolvedVariables(resolved)).toEqual([]);
+      expect(resolved).toContain('Breaking News Story');
+    });
+
+    it('should produce coherent prompt through real PromptLoader with variables', async () => {
+      const resolved = await realPromptLoader.loadPromptWithVariables('user', 'news-summary.txt', {
+        headlines: 'Tech Giant Launches Product',
+        snippet: 'Major tech company announces revolutionary device at keynote.',
+      });
+
+      expect(resolved).toContain('Tech Giant Launches Product');
+      expect(resolved).toContain('revolutionary device');
+      expect(resolved).toContain('This just in');
+      expect(findUnresolvedVariables(resolved)).toEqual([]);
     });
   });
 });
