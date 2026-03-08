@@ -4,6 +4,9 @@
  * Testing touch-friendly voting buttons for content rating
  * with visual animations, confetti celebration, and haptic feedback.
  * Buttons are icon-only (no text labels) with aria-labels for accessibility.
+ *
+ * Thumbs-up: immediate vote with confetti + success haptic
+ * Thumbs-down: opens reason popover, then votes with selected reason
  */
 
 /// <reference types="@testing-library/jest-dom" />
@@ -84,8 +87,8 @@ describe('VotingButtons Component', () => {
     });
   });
 
-  describe('User Interactions', () => {
-    it('should call onVote with "good" when thumbs up is clicked', () => {
+  describe('Thumbs Up (Immediate Vote)', () => {
+    it('should call onVote with "good" immediately when thumbs up is clicked', () => {
       render(<VotingButtons onVote={mockOnVote} />);
 
       const upButton = screen.getByRole('button', { name: /thumbs up|good/i });
@@ -93,16 +96,6 @@ describe('VotingButtons Component', () => {
 
       expect(mockOnVote).toHaveBeenCalledTimes(1);
       expect(mockOnVote).toHaveBeenCalledWith('good');
-    });
-
-    it('should call onVote with "bad" when thumbs down is clicked', () => {
-      render(<VotingButtons onVote={mockOnVote} />);
-
-      const downButton = screen.getByRole('button', { name: /thumbs down|bad/i });
-      fireEvent.click(downButton);
-
-      expect(mockOnVote).toHaveBeenCalledTimes(1);
-      expect(mockOnVote).toHaveBeenCalledWith('bad');
     });
 
     it('should be keyboard accessible', () => {
@@ -116,6 +109,109 @@ describe('VotingButtons Component', () => {
       expect(upButton).toBeInTheDocument();
       // @ts-expect-error - jest-dom matchers
       expect(downButton).toBeInTheDocument();
+    });
+  });
+
+  describe('Thumbs Down (Popover Reason Selection)', () => {
+    it('should not immediately call onVote when thumbs down is clicked', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      const downButton = screen.getByRole('button', { name: /thumbs down|bad/i });
+      fireEvent.click(downButton);
+
+      // onVote should NOT be called yet - popover should open first
+      expect(mockOnVote).not.toHaveBeenCalled();
+    });
+
+    it('should show reason options after clicking thumbs down', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      const downButton = screen.getByRole('button', { name: /thumbs down|bad/i });
+      fireEvent.click(downButton);
+
+      // Reason popover should display reason options
+      expect(screen.getByText('Not funny')).not.toBeNull();
+      expect(screen.getByText('Boring')).not.toBeNull();
+      expect(screen.getByText('Other')).not.toBeNull();
+    });
+
+    it('should call onVote with "bad" and reason when a reason is selected', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      // Open popover
+      const downButton = screen.getByRole('button', { name: /thumbs down|bad/i });
+      fireEvent.click(downButton);
+
+      // Select a reason
+      const boringOption = screen.getByText('Boring');
+      fireEvent.click(boringOption);
+
+      expect(mockOnVote).toHaveBeenCalledTimes(1);
+      expect(mockOnVote).toHaveBeenCalledWith('bad', 'boring');
+    });
+
+    it('should call onVote with correct reason key for each option', () => {
+      const reasonMap = [
+        { label: 'Not funny', key: 'not_funny' },
+        { label: "Doesn't make sense", key: 'doesnt_make_sense' },
+        { label: 'Factually wrong', key: 'factually_wrong' },
+        { label: 'Too negative', key: 'too_negative' },
+        { label: 'Badly formatted', key: 'badly_formatted' },
+        { label: 'Almost there', key: 'almost_there' },
+        { label: 'Other', key: 'other' },
+      ];
+
+      for (const { label, key } of reasonMap) {
+        mockOnVote.mockClear();
+
+        const { unmount } = render(<VotingButtons onVote={mockOnVote} />);
+
+        const downButton = screen.getByRole('button', { name: /thumbs down|bad/i });
+        fireEvent.click(downButton);
+
+        const option = screen.getByText(label);
+        fireEvent.click(option);
+
+        expect(mockOnVote).toHaveBeenCalledWith('bad', key);
+
+        unmount();
+      }
+    });
+
+    it('should trigger haptic feedback after selecting a reason', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      // Open popover (should not trigger haptic yet)
+      const downButton = screen.getByRole('button', { name: /thumbs down|bad/i });
+      fireEvent.click(downButton);
+      expect(mockTriggerHaptic).not.toHaveBeenCalled();
+
+      // Select reason (should trigger haptic)
+      const option = screen.getByText('Boring');
+      fireEvent.click(option);
+
+      expect(mockTriggerHaptic).toHaveBeenCalledTimes(1);
+      expect(mockTriggerHaptic).toHaveBeenCalledWith('medium');
+    });
+
+    it('should play sink animation after selecting a reason', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      const downButton = screen.getByRole('button', { name: /thumbs down/i });
+
+      // Before any interaction: no animation
+      expect(downButton.querySelector('.animate-vote-sink-down')).toBeNull();
+
+      // Open popover
+      fireEvent.click(downButton);
+
+      // Select reason
+      const option = screen.getByText('Other');
+      fireEvent.click(option);
+
+      // After reason selection, sink animation should be applied
+      const animatedElement = downButton.querySelector('.animate-vote-sink-down');
+      expect(animatedElement).not.toBeNull();
     });
   });
 
@@ -181,17 +277,6 @@ describe('VotingButtons Component', () => {
       expect(animatedElement).not.toBeNull();
     });
 
-    it('should apply downward sink animation class on thumbs down vote', () => {
-      render(<VotingButtons onVote={mockOnVote} />);
-
-      const downButton = screen.getByRole('button', { name: /thumbs down/i });
-      fireEvent.click(downButton);
-
-      // The icon wrapper should get the animate-vote-sink-down class
-      const animatedElement = downButton.querySelector('.animate-vote-sink-down');
-      expect(animatedElement).not.toBeNull();
-    });
-
     it('should not apply animation classes before any vote', () => {
       render(<VotingButtons onVote={mockOnVote} />);
 
@@ -217,23 +302,6 @@ describe('VotingButtons Component', () => {
 
       // Animation class should be removed after completion
       expect(upButton.querySelector('.animate-vote-float-up')).toBeNull();
-    });
-
-    it('should reset animation after onAnimationEnd fires on thumbs down', () => {
-      render(<VotingButtons onVote={mockOnVote} />);
-
-      const downButton = screen.getByRole('button', { name: /thumbs down/i });
-      fireEvent.click(downButton);
-
-      // Animation class should be present after click
-      const animatedElement = downButton.querySelector('.animate-vote-sink-down');
-      expect(animatedElement).not.toBeNull();
-
-      // Fire animationend event to simulate animation completion
-      fireEvent.animationEnd(animatedElement!);
-
-      // Animation class should be removed after completion
-      expect(downButton.querySelector('.animate-vote-sink-down')).toBeNull();
     });
 
     it('should allow re-voting after animation completes', () => {
@@ -266,16 +334,6 @@ describe('VotingButtons Component', () => {
       expect(mockTriggerSuccessHaptic).toHaveBeenCalledTimes(1);
     });
 
-    it('should trigger medium haptic on thumbs down vote', () => {
-      render(<VotingButtons onVote={mockOnVote} />);
-
-      const downButton = screen.getByRole('button', { name: /thumbs down|bad/i });
-      fireEvent.click(downButton);
-
-      expect(mockTriggerHaptic).toHaveBeenCalledTimes(1);
-      expect(mockTriggerHaptic).toHaveBeenCalledWith('medium');
-    });
-
     it('should not trigger haptics when disabled', () => {
       render(<VotingButtons onVote={mockOnVote} isLoading={true} />);
 
@@ -302,7 +360,7 @@ describe('VotingButtons Component', () => {
       expect(confettiCanvas).not.toBeNull();
     });
 
-    it('should not show confetti on thumbs down vote', () => {
+    it('should not show confetti on thumbs down button click', () => {
       render(<VotingButtons onVote={mockOnVote} />);
 
       const downButton = screen.getByRole('button', { name: /thumbs down|bad/i });

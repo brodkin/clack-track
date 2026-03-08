@@ -85,12 +85,13 @@ export function History() {
     fetchConfig();
   }, []);
 
-  const handleVote = async (contentId: number, vote: 'good' | 'bad') => {
+  const handleVote = async (contentId: number, vote: 'good' | 'bad', reason?: string) => {
     setVotingState(prev => ({ ...prev, [contentId]: true }));
     try {
       await apiClient.submitVote({
         contentId: String(contentId),
         vote,
+        ...(reason && { reason }),
       });
     } catch {
       // Visual feedback is self-contained in VotingButtons (animations + haptics)
@@ -186,7 +187,7 @@ export function History() {
               <div className="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-b-lg -mt-2">
                 <div className="flex items-center gap-4">
                   <VotingButtons
-                    onVote={vote => handleVote(content.id, vote)}
+                    onVote={(vote, reason) => handleVote(content.id, vote, reason)}
                     isLoading={votingState[content.id] === true}
                     className="scale-75 origin-left"
                   />

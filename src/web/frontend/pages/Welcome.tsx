@@ -102,7 +102,7 @@ export function Welcome() {
     fetchConfig();
   }, []);
 
-  const handleVote = async (vote: 'good' | 'bad') => {
+  const handleVote = async (vote: 'good' | 'bad', reason?: string) => {
     if (!content) return;
 
     setIsVoting(true);
@@ -110,6 +110,7 @@ export function Welcome() {
       await apiClient.submitVote({
         contentId: String(content.id),
         vote,
+        ...(reason && { reason }),
       });
     } catch {
       // Visual feedback is self-contained in VotingButtons (animations + haptics)
