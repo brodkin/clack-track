@@ -800,3 +800,10 @@ import { createConnection, ... } from 'home-assistant-js-websocket';
 ### Live Integration Tests
 
 Vestaboard live tests require explicit opt-in: `VESTABOARD_LIVE_TEST=true`. Never enable in CI/CD without configuration.
+
+## Quality Gates
+
+The following commands are used during automated quality gates:
+
+**Test command**: `npm test`
+**Lint command**: `npm run lint`
