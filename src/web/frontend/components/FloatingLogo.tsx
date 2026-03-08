@@ -2,14 +2,14 @@
  * FloatingLogo Component
  *
  * Sticky glassmorphism header with gradient brand text.
- * Displays 'Clack Track' with a warm amber-yellow-amber gold gradient
- * and 'BY HOUSEBOY' byline in complementary gold tones.
+ * Displays 'Clack Track' with a tiffany blue to medium-dark blue gradient
+ * and 'BY HOUSEBOY' byline in complementary blue tones.
  *
  * Features:
  * - Sticky positioning at top of viewport (participates in document flow)
  * - Glassmorphism: uniform bg, heavy blur, saturation boost, crisp border
- * - Gold gradient text treatment on logo (mid-century aesthetic)
- * - Gold-tinted byline with wide tracking
+ * - Blue gradient text treatment on logo (tiffany blue to blue)
+ * - Blue-tinted byline with wide tracking
  * - Dark mode support
  * - Responsive typography
  */
@@ -36,9 +36,9 @@ export function FloatingLogo({ className }: FloatingLogoProps) {
         // Glassmorphism: heavy blur + saturation boost + uniform background
         'backdrop-blur-2xl backdrop-saturate-150',
         'bg-white/60 dark:bg-gray-950/50',
-        // Crisp border and gold-tinted shadow
-        'border-b border-amber-300/30 dark:border-amber-500/20',
-        'shadow-[0_1px_20px_-6px_rgba(180,130,20,0.18)]',
+        // Crisp border and neutral shadow
+        'border-b border-gray-300/30 dark:border-gray-500/20',
+        'shadow-[0_1px_20px_-6px_rgba(128,128,128,0.18)]',
         // Spacing
         'pt-6 pb-4 px-4',
         // Layout
@@ -51,10 +51,10 @@ export function FloatingLogo({ className }: FloatingLogoProps) {
         <h1
           className={cn(
             // Typography
-            'font-brush text-4xl md:text-5xl',
-            // Gradient text: amber-yellow-amber (mid-century gold)
+            'font-brush text-4xl md:text-5xl leading-tight !mb-0',
+            // Gradient text: tiffany blue edge → light blue → medium-dark blue
             'text-transparent bg-clip-text',
-            'bg-gradient-to-r from-amber-600 via-yellow-400 to-amber-600'
+            'bg-gradient-to-r from-[#0abab5] via-[#60a5fa] to-[#2563eb]'
           )}
         >
           Clack Track
@@ -64,11 +64,11 @@ export function FloatingLogo({ className }: FloatingLogoProps) {
         <p
           className={cn(
             // Typography
-            'font-display text-sm tracking-[0.3em] font-light',
+            'font-display text-base tracking-[0.45em] font-light',
             // Gold-tinted color
             'text-amber-800/60 dark:text-amber-300/50',
             // Spacing
-            'mt-1'
+            'mt-0'
           )}
         >
           BY HOUSEBOY
