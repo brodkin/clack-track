@@ -8,6 +8,7 @@ export interface Vote {
   created_at: Date;
   userAgent?: string;
   ipAddress?: string;
+  reason?: string;
 }
 
 // Maintain backward compatibility with old interface name
@@ -31,6 +32,7 @@ export class VoteModel {
       vote_type: vote.vote_type,
       userAgent: vote.userAgent || null,
       ipAddress: vote.ipAddress || null,
+      reason: vote.reason || null,
     });
 
     if (!id) {
@@ -44,6 +46,7 @@ export class VoteModel {
       created_at: now,
       userAgent: vote.userAgent,
       ipAddress: vote.ipAddress,
+      reason: vote.reason,
     };
   }
 
@@ -52,7 +55,7 @@ export class VoteModel {
    */
   async findByContentId(contentId: number): Promise<Vote[]> {
     const rows = await this.knex('votes')
-      .select('id', 'content_id', 'vote_type', 'created_at', 'userAgent', 'ipAddress')
+      .select('id', 'content_id', 'vote_type', 'created_at', 'userAgent', 'ipAddress', 'reason')
       .where('content_id', contentId)
       .orderBy('created_at', 'desc')
       .orderBy('id', 'desc');
@@ -79,7 +82,7 @@ export class VoteModel {
    */
   async findById(id: number): Promise<Vote | null> {
     const row = await this.knex('votes')
-      .select('id', 'content_id', 'vote_type', 'created_at', 'userAgent', 'ipAddress')
+      .select('id', 'content_id', 'vote_type', 'created_at', 'userAgent', 'ipAddress', 'reason')
       .where('id', id)
       .first();
 
@@ -106,6 +109,7 @@ export class VoteModel {
       created_at: parseMySQLDateTime(row.created_at as string),
       userAgent: row.userAgent as string | undefined,
       ipAddress: row.ipAddress as string | undefined,
+      reason: (row.reason as string | null) ?? undefined,
     };
   }
 }

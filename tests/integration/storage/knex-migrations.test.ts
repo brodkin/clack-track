@@ -17,6 +17,8 @@ describe('Knex Migrations', () => {
   const migration002 = require('../../../migrations/002_create_votes_table.js');
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const migration003 = require('../../../migrations/003_create_logs_table.js');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const migration011 = require('../../../migrations/011_add_vote_reason.js');
 
   beforeEach(async () => {
     // Create in-memory SQLite database for testing
@@ -92,6 +94,78 @@ describe('Knex Migrations', () => {
       expect(columns).toHaveProperty('created_at');
       expect(columns).toHaveProperty('userAgent');
       expect(columns).toHaveProperty('ipAddress');
+    });
+
+    it('should add reason column to votes table via migration 011', async () => {
+      await migration001.up(db);
+      await migration002.up(db);
+      await migration011.up(db);
+
+      const columns = await db.table('votes').columnInfo();
+
+      expect(columns).toHaveProperty('reason');
+    });
+
+    it('should allow inserting votes with reason after migration 011', async () => {
+      await migration001.up(db);
+      await migration002.up(db);
+      await migration011.up(db);
+
+      const [contentId] = await db('content').insert({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: new Date().toISOString(),
+        aiProvider: 'test',
+        status: 'success',
+      });
+
+      await db('votes').insert({
+        content_id: contentId,
+        vote_type: 'bad',
+        reason: 'boring',
+      });
+
+      const vote = await db('votes').where({ content_id: contentId }).first();
+      expect(vote.reason).toBe('boring');
+    });
+
+    it('should allow inserting votes without reason after migration 011', async () => {
+      await migration001.up(db);
+      await migration002.up(db);
+      await migration011.up(db);
+
+      const [contentId] = await db('content').insert({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: new Date().toISOString(),
+        aiProvider: 'test',
+        status: 'success',
+      });
+
+      await db('votes').insert({
+        content_id: contentId,
+        vote_type: 'good',
+      });
+
+      const vote = await db('votes').where({ content_id: contentId }).first();
+      expect(vote.reason).toBeNull();
+    });
+
+    it('should rollback migration 011 (remove reason column)', async () => {
+      await migration001.up(db);
+      await migration002.up(db);
+      await migration011.up(db);
+
+      // Verify reason column exists
+      let columns = await db.table('votes').columnInfo();
+      expect(columns).toHaveProperty('reason');
+
+      // Rollback
+      await migration011.down(db);
+
+      // Verify reason column removed
+      columns = await db.table('votes').columnInfo();
+      expect(columns).not.toHaveProperty('reason');
     });
 
     it('should create logs table with correct schema', async () => {

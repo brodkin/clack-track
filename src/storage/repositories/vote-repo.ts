@@ -17,6 +17,7 @@ export class VoteRepository {
       vote_type: vote,
       userAgent: metadata?.userAgent,
       ipAddress: metadata?.ipAddress,
+      reason: metadata?.reason,
     });
   }
 
