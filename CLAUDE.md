@@ -510,6 +510,31 @@ await page.goto('/account'); // Protected route - now accessible
 - ES modules with `.js` extensions in imports (TypeScript requirement)
 - Type definitions: Centralized in `src/types/` with `index.ts` aggregation
 
+## Running the Application
+
+### Entry Point
+
+The single entry point is `src/index.ts` (compiled: `dist/index.js`). It handles both web server and CLI modes based on `process.argv`:
+
+```bash
+# Start web server (runs bootstrap, starts Express on WEB_SERVER_PORT)
+node dist/index.js
+
+# Run CLI commands (routed by first positional argument)
+node dist/index.js generate --generator haiku
+node dist/index.js content:list
+```
+
+**Do NOT** run `dist/web/server.js` directly — it only exports the `WebServer` class with no standalone startup logic.
+
+### Database Migrations
+
+```bash
+npm run db:migrate          # Correct — uses tsx to handle TypeScript knexfile
+```
+
+**Do NOT** run `npx knex migrate:latest --knexfile knexfile.cjs` — the knexfile is `knexfile.ts` (ES modules) and requires tsx.
+
 ## Common Development Tasks
 
 ### Adding a New Content Generator
