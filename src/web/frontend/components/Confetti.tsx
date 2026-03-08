@@ -17,6 +17,8 @@ export interface ConfettiProps {
   active: boolean;
   /** Callback fired when animation completes */
   onComplete?: () => void;
+  /** Ref to the element the confetti should burst from */
+  originRef?: React.RefObject<HTMLElement | null>;
 }
 
 /** Animation duration in milliseconds (matches animations.ts default + buffer) */
@@ -38,7 +40,7 @@ const ANIMATION_DURATION = 2500;
  * />
  * ```
  */
-export function Confetti({ active, onComplete }: ConfettiProps): JSX.Element | null {
+export function Confetti({ active, onComplete, originRef }: ConfettiProps): JSX.Element | null {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cleanupRef = useRef<CleanupFunction | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -96,12 +98,21 @@ export function Confetti({ active, onComplete }: ConfettiProps): JSX.Element | n
     // Reset completion flag for new animation
     onCompleteCalledRef.current = false;
 
+    // Compute origin from the button's position, or fall back to center
+    let originX = 0.5;
+    let originY = 0.6;
+    if (originRef?.current) {
+      const rect = originRef.current.getBoundingClientRect();
+      originX = (rect.left + rect.width / 2) / window.innerWidth;
+      originY = (rect.top + rect.height / 2) / window.innerHeight;
+    }
+
     // Start confetti animation with amber/gold theme
     cleanupRef.current = createConfettiAnimation(canvas, {
       particleCount: 60,
       spread: 90,
-      originX: 0.5,
-      originY: 0.6,
+      originX,
+      originY,
       velocity: 35,
       gravity: 0.6,
       duration: ANIMATION_DURATION,

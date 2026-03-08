@@ -10,7 +10,7 @@
  * - Animations reset via onAnimationEnd for re-voting
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '../lib/utils';
@@ -33,6 +33,7 @@ type VotedState = 'none' | 'good' | 'bad';
 export function VotingButtons({ onVote, isLoading = false, className }: VotingButtonsProps) {
   const [showConfetti, setShowConfetti] = useState(false);
   const [voted, setVoted] = useState<VotedState>('none');
+  const thumbsUpRef = useRef<HTMLButtonElement>(null);
 
   /**
    * Handle vote with appropriate feedback animation
@@ -58,8 +59,13 @@ export function VotingButtons({ onVote, isLoading = false, className }: VotingBu
 
   return (
     <div className={cn('flex gap-4 justify-center', className)}>
-      <Confetti active={showConfetti} onComplete={() => setShowConfetti(false)} />
+      <Confetti
+        active={showConfetti}
+        onComplete={() => setShowConfetti(false)}
+        originRef={thumbsUpRef}
+      />
       <Button
+        ref={thumbsUpRef}
         onClick={() => handleVote('good')}
         disabled={isLoading}
         size="lg"
