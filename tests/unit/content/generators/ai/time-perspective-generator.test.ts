@@ -3,12 +3,10 @@
  *
  * Test coverage:
  * - Extends AIPromptGenerator with correct prompt files
- * - Uses MEDIUM model tier for psychological reframing
+ * - Uses MEDIUM model tier
  * - Validates prompt files exist
- * - Generates time perspective content via AI provider
- * - Handles AI provider failures gracefully
- * - Selects random lens and stress context programmatically
- * - Injects lens and stressContext as template variables
+ * - Selects random lens and observation programmatically
+ * - Injects lens and observation as template variables
  */
 
 import { TimePerspectiveGenerator } from '@/content/generators/ai/time-perspective-generator';
@@ -57,18 +55,18 @@ describe('TimePerspectiveGenerator', () => {
     });
   });
 
-  describe('STRESS_CONTEXTS static array', () => {
-    it('should contain at least 20 stress contexts', () => {
-      expect(TimePerspectiveGenerator.STRESS_CONTEXTS.length).toBeGreaterThanOrEqual(20);
+  describe('OBSERVATIONS static array', () => {
+    it('should contain at least 20 observations', () => {
+      expect(TimePerspectiveGenerator.OBSERVATIONS.length).toBeGreaterThanOrEqual(20);
     });
 
-    it('should include key stress contexts', () => {
-      expect(TimePerspectiveGenerator.STRESS_CONTEXTS).toContain('FACING_DECISION');
-      expect(TimePerspectiveGenerator.STRESS_CONTEXTS).toContain('OVERWHELMED_TODO');
-      expect(TimePerspectiveGenerator.STRESS_CONTEXTS).toContain('DREADING_MEETING');
-      expect(TimePerspectiveGenerator.STRESS_CONTEXTS).toContain('AFTER_MISTAKE');
-      expect(TimePerspectiveGenerator.STRESS_CONTEXTS).toContain('IMPOSTER_SYNDROME');
-      expect(TimePerspectiveGenerator.STRESS_CONTEXTS).toContain('BURNED_OUT');
+    it('should include key everyday observations', () => {
+      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain('MAKING_COFFEE');
+      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain('LOOKING_AT_THE_SKY');
+      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain('LISTENING_TO_MUSIC');
+      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain('COOKING_A_MEAL');
+      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain('DRINKING_CLEAN_WATER');
+      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain('TURNING_ON_A_LIGHT');
     });
   });
 
@@ -88,17 +86,17 @@ describe('TimePerspectiveGenerator', () => {
     });
   });
 
-  describe('selectStressContext()', () => {
-    it('should return a stress context from the STRESS_CONTEXTS array', () => {
-      const context = TimePerspectiveGenerator.selectStressContext();
-      expect(TimePerspectiveGenerator.STRESS_CONTEXTS).toContain(context);
+  describe('selectObservation()', () => {
+    it('should return an observation from the OBSERVATIONS array', () => {
+      const observation = TimePerspectiveGenerator.selectObservation();
+      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain(observation);
     });
 
     it('should use Math.random for selection (probabilistic)', () => {
-      // Run multiple times to verify we get at least 2 different contexts
+      // Run multiple times to verify we get at least 2 different observations
       const results = new Set<string>();
       for (let i = 0; i < 50; i++) {
-        results.add(TimePerspectiveGenerator.selectStressContext());
+        results.add(TimePerspectiveGenerator.selectObservation());
       }
       expect(results.size).toBeGreaterThan(1);
     });
@@ -136,7 +134,7 @@ describe('TimePerspectiveGenerator', () => {
       expect(generator).toBeInstanceOf(TimePerspectiveGenerator);
     });
 
-    it('should use MEDIUM model tier for psychological reframing', async () => {
+    it('should use MEDIUM model tier', async () => {
       // Set up mocks for generate() call
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
@@ -202,35 +200,7 @@ describe('TimePerspectiveGenerator', () => {
   });
 
   describe('generate()', () => {
-    it('should load correct prompts and use MEDIUM tier', async () => {
-      // Set up mocks for generate() call
-      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
-      mockModelTierSelector.select.mockReturnValue({
-        provider: 'openai',
-        model: 'gpt-4.1-mini',
-        tier: ModelTier.MEDIUM,
-      });
-      mockModelTierSelector.getAlternate.mockReturnValue(null);
-
-      const generator = new TimePerspectiveGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedTimePerspectiveGenerator;
-
-      // Verify the generator uses the correct prompt files via protected methods
-      expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
-      expect(generator.getUserPromptFile()).toBe('time-perspective.txt');
-
-      // Verify tier via observable behavior
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider - we're testing the tier selection call
-      }
-
-      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
-    });
-
-    it('should inject lens and stressContext as template variables', async () => {
+    it('should inject lens and observation as template variables', async () => {
       // Set up mocks for generate() call
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
@@ -250,7 +220,7 @@ describe('TimePerspectiveGenerator', () => {
         // May fail without AI provider - we're testing template variable injection
       }
 
-      // Verify loadPromptWithVariables was called with lens and stressContext
+      // Verify loadPromptWithVariables was called with lens and observation
       const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
         call => call[0] === 'user' && call[1] === 'time-perspective.txt'
       );
@@ -259,62 +229,21 @@ describe('TimePerspectiveGenerator', () => {
       if (userPromptCall) {
         const variables = userPromptCall[2] as Record<string, unknown>;
         expect(variables).toHaveProperty('lens');
-        expect(variables).toHaveProperty('stressContext');
+        expect(variables).toHaveProperty('observation');
         expect(variables).toHaveProperty('timeBucket');
         expect(TimePerspectiveGenerator.LENSES).toContain(variables.lens);
-        expect(TimePerspectiveGenerator.STRESS_CONTEXTS).toContain(variables.stressContext);
+        expect(TimePerspectiveGenerator.OBSERVATIONS).toContain(variables.observation);
       }
-    });
-
-    it('should include selectedLens and selectedStressContext in metadata', async () => {
-      // Set up mocks for successful generate() call
-      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
-      mockModelTierSelector.select.mockReturnValue({
-        provider: 'openai',
-        model: 'gpt-4.1-mini',
-        tier: ModelTier.MEDIUM,
-      });
-
-      // Mock the AI provider creation and response
-      const mockProvider = {
-        generate: jest.fn().mockResolvedValue({
-          text: 'Time perspective content',
-          model: 'gpt-4.1-mini',
-          tokensUsed: 100,
-        }),
-      };
-
-      // Mock createAIProvider by mocking the module
-      jest.doMock('@/api/ai', () => ({
-        createAIProvider: jest.fn().mockReturnValue(mockProvider),
-      }));
-
-      const generator = new TimePerspectiveGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      // Since we can't easily mock the AI provider, we'll just verify the call pattern
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // Expected to fail without real API key
-      }
-
-      // Verify the user prompt was loaded with expected variables
-      const userPromptCalls = mockPromptLoader.loadPromptWithVariables.mock.calls.filter(
-        call => call[0] === 'user'
-      );
-      expect(userPromptCalls.length).toBeGreaterThan(0);
     });
   });
 
   describe('variability', () => {
-    it('should provide 400+ combinations (5 lenses x 20+ contexts x 4 time buckets)', () => {
+    it('should provide 400+ combinations (5 lenses x 20 observations x 4 time buckets)', () => {
       const lensCount = TimePerspectiveGenerator.LENSES.length;
-      const contextCount = TimePerspectiveGenerator.STRESS_CONTEXTS.length;
+      const observationCount = TimePerspectiveGenerator.OBSERVATIONS.length;
       const timeBucketCount = 4; // NIGHT, MORNING, AFTERNOON, EVENING
 
-      const totalCombinations = lensCount * contextCount * timeBucketCount;
+      const totalCombinations = lensCount * observationCount * timeBucketCount;
 
       expect(totalCombinations).toBeGreaterThanOrEqual(400);
     });

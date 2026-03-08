@@ -30,7 +30,7 @@
     "circuit:reset": "node dist/index.js circuit:reset",
     "circuit:watch": "node dist/index.js circuit:watch",
     "auth:invite": "node dist/index.js auth:invite",
-    "test": "jest",
+    "test": "jest --forceExit",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:unit": "jest --selectProjects=unit",

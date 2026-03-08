@@ -1,28 +1,25 @@
 /**
  * Time Perspective Generator
  *
- * Concrete implementation of AIPromptGenerator for generating
- * temporal reframing content through various psychological lenses using AI.
+ * Generates content that views the present moment through the eyes of a
+ * historian peering across deep time with wonder. Pairs a temporal lens
+ * with an ordinary modern-day observation to reveal how extraordinary
+ * everyday life actually is.
  *
  * Features:
  * - Uses prompts/system/major-update-base.txt for system context
  * - Uses prompts/user/time-perspective.txt for time perspective guidance
- * - Uses MEDIUM model tier for nuanced psychological reframing
- * - Programmatic lens selection from 5 curated temporal perspectives
- * - Programmatic stress context selection from 20+ relatable situations
+ * - Uses MEDIUM model tier for nuanced temporal wonder
+ * - Programmatic lens selection from 5 temporal perspectives
+ * - Programmatic observation selection from 20 everyday moments
  * - Time-of-day bucket for contextual relevance
  * - Inherits retry logic and provider failover from base class
  *
  * Uses Template Method hooks:
- * - getTemplateVariables(): Injects lens, stressContext, and timeBucket
+ * - getTemplateVariables(): Injects lens, observation, and timeBucket
  * - getCustomMetadata(): Tracks selection choices in metadata
  *
- * Time perspective content aims to reframe current stressors through
- * temporal shifts - viewing situations from cosmic, absurdist, ancestral,
- * connected, or future-self perspectives. The goal is providing genuine
- * perspective shifts, not platitudes.
- *
- * Variability: 5 lenses x 20+ contexts x 4 time buckets = 400+ combinations
+ * Variability: 5 lenses x 20 observations x 4 time buckets = 400 combinations
  *
  * @example
  * ```typescript
@@ -37,7 +34,7 @@
  *   timezone: 'America/New_York'
  * });
  *
- * console.log(content.text); // "IN 10000 YEARS\nNO ONE WILL REMEMBER\nTHAT MEETING YOU DREAD"
+ * console.log(content.text); // "STARS TAKE 10 MILLION\nYEARS TO FORM AND YOU\nMADE COFFEE IN FOUR\nMINUTES. EFFICIENT."
  * ```
  */
 
@@ -53,23 +50,22 @@ import type { GenerationContext } from '../../../types/content-generator.js';
 type TimeBucket = 'NIGHT' | 'MORNING' | 'AFTERNOON' | 'EVENING';
 
 /**
- * Generates temporal reframing content through various psychological lenses
+ * Generates temporal wonder content through various historical lenses
  *
  * Extends AIPromptGenerator with time-perspective-specific prompts
- * and MEDIUM model tier selection for nuanced psychological reframing.
- * Uses programmatic selection to ensure true randomness in lens and
- * stress context choices (LLMs cannot reliably generate random selections).
+ * and MEDIUM model tier selection. Uses programmatic selection to
+ * ensure true randomness in lens and observation choices.
  */
 export class TimePerspectiveGenerator extends AIPromptGenerator {
   /**
-   * Five temporal perspective lenses for reframing stress.
-   * Each lens provides a different angle on the current situation:
+   * Five temporal perspective lenses, each offering a different
+   * angle on the present moment:
    *
    * - COSMIC: Vast time scales (billions of years, universe's age)
-   * - ABSURDIST: Embracing life's inherent meaninglessness with humor
-   * - ANCESTOR: Wisdom from those who came before
-   * - CONNECTION: The web of human experience across time
-   * - FUTURE_SELF: Advice from your future self looking back
+   * - ABSURDIST: Playful wonder at the ridiculousness of existing
+   * - ANCESTOR: What people from the past would marvel at today
+   * - CONNECTION: The web of simultaneous human experience
+   * - FUTURE_SELF: Your future self appreciating this moment
    */
   static readonly LENSES: readonly string[] = [
     'COSMIC',
@@ -80,45 +76,39 @@ export class TimePerspectiveGenerator extends AIPromptGenerator {
   ] as const;
 
   /**
-   * Relatable stress contexts that viewers may be experiencing.
-   * Selected programmatically to ensure variety across generations.
+   * Ordinary present-day moments that become extraordinary
+   * when viewed through a temporal lens. Selected programmatically
+   * to ensure variety across generations.
    */
-  static readonly STRESS_CONTEXTS: readonly string[] = [
-    'FACING_DECISION',
-    'OVERWHELMED_TODO',
-    'DREADING_MEETING',
-    'AFTER_MISTAKE',
-    'WAITING_NEWS',
-    'FEELING_STUCK',
-    'INTERPERSONAL_CONFLICT',
-    'DEADLINE_PRESSURE',
-    'STARTING_SOMETHING_NEW',
-    'LETTING_GO',
-    'IMPOSTER_SYNDROME',
-    'COMPARISON_SPIRAL',
-    'PROCRASTINATING',
-    'BURNED_OUT',
-    'ANXIOUS_FUTURE',
-    'REGRET_PAST',
-    'FEELING_SMALL',
-    'SEEKING_MEANING',
-    'OVERWHELMED_OPTIONS',
-    'FEAR_OF_FAILURE',
+  static readonly OBSERVATIONS: readonly string[] = [
+    'MAKING_COFFEE',
+    'CHECKING_THE_TIME',
+    'CHOOSING_WHAT_TO_EAT',
+    'LISTENING_TO_MUSIC',
+    'READING_A_MESSAGE',
+    'WALKING_THROUGH_A_DOOR',
+    'LOOKING_OUT_A_WINDOW',
+    'TURNING_ON_A_LIGHT',
+    'DRINKING_CLEAN_WATER',
+    'HAVING_A_CONVERSATION',
+    'PICKING_AN_OUTFIT',
+    'COOKING_A_MEAL',
+    'SITTING_IN_A_CHAIR',
+    'PETTING_AN_ANIMAL',
+    'LAUGHING_AT_SOMETHING',
+    'LEARNING_SOMETHING_NEW',
+    'MAKING_A_PLAN',
+    'OPENING_A_BOOK',
+    'LOOKING_AT_THE_SKY',
+    'SHARING_A_MEAL',
   ] as const;
 
-  /**
-   * Selected values for the current generation, used by getCustomMetadata
-   */
   private selectedLens: string = '';
-  private selectedStressContext: string = '';
+  private selectedObservation: string = '';
   private selectedTimeBucket: TimeBucket = 'MORNING';
 
   /**
    * Programmatically selects a random lens from the LENSES array.
-   * Uses Math.random() for true randomness, unlike LLM-based selection
-   * which exhibits bias toward certain options.
-   *
-   * @returns A randomly selected lens string
    */
   static selectLens(): string {
     const index = Math.floor(Math.random() * TimePerspectiveGenerator.LENSES.length);
@@ -126,14 +116,11 @@ export class TimePerspectiveGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Programmatically selects a random stress context from STRESS_CONTEXTS.
-   * Uses Math.random() for true randomness.
-   *
-   * @returns A randomly selected stress context string
+   * Programmatically selects a random observation from OBSERVATIONS.
    */
-  static selectStressContext(): string {
-    const index = Math.floor(Math.random() * TimePerspectiveGenerator.STRESS_CONTEXTS.length);
-    return TimePerspectiveGenerator.STRESS_CONTEXTS[index];
+  static selectObservation(): string {
+    const index = Math.floor(Math.random() * TimePerspectiveGenerator.OBSERVATIONS.length);
+    return TimePerspectiveGenerator.OBSERVATIONS[index];
   }
 
   /**
@@ -149,75 +136,46 @@ export class TimePerspectiveGenerator extends AIPromptGenerator {
     return 'EVENING';
   }
 
-  /**
-   * Creates a new TimePerspectiveGenerator instance
-   *
-   * @param promptLoader - Loader for system and user prompt files
-   * @param modelTierSelector - Selector for tier-based model selection with fallback
-   * @param apiKeys - Record of provider names to API keys (e.g., {'openai': 'sk-...', 'anthropic': 'sk-ant-...'})
-   */
   constructor(
     promptLoader: PromptLoader,
     modelTierSelector: ModelTierSelector,
     apiKeys: AIProviderAPIKeys = {}
   ) {
-    // Use MEDIUM tier for time perspective (psychological reframing needs nuance)
     super(promptLoader, modelTierSelector, ModelTier.MEDIUM, apiKeys);
   }
 
-  /**
-   * Returns the filename for the system prompt
-   *
-   * Uses the major update base prompt which provides general
-   * Vestaboard formatting constraints and creative guidelines.
-   *
-   * @returns Filename of the system prompt
-   */
   protected getSystemPromptFile(): string {
     return 'major-update-base.txt';
   }
 
-  /**
-   * Returns the filename for the user prompt
-   *
-   * Uses the time-perspective prompt which specifies lens-specific
-   * guidance and cliche exclusions, especially for COSMIC lens.
-   *
-   * @returns Filename of the user prompt
-   */
   protected getUserPromptFile(): string {
     return 'time-perspective.txt';
   }
 
   /**
-   * Hook: Selects random lens, stress context, and time bucket, returns as template variables.
-   *
-   * @param context - Generation context with timestamp for time bucket calculation
-   * @returns Template variables with lens, stressContext, and timeBucket
+   * Hook: Selects random lens, observation, and time bucket, returns as template variables.
    */
   protected async getTemplateVariables(
     context: GenerationContext
   ): Promise<Record<string, string>> {
     this.selectedLens = TimePerspectiveGenerator.selectLens();
-    this.selectedStressContext = TimePerspectiveGenerator.selectStressContext();
+    this.selectedObservation = TimePerspectiveGenerator.selectObservation();
     this.selectedTimeBucket = TimePerspectiveGenerator.getTimeBucket(context.timestamp.getHours());
 
     return {
       lens: this.selectedLens,
-      stressContext: this.selectedStressContext,
+      observation: this.selectedObservation,
       timeBucket: this.selectedTimeBucket,
     };
   }
 
   /**
    * Hook: Returns selection choices in metadata.
-   *
-   * @returns Metadata with selectedLens, selectedStressContext, and timeBucket
    */
   protected getCustomMetadata(): Record<string, unknown> {
     return {
       selectedLens: this.selectedLens,
-      selectedStressContext: this.selectedStressContext,
+      selectedObservation: this.selectedObservation,
       timeBucket: this.selectedTimeBucket,
     };
   }
