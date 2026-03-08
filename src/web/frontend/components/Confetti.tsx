@@ -6,6 +6,7 @@
  */
 
 import { useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { createConfettiAnimation, CONFETTI_COLORS, type CleanupFunction } from '../lib/animations';
 
 /**
@@ -138,7 +139,7 @@ export function Confetti({ active, onComplete }: ConfettiProps): JSX.Element | n
     return null;
   }
 
-  return (
+  return createPortal(
     <canvas
       ref={canvasRef}
       aria-hidden="true"
@@ -151,6 +152,7 @@ export function Confetti({ active, onComplete }: ConfettiProps): JSX.Element | n
         pointerEvents: 'none',
         zIndex: 9999,
       }}
-    />
+    />,
+    document.body
   );
 }
