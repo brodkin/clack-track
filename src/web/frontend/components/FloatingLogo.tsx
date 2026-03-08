@@ -14,6 +14,7 @@
  * - Responsive typography
  */
 
+import { useEffect, useRef } from 'react';
 import { cn } from '../lib/utils';
 
 interface FloatingLogoProps {
@@ -21,10 +22,40 @@ interface FloatingLogoProps {
 }
 
 /**
+ * Hook that shifts a gradient's background-position based on device tilt (gyroscope).
+ * Falls back to a slow CSS animation on desktop / non-gyro devices.
+ */
+function useGyroGradient(ref: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let hasGyro = false;
+
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      if (e.gamma == null) return;
+      if (!hasGyro) {
+        hasGyro = true;
+        el.style.animationPlayState = 'paused';
+      }
+      // gamma: -90 to 90 (left/right tilt) → map to 0%–100% background-position
+      const pct = ((e.gamma + 90) / 180) * 100;
+      el.style.backgroundPosition = `${pct}% 50%`;
+    };
+
+    window.addEventListener('deviceorientation', handleOrientation);
+    return () => window.removeEventListener('deviceorientation', handleOrientation);
+  }, [ref]);
+}
+
+/**
  * FloatingLogo displays a sticky header with glassmorphism effect and gradient brand text.
  * The component sticks to the top of the viewport during scroll without blocking content flow.
  */
 export function FloatingLogo({ className }: FloatingLogoProps) {
+  const h1Ref = useRef<HTMLHeadingElement>(null);
+  useGyroGradient(h1Ref);
+
   return (
     <header
       data-testid="floating-logo"
@@ -47,15 +78,21 @@ export function FloatingLogo({ className }: FloatingLogoProps) {
       )}
     >
       <div className="text-center">
-        {/* Main logo text with gold gradient */}
+        {/* Main logo text with glossy gradient */}
         <h1
+          ref={h1Ref}
           className={cn(
             // Typography
             'font-brush text-4xl md:text-5xl leading-tight !mb-0',
-            // Gradient text: tiffany blue edge → light blue → medium-dark blue
+            // Glossy gradient: wide with white highlight for shimmer
             'text-transparent bg-clip-text',
-            'bg-gradient-to-r from-[#0abab5] via-[#60a5fa] to-[#2563eb]'
+            'animate-glossy-shift'
           )}
+          style={{
+            backgroundImage:
+              'linear-gradient(90deg, #2563eb 0%, #0abab5 20%, #60a5fa 40%, rgba(255,255,255,0.18) 50%, #60a5fa 60%, #0abab5 80%, #2563eb 100%)',
+            backgroundSize: '300% 100%',
+          }}
         >
           Clack Track
         </h1>

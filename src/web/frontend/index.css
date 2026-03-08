@@ -317,6 +317,21 @@ h1 {
   animation: vote-sink-down 500ms ease-out;
 }
 
+/* Glossy gradient sweep - shimmer highlight across logo text */
+@keyframes glossy-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-glossy-shift {
+  animation: glossy-shift 9s ease-in-out infinite;
+}
+
 /* ============================================
    Glass Morphism & Device Safety
    ============================================ */
