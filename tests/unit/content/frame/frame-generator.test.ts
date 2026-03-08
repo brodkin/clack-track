@@ -700,4 +700,73 @@ describe('generateFrame', () => {
       expect(result.layout).toHaveLength(6);
     });
   });
+
+  describe('color emoji handling', () => {
+    it('should encode color emoji 🟥 as character code 63 (RED) in the layout', async () => {
+      const options: FrameOptions = {
+        text: '🟥',
+        dateTime: new Date('2025-11-26T10:30:00'),
+      };
+
+      const result = await generateFrame(options);
+
+      // Single emoji on 1 line, vertically centered at row 2
+      // Column 0 should be 63 (RED), columns 1-20 should be 0 (space)
+      expect(result.layout[2][0]).toBe(63); // RED color tile
+      expect(result.layout[2][1]).toBe(0); // space padding
+    });
+
+    it('should encode color emoji mixed with text correctly', async () => {
+      const options: FrameOptions = {
+        text: 'A🟥B',
+        dateTime: new Date('2025-11-26T10:30:00'),
+      };
+
+      const result = await generateFrame(options);
+
+      // 'A🟥B' is 3 graphemes, vertically centered at row 2
+      const row = result.layout[2];
+      expect(row[0]).toBe(1); // A
+      expect(row[1]).toBe(63); // 🟥 = RED
+      expect(row[2]).toBe(2); // B
+      expect(row[3]).toBe(0); // space padding
+    });
+
+    it('should correctly pad lines containing color emojis to 21 columns', async () => {
+      const options: FrameOptions = {
+        text: '🟥HELLO',
+        dateTime: new Date('2025-11-26T10:30:00'),
+      };
+
+      const result = await generateFrame(options);
+
+      // '🟥HELLO' is 6 graphemes, should produce exactly 21 content columns + 1 color bar = 22
+      const row = result.layout[2];
+      expect(row).toHaveLength(22);
+
+      // First char should be RED (63), followed by HELLO
+      expect(row[0]).toBe(63); // 🟥 = RED
+      expect(row[1]).toBe(8); // H
+      expect(row[2]).toBe(5); // E
+      expect(row[3]).toBe(12); // L
+      expect(row[4]).toBe(12); // L
+      expect(row[5]).toBe(15); // O
+      // Remaining columns 6-20 should be spaces (0)
+      for (let col = 6; col < 21; col++) {
+        expect(row[col]).toBe(0);
+      }
+    });
+
+    it('should not warn about color emojis as unsupported characters', async () => {
+      const options: FrameOptions = {
+        text: '🟥TEST',
+        dateTime: new Date('2025-11-26T10:30:00'),
+      };
+
+      const result = await generateFrame(options);
+
+      // Color emojis are supported, so no unsupported character warning
+      expect(result.warnings.some(w => /unsupported characters/i.test(w))).toBe(false);
+    });
+  });
 });
