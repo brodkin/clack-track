@@ -3,6 +3,23 @@ import { Request, Response, WebDependencies } from '../types.js';
 import { VoteRepository } from '../../storage/repositories/vote-repo.js';
 
 /**
+ * Valid reason values for downvotes.
+ * @internal Exported for testing purposes
+ */
+export const VALID_VOTE_REASONS = [
+  'not_funny',
+  'doesnt_make_sense',
+  'factually_wrong',
+  'too_negative',
+  'boring',
+  'badly_formatted',
+  'almost_there',
+  'other',
+] as const;
+
+export type VoteReason = (typeof VALID_VOTE_REASONS)[number];
+
+/**
  * Validate vote value
  * @internal Exported for testing purposes
  */
@@ -11,9 +28,33 @@ export function isValidVote(vote: unknown): vote is 'good' | 'bad' {
 }
 
 /**
+ * Validate an optional reason field.
+ * Returns null if reason is valid or absent, or an error string if invalid.
+ * @internal Exported for testing purposes
+ */
+export function validateReason(reason: unknown): string | null {
+  // No reason provided -- valid (optional field)
+  if (reason === undefined || reason === null) {
+    return null;
+  }
+
+  // Must be a non-empty string
+  if (typeof reason !== 'string' || reason.length === 0) {
+    return `reason must be one of: ${VALID_VOTE_REASONS.join(', ')}`;
+  }
+
+  // Must be one of the predefined values
+  if (!VALID_VOTE_REASONS.includes(reason as VoteReason)) {
+    return `reason must be one of: ${VALID_VOTE_REASONS.join(', ')}`;
+  }
+
+  return null;
+}
+
+/**
  * POST /api/vote
  * Submit a vote for content quality
- * Body: { contentId: string, vote: 'good' | 'bad' }
+ * Body: { contentId: string, vote: 'good' | 'bad', reason?: VoteReason }
  *
  * @param req - Express request object
  * @param res - Express response object
@@ -45,7 +86,11 @@ export async function submitVote(
       return;
     }
 
-    const { contentId, vote } = body as { contentId?: unknown; vote?: unknown };
+    const { contentId, vote, reason } = body as {
+      contentId?: unknown;
+      vote?: unknown;
+      reason?: unknown;
+    };
 
     // Validate required fields
     if (!contentId || !vote) {
@@ -65,8 +110,22 @@ export async function submitVote(
       return;
     }
 
+    // Validate optional reason field
+    const reasonError = validateReason(reason);
+    if (reasonError) {
+      res.status(400).json({
+        success: false,
+        error: reasonError,
+      });
+      return;
+    }
+
+    // Build metadata with reason if provided
+    const metadata: Record<string, string> | undefined =
+      typeof reason === 'string' ? { reason } : undefined;
+
     // Submit vote to repository
-    const voteRecord = await repository.submitVote(Number(contentId), vote);
+    const voteRecord = await repository.submitVote(Number(contentId), vote, metadata);
 
     res.json({
       success: true,

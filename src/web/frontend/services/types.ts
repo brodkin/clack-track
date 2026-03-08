@@ -56,6 +56,7 @@ export type ContentHistoryResponse = ContentRecord[];
 export interface VoteSubmission {
   contentId: string;
   vote: 'good' | 'bad';
+  reason?: string;
 }
 
 export interface VoteResponse {

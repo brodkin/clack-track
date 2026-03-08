@@ -97,7 +97,7 @@ describe('Voting API Routes', () => {
 
       await submitVote(mockRequest, mockResponse, mockRepository);
 
-      expect(mockSubmitVote).toHaveBeenCalledWith(456, 'good');
+      expect(mockSubmitVote).toHaveBeenCalledWith(456, 'good', undefined);
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
         data: mockVote,
@@ -127,7 +127,7 @@ describe('Voting API Routes', () => {
 
       await submitVote(mockRequest, mockResponse, mockRepository);
 
-      expect(mockSubmitVote).toHaveBeenCalledWith(456, 'bad');
+      expect(mockSubmitVote).toHaveBeenCalledWith(456, 'bad', undefined);
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
         data: mockVote,
@@ -422,7 +422,7 @@ describe('Voting API Routes', () => {
         await postHandler.route.stack[0].handle(req, res);
       }
 
-      expect(mockSubmitVote).toHaveBeenCalledWith(777, 'good');
+      expect(mockSubmitVote).toHaveBeenCalledWith(777, 'good', undefined);
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
         data: mockVote,
