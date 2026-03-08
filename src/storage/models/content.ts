@@ -278,9 +278,14 @@ export class ContentModel {
   private mapRowToContentRecord(row: Record<string, unknown>): ContentRecord {
     let metadata: Record<string, unknown> | undefined;
     try {
-      const metadataStr = row.metadata as string | null;
-      if (metadataStr) {
-        metadata = JSON.parse(metadataStr);
+      const rawMetadata = row.metadata;
+      if (rawMetadata) {
+        // MySQL's mysql2 driver returns JSON columns as already-parsed objects.
+        // SQLite (used in tests) returns them as strings that need parsing.
+        metadata =
+          typeof rawMetadata === 'string'
+            ? JSON.parse(rawMetadata)
+            : (rawMetadata as Record<string, unknown>);
       }
     } catch {
       // If metadata parsing fails, leave it undefined
@@ -288,9 +293,12 @@ export class ContentModel {
 
     let rejectionReasons: RejectionReason[] | undefined;
     try {
-      const rejectionReasonsStr = row.rejectionReasons as string | null;
-      if (rejectionReasonsStr) {
-        rejectionReasons = JSON.parse(rejectionReasonsStr);
+      const rawReasons = row.rejectionReasons;
+      if (rawReasons) {
+        rejectionReasons =
+          typeof rawReasons === 'string'
+            ? JSON.parse(rawReasons)
+            : (rawReasons as RejectionReason[]);
       }
     } catch {
       // If rejectionReasons parsing fails, leave it undefined
