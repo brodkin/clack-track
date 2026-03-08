@@ -403,7 +403,10 @@ describe('NovelInsightGenerator', () => {
     });
 
     it('should throw error when API key is not found', async () => {
-      Math.random = jest.fn().mockReturnValue(0);
+      // NOTE: Do NOT mock Math.random here. source-map-support's quicksort
+      // uses Math.random() for pivot selection; mocking it to a constant
+      // causes worst-case recursion and a stack overflow when Jest formats
+      // the expected error via rejects.toThrow().
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
         provider: 'openai',

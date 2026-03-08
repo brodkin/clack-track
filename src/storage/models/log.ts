@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { parseMySQLDateTime } from '@/storage/parse-datetime.js';
+import { parseMySQLDateTime } from '../parse-datetime.js';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 

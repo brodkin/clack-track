@@ -19,7 +19,6 @@ export { HaikuGenerator } from './haiku-generator.js';
 export { HotTakeGenerator } from './hot-take-generator.js';
 export { LanguageLessonGenerator } from './language-lesson-generator.js';
 export { LocalNewsGenerator } from './local-news-generator.js';
-export { NewsGenerator } from './news-generator.js';
 export { NovelInsightGenerator } from './novel-insight-generator.js';
 export { ParadoxEngineGenerator } from './paradox-engine-generator.js';
 export { SeasonalGenerator } from './seasonal-generator.js';

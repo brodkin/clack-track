@@ -172,7 +172,7 @@ export abstract class AIPromptGenerator implements ContentGenerator {
    *
    * **Use cases:**
    * - WeatherGenerator: Inject weather data via `{ weather: '72F Sunny' }`
-   * - NewsGenerator: Inject headlines via `{ headlines: '...' }`
+   * - BaseNewsGenerator: Inject headlines via `{ headlines: '...' }`
    *
    * @param context - Generation context with timestamp and other data
    * @returns Custom template variables (default: empty object)
