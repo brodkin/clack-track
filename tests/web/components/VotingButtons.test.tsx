@@ -2,7 +2,8 @@
  * VotingButtons Component Tests
  *
  * Testing touch-friendly voting buttons for content rating
- * with confetti celebration and haptic feedback
+ * with visual animations, confetti celebration, and haptic feedback.
+ * Buttons are icon-only (no text labels) with aria-labels for accessibility.
  */
 
 /// <reference types="@testing-library/jest-dom" />
@@ -54,6 +55,17 @@ describe('VotingButtons Component', () => {
       expect(upButton).toBeInTheDocument();
       // @ts-expect-error - jest-dom matchers
       expect(downButton).toBeInTheDocument();
+    });
+
+    it('should render icon-only buttons without text labels', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      const upButton = screen.getByRole('button', { name: /thumbs up/i });
+      const downButton = screen.getByRole('button', { name: /thumbs down/i });
+
+      // Buttons should NOT contain visible "Good" or "Bad" text
+      expect(upButton.textContent).not.toMatch(/good/i);
+      expect(downButton.textContent).not.toMatch(/bad/i);
     });
   });
 
@@ -154,6 +166,93 @@ describe('VotingButtons Component', () => {
       // Should have focus-visible class or similar
       // @ts-expect-error - jest-dom matchers
       expect(upButton).toHaveClass('focus:outline-none');
+    });
+  });
+
+  describe('Vote Animation', () => {
+    it('should apply upward float animation class on thumbs up vote', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      const upButton = screen.getByRole('button', { name: /thumbs up/i });
+      fireEvent.click(upButton);
+
+      // The icon wrapper should get the animate-vote-float-up class
+      const animatedElement = upButton.querySelector('.animate-vote-float-up');
+      expect(animatedElement).not.toBeNull();
+    });
+
+    it('should apply downward sink animation class on thumbs down vote', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      const downButton = screen.getByRole('button', { name: /thumbs down/i });
+      fireEvent.click(downButton);
+
+      // The icon wrapper should get the animate-vote-sink-down class
+      const animatedElement = downButton.querySelector('.animate-vote-sink-down');
+      expect(animatedElement).not.toBeNull();
+    });
+
+    it('should not apply animation classes before any vote', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      const upButton = screen.getByRole('button', { name: /thumbs up/i });
+      const downButton = screen.getByRole('button', { name: /thumbs down/i });
+
+      expect(upButton.querySelector('.animate-vote-float-up')).toBeNull();
+      expect(downButton.querySelector('.animate-vote-sink-down')).toBeNull();
+    });
+
+    it('should reset animation after onAnimationEnd fires on thumbs up', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      const upButton = screen.getByRole('button', { name: /thumbs up/i });
+      fireEvent.click(upButton);
+
+      // Animation class should be present after click
+      const animatedElement = upButton.querySelector('.animate-vote-float-up');
+      expect(animatedElement).not.toBeNull();
+
+      // Fire animationend event to simulate animation completion
+      fireEvent.animationEnd(animatedElement!);
+
+      // Animation class should be removed after completion
+      expect(upButton.querySelector('.animate-vote-float-up')).toBeNull();
+    });
+
+    it('should reset animation after onAnimationEnd fires on thumbs down', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      const downButton = screen.getByRole('button', { name: /thumbs down/i });
+      fireEvent.click(downButton);
+
+      // Animation class should be present after click
+      const animatedElement = downButton.querySelector('.animate-vote-sink-down');
+      expect(animatedElement).not.toBeNull();
+
+      // Fire animationend event to simulate animation completion
+      fireEvent.animationEnd(animatedElement!);
+
+      // Animation class should be removed after completion
+      expect(downButton.querySelector('.animate-vote-sink-down')).toBeNull();
+    });
+
+    it('should allow re-voting after animation completes', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      const upButton = screen.getByRole('button', { name: /thumbs up/i });
+
+      // First vote
+      fireEvent.click(upButton);
+      const firstAnimated = upButton.querySelector('.animate-vote-float-up');
+      expect(firstAnimated).not.toBeNull();
+      fireEvent.animationEnd(firstAnimated!);
+
+      // Second vote should work and re-apply animation
+      fireEvent.click(upButton);
+      const secondAnimated = upButton.querySelector('.animate-vote-float-up');
+      expect(secondAnimated).not.toBeNull();
+
+      expect(mockOnVote).toHaveBeenCalledTimes(2);
     });
   });
 

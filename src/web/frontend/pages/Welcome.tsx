@@ -18,7 +18,6 @@ import { apiClient } from '../services/apiClient';
 import { textToCharacterCodes, emptyGrid } from '../lib/textToCharCodes';
 import type { ContentWithCharacterCodes } from '../services/types.js';
 
-type VoteStatus = 'idle' | 'loading' | 'success' | 'error';
 type VestaboardModel = 'black' | 'white';
 
 /**
@@ -64,8 +63,7 @@ export function Welcome() {
   const [content, setContent] = useState<ContentWithCharacterCodes | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [voteStatus, setVoteStatus] = useState<VoteStatus>('idle');
-  const [voteError, setVoteError] = useState<string | null>(null);
+  const [isVoting, setIsVoting] = useState(false);
   const [vestaboardModel, setVestaboardModel] = useState<VestaboardModel>('black');
 
   const fetchContent = useCallback(async () => {
@@ -107,20 +105,16 @@ export function Welcome() {
   const handleVote = async (vote: 'good' | 'bad') => {
     if (!content) return;
 
-    setVoteStatus('loading');
-    setVoteError(null);
-
+    setIsVoting(true);
     try {
       await apiClient.submitVote({
         contentId: String(content.id),
         vote,
       });
-      setVoteStatus('success');
-      // Reset success state after 3 seconds
-      setTimeout(() => setVoteStatus('idle'), 3000);
-    } catch (err) {
-      setVoteStatus('error');
-      setVoteError(err instanceof Error ? err.message : 'Failed to submit vote');
+    } catch {
+      // Visual feedback is self-contained in VotingButtons (animations + haptics)
+    } finally {
+      setIsVoting(false);
     }
   };
 
@@ -219,18 +213,7 @@ export function Welcome() {
           </p>
         </div>
 
-        <VotingButtons onVote={handleVote} isLoading={voteStatus === 'loading'} />
-
-        {/* Vote feedback */}
-        <div className="mt-4 text-center min-h-[24px]">
-          {voteStatus === 'loading' && (
-            <p className="text-gray-600 dark:text-gray-400">Submitting vote...</p>
-          )}
-          {voteStatus === 'success' && (
-            <p className="text-green-600 dark:text-green-400">Thank you for your feedback!</p>
-          )}
-          {voteStatus === 'error' && <p className="text-red-600 dark:text-red-400">{voteError}</p>}
-        </div>
+        <VotingButtons onVote={handleVote} isLoading={isVoting} />
 
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">

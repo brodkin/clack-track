@@ -2,7 +2,12 @@
  * VotingButtons Component
  *
  * Touch-friendly voting interface for content rating (good/bad)
- * Includes confetti celebration and haptic feedback for enhanced UX
+ * Includes visual animations, confetti celebration, and haptic feedback.
+ * Buttons are icon-only with aria-labels for accessibility.
+ *
+ * - Thumbs up: floats upward with confetti + success haptic
+ * - Thumbs down: sinks downward with medium haptic
+ * - Animations reset via onAnimationEnd for re-voting
  */
 
 import { useState } from 'react';
@@ -18,12 +23,16 @@ interface VotingButtonsProps {
   className?: string;
 }
 
+type VotedState = 'none' | 'good' | 'bad';
+
 /**
- * VotingButtons provides large, touch-friendly buttons for content voting
- * with celebratory confetti and haptic feedback
+ * VotingButtons provides large, touch-friendly icon-only buttons for content voting
+ * with animated visual feedback, confetti celebration, and haptic feedback.
+ * All visual feedback is self-contained -- consuming pages need only wire up onVote and isLoading.
  */
 export function VotingButtons({ onVote, isLoading = false, className }: VotingButtonsProps) {
   const [showConfetti, setShowConfetti] = useState(false);
+  const [voted, setVoted] = useState<VotedState>('none');
 
   /**
    * Handle vote with appropriate feedback animation
@@ -35,7 +44,16 @@ export function VotingButtons({ onVote, isLoading = false, className }: VotingBu
     } else {
       triggerHaptic('medium');
     }
+    setVoted(vote);
     onVote(vote);
+  };
+
+  /**
+   * Reset animation state when CSS animation completes,
+   * allowing the button to be re-voted.
+   */
+  const handleAnimationEnd = () => {
+    setVoted('none');
   };
 
   return (
@@ -56,8 +74,12 @@ export function VotingButtons({ onVote, isLoading = false, className }: VotingBu
         )}
         aria-label="Thumbs up - Good content"
       >
-        <ThumbsUp className="mr-2 h-5 w-5" />
-        Good
+        <span
+          className={cn(voted === 'good' && 'animate-vote-float-up')}
+          onAnimationEnd={handleAnimationEnd}
+        >
+          <ThumbsUp className="h-5 w-5" />
+        </span>
       </Button>
 
       <Button
@@ -75,8 +97,12 @@ export function VotingButtons({ onVote, isLoading = false, className }: VotingBu
         )}
         aria-label="Thumbs down - Bad content"
       >
-        <ThumbsDown className="mr-2 h-5 w-5" />
-        Bad
+        <span
+          className={cn(voted === 'bad' && 'animate-vote-sink-down')}
+          onAnimationEnd={handleAnimationEnd}
+        >
+          <ThumbsDown className="h-5 w-5" />
+        </span>
       </Button>
     </div>
   );

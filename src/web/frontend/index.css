@@ -259,6 +259,38 @@ h1 {
   }
 }
 
+/* Vote float-up animation - icon rises with fade for thumbs up */
+@keyframes vote-float-up {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-12px) scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Vote sink-down animation - icon drops with fade for thumbs down */
+@keyframes vote-sink-down {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(8px) scale(0.85);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
 /* ============================================
    Animation Utility Classes
    ============================================ */
@@ -273,6 +305,16 @@ h1 {
 /* Tab bounce animation class */
 .animate-tab-bounce {
   animation: tab-bounce 200ms ease-out;
+}
+
+/* Vote float-up animation class - thumbs up rises */
+.animate-vote-float-up {
+  animation: vote-float-up 500ms ease-out;
+}
+
+/* Vote sink-down animation class - thumbs down sinks */
+.animate-vote-sink-down {
+  animation: vote-sink-down 500ms ease-out;
 }
 
 /* ============================================

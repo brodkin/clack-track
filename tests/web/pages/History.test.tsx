@@ -407,7 +407,7 @@ describe('History Page', () => {
       });
     });
 
-    it('should show success message after vote submission', async () => {
+    it('should submit vote successfully without showing text feedback', async () => {
       mockApiClient.submitVote.mockResolvedValue({
         success: true,
         data: {
@@ -428,13 +428,18 @@ describe('History Page', () => {
       });
 
       await waitFor(() => {
-        const successMessage = screen.getByText(/thanks for voting/i);
-        // @ts-expect-error - jest-dom matchers
-        expect(successMessage).toBeInTheDocument();
+        expect(mockApiClient.submitVote).toHaveBeenCalledWith({
+          contentId: '1',
+          vote: 'good',
+        });
       });
+
+      // Visual feedback is now self-contained in VotingButtons (animations),
+      // no text confirmation messages in History page
+      expect(screen.queryByText(/thanks for voting/i)).toBeNull();
     });
 
-    it('should show error message when vote submission fails', async () => {
+    it('should handle vote submission failure without showing text feedback', async () => {
       mockApiClient.submitVote.mockRejectedValue(new Error('Vote failed'));
 
       renderWithAuth(<History />);
@@ -445,10 +450,12 @@ describe('History Page', () => {
       });
 
       await waitFor(() => {
-        const errorMessage = screen.getByText(/vote failed/i);
-        // @ts-expect-error - jest-dom matchers
-        expect(errorMessage).toBeInTheDocument();
+        expect(mockApiClient.submitVote).toHaveBeenCalled();
       });
+
+      // Visual feedback is now self-contained in VotingButtons (animations),
+      // no text error messages in History page
+      expect(screen.queryByText(/vote failed/i)).toBeNull();
     });
   });
 
