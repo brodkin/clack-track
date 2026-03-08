@@ -15,7 +15,7 @@ import type { ContentRecord } from '../../../storage/models/content.js';
 
 const PAGE_SIZE = 20;
 
-type VoteStatus = Record<number, 'idle' | 'loading' | 'success' | 'error'>;
+type VotingState = Record<number, boolean>;
 type VestaboardModel = 'black' | 'white';
 
 export function History() {
@@ -24,7 +24,7 @@ export function History() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [voteStatus, setVoteStatus] = useState<VoteStatus>({});
+  const [votingState, setVotingState] = useState<VotingState>({});
   const [expandedId, setExpandedId] = useState<number | null>(null);
   // Store model for future VestaboardPreview usage (e.g., expanded content view)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -86,20 +86,16 @@ export function History() {
   }, []);
 
   const handleVote = async (contentId: number, vote: 'good' | 'bad') => {
-    setVoteStatus(prev => ({ ...prev, [contentId]: 'loading' }));
-
+    setVotingState(prev => ({ ...prev, [contentId]: true }));
     try {
       await apiClient.submitVote({
         contentId: String(contentId),
         vote,
       });
-      setVoteStatus(prev => ({ ...prev, [contentId]: 'success' }));
-      // Reset success state after 3 seconds
-      setTimeout(() => {
-        setVoteStatus(prev => ({ ...prev, [contentId]: 'idle' }));
-      }, 3000);
     } catch {
-      setVoteStatus(prev => ({ ...prev, [contentId]: 'error' }));
+      // Visual feedback is self-contained in VotingButtons (animations + haptics)
+    } finally {
+      setVotingState(prev => ({ ...prev, [contentId]: false }));
     }
   };
 
@@ -191,17 +187,9 @@ export function History() {
                 <div className="flex items-center gap-4">
                   <VotingButtons
                     onVote={vote => handleVote(content.id, vote)}
-                    isLoading={voteStatus[content.id] === 'loading'}
+                    isLoading={votingState[content.id] === true}
                     className="scale-75 origin-left"
                   />
-                  {voteStatus[content.id] === 'success' && (
-                    <span className="text-sm text-green-600 dark:text-green-400">
-                      Thanks for voting!
-                    </span>
-                  )}
-                  {voteStatus[content.id] === 'error' && (
-                    <span className="text-sm text-red-600 dark:text-red-400">Vote failed</span>
-                  )}
                 </div>
                 <span className="text-xs text-gray-500">
                   {formatRelativeTime(new Date(content.generatedAt))}
