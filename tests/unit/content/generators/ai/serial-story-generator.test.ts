@@ -878,6 +878,224 @@ describe('SerialStoryGenerator', () => {
     });
   });
 
+  describe('story arc boundary detection', () => {
+    it('should only count chapters from the current story arc, not previous arcs', async () => {
+      // Simulate: old story (5 chapters, concluded) + new story (1 chapter started)
+      // findLatestByGenerator returns newest first
+      const records: ContentRecord[] = [
+        // Most recent: chapter 1 of NEW story
+        {
+          id: 6,
+          text: 'New story chapter 1',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 1000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: {
+            storyChapter: 1,
+            isNewStory: true,
+            continueStory: true,
+            chapterSummary: 'A new beginning',
+          },
+          generatorId: 'serial-story',
+        },
+        // Previous story final chapter (continueStory: false)
+        {
+          id: 5,
+          text: 'Old story final chapter',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 2000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: {
+            storyChapter: 5,
+            isNewStory: false,
+            continueStory: false,
+            chapterSummary: 'The old story ends',
+          },
+          generatorId: 'serial-story',
+        },
+        // Previous story chapters 4, 3, 2, 1
+        {
+          id: 4,
+          text: 'Old story chapter 4',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 3000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 4, isNewStory: false, continueStory: true, chapterSummary: 'Ch4' },
+          generatorId: 'serial-story',
+        },
+        {
+          id: 3,
+          text: 'Old story chapter 3',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 4000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 3, isNewStory: false, continueStory: true, chapterSummary: 'Ch3' },
+          generatorId: 'serial-story',
+        },
+        {
+          id: 2,
+          text: 'Old story chapter 2',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 5000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 2, isNewStory: false, continueStory: true, chapterSummary: 'Ch2' },
+          generatorId: 'serial-story',
+        },
+        {
+          id: 1,
+          text: 'Old story chapter 1',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 6000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 1, isNewStory: true, continueStory: true, chapterSummary: 'Ch1' },
+          generatorId: 'serial-story',
+        },
+      ];
+      mockContentRepository.findLatestByGenerator.mockResolvedValue(records);
+
+      const generator = new SerialStoryGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        mockContentRepository,
+        { openai: 'test-key' }
+      ) as ProtectedSerialStoryGenerator;
+
+      const state = await generator.getStoryState();
+
+      // Should continue the current story arc (chapter 1 exists, continueStory: true)
+      // Next chapter should be 2, NOT restart at 1
+      expect(state.isNewStory).toBe(false);
+      expect(state.currentChapter).toBe(2);
+      // previousChapters should only contain chapter 1 of the current arc
+      expect(state.previousChapters).toHaveLength(1);
+    });
+
+    it('should not trigger reachedMaxChapters from old story arc chapters', async () => {
+      // maxChapters = 5, old story had 4 chapters + concluded, new story has 2 chapters
+      // Total records = 7, but current arc only has 2 chapters
+      const records: ContentRecord[] = [
+        // Current arc: chapter 2
+        {
+          id: 7,
+          text: 'New ch2',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 1000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 2, isNewStory: false, continueStory: true, chapterSummary: 'New ch2' },
+          generatorId: 'serial-story',
+        },
+        // Current arc: chapter 1
+        {
+          id: 6,
+          text: 'New ch1',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 2000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 1, isNewStory: true, continueStory: true, chapterSummary: 'New ch1' },
+          generatorId: 'serial-story',
+        },
+        // Old arc boundary (concluded)
+        {
+          id: 5,
+          text: 'Old final',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 3000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 4, isNewStory: false, continueStory: false, chapterSummary: 'Old final' },
+          generatorId: 'serial-story',
+        },
+        // Old arc chapters
+        {
+          id: 4,
+          text: 'Old ch3',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 4000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 3, isNewStory: false, continueStory: true, chapterSummary: 'Old ch3' },
+          generatorId: 'serial-story',
+        },
+        {
+          id: 3,
+          text: 'Old ch2',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 5000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 2, isNewStory: false, continueStory: true, chapterSummary: 'Old ch2' },
+          generatorId: 'serial-story',
+        },
+      ];
+      mockContentRepository.findLatestByGenerator.mockResolvedValue(records);
+
+      const generator = new SerialStoryGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        mockContentRepository,
+        { openai: 'test-key' },
+        5 // maxChapters = 5
+      ) as ProtectedSerialStoryGenerator;
+
+      const state = await generator.getStoryState();
+
+      // Current arc has only 2 chapters, not 5+. Should continue to chapter 3.
+      expect(state.isNewStory).toBe(false);
+      expect(state.currentChapter).toBe(3);
+    });
+
+    it('should start new story after concluded story even with isNewStory marker in old records', async () => {
+      // After a story concludes (continueStory: false), the next generation
+      // should start chapter 1 of a NEW story
+      const records: ContentRecord[] = [
+        // Most recent: final chapter with continueStory: false
+        {
+          id: 5,
+          text: 'Final chapter',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 1000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 5, isNewStory: false, continueStory: false, chapterSummary: 'The end' },
+          generatorId: 'serial-story',
+        },
+        {
+          id: 4,
+          text: 'Ch4',
+          type: 'major',
+          generatedAt: new Date(Date.now() - 2000),
+          sentAt: new Date(),
+          aiProvider: 'openai',
+          metadata: { storyChapter: 4, isNewStory: false, continueStory: true, chapterSummary: 'Ch4' },
+          generatorId: 'serial-story',
+        },
+      ];
+      mockContentRepository.findLatestByGenerator.mockResolvedValue(records);
+
+      const generator = new SerialStoryGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        mockContentRepository,
+        { openai: 'test-key' }
+      ) as ProtectedSerialStoryGenerator;
+
+      const state = await generator.getStoryState();
+
+      // Should start a new story
+      expect(state.isNewStory).toBe(true);
+      expect(state.currentChapter).toBe(1);
+      expect(state.previousChapters).toEqual([]);
+    });
+  });
+
   describe('StoryState interface', () => {
     it('should export StoryState type', () => {
       // TypeScript compile-time check
