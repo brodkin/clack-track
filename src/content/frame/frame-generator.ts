@@ -181,7 +181,15 @@ function processContent(text: string): ContentResult {
   // Add content lines
   for (let i = 0; i < contentLineCount; i++) {
     const line = wrappedLines[i] ?? '';
-    lines.push(line.padEnd(MAX_COLS, ' ').substring(0, MAX_COLS));
+    const graphemes = Array.from(line);
+    const graphemeLen = graphemes.length;
+    if (graphemeLen < MAX_COLS) {
+      lines.push(line + ' '.repeat(MAX_COLS - graphemeLen));
+    } else if (graphemeLen > MAX_COLS) {
+      lines.push(graphemes.slice(0, MAX_COLS).join(''));
+    } else {
+      lines.push(line);
+    }
   }
 
   // Add bottom padding to reach MAX_ROWS
@@ -237,9 +245,10 @@ function composeLayout(contentLines: string[], infoBar: number[], colorBar: numb
     const rowCodes: number[] = [];
     const line = contentLines[row];
 
-    // Columns 0-20: Content characters
+    // Columns 0-20: Content characters (use Array.from to handle surrogate pairs)
+    const chars = Array.from(line);
     for (let col = 0; col < 21; col++) {
-      rowCodes.push(charToCode(line[col] ?? ' '));
+      rowCodes.push(charToCode(chars[col] ?? ' '));
     }
 
     // Column 21: Color bar
