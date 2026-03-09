@@ -13,7 +13,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { PageLayout } from '../components/PageLayout';
 import { VestaboardPreview } from '../components/VestaboardPreview';
 import { VotingButtons } from '../components/VotingButtons';
+import { LoginToVote } from '../components/LoginToVote';
 import { MoreInfoButton } from '../components/MoreInfoButton';
+import { useAuth } from '../context/AuthContext.js';
 import { apiClient } from '../services/apiClient';
 import { textToCharacterCodes, emptyGrid } from '../lib/textToCharCodes';
 import type { ContentWithCharacterCodes } from '../services/types.js';
@@ -60,6 +62,7 @@ function getDisplayCharacterCodes(content: ContentWithCharacterCodes | null): nu
 }
 
 export function Welcome() {
+  const { isAuthenticated } = useAuth();
   const [content, setContent] = useState<ContentWithCharacterCodes | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -214,7 +217,11 @@ export function Welcome() {
           </p>
         </div>
 
-        <VotingButtons onVote={handleVote} isLoading={isVoting} />
+        {isAuthenticated ? (
+          <VotingButtons onVote={handleVote} isLoading={isVoting} />
+        ) : (
+          <LoginToVote />
+        )}
 
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">

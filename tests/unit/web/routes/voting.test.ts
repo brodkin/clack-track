@@ -375,58 +375,72 @@ describe('Voting API Routes', () => {
       expect(typeof router).toBe('function');
     });
 
-    it('should wire POST / route to submitVote handler', async () => {
-      const mockVote: VoteRecord = {
-        id: 999,
-        content_id: 777,
-        vote_type: 'good',
-        created_at: new Date('2025-01-15T12:00:00Z'),
-      };
-
-      const mockSubmitVote = jest.fn().mockResolvedValue(mockVote);
+    it('should wire POST / route with requireAuth middleware when auth deps provided', () => {
       const mockRepository = {
-        submitVote: mockSubmitVote,
+        submitVote: jest.fn(),
         getVotesByContent: jest.fn(),
         getOverallStats: jest.fn(),
       } as unknown as VoteRepository;
 
-      const router = createVotingRouter({ voteRepository: mockRepository });
+      const mockSessionRepo = {
+        getValidSessionByToken: jest.fn(),
+        touchSession: jest.fn(),
+        deleteSession: jest.fn(),
+        createSession: jest.fn(),
+      } as unknown as import('../../../../src/storage/repositories/session-repo.js').SessionRepository;
 
-      // Simulate Express route execution
-      const req = {
-        body: { contentId: '777', vote: 'good' },
-        params: {},
-        query: {},
-      } as Request;
+      const mockUserRepo = {
+        findById: jest.fn(),
+      } as unknown as import('../../../../src/storage/repositories/user-repo.js').UserRepository;
 
-      const res = {
-        json: jsonSpy,
-        status: statusSpy,
-        send: jest.fn(),
-      } as Response;
+      const router = createVotingRouter({
+        voteRepository: mockRepository,
+        sessionRepository: mockSessionRepo,
+        userRepository: mockUserRepo,
+      });
 
-      // Get the POST handler from the router stack
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const routerStack = (router as any).stack as Array<{
         route?: {
           path: string;
           methods?: { post?: boolean };
-          stack: Array<{ handle: (req: Request, res: Response) => Promise<void> }>;
+          stack: Array<{ handle: (...args: unknown[]) => unknown }>;
         };
       }>;
-      const postHandler = routerStack.find(
+      const postRoute = routerStack.find(
         layer => layer.route?.path === '/' && layer.route?.methods?.post
       );
 
-      if (postHandler?.route?.stack[0]) {
-        await postHandler.route.stack[0].handle(req, res);
+      // With auth deps, POST route should have 2 handlers: requireAuth + submitVote
+      expect(postRoute?.route?.stack).toHaveLength(2);
+    });
+
+    it('should return 401 on POST / when auth deps are missing', async () => {
+      const router = createVotingRouter({});
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const routerStack = (router as any).stack as Array<{
+        route?: {
+          path: string;
+          methods?: { post?: boolean };
+          stack: Array<{ handle: (req: unknown, res: unknown) => Promise<void> }>;
+        };
+      }>;
+      const postRoute = routerStack.find(
+        layer => layer.route?.path === '/' && layer.route?.methods?.post
+      );
+
+      const res = {
+        json: jsonSpy,
+        status: statusSpy,
+      } as unknown;
+
+      if (postRoute?.route?.stack[0]) {
+        await postRoute.route.stack[0].handle({}, res);
       }
 
-      expect(mockSubmitVote).toHaveBeenCalledWith(777, 'good', undefined);
-      expect(jsonSpy).toHaveBeenCalledWith({
-        success: true,
-        data: mockVote,
-      });
+      expect(statusSpy).toHaveBeenCalledWith(401);
+      expect(jsonSpy).toHaveBeenCalledWith({ error: 'Authentication required' });
     });
 
     it('should wire GET /stats route to getVoteStats handler', async () => {

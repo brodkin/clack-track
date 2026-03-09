@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { Request, Response, WebDependencies } from '../types.js';
 import { VoteRepository } from '../../storage/repositories/vote-repo.js';
-import { AuthenticatedRequest } from '../middleware/session.js';
+import { AuthenticatedRequest, requireAuth } from '../middleware/session.js';
 
 /**
  * Valid reason values for downvotes.
@@ -191,9 +191,23 @@ export async function getVoteStats(
  */
 export function createVotingRouter(dependencies: WebDependencies = {}): Router {
   const router = Router();
-  const { voteRepository } = dependencies;
+  const { voteRepository, sessionRepository, userRepository } = dependencies;
 
-  router.post('/', (req, res) => submitVote(req as Request, res as Response, voteRepository));
+  // POST /api/vote requires authentication so we can track who voted
+  if (sessionRepository && userRepository) {
+    router.post('/', requireAuth(sessionRepository, userRepository), (req, res) =>
+      submitVote(req as Request, res as Response, voteRepository)
+    );
+  } else {
+    // Fallback: if auth deps not available, still require auth (will always 401)
+    router.post('/', (_req, res) => {
+      (res as unknown as import('express').Response)
+        .status(401)
+        .json({ error: 'Authentication required' });
+    });
+  }
+
+  // GET /api/vote/stats is public (no auth required)
   router.get('/stats', (req, res) => getVoteStats(req as Request, res as Response, voteRepository));
 
   return router;

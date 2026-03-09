@@ -31,6 +31,7 @@ describe('WebServer Database Integration Tests', () => {
   let credentialRepository: CredentialRepository;
   let logModel: LogModel;
   let app: Express;
+  let authCookie: string;
 
   beforeAll(async () => {
     // Create in-memory SQLite database (NODE_ENV=test uses :memory:)
@@ -80,6 +81,7 @@ describe('WebServer Database Integration Tests', () => {
         table.string('userAgent', 500).nullable();
         table.string('ipAddress', 45).nullable();
         table.string('reason', 50).nullable();
+        table.integer('user_id').unsigned().nullable();
         table.index('content_id', 'idx_votes_content_id');
       });
     }
@@ -120,6 +122,7 @@ describe('WebServer Database Integration Tests', () => {
         table.dateTime('expires_at').notNullable();
         table.timestamp('created_at').defaultTo(knex.fn.now());
         table.timestamp('last_accessed_at').defaultTo(knex.fn.now());
+        table.json('data').nullable();
         table.index('token', 'idx_sessions_token');
         table.index('user_id', 'idx_sessions_user_id');
         table.index('expires_at', 'idx_sessions_expires_at');
@@ -184,6 +187,24 @@ describe('WebServer Database Integration Tests', () => {
     // Get Express app for supertest
     // @ts-expect-error - accessing private property for testing
     app = server.app;
+
+    // Create a test user and session for authenticated vote requests
+    const [userId] = await knex('users').insert({
+      email: 'test@example.com',
+      name: 'Test User',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    const sessionToken = 'test-session-token-' + Date.now();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    await knex('sessions').insert({
+      token: sessionToken,
+      user_id: userId,
+      expires_at: expiresAt,
+      created_at: new Date().toISOString(),
+      last_accessed_at: new Date().toISOString(),
+    });
+    authCookie = `clack_session=${sessionToken}`;
   });
 
   afterAll(async () => {
@@ -375,7 +396,10 @@ describe('WebServer Database Integration Tests', () => {
       });
 
       it('should submit vote successfully', async () => {
-        const response = await request(app).post('/api/vote').send({ contentId, vote: 'good' });
+        const response = await request(app)
+          .post('/api/vote')
+          .set('Cookie', authCookie)
+          .send({ contentId, vote: 'good' });
 
         expect(response.status).toBe(200);
         expect(response.body).toHaveProperty('success', true);
@@ -384,7 +408,10 @@ describe('WebServer Database Integration Tests', () => {
       });
 
       it('should reject invalid vote values', async () => {
-        const response = await request(app).post('/api/vote').send({ contentId, vote: 'invalid' });
+        const response = await request(app)
+          .post('/api/vote')
+          .set('Cookie', authCookie)
+          .send({ contentId, vote: 'invalid' });
 
         expect(response.status).toBe(400);
         expect(response.body).toHaveProperty('success', false);
@@ -392,7 +419,10 @@ describe('WebServer Database Integration Tests', () => {
       });
 
       it('should reject missing fields', async () => {
-        const response = await request(app).post('/api/vote').send({ contentId });
+        const response = await request(app)
+          .post('/api/vote')
+          .set('Cookie', authCookie)
+          .send({ contentId });
 
         expect(response.status).toBe(400);
         expect(response.body).toHaveProperty('success', false);
@@ -472,14 +502,14 @@ describe('WebServer Database Integration Tests', () => {
       expect(response.body.error).toMatch(/service unavailable/i);
     });
 
-    it('should return 503 for /api/vote when voteRepository undefined', async () => {
+    it('should return 401 for /api/vote when dependencies undefined (auth required)', async () => {
       const response = await request(degradedApp)
         .post('/api/vote')
         .send({ contentId: 1, vote: 'good' });
 
-      expect(response.status).toBe(503);
-      expect(response.body).toHaveProperty('success', false);
-      expect(response.body.error).toMatch(/service unavailable/i);
+      expect(response.status).toBe(401);
+      expect(response.body).toHaveProperty('error');
+      expect(response.body.error).toMatch(/authentication required/i);
     });
 
     it('should return 503 for /api/vote/stats when voteRepository undefined', async () => {
