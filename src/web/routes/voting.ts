@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Request, Response, WebDependencies } from '../types.js';
 import { VoteRepository } from '../../storage/repositories/vote-repo.js';
+import { AuthenticatedRequest } from '../middleware/session.js';
 
 /**
  * Valid reason values for downvotes.
@@ -120,9 +121,13 @@ export async function submitVote(
       return;
     }
 
-    // Build metadata with reason if provided
-    const metadata: Record<string, string> | undefined =
-      typeof reason === 'string' ? { reason } : undefined;
+    // Build metadata with reason and user_id if available
+    const authReq = req as unknown as AuthenticatedRequest;
+    const userId = authReq.user?.id;
+    const meta: Record<string, string> = {};
+    if (typeof reason === 'string') meta.reason = reason;
+    if (userId) meta.userId = String(userId);
+    const metadata = Object.keys(meta).length > 0 ? meta : undefined;
 
     // Submit vote to repository
     const voteRecord = await repository.submitVote(Number(contentId), vote, metadata);
