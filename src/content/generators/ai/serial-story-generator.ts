@@ -258,24 +258,31 @@ export class SerialStoryGenerator extends AIPromptGenerator {
     }
 
     // Query previous chapters
-    const previousChapters = await this.repository.findLatestByGenerator(
+    const allRecords = await this.repository.findLatestByGenerator(
       GENERATOR_ID,
       this.maxChapters
     );
+
+    // Filter to current story arc: stop at the most recent arc boundary
+    // An arc boundary is either:
+    //   - A record with continueStory === false (story concluded)
+    //   - A record with isNewStory === true (but only if it's NOT the most recent record,
+    //     since the most recent isNewStory:true means we're IN that new arc)
+    const currentArcChapters = this.filterToCurrentArc(allRecords);
 
     // Determine if this is a new story
     let isNewStory = true;
     let currentChapter = 1;
 
-    if (previousChapters.length > 0) {
+    if (currentArcChapters.length > 0) {
       // Check if the most recent chapter was the final chapter
       // Final chapter is indicated by continueStory === false
-      const latestChapter = previousChapters[0];
+      const latestChapter = currentArcChapters[0];
       const latestMetadata = latestChapter.metadata as StoryChapterMetadata | undefined;
       const storyEnded = latestMetadata?.continueStory === false;
 
-      // Check if we've reached max chapters
-      const chapterCount = previousChapters.length;
+      // Check if we've reached max chapters within the current arc
+      const chapterCount = currentArcChapters.length;
       const reachedMaxChapters = chapterCount >= this.maxChapters;
 
       if (!storyEnded && !reachedMaxChapters) {
@@ -286,7 +293,7 @@ export class SerialStoryGenerator extends AIPromptGenerator {
     }
 
     // Sort chapters chronologically (oldest first) for continuation context
-    const chronologicalChapters = isNewStory ? [] : [...previousChapters].reverse();
+    const chronologicalChapters = isNewStory ? [] : [...currentArcChapters].reverse();
 
     // Determine arc phase based on current chapter
     const arcPhase = this.getArcPhase(currentChapter);
@@ -299,6 +306,45 @@ export class SerialStoryGenerator extends AIPromptGenerator {
     };
 
     return this.cachedStoryState;
+  }
+
+  /**
+   * Filters records to only include chapters from the current story arc.
+   *
+   * Records are ordered newest-first from findLatestByGenerator.
+   * The current arc boundary is determined by finding either:
+   * - A record with continueStory === false (previous story concluded)
+   * - A record with isNewStory === true that is NOT the first record
+   *   (indicates start of current arc; records before it belong to a previous arc)
+   *
+   * @param records - Records ordered newest-first
+   * @returns Records belonging to the current story arc only
+   */
+  private filterToCurrentArc(records: ContentRecord[]): ContentRecord[] {
+    if (records.length === 0) return [];
+
+    const currentArc: ContentRecord[] = [];
+
+    for (let i = 0; i < records.length; i++) {
+      const record = records[i];
+      const metadata = record.metadata as StoryChapterMetadata | undefined;
+
+      // If we encounter a concluded story (not the latest record), stop
+      if (i > 0 && metadata?.continueStory === false) {
+        break;
+      }
+
+      // If we encounter a new story marker that isn't the first record in our arc,
+      // this is the start of the current arc - include it but stop after
+      if (i > 0 && metadata?.isNewStory === true) {
+        currentArc.push(record);
+        break;
+      }
+
+      currentArc.push(record);
+    }
+
+    return currentArc;
   }
 
   /**

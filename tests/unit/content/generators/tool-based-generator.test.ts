@@ -643,6 +643,37 @@ describe('ToolBasedGenerator', () => {
 
           expect(result.metadata?.toolForceAccepted).toBe(true);
         });
+
+        it('should preserve continueStory and chapterSummary metadata from last validation result', async () => {
+          const mockProvider = createMockAIProvider({
+            responses: Array(3).fill({
+              toolCalls: [
+                {
+                  id: 'call_x',
+                  name: 'submit_content',
+                  arguments: {
+                    content: 'L1\nL2\nL3\nL4\nL5\nL6',
+                    continueStory: true,
+                    chapterSummary: 'A mysterious door appeared',
+                  },
+                },
+              ],
+            }),
+          });
+          const baseGenerator = new MockAIPromptGenerator();
+          const wrapped = ToolBasedGenerator.wrap(baseGenerator, {
+            aiProvider: mockProvider,
+            exhaustionStrategy: 'use-last',
+          });
+
+          const result = await wrapped.generate(context);
+
+          // continueStory and chapterSummary should be preserved in metadata
+          expect((result.metadata as Record<string, unknown>).continueStory).toBe(true);
+          expect((result.metadata as Record<string, unknown>).chapterSummary).toBe(
+            'A mysterious door appeared'
+          );
+        });
       });
     });
 

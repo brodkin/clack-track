@@ -366,16 +366,26 @@ export class ToolBasedGenerator implements ContentGenerator {
     const content = lastSubmission || '';
     const truncatedContent = this.truncateToFit(content);
 
+    const exhaustionMetadata: Record<string, unknown> = {
+      ...baseMetadata,
+      toolAttempts: attempts,
+      toolAccepted: false,
+      toolExhausted: true,
+      toolForceAccepted: true,
+    };
+
+    // Preserve serial story parameters from last validation result
+    if (lastValidationResult?.continueStory !== undefined) {
+      exhaustionMetadata.continueStory = lastValidationResult.continueStory;
+    }
+    if (lastValidationResult?.chapterSummary !== undefined) {
+      exhaustionMetadata.chapterSummary = lastValidationResult.chapterSummary;
+    }
+
     return {
       text: truncatedContent,
       outputMode: 'text',
-      metadata: {
-        ...baseMetadata,
-        toolAttempts: attempts,
-        toolAccepted: false,
-        toolExhausted: true,
-        toolForceAccepted: true,
-      } as ToolBasedMetadata,
+      metadata: exhaustionMetadata as ToolBasedMetadata,
     };
   }
 
