@@ -1,21 +1,14 @@
 /**
  * Tests for BaseNewsGenerator abstract class
  *
- * TDD Approach:
- * - RED: Write tests first (this file)
- * - GREEN: Implement minimal functionality
- * - BLUE: Refactor for quality
- *
- * Uses Template Method hooks:
- * - getTemplateVariables() for single-story injection
- * - getCustomMetadata() for feedUrls and selection tracking
- *
- * Story selection behavior:
+ * Generator-specific behavior:
  * - Fetches ALL items from RSS feeds (no limit)
  * - Filters to items within 12-hour window of context timestamp
  * - Selects one item at random from filtered set
  * - Falls back to 5 most recent if no items in 12h window
  * - Injects single headline via {{headlines}} and snippet via {{snippet}}
+ * - getCustomMetadata() tracks feedUrls, headlineCount, moreInfoUrl, selectionStrategy, totalItemsFetched, recentItemCount
+ * - news-summary.txt prompt content validation
  */
 
 import { join } from 'path';
@@ -491,115 +484,7 @@ describe('BaseNewsGenerator', () => {
     });
   });
 
-  describe('Constructor', () => {
-    it('should store RSSClient and feed URLs', async () => {
-      expect(generator).toBeInstanceOf(BaseNewsGenerator);
-      // Protected properties - verify through behavior
-      const result = await generator.validate();
-      expect(result.valid).toBe(true);
-    });
-
-    it('should accept custom feed URLs', () => {
-      const customUrls = ['https://custom.com/feed.xml'];
-      const customGenerator = new TestNewsGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        'medium' as ModelTier,
-        { openai: 'test-api-key' },
-        mockRSSClient,
-        customUrls
-      );
-
-      expect(customGenerator).toBeInstanceOf(BaseNewsGenerator);
-    });
-  });
-
-  describe('Base Class Contract', () => {
-    it('should provide getUserPromptFile returning news-summary.txt', () => {
-      expect(generator.getUserPromptFile()).toBe('news-summary.txt');
-    });
-
-    it('should provide getSystemPromptFile returning major-update-base.txt', () => {
-      expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
-    });
-
-    it('should inherit validation from AIPromptGenerator', async () => {
-      const result = await generator.validate();
-      expect(result).toHaveProperty('valid');
-      expect(result.valid).toBe(true);
-    });
-  });
-
-  describe('Dimension Substitution', () => {
-    it('should apply dimension substitution to system prompt', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(recentItems);
-
-      // Track what gets passed to createAIProvider
-      const mockProvider = createMockAIProvider({
-        response: {
-          text: 'NEWS CONTENT',
-          model: 'gpt-4o-mini',
-          tokensUsed: 100,
-        },
-      });
-      (createAIProvider as jest.Mock).mockReturnValue(mockProvider);
-
-      // Return system prompt with dimension placeholders
-      mockPromptLoader.loadPromptWithVariables.mockImplementation((type, _filename, _variables) => {
-        if (type === 'system') {
-          return Promise.resolve(
-            'Generate content with {{maxChars}} chars per line and {{maxLines}} lines maximum.'
-          );
-        }
-        return Promise.resolve('News prompt with headlines.');
-      });
-
-      const context: GenerationContext = {
-        updateType: 'major',
-        timestamp: baseTimestamp,
-      };
-
-      await generator.generate(context);
-
-      // Extract the systemPrompt argument from the AI provider call
-      const generateCall = (mockProvider.generate as jest.Mock).mock.calls[0][0];
-      const systemPrompt = generateCall.systemPrompt;
-
-      // Verify dimension placeholders are substituted with actual values
-      expect(systemPrompt).toContain('21 chars per line');
-      expect(systemPrompt).toContain('5 lines maximum');
-      expect(systemPrompt).not.toContain('{{maxChars}}');
-      expect(systemPrompt).not.toContain('{{maxLines}}');
-    });
-  });
-
   describe('Template Variables', () => {
-    it('should include date template variable in system prompt loading', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(recentItems);
-
-      const context: GenerationContext = {
-        updateType: 'major',
-        timestamp: baseTimestamp,
-      };
-
-      await generator.generate(context);
-
-      // Verify loadPromptWithVariables was called with date variable
-      const systemPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
-        call => call[0] === 'system'
-      );
-
-      expect(systemPromptCall).toBeDefined();
-      const templateVars = systemPromptCall![2] as Record<string, string>;
-
-      // Should have date variable
-      expect(templateVars).toHaveProperty('date');
-      // Date should be formatted like "Wednesday, November 27, 2025"
-      expect(templateVars.date).toContain('November');
-      expect(templateVars.date).toContain('27');
-      expect(templateVars.date).toContain('2025');
-    });
-
     it('should inject single headline via {{headlines}} template variable', async () => {
       mockRSSClient.getLatestItems.mockResolvedValue(recentItems);
       jest.spyOn(Math, 'random').mockReturnValue(0);
@@ -622,96 +507,6 @@ describe('BaseNewsGenerator', () => {
       expect(templateVars).toHaveProperty('snippet');
 
       jest.spyOn(Math, 'random').mockRestore();
-    });
-  });
-
-  describe('Provider Failover', () => {
-    it('should try alternate provider when primary fails', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(recentItems);
-
-      // Create generator with both API keys
-      const generatorWithBothKeys = new TestNewsGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        'medium' as ModelTier,
-        { openai: 'test-api-key', anthropic: 'test-api-key-2' },
-        mockRSSClient,
-        feedUrls
-      );
-
-      // Primary provider fails, alternate succeeds
-      const primaryProvider = createMockAIProvider({
-        shouldFail: true,
-        failureError: new Error('Primary provider error'),
-      });
-
-      const alternateProvider = createMockAIProvider({
-        response: {
-          text: 'ALTERNATE PROVIDER CONTENT',
-          model: 'claude-sonnet-4.5',
-          tokensUsed: 150,
-        },
-      });
-
-      (createAIProvider as jest.Mock)
-        .mockReturnValueOnce(primaryProvider)
-        .mockReturnValueOnce(alternateProvider);
-
-      mockModelTierSelector.getAlternate.mockReturnValue({
-        provider: 'anthropic',
-        model: 'claude-sonnet-4.5',
-        tier: 'medium',
-      });
-
-      const context: GenerationContext = {
-        updateType: 'major',
-        timestamp: baseTimestamp,
-      };
-
-      const result = await generatorWithBothKeys.generate(context);
-
-      // Verify result came from alternate provider
-      expect(result.text).toBe('ALTERNATE PROVIDER CONTENT');
-      expect(result.metadata?.provider).toBe('anthropic');
-      expect(result.metadata?.failedOver).toBe(true);
-      expect(result.metadata?.primaryError).toBe('Primary provider error');
-    });
-
-    it('should throw error when all providers fail', async () => {
-      mockRSSClient.getLatestItems.mockResolvedValue(recentItems);
-
-      // Create generator with both API keys
-      const generatorWithBothKeys = new TestNewsGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        'medium' as ModelTier,
-        { openai: 'test-api-key', anthropic: 'test-api-key-2' },
-        mockRSSClient,
-        feedUrls
-      );
-
-      // Both providers fail
-      (createAIProvider as jest.Mock).mockReturnValue(
-        createMockAIProvider({
-          shouldFail: true,
-          failureError: new Error('Provider failure'),
-        })
-      );
-
-      mockModelTierSelector.getAlternate.mockReturnValue({
-        provider: 'anthropic',
-        model: 'claude-sonnet-4.5',
-        tier: 'medium',
-      });
-
-      const context: GenerationContext = {
-        updateType: 'major',
-        timestamp: baseTimestamp,
-      };
-
-      await expect(generatorWithBothKeys.generate(context)).rejects.toThrow(
-        'All AI providers failed for tier medium'
-      );
     });
   });
 
@@ -905,21 +700,16 @@ describe('BaseNewsGenerator', () => {
     });
 
     it('should handle absent snippet gracefully in the prompt wording', () => {
-      // The prompt should not unconditionally say "based on the snippet below"
-      // or assume a snippet is always present. It should use conditional language.
-      // Verify the prompt works when snippet is empty by resolving with empty snippet
       const resolved = resolveTemplateVariables(promptContent, {
         headlines: 'Test Headline',
         snippet: '',
       });
-      // Should not have dangling labels like "Snippet:" with nothing after them
-      // The resolved prompt should still be coherent
       expect(resolved).toContain('Test Headline');
       expect(findUnresolvedVariables(resolved)).toEqual([]);
     });
 
     it('should require the red tile emoji prefix for news indicator', () => {
-      expect(promptContent).toContain('🟥');
+      expect(promptContent).toContain('\u{1F7E5}');
       expect(promptContent).not.toContain('This just in');
     });
 
@@ -954,7 +744,7 @@ describe('BaseNewsGenerator', () => {
 
       expect(resolved).toContain('Tech Giant Launches Product');
       expect(resolved).toContain('revolutionary device');
-      expect(resolved).toContain('🟥');
+      expect(resolved).toContain('\u{1F7E5}');
       expect(findUnresolvedVariables(resolved)).toEqual([]);
     });
   });

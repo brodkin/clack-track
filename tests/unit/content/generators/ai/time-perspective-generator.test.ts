@@ -1,25 +1,18 @@
 /**
  * Tests for TimePerspectiveGenerator
  *
- * Test coverage:
- * - Extends AIPromptGenerator with correct prompt files
- * - Uses MEDIUM model tier
- * - Validates prompt files exist
- * - Selects random field and disposition programmatically
- * - Injects field and disposition as template variables
+ * Generator-specific behavior:
+ * - FIELDS (15+) and DISPOSITIONS (5) static arrays
+ * - Static selection methods (selectField, selectDisposition)
+ * - getTimeBucket() time-of-day classification
+ * - Template variable injection (field, disposition, timeBucket)
+ * - 300+ combinations variability
  */
 
 import { TimePerspectiveGenerator } from '@/content/generators/ai/time-perspective-generator';
 import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector';
 import { ModelTier } from '@/types/content-generator';
-
-// Helper type for accessing protected members in tests
-type ProtectedTimePerspectiveGenerator = TimePerspectiveGenerator & {
-  getSystemPromptFile(): string;
-  getUserPromptFile(): string;
-  modelTier: ModelTier;
-};
 
 describe('TimePerspectiveGenerator', () => {
   let mockPromptLoader: jest.Mocked<PromptLoader>;
@@ -120,73 +113,8 @@ describe('TimePerspectiveGenerator', () => {
     });
   });
 
-  describe('constructor', () => {
-    it('should create instance with MEDIUM tier', () => {
-      const generator = new TimePerspectiveGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      expect(generator).toBeInstanceOf(TimePerspectiveGenerator);
-    });
-
-    it('should select MEDIUM model tier', async () => {
-      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
-      mockModelTierSelector.select.mockReturnValue({
-        provider: 'openai',
-        model: 'gpt-4.1-mini',
-        tier: ModelTier.MEDIUM,
-      });
-      mockModelTierSelector.getAlternate.mockReturnValue(null);
-
-      const generator = new TimePerspectiveGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // Expected without real API key
-      }
-
-      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
-    });
-  });
-
-  describe('prompt files', () => {
-    it('should use major-update-base.txt as system prompt', () => {
-      const generator = new TimePerspectiveGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedTimePerspectiveGenerator;
-
-      expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
-    });
-
-    it('should use time-perspective.txt as user prompt', () => {
-      const generator = new TimePerspectiveGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedTimePerspectiveGenerator;
-
-      expect(generator.getUserPromptFile()).toBe('time-perspective.txt');
-    });
-  });
-
-  describe('validate()', () => {
-    it('should return valid when both prompt files exist', async () => {
-      mockPromptLoader.loadPrompt.mockResolvedValue('prompt content');
-
-      const generator = new TimePerspectiveGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const result = await generator.validate();
-
-      expect(result.valid).toBe(true);
-      expect(result.errors).toBeUndefined();
-    });
-  });
-
-  describe('generate()', () => {
-    it('should inject field and disposition as template variables', async () => {
+  describe('template variable injection', () => {
+    it('should inject field, disposition, and timeBucket as template variables', async () => {
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
         provider: 'openai',

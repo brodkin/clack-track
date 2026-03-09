@@ -12,7 +12,7 @@
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { ProtectedRoute } from '@/web/frontend/components/ProtectedRoute';
 import { AuthProvider } from '@/web/frontend/context/AuthContext';
 import * as apiClient from '@/web/frontend/services/apiClient';

@@ -12,6 +12,17 @@
 
 import { testAICommand } from '../../../src/cli/commands/test-ai.js';
 import { createMockOpenAIClient, createMockAnthropicClient } from '../../__mocks__/ai-providers.js';
+
+// Mock AI module - @swc/jest compiles imports as non-configurable,
+// preventing jest.spyOn from redefining module exports
+jest.mock('../../../src/api/ai/index.js', () => ({
+  createAIProvider: jest.fn(),
+  AIProviderType: {
+    OPENAI: 'openai',
+    ANTHROPIC: 'anthropic',
+  },
+}));
+
 import * as aiIndex from '../../../src/api/ai/index.js';
 import { AIProviderType } from '../../../src/api/ai/index.js';
 
@@ -50,7 +61,7 @@ describe('CLI test-ai Command E2E', () => {
       process.env.OPENAI_API_KEY = 'test-key-openai';
 
       // Mock the factory to return our mock client
-      jest.spyOn(aiIndex, 'createAIProvider').mockImplementation(type => {
+      (aiIndex.createAIProvider as jest.Mock).mockImplementation(type => {
         if (type === AIProviderType.OPENAI) {
           return createMockOpenAIClient({
             responseText: 'OpenAI test response',
@@ -73,7 +84,7 @@ describe('CLI test-ai Command E2E', () => {
       process.env.ANTHROPIC_API_KEY = 'test-key-anthropic';
 
       // Mock the factory to return our mock client
-      jest.spyOn(aiIndex, 'createAIProvider').mockImplementation(type => {
+      (aiIndex.createAIProvider as jest.Mock).mockImplementation(type => {
         if (type === AIProviderType.ANTHROPIC) {
           return createMockAnthropicClient({
             responseText: 'Anthropic test response',
@@ -96,7 +107,7 @@ describe('CLI test-ai Command E2E', () => {
       process.env.ANTHROPIC_API_KEY = 'test-anthropic-key';
 
       // Mock the factory to return appropriate mock client
-      jest.spyOn(aiIndex, 'createAIProvider').mockImplementation(type => {
+      (aiIndex.createAIProvider as jest.Mock).mockImplementation(type => {
         if (type === AIProviderType.OPENAI) {
           return createMockOpenAIClient({
             responseText: 'OpenAI response',
@@ -132,7 +143,7 @@ describe('CLI test-ai Command E2E', () => {
     beforeEach(() => {
       process.env.OPENAI_API_KEY = 'test-key';
 
-      jest.spyOn(aiIndex, 'createAIProvider').mockImplementation(() =>
+      (aiIndex.createAIProvider as jest.Mock).mockImplementation(() =>
         createMockOpenAIClient({
           responseText: 'Test response',
           model: 'gpt-4-turbo-preview',
@@ -159,7 +170,7 @@ describe('CLI test-ai Command E2E', () => {
     });
 
     it('should display formatted response with box drawing', async () => {
-      jest.spyOn(aiIndex, 'createAIProvider').mockImplementation(() =>
+      (aiIndex.createAIProvider as jest.Mock).mockImplementation(() =>
         createMockOpenAIClient({
           responseText: 'Multi-line\ntest\nresponse',
           model: 'gpt-4-turbo-preview',
@@ -175,7 +186,7 @@ describe('CLI test-ai Command E2E', () => {
     });
 
     it('should display model information', async () => {
-      jest.spyOn(aiIndex, 'createAIProvider').mockImplementation(() =>
+      (aiIndex.createAIProvider as jest.Mock).mockImplementation(() =>
         createMockOpenAIClient({
           responseText: 'Test',
           model: 'gpt-4-turbo-preview',
@@ -205,7 +216,7 @@ describe('CLI test-ai Command E2E', () => {
       process.env.OPENAI_API_KEY = 'test-key';
       delete process.env.ANTHROPIC_API_KEY; // Missing Anthropic key
 
-      jest.spyOn(aiIndex, 'createAIProvider').mockImplementation(type => {
+      (aiIndex.createAIProvider as jest.Mock).mockImplementation(type => {
         if (type === AIProviderType.OPENAI) {
           return createMockOpenAIClient({
             responseText: 'OpenAI response',
@@ -231,7 +242,7 @@ describe('CLI test-ai Command E2E', () => {
     it('should handle connection validation failures', async () => {
       process.env.OPENAI_API_KEY = 'test-key';
 
-      jest.spyOn(aiIndex, 'createAIProvider').mockImplementation(() =>
+      (aiIndex.createAIProvider as jest.Mock).mockImplementation(() =>
         createMockOpenAIClient({
           connectionValid: false,
         })
@@ -249,7 +260,7 @@ describe('CLI test-ai Command E2E', () => {
     it('should handle generation failures', async () => {
       process.env.OPENAI_API_KEY = 'test-key';
 
-      jest.spyOn(aiIndex, 'createAIProvider').mockImplementation(() =>
+      (aiIndex.createAIProvider as jest.Mock).mockImplementation(() =>
         createMockOpenAIClient({
           shouldFail: true,
         })
@@ -267,7 +278,7 @@ describe('CLI test-ai Command E2E', () => {
     beforeEach(() => {
       process.env.OPENAI_API_KEY = 'test-key';
 
-      jest.spyOn(aiIndex, 'createAIProvider').mockImplementation(() =>
+      (aiIndex.createAIProvider as jest.Mock).mockImplementation(() =>
         createMockOpenAIClient({
           responseText: 'Custom prompt response',
           model: 'gpt-4-turbo-preview',
@@ -299,7 +310,7 @@ describe('CLI test-ai Command E2E', () => {
       process.env.OPENAI_API_KEY = 'test-openai';
       process.env.ANTHROPIC_API_KEY = 'test-anthropic';
 
-      jest.spyOn(aiIndex, 'createAIProvider').mockImplementation(type => {
+      (aiIndex.createAIProvider as jest.Mock).mockImplementation(type => {
         if (type === AIProviderType.OPENAI) {
           return createMockOpenAIClient({
             responseText: 'OpenAI response',
@@ -330,7 +341,7 @@ describe('CLI test-ai Command E2E', () => {
       process.env.ANTHROPIC_API_KEY = 'test-anthropic';
 
       let callCount = 0;
-      jest.spyOn(aiIndex, 'createAIProvider').mockImplementation(type => {
+      (aiIndex.createAIProvider as jest.Mock).mockImplementation(type => {
         callCount++;
         if (type === AIProviderType.OPENAI) {
           return createMockOpenAIClient({

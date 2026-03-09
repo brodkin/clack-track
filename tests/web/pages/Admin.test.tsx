@@ -15,7 +15,7 @@
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { Admin } from '@/web/frontend/pages/Admin';
 import { AuthProvider } from '@/web/frontend/context/AuthContext';
 import * as apiClientModule from '@/web/frontend/services/apiClient';

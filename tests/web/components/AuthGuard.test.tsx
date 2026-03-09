@@ -12,7 +12,7 @@
 
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { AuthGuard } from '@/web/frontend/components/AuthGuard';
 import { AuthProvider } from '@/web/frontend/context/AuthContext';
 import * as apiClient from '@/web/frontend/services/apiClient';

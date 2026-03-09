@@ -7,7 +7,7 @@
 
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { DownvoteReasonMenu } from '@/web/frontend/components/DownvoteReasonMenu';
 
 /**
@@ -37,11 +37,7 @@ describe('DownvoteReasonMenu Component', () => {
   describe('Rendering', () => {
     it('should render all 8 reason options when open', () => {
       render(
-        <DownvoteReasonMenu
-          open={true}
-          onOpenChange={mockOnOpenChange}
-          onSelect={mockOnSelect}
-        >
+        <DownvoteReasonMenu open={true} onOpenChange={mockOnOpenChange} onSelect={mockOnSelect}>
           <button>Trigger</button>
         </DownvoteReasonMenu>
       );
@@ -55,11 +51,7 @@ describe('DownvoteReasonMenu Component', () => {
 
     it('should not render reason options when closed', () => {
       render(
-        <DownvoteReasonMenu
-          open={false}
-          onOpenChange={mockOnOpenChange}
-          onSelect={mockOnSelect}
-        >
+        <DownvoteReasonMenu open={false} onOpenChange={mockOnOpenChange} onSelect={mockOnSelect}>
           <button>Trigger</button>
         </DownvoteReasonMenu>
       );
@@ -71,11 +63,7 @@ describe('DownvoteReasonMenu Component', () => {
 
     it('should render reason items with touch-friendly sizing', () => {
       render(
-        <DownvoteReasonMenu
-          open={true}
-          onOpenChange={mockOnOpenChange}
-          onSelect={mockOnSelect}
-        >
+        <DownvoteReasonMenu open={true} onOpenChange={mockOnOpenChange} onSelect={mockOnSelect}>
           <button>Trigger</button>
         </DownvoteReasonMenu>
       );
@@ -92,11 +80,7 @@ describe('DownvoteReasonMenu Component', () => {
   describe('Selection', () => {
     it('should call onSelect with the correct reason key when a reason is clicked', () => {
       render(
-        <DownvoteReasonMenu
-          open={true}
-          onOpenChange={mockOnOpenChange}
-          onSelect={mockOnSelect}
-        >
+        <DownvoteReasonMenu open={true} onOpenChange={mockOnOpenChange} onSelect={mockOnSelect}>
           <button>Trigger</button>
         </DownvoteReasonMenu>
       );
@@ -110,11 +94,7 @@ describe('DownvoteReasonMenu Component', () => {
 
     it('should call onSelect with "other" when Other is clicked', () => {
       render(
-        <DownvoteReasonMenu
-          open={true}
-          onOpenChange={mockOnOpenChange}
-          onSelect={mockOnSelect}
-        >
+        <DownvoteReasonMenu open={true} onOpenChange={mockOnOpenChange} onSelect={mockOnSelect}>
           <button>Trigger</button>
         </DownvoteReasonMenu>
       );
@@ -127,11 +107,7 @@ describe('DownvoteReasonMenu Component', () => {
 
     it('should call onSelect with "factually_wrong" when Factually wrong is clicked', () => {
       render(
-        <DownvoteReasonMenu
-          open={true}
-          onOpenChange={mockOnOpenChange}
-          onSelect={mockOnSelect}
-        >
+        <DownvoteReasonMenu open={true} onOpenChange={mockOnOpenChange} onSelect={mockOnSelect}>
           <button>Trigger</button>
         </DownvoteReasonMenu>
       );
@@ -146,11 +122,7 @@ describe('DownvoteReasonMenu Component', () => {
   describe('Accessibility', () => {
     it('should render reason options as buttons for keyboard accessibility', () => {
       render(
-        <DownvoteReasonMenu
-          open={true}
-          onOpenChange={mockOnOpenChange}
-          onSelect={mockOnSelect}
-        >
+        <DownvoteReasonMenu open={true} onOpenChange={mockOnOpenChange} onSelect={mockOnSelect}>
           <button>Trigger</button>
         </DownvoteReasonMenu>
       );

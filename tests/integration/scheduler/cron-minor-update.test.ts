@@ -14,7 +14,6 @@
  * @group integration
  */
 
-import { jest } from '@jest/globals';
 import { CronScheduler } from '@/scheduler/cron';
 import { MinorUpdateGenerator } from '@/content/generators/minor-update';
 import { ContentOrchestrator } from '@/content/orchestrator';

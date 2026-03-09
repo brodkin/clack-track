@@ -6,7 +6,7 @@
 
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, jest } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 import { Switch } from '@/web/frontend/components/ui/switch';
 
 describe('Switch Component', () => {

@@ -34,6 +34,8 @@ describe('Voting Routes - reason field', () => {
   const migration002 = require('../../../../migrations/002_create_votes_table.cjs');
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const migration011 = require('../../../../migrations/011_add_vote_reason.cjs');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const migration012 = require('../../../../migrations/012_add_vote_user_id.cjs');
 
   beforeAll(async () => {
     db = knex({
@@ -46,6 +48,7 @@ describe('Voting Routes - reason field', () => {
     await migration001.up(db);
     await migration002.up(db);
     await migration011.up(db);
+    await migration012.up(db);
 
     voteModel = new VoteModel(db);
     voteRepository = new VoteRepository(voteModel);
@@ -80,9 +83,7 @@ describe('Voting Routes - reason field', () => {
 
   describe('POST /api/vote - backward compatibility', () => {
     it('should accept a vote without reason', async () => {
-      const response = await request(app)
-        .post('/api/vote')
-        .send({ contentId: '1', vote: 'good' });
+      const response = await request(app).post('/api/vote').send({ contentId: '1', vote: 'good' });
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -91,9 +92,7 @@ describe('Voting Routes - reason field', () => {
     });
 
     it('should accept a bad vote without reason', async () => {
-      const response = await request(app)
-        .post('/api/vote')
-        .send({ contentId: '1', vote: 'bad' });
+      const response = await request(app).post('/api/vote').send({ contentId: '1', vote: 'bad' });
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -113,7 +112,7 @@ describe('Voting Routes - reason field', () => {
       'other',
     ];
 
-    it.each(validReasons)('should accept reason "%s" and pass it to repository', async (reason) => {
+    it.each(validReasons)('should accept reason "%s" and pass it to repository', async reason => {
       const response = await request(app)
         .post('/api/vote')
         .send({ contentId: '1', vote: 'bad', reason });
@@ -124,9 +123,7 @@ describe('Voting Routes - reason field', () => {
     });
 
     it('should persist the reason in the database', async () => {
-      await request(app)
-        .post('/api/vote')
-        .send({ contentId: '1', vote: 'bad', reason: 'boring' });
+      await request(app).post('/api/vote').send({ contentId: '1', vote: 'bad', reason: 'boring' });
 
       // Verify in database directly
       const votes = await db('votes').select('*').where('content_id', 1);
@@ -179,18 +176,14 @@ describe('Voting Routes - reason field', () => {
 
   describe('POST /api/vote - existing validations still work', () => {
     it('should reject missing contentId', async () => {
-      const response = await request(app)
-        .post('/api/vote')
-        .send({ vote: 'good' });
+      const response = await request(app).post('/api/vote').send({ vote: 'good' });
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
     });
 
     it('should reject missing vote', async () => {
-      const response = await request(app)
-        .post('/api/vote')
-        .send({ contentId: '1' });
+      const response = await request(app).post('/api/vote').send({ contentId: '1' });
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -206,9 +199,7 @@ describe('Voting Routes - reason field', () => {
     });
 
     it('should reject empty body', async () => {
-      const response = await request(app)
-        .post('/api/vote')
-        .send({});
+      const response = await request(app).post('/api/vote').send({});
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);

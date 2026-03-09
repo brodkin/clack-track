@@ -9,7 +9,7 @@
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+// Note: Do not import jest from @jest/globals - it conflicts with @swc/jest mock hoisting
 import { Welcome } from '@/web/frontend/pages/Welcome';
 import { AuthProvider } from '@/web/frontend/context/AuthContext';
 import { apiClient } from '@/web/frontend/services/apiClient';

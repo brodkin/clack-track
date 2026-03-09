@@ -7,7 +7,7 @@
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { History } from '@/web/frontend/pages/History';
 import { AuthProvider } from '@/web/frontend/context/AuthContext';
 import { apiClient } from '@/web/frontend/services/apiClient';

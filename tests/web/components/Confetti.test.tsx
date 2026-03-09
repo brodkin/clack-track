@@ -7,7 +7,7 @@
 
 /// <reference types="@testing-library/jest-dom" />
 import { render, cleanup, act } from '@testing-library/react';
-import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { Confetti } from '@/web/frontend/components/Confetti';
 
 // Mock canvas context
