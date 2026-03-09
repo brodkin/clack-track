@@ -48,6 +48,7 @@ import { PricelessGenerator } from './content/generators/ai/priceless-generator.
 import { TourGuideGenerator } from './content/generators/ai/tour-guide-generator.js';
 import { BaristaLifeGenerator } from './content/generators/ai/barista-life-generator.js';
 import { CastMemberRadioGenerator } from './content/generators/ai/cast-member-radio-generator.js';
+import { ZaydeWisdomGenerator } from './content/generators/ai/zayde-wisdom-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { SleepModeGenerator } from './content/generators/programmatic/sleep-mode-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
@@ -250,6 +251,7 @@ function createCoreGenerators(
     tourGuide: new TourGuideGenerator(promptLoader, modelTierSelector, apiKeys),
     baristaLife: new BaristaLifeGenerator(promptLoader, modelTierSelector, apiKeys),
     castMemberRadio: new CastMemberRadioGenerator(promptLoader, modelTierSelector, apiKeys),
+    zaydeWisdom: new ZaydeWisdomGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }
