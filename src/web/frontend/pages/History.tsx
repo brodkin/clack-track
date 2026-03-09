@@ -9,7 +9,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { PageLayout } from '../components/PageLayout';
 import { ContentCard } from '../components/ContentCard';
 import { VotingButtons } from '../components/VotingButtons';
+import { LoginToVote } from '../components/LoginToVote';
 import { Button } from '../components/ui/button';
+import { useAuth } from '../context/AuthContext.js';
 import { apiClient } from '../services/apiClient';
 import type { ContentRecord } from '../../../storage/models/content.js';
 
@@ -19,6 +21,7 @@ type VotingState = Record<number, boolean>;
 type VestaboardModel = 'black' | 'white';
 
 export function History() {
+  const { isAuthenticated } = useAuth();
   const [contents, setContents] = useState<ContentRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -186,11 +189,15 @@ export function History() {
               {/* Voting section */}
               <div className="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-b-lg -mt-2">
                 <div className="flex items-center gap-4">
-                  <VotingButtons
-                    onVote={(vote, reason) => handleVote(content.id, vote, reason)}
-                    isLoading={votingState[content.id] === true}
-                    className="scale-75 origin-left"
-                  />
+                  {isAuthenticated ? (
+                    <VotingButtons
+                      onVote={(vote, reason) => handleVote(content.id, vote, reason)}
+                      isLoading={votingState[content.id] === true}
+                      className="scale-75 origin-left"
+                    />
+                  ) : (
+                    <LoginToVote className="scale-75 origin-left" />
+                  )}
                 </div>
                 <span className="text-xs text-gray-500">
                   {formatRelativeTime(new Date(content.generatedAt))}

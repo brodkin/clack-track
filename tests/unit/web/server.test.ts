@@ -375,7 +375,7 @@ describe('WebServer', () => {
       expect(response.body.error).toBe('Logs service unavailable');
     });
 
-    it('should return 503 for voting endpoint without dependencies', async () => {
+    it('should return 401 for voting endpoint without dependencies (auth required)', async () => {
       server = new WebServer(
         {
           port: 0,
@@ -389,8 +389,8 @@ describe('WebServer', () => {
       const app = (server as unknown as { app: Express }).app;
       const response = await request(app).post('/api/vote').send({ contentId: 1, value: 1 });
 
-      expect(response.status).toBe(503);
-      expect(response.body.error).toBe('Voting service unavailable');
+      expect(response.status).toBe(401);
+      expect(response.body.error).toMatch(/authentication required/i);
     });
   });
 

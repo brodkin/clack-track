@@ -51,6 +51,7 @@ describe('VoteRepository reason field', () => {
         table.string('userAgent', 500).nullable();
         table.string('ipAddress', 45).nullable();
         table.string('reason', 50).nullable();
+        table.integer('user_id').unsigned().nullable();
         table.index('content_id', 'idx_votes_content_id');
       });
     }

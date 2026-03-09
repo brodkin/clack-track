@@ -311,6 +311,70 @@ describe('Welcome Page', () => {
     });
   });
 
+  describe('authentication-aware voting', () => {
+    const contentWithData = {
+      success: true,
+      data: {
+        id: 1,
+        text: 'HELLO',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: new Date(),
+        aiProvider: 'openai',
+        generatorId: 'test-generator',
+        characterCodes: sampleCharacterCodes,
+      },
+    };
+
+    it('should show login button instead of voting buttons when unauthenticated', async () => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: false,
+        user: null,
+      });
+      mockApiClient.getLatestContent.mockResolvedValue(contentWithData);
+
+      renderWithAuth(<Welcome />);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading content...')).not.toBeInTheDocument();
+      });
+
+      // Should show login prompt, not voting buttons
+      const loginLink = screen.getByRole('link', { name: /log in to vote/i });
+      // @ts-expect-error - jest-dom matchers
+      expect(loginLink).toBeInTheDocument();
+      // @ts-expect-error - jest-dom matchers
+      expect(loginLink).toHaveAttribute('href', '/login');
+
+      // Should NOT show voting buttons
+      expect(screen.queryByRole('button', { name: /good/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /bad/i })).toBeNull();
+    });
+
+    it('should show voting buttons when authenticated', async () => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: true,
+        user: { name: 'Test User' },
+      });
+      mockApiClient.getLatestContent.mockResolvedValue(contentWithData);
+
+      renderWithAuth(<Welcome />);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading content...')).not.toBeInTheDocument();
+      });
+
+      // Should show voting buttons
+      // @ts-expect-error - jest-dom matchers
+      expect(screen.getByRole('button', { name: /good/i })).toBeInTheDocument();
+      // @ts-expect-error - jest-dom matchers
+      expect(screen.getByRole('button', { name: /bad/i })).toBeInTheDocument();
+
+      // Should NOT show login prompt
+      expect(screen.queryByRole('link', { name: /log in to vote/i })).toBeNull();
+    });
+  });
+
   describe('loading and error states', () => {
     it('should show loading state initially', async () => {
       // Arrange: API takes time to respond

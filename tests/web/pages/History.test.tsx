@@ -357,12 +357,67 @@ describe('History Page', () => {
     });
   });
 
+  describe('Authentication-Aware Voting', () => {
+    beforeEach(() => {
+      mockApiClient.getContentHistory.mockResolvedValue({
+        success: true,
+        data: mockContents,
+        pagination: { limit: 20, count: 5 },
+      });
+    });
+
+    it('should show login prompts instead of voting buttons when unauthenticated', async () => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: false,
+        user: null,
+      });
+
+      renderWithAuth(<History />);
+
+      await waitFor(() => {
+        const generatorText = screen.getByText(/generator-1/i);
+        // @ts-expect-error - jest-dom matchers
+        expect(generatorText).toBeInTheDocument();
+      });
+
+      // Should show login links, not voting buttons
+      const loginLinks = screen.getAllByRole('link', { name: /log in to vote/i });
+      expect(loginLinks.length).toBeGreaterThan(0);
+
+      // Should NOT show voting buttons
+      expect(screen.queryByRole('button', { name: /good/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /bad/i })).toBeNull();
+    });
+
+    it('should show voting buttons when authenticated', async () => {
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: true,
+        user: { name: 'Test User' },
+      });
+
+      renderWithAuth(<History />);
+
+      await waitFor(() => {
+        const goodButtons = screen.getAllByRole('button', { name: /good/i });
+        expect(goodButtons.length).toBe(5);
+      });
+
+      // Should NOT show login prompts
+      expect(screen.queryByRole('link', { name: /log in to vote/i })).toBeNull();
+    });
+  });
+
   describe('Voting Functionality', () => {
     beforeEach(() => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: mockContents,
         pagination: { limit: 20, count: 5 },
+      });
+      // Voting tests need authenticated user
+      mockApiClient.checkSession.mockResolvedValue({
+        authenticated: true,
+        user: { name: 'Test User' },
       });
     });
 

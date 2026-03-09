@@ -108,6 +108,8 @@ export interface CoreGenerators {
   baristaLife: ContentGenerator;
   /** Cast Member Radio generator (P2, LIGHT, AI-powered) */
   castMemberRadio: ContentGenerator;
+  /** Zayde Wisdom generator (P2, MEDIUM, AI-powered) */
+  zaydeWisdom: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -457,6 +459,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.castMemberRadio
+  );
+
+  registry.register(
+    {
+      id: 'zayde-wisdom',
+      name: 'Zayde Wisdom Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.zaydeWisdom
   );
 
   // Register P3 fallback generator (FALLBACK priority)
