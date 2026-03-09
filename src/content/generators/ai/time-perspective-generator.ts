@@ -1,25 +1,21 @@
 /**
  * Time Perspective Generator
  *
- * Generates content that views the present moment through the eyes of a
- * historian peering across deep time with wonder. Pairs a temporal lens
- * with an ordinary modern-day observation to reveal how extraordinary
- * everyday life actually is.
+ * Generates content written as notebook entries from pre-modern scholars,
+ * musing about their daily work in ways that create dramatic irony for
+ * the modern viewer. The scholar writes from within their era — wishing,
+ * complaining, inventing, wondering — and the viewer recognizes that
+ * many of those wishes have already come true.
  *
- * Features:
- * - Uses prompts/system/major-update-base.txt for system context
- * - Uses prompts/user/time-perspective.txt for time perspective guidance
- * - Uses MEDIUM model tier for nuanced temporal wonder
- * - Programmatic lens selection from 5 temporal perspectives
- * - Programmatic observation selection from 20 everyday moments
- * - Time-of-day bucket for contextual relevance
- * - Inherits retry logic and provider failover from base class
+ * Variability comes from two dimensions:
+ * - FIELD: The scholar's discipline (astronomer, cartographer, physician...)
+ *   gives the AI an entire domain of knowledge, vocabulary, and daily
+ *   frustrations to draw from.
+ * - DISPOSITION: How the scholar is expressing themselves (wistful,
+ *   inventive, exasperated, philosophical, matter-of-fact) shapes
+ *   the tone and structure of the entry.
  *
- * Uses Template Method hooks:
- * - getTemplateVariables(): Injects lens, observation, and timeBucket
- * - getCustomMetadata(): Tracks selection choices in metadata
- *
- * Variability: 5 lenses x 20 observations x 4 time buckets = 400 combinations
+ * Variability: 15 fields x 5 dispositions x 4 time buckets = 300 combinations
  *
  * @example
  * ```typescript
@@ -33,8 +29,6 @@
  *   timestamp: new Date(),
  *   timezone: 'America/New_York'
  * });
- *
- * console.log(content.text); // "STARS TAKE 10 MILLION\nYEARS TO FORM AND YOU\nMADE COFFEE IN FOUR\nMINUTES. EFFICIENT."
  * ```
  */
 
@@ -50,77 +44,63 @@ import type { GenerationContext } from '../../../types/content-generator.js';
 type TimeBucket = 'NIGHT' | 'MORNING' | 'AFTERNOON' | 'EVENING';
 
 /**
- * Generates temporal wonder content through various historical lenses
- *
- * Extends AIPromptGenerator with time-perspective-specific prompts
- * and MEDIUM model tier selection. Uses programmatic selection to
- * ensure true randomness in lens and observation choices.
+ * Generates scholar notebook entries that create dramatic irony
+ * through the gap between the scholar's era and the viewer's present.
  */
 export class TimePerspectiveGenerator extends AIPromptGenerator {
   /**
-   * Five temporal perspective lenses, each offering a different
-   * angle on the present moment:
-   *
-   * - COSMIC: Vast time scales (billions of years, universe's age)
-   * - ABSURDIST: Playful wonder at the ridiculousness of existing
-   * - ANCESTOR: What people from the past would marvel at today
-   * - CONNECTION: The web of simultaneous human experience
-   * - FUTURE_SELF: Your future self appreciating this moment
+   * Scholarly disciplines from the pre-modern world. Each field gives
+   * the AI an entire domain of knowledge, tools, constraints, and
+   * daily rhythms to draw from.
    */
-  static readonly LENSES: readonly string[] = [
-    'COSMIC',
-    'ABSURDIST',
-    'ANCESTOR',
-    'CONNECTION',
-    'FUTURE_SELF',
+  static readonly FIELDS: readonly string[] = [
+    'ASTRONOMER',
+    'CARTOGRAPHER',
+    'PHYSICIAN',
+    'MATHEMATICIAN',
+    'BOTANIST',
+    'NAVIGATOR',
+    'LINGUIST',
+    'ARCHITECT',
+    'NATURALIST',
+    'ALCHEMIST',
+    'MUSICIAN',
+    'GEOLOGIST',
+    'HISTORIAN',
+    'ENGINEER',
+    'CLOCKMAKER',
   ] as const;
 
   /**
-   * Ordinary present-day moments that become extraordinary
-   * when viewed through a temporal lens. Selected programmatically
-   * to ensure variety across generations.
+   * How the scholar is expressing themselves. Shapes tone and
+   * structure without prescribing subject matter.
    */
-  static readonly OBSERVATIONS: readonly string[] = [
-    'MAKING_COFFEE',
-    'CHECKING_THE_TIME',
-    'CHOOSING_WHAT_TO_EAT',
-    'LISTENING_TO_MUSIC',
-    'READING_A_MESSAGE',
-    'WALKING_THROUGH_A_DOOR',
-    'LOOKING_OUT_A_WINDOW',
-    'TURNING_ON_A_LIGHT',
-    'DRINKING_CLEAN_WATER',
-    'HAVING_A_CONVERSATION',
-    'PICKING_AN_OUTFIT',
-    'COOKING_A_MEAL',
-    'SITTING_IN_A_CHAIR',
-    'PETTING_AN_ANIMAL',
-    'LAUGHING_AT_SOMETHING',
-    'LEARNING_SOMETHING_NEW',
-    'MAKING_A_PLAN',
-    'OPENING_A_BOOK',
-    'LOOKING_AT_THE_SKY',
-    'SHARING_A_MEAL',
+  static readonly DISPOSITIONS: readonly string[] = [
+    'WISTFUL',
+    'INVENTIVE',
+    'EXASPERATED',
+    'PHILOSOPHICAL',
+    'MATTER_OF_FACT',
   ] as const;
 
-  private selectedLens: string = '';
-  private selectedObservation: string = '';
+  private selectedField: string = '';
+  private selectedDisposition: string = '';
   private selectedTimeBucket: TimeBucket = 'MORNING';
 
   /**
-   * Programmatically selects a random lens from the LENSES array.
+   * Programmatically selects a random field from the FIELDS array.
    */
-  static selectLens(): string {
-    const index = Math.floor(Math.random() * TimePerspectiveGenerator.LENSES.length);
-    return TimePerspectiveGenerator.LENSES[index];
+  static selectField(): string {
+    const index = Math.floor(Math.random() * TimePerspectiveGenerator.FIELDS.length);
+    return TimePerspectiveGenerator.FIELDS[index];
   }
 
   /**
-   * Programmatically selects a random observation from OBSERVATIONS.
+   * Programmatically selects a random disposition from DISPOSITIONS.
    */
-  static selectObservation(): string {
-    const index = Math.floor(Math.random() * TimePerspectiveGenerator.OBSERVATIONS.length);
-    return TimePerspectiveGenerator.OBSERVATIONS[index];
+  static selectDisposition(): string {
+    const index = Math.floor(Math.random() * TimePerspectiveGenerator.DISPOSITIONS.length);
+    return TimePerspectiveGenerator.DISPOSITIONS[index];
   }
 
   /**
@@ -153,18 +133,18 @@ export class TimePerspectiveGenerator extends AIPromptGenerator {
   }
 
   /**
-   * Hook: Selects random lens, observation, and time bucket, returns as template variables.
+   * Hook: Selects random field, disposition, and time bucket, returns as template variables.
    */
   protected async getTemplateVariables(
     context: GenerationContext
   ): Promise<Record<string, string>> {
-    this.selectedLens = TimePerspectiveGenerator.selectLens();
-    this.selectedObservation = TimePerspectiveGenerator.selectObservation();
+    this.selectedField = TimePerspectiveGenerator.selectField();
+    this.selectedDisposition = TimePerspectiveGenerator.selectDisposition();
     this.selectedTimeBucket = TimePerspectiveGenerator.getTimeBucket(context.timestamp.getHours());
 
     return {
-      lens: this.selectedLens,
-      observation: this.selectedObservation,
+      field: this.selectedField,
+      disposition: this.selectedDisposition,
       timeBucket: this.selectedTimeBucket,
     };
   }
@@ -174,8 +154,8 @@ export class TimePerspectiveGenerator extends AIPromptGenerator {
    */
   protected getCustomMetadata(): Record<string, unknown> {
     return {
-      selectedLens: this.selectedLens,
-      selectedObservation: this.selectedObservation,
+      selectedField: this.selectedField,
+      selectedDisposition: this.selectedDisposition,
       timeBucket: this.selectedTimeBucket,
     };
   }

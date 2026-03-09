@@ -5,8 +5,8 @@
  * - Extends AIPromptGenerator with correct prompt files
  * - Uses MEDIUM model tier
  * - Validates prompt files exist
- * - Selects random lens and observation programmatically
- * - Injects lens and observation as template variables
+ * - Selects random field and disposition programmatically
+ * - Injects field and disposition as template variables
  */
 
 import { TimePerspectiveGenerator } from '@/content/generators/ai/time-perspective-generator';
@@ -26,7 +26,6 @@ describe('TimePerspectiveGenerator', () => {
   let mockModelTierSelector: jest.Mocked<ModelTierSelector>;
 
   beforeEach(() => {
-    // Mock PromptLoader
     mockPromptLoader = {
       loadPrompt: jest.fn(),
       loadPromptTemplate: jest.fn(),
@@ -34,69 +33,66 @@ describe('TimePerspectiveGenerator', () => {
       loadPromptTemplateWithVariables: jest.fn(),
     } as unknown as jest.Mocked<PromptLoader>;
 
-    // Mock ModelTierSelector
     mockModelTierSelector = {
       select: jest.fn(),
       getAlternate: jest.fn(),
     } as unknown as jest.Mocked<ModelTierSelector>;
   });
 
-  describe('LENSES static array', () => {
-    it('should contain exactly 5 lenses', () => {
-      expect(TimePerspectiveGenerator.LENSES).toHaveLength(5);
+  describe('FIELDS static array', () => {
+    it('should contain at least 15 scholarly fields', () => {
+      expect(TimePerspectiveGenerator.FIELDS.length).toBeGreaterThanOrEqual(15);
     });
 
-    it('should include COSMIC, ABSURDIST, ANCESTOR, CONNECTION, and FUTURE_SELF', () => {
-      expect(TimePerspectiveGenerator.LENSES).toContain('COSMIC');
-      expect(TimePerspectiveGenerator.LENSES).toContain('ABSURDIST');
-      expect(TimePerspectiveGenerator.LENSES).toContain('ANCESTOR');
-      expect(TimePerspectiveGenerator.LENSES).toContain('CONNECTION');
-      expect(TimePerspectiveGenerator.LENSES).toContain('FUTURE_SELF');
-    });
-  });
-
-  describe('OBSERVATIONS static array', () => {
-    it('should contain at least 20 observations', () => {
-      expect(TimePerspectiveGenerator.OBSERVATIONS.length).toBeGreaterThanOrEqual(20);
-    });
-
-    it('should include key everyday observations', () => {
-      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain('MAKING_COFFEE');
-      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain('LOOKING_AT_THE_SKY');
-      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain('LISTENING_TO_MUSIC');
-      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain('COOKING_A_MEAL');
-      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain('DRINKING_CLEAN_WATER');
-      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain('TURNING_ON_A_LIGHT');
+    it('should include key scholarly disciplines', () => {
+      expect(TimePerspectiveGenerator.FIELDS).toContain('ASTRONOMER');
+      expect(TimePerspectiveGenerator.FIELDS).toContain('CARTOGRAPHER');
+      expect(TimePerspectiveGenerator.FIELDS).toContain('PHYSICIAN');
+      expect(TimePerspectiveGenerator.FIELDS).toContain('MATHEMATICIAN');
+      expect(TimePerspectiveGenerator.FIELDS).toContain('BOTANIST');
+      expect(TimePerspectiveGenerator.FIELDS).toContain('NAVIGATOR');
     });
   });
 
-  describe('selectLens()', () => {
-    it('should return a lens from the LENSES array', () => {
-      const lens = TimePerspectiveGenerator.selectLens();
-      expect(TimePerspectiveGenerator.LENSES).toContain(lens);
+  describe('DISPOSITIONS static array', () => {
+    it('should contain exactly 5 dispositions', () => {
+      expect(TimePerspectiveGenerator.DISPOSITIONS).toHaveLength(5);
     });
 
-    it('should use Math.random for selection (probabilistic)', () => {
-      // Run multiple times to verify we get at least 2 different lenses
+    it('should include all disposition types', () => {
+      expect(TimePerspectiveGenerator.DISPOSITIONS).toContain('WISTFUL');
+      expect(TimePerspectiveGenerator.DISPOSITIONS).toContain('INVENTIVE');
+      expect(TimePerspectiveGenerator.DISPOSITIONS).toContain('EXASPERATED');
+      expect(TimePerspectiveGenerator.DISPOSITIONS).toContain('PHILOSOPHICAL');
+      expect(TimePerspectiveGenerator.DISPOSITIONS).toContain('MATTER_OF_FACT');
+    });
+  });
+
+  describe('selectField()', () => {
+    it('should return a field from the FIELDS array', () => {
+      const field = TimePerspectiveGenerator.selectField();
+      expect(TimePerspectiveGenerator.FIELDS).toContain(field);
+    });
+
+    it('should produce variety across multiple selections', () => {
       const results = new Set<string>();
       for (let i = 0; i < 50; i++) {
-        results.add(TimePerspectiveGenerator.selectLens());
+        results.add(TimePerspectiveGenerator.selectField());
       }
       expect(results.size).toBeGreaterThan(1);
     });
   });
 
-  describe('selectObservation()', () => {
-    it('should return an observation from the OBSERVATIONS array', () => {
-      const observation = TimePerspectiveGenerator.selectObservation();
-      expect(TimePerspectiveGenerator.OBSERVATIONS).toContain(observation);
+  describe('selectDisposition()', () => {
+    it('should return a disposition from the DISPOSITIONS array', () => {
+      const disposition = TimePerspectiveGenerator.selectDisposition();
+      expect(TimePerspectiveGenerator.DISPOSITIONS).toContain(disposition);
     });
 
-    it('should use Math.random for selection (probabilistic)', () => {
-      // Run multiple times to verify we get at least 2 different observations
+    it('should produce variety across multiple selections', () => {
       const results = new Set<string>();
       for (let i = 0; i < 50; i++) {
-        results.add(TimePerspectiveGenerator.selectObservation());
+        results.add(TimePerspectiveGenerator.selectDisposition());
       }
       expect(results.size).toBeGreaterThan(1);
     });
@@ -125,17 +121,15 @@ describe('TimePerspectiveGenerator', () => {
   });
 
   describe('constructor', () => {
-    it('should create instance with PromptLoader, ModelTierSelector, and MEDIUM tier', () => {
+    it('should create instance with MEDIUM tier', () => {
       const generator = new TimePerspectiveGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      expect(generator).toBeDefined();
       expect(generator).toBeInstanceOf(TimePerspectiveGenerator);
     });
 
-    it('should use MEDIUM model tier', async () => {
-      // Set up mocks for generate() call
+    it('should select MEDIUM model tier', async () => {
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
         provider: 'openai',
@@ -148,38 +142,31 @@ describe('TimePerspectiveGenerator', () => {
         openai: 'test-key',
       });
 
-      // Verify via observable behavior: modelTierSelector.select is called with MEDIUM tier
       try {
         await generator.generate({ updateType: 'major', timestamp: new Date() });
       } catch {
-        // May fail without AI provider - we're testing the tier selection call
+        // Expected without real API key
       }
 
       expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
     });
   });
 
-  describe('getSystemPromptFile()', () => {
-    it('should return major-update-base.txt', () => {
+  describe('prompt files', () => {
+    it('should use major-update-base.txt as system prompt', () => {
       const generator = new TimePerspectiveGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedTimePerspectiveGenerator;
 
-      const systemPromptFile = generator.getSystemPromptFile();
-
-      expect(systemPromptFile).toBe('major-update-base.txt');
+      expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
     });
-  });
 
-  describe('getUserPromptFile()', () => {
-    it('should return time-perspective.txt', () => {
+    it('should use time-perspective.txt as user prompt', () => {
       const generator = new TimePerspectiveGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       }) as ProtectedTimePerspectiveGenerator;
 
-      const userPromptFile = generator.getUserPromptFile();
-
-      expect(userPromptFile).toBe('time-perspective.txt');
+      expect(generator.getUserPromptFile()).toBe('time-perspective.txt');
     });
   });
 
@@ -193,15 +180,13 @@ describe('TimePerspectiveGenerator', () => {
 
       const result = await generator.validate();
 
-      // Assuming prompts exist in the worktree
       expect(result.valid).toBe(true);
       expect(result.errors).toBeUndefined();
     });
   });
 
   describe('generate()', () => {
-    it('should inject lens and observation as template variables', async () => {
-      // Set up mocks for generate() call
+    it('should inject field and disposition as template variables', async () => {
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
         provider: 'openai',
@@ -217,10 +202,9 @@ describe('TimePerspectiveGenerator', () => {
       try {
         await generator.generate({ updateType: 'major', timestamp: new Date() });
       } catch {
-        // May fail without AI provider - we're testing template variable injection
+        // Expected without real API key
       }
 
-      // Verify loadPromptWithVariables was called with lens and observation
       const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
         call => call[0] === 'user' && call[1] === 'time-perspective.txt'
       );
@@ -228,24 +212,24 @@ describe('TimePerspectiveGenerator', () => {
       expect(userPromptCall).toBeDefined();
       if (userPromptCall) {
         const variables = userPromptCall[2] as Record<string, unknown>;
-        expect(variables).toHaveProperty('lens');
-        expect(variables).toHaveProperty('observation');
+        expect(variables).toHaveProperty('field');
+        expect(variables).toHaveProperty('disposition');
         expect(variables).toHaveProperty('timeBucket');
-        expect(TimePerspectiveGenerator.LENSES).toContain(variables.lens);
-        expect(TimePerspectiveGenerator.OBSERVATIONS).toContain(variables.observation);
+        expect(TimePerspectiveGenerator.FIELDS).toContain(variables.field);
+        expect(TimePerspectiveGenerator.DISPOSITIONS).toContain(variables.disposition);
       }
     });
   });
 
   describe('variability', () => {
-    it('should provide 400+ combinations (5 lenses x 20 observations x 4 time buckets)', () => {
-      const lensCount = TimePerspectiveGenerator.LENSES.length;
-      const observationCount = TimePerspectiveGenerator.OBSERVATIONS.length;
-      const timeBucketCount = 4; // NIGHT, MORNING, AFTERNOON, EVENING
+    it('should provide 300+ combinations (15 fields x 5 dispositions x 4 time buckets)', () => {
+      const fieldCount = TimePerspectiveGenerator.FIELDS.length;
+      const dispositionCount = TimePerspectiveGenerator.DISPOSITIONS.length;
+      const timeBucketCount = 4;
 
-      const totalCombinations = lensCount * observationCount * timeBucketCount;
+      const totalCombinations = fieldCount * dispositionCount * timeBucketCount;
 
-      expect(totalCombinations).toBeGreaterThanOrEqual(400);
+      expect(totalCombinations).toBeGreaterThanOrEqual(300);
     });
   });
 });
