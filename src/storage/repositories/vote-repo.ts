@@ -17,6 +17,8 @@ export class VoteRepository {
       vote_type: vote,
       userAgent: metadata?.userAgent,
       ipAddress: metadata?.ipAddress,
+      reason: metadata?.reason,
+      user_id: metadata?.userId ? Number(metadata.userId) : undefined,
     });
   }
 

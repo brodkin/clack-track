@@ -281,6 +281,45 @@ describe('API Client', () => {
       expect(result.data?.vote.vote_type).toBe('bad');
     });
 
+    it('should include reason in request body when provided', async () => {
+      const mockVote: VoteRecord = {
+        id: 789,
+        content_id: 123,
+        vote_type: 'bad',
+        created_at: new Date('2025-01-01T12:00:00Z'),
+        reason: 'boring',
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => ({
+          success: true,
+          data: { vote: mockVote },
+        }),
+      });
+
+      const result = await apiClient.submitVote({
+        contentId: 'content-123',
+        vote: 'bad',
+        reason: 'boring',
+      });
+
+      expect(global.fetch).toHaveBeenCalledWith('/api/vote', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contentId: 'content-123',
+          vote: 'bad',
+          reason: 'boring',
+        }),
+      });
+      expect(result.success).toBe(true);
+      expect(result.data?.vote.reason).toBe('boring');
+    });
+
     it('should handle validation errors', async () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,

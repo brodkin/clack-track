@@ -72,6 +72,7 @@ describe('VoteModel', () => {
         table.timestamp('created_at').defaultTo(knex.fn.now());
         table.string('userAgent', 500).nullable();
         table.string('ipAddress', 45).nullable();
+        table.string('reason', 50).nullable();
         table.index('content_id', 'idx_votes_content_id');
       });
     }
@@ -518,6 +519,104 @@ describe('VoteModel', () => {
       const deleted = await voteModel.deleteByContentId(99999);
 
       expect(deleted).toBe(0);
+    });
+  });
+
+  describe('reason field', () => {
+    test('should store reason when provided during creation', async () => {
+      const content = await contentHelper.create({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
+      const result = await voteModel.create({
+        content_id: content.id,
+        vote_type: 'bad',
+        reason: 'boring',
+      });
+
+      expect(result.reason).toBe('boring');
+    });
+
+    test('should leave reason undefined when not provided', async () => {
+      const content = await contentHelper.create({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
+      const result = await voteModel.create({
+        content_id: content.id,
+        vote_type: 'good',
+      });
+
+      expect(result.reason).toBeUndefined();
+    });
+
+    test('should persist and retrieve reason via findByContentId', async () => {
+      const content = await contentHelper.create({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
+      await voteModel.create({
+        content_id: content.id,
+        vote_type: 'bad',
+        reason: 'repetitive',
+      });
+
+      const votes = await voteModel.findByContentId(content.id);
+
+      expect(votes[0].reason).toBe('repetitive');
+    });
+
+    test('should persist and retrieve reason via findById', async () => {
+      const content = await contentHelper.create({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
+      const created = await voteModel.create({
+        content_id: content.id,
+        vote_type: 'bad',
+        reason: 'inappropriate',
+      });
+
+      const found = await voteModel.findById(created.id);
+
+      expect(found).not.toBeNull();
+      expect(found!.reason).toBe('inappropriate');
+    });
+
+    test('should return undefined reason for votes created without one', async () => {
+      const content = await contentHelper.create({
+        text: 'Test content',
+        type: 'major',
+        generatedAt: new Date(),
+        sentAt: null,
+        aiProvider: 'openai',
+      });
+
+      const created = await voteModel.create({
+        content_id: content.id,
+        vote_type: 'good',
+      });
+
+      const found = await voteModel.findById(created.id);
+
+      expect(found).not.toBeNull();
+      expect(found!.reason).toBeUndefined();
     });
   });
 
