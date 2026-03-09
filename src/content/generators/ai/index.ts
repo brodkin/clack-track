@@ -37,3 +37,4 @@ export { HouseboyVentGenerator } from './houseboy-vent-generator.js';
 export { PricelessGenerator } from './priceless-generator.js';
 export { WrongNumberVoicemailGenerator } from './wrong-number-voicemail-generator.js';
 export { CastMemberRadioGenerator } from './cast-member-radio-generator.js';
+export { ZaydeWisdomGenerator } from './zayde-wisdom-generator.js';
