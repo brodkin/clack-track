@@ -112,13 +112,13 @@ describe('FloatingLogo', () => {
     it('has gold-tinted border color', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
-      expect(container.className).toContain('border-amber-300/30');
+      expect(container.className).toContain('border-gray-300/30');
     });
 
     it('has dark mode gold border color', () => {
       render(<FloatingLogo />);
       const container = screen.getByTestId('floating-logo');
-      expect(container.className).toContain('dark:border-amber-500/20');
+      expect(container.className).toContain('dark:border-gray-500/20');
     });
 
     it('has gold-tinted shadow', () => {
@@ -170,13 +170,12 @@ describe('FloatingLogo', () => {
       expect(mainText).toHaveClass('bg-clip-text');
     });
 
-    it('applies amber-yellow-amber gold gradient to logo', () => {
+    it('applies glossy gradient to logo via inline style', () => {
       render(<FloatingLogo />);
       const mainText = screen.getByText('Clack Track');
-      expect(mainText.className).toContain('bg-gradient-to-r');
-      expect(mainText.className).toContain('from-amber-600');
-      expect(mainText.className).toContain('via-yellow-400');
-      expect(mainText.className).toContain('to-amber-600');
+      // Gradient is now applied via inline style backgroundImage, not Tailwind classes
+      expect(mainText.style.backgroundImage).toContain('linear-gradient');
+      expect(mainText.className).toContain('animate-glossy-shift');
     });
 
     it('does not use old red gradient on logo', () => {
@@ -217,7 +216,7 @@ describe('FloatingLogo', () => {
     it('has wide letter spacing', () => {
       render(<FloatingLogo />);
       const byline = screen.getByText('BY HOUSEBOY');
-      expect(byline.className).toContain('tracking-[0.3em]');
+      expect(byline.className).toContain('tracking-[0.45em]');
     });
 
     it('does not use old gray text colors', () => {
@@ -250,7 +249,7 @@ describe('FloatingLogo', () => {
     it('applies smaller size to byline', () => {
       render(<FloatingLogo />);
       const byline = screen.getByText('BY HOUSEBOY');
-      expect(byline).toHaveClass('text-sm');
+      expect(byline).toHaveClass('text-base');
     });
   });
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { TextLayoutFormatter } from '@/content/formatters/text-layout';
 import { textToLayout as realTextToLayout } from '@/api/vestaboard/character-converter';
 import type { VestaboardContent } from '@/types/content';

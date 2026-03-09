@@ -35,7 +35,7 @@
  * ```
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { contentTestCommand } from '@/cli/commands/content-test.js';
 import type { ContentTestOptions } from '@/cli/commands/content-test.js';
 import { ContentRegistry } from '@/content/registry/content-registry.js';

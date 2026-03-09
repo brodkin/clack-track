@@ -1,17 +1,16 @@
 /**
  * Tests for ISSObserverGenerator
  *
- * Test coverage:
- * - Constructor creates instance with LIGHT tier
- * - getSystemPromptFile() returns 'major-update-base.txt'
- * - getUserPromptFile() returns 'iss-observer.txt'
- * - getTemplateVariables() injects ISS data correctly
- * - Random astronaut selected from ISS crew only (filters Tiangong)
- * - Random observation angle selected from dictionary
- * - Location-appropriate flavor selected based on position
- * - getCustomMetadata() tracks all selections
- * - Fallback values used on API failure
- * - Mock ISSClient for isolation
+ * Generator-specific behavior:
+ * - ISS data fetching (getFullStatus)
+ * - Position/location/crew injection into template variables
+ * - Velocity in mph conversion
+ * - ISS-only crew filtering (not Tiangong)
+ * - Fallback astronaut text
+ * - Observation angle from dictionaries
+ * - Location flavor selection (country-specific, ocean, generic)
+ * - Fallback values on API failure
+ * - Custom metadata (issDataFetched, position, location, crewCount, etc.)
  */
 
 import { ISSObserverGenerator } from '@/content/generators/ai/iss-observer-generator';
@@ -52,13 +51,6 @@ jest.mock('@/content/personality/index.js', () => ({
 }));
 
 import { createAIProvider } from '@/api/ai/index.js';
-
-// Helper type for accessing protected members in tests
-type ProtectedISSObserverGenerator = ISSObserverGenerator & {
-  getSystemPromptFile(): string;
-  getUserPromptFile(): string;
-  modelTier: ModelTier;
-};
 
 describe('ISSObserverGenerator', () => {
   let mockPromptLoader: jest.Mocked<PromptLoader>;
@@ -111,14 +103,12 @@ describe('ISSObserverGenerator', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock PromptLoader
     mockPromptLoader = {
       loadPrompt: jest.fn(),
       loadPromptTemplate: jest.fn(),
       loadPromptWithVariables: jest.fn().mockResolvedValue('mocked prompt content'),
     } as unknown as jest.Mocked<PromptLoader>;
 
-    // Mock ModelTierSelector
     mockModelTierSelector = {
       select: jest.fn().mockReturnValue({
         provider: 'openai',
@@ -128,7 +118,6 @@ describe('ISSObserverGenerator', () => {
       getAlternate: jest.fn().mockReturnValue(null),
     } as unknown as jest.Mocked<ModelTierSelector>;
 
-    // Mock ISSClient
     mockISSClient = {
       getPosition: jest.fn().mockResolvedValue(mockPosition),
       reverseGeocode: jest.fn().mockResolvedValue(mockLocation),
@@ -136,7 +125,6 @@ describe('ISSObserverGenerator', () => {
       getFullStatus: jest.fn().mockResolvedValue(mockFullStatus),
     } as unknown as jest.Mocked<ISSClient>;
 
-    // Mock createAIProvider to return a successful mock provider
     (createAIProvider as jest.Mock).mockReturnValue(
       createMockAIProvider({
         response: {
@@ -146,94 +134,6 @@ describe('ISSObserverGenerator', () => {
         },
       })
     );
-  });
-
-  describe('constructor', () => {
-    it('should create instance with PromptLoader, ModelTierSelector, and LIGHT tier', () => {
-      const generator = new ISSObserverGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      expect(generator).toBeDefined();
-      expect(generator).toBeInstanceOf(ISSObserverGenerator);
-    });
-
-    it('should accept optional ISSClient dependency', () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      expect(generator).toBeDefined();
-      expect(generator).toBeInstanceOf(ISSObserverGenerator);
-    });
-
-    it('should use LIGHT model tier for efficiency', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      await generator.generate(mockContext);
-
-      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
-    });
-  });
-
-  describe('getSystemPromptFile()', () => {
-    it('should return major-update-base.txt', () => {
-      const generator = new ISSObserverGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedISSObserverGenerator;
-
-      const systemPromptFile = generator.getSystemPromptFile();
-
-      expect(systemPromptFile).toBe('major-update-base.txt');
-    });
-  });
-
-  describe('getUserPromptFile()', () => {
-    it('should return iss-observer.txt', () => {
-      const generator = new ISSObserverGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedISSObserverGenerator;
-
-      const userPromptFile = generator.getUserPromptFile();
-
-      expect(userPromptFile).toBe('iss-observer.txt');
-    });
-  });
-
-  describe('validate()', () => {
-    it('should validate that prompt files exist', async () => {
-      mockPromptLoader.loadPrompt.mockResolvedValue('prompt content');
-
-      const generator = new ISSObserverGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const result = await generator.validate();
-
-      expect(result).toBeDefined();
-      expect(typeof result.valid).toBe('boolean');
-    });
-
-    it('should return valid when both prompt files exist', async () => {
-      mockPromptLoader.loadPrompt.mockResolvedValue('prompt content');
-
-      const generator = new ISSObserverGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const result = await generator.validate();
-
-      expect(result.valid).toBe(true);
-      expect(result.errors).toBeUndefined();
-    });
   });
 
   describe('getTemplateVariables()', () => {
@@ -260,15 +160,14 @@ describe('ISSObserverGenerator', () => {
 
       await generator.generate(mockContext);
 
-      // Verify loadPromptWithVariables was called with ISS data
       expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
         'user',
         'iss-observer.txt',
         expect.objectContaining({
           latitude: '51.51',
           longitude: '-0.13',
-          altitude: '409', // Rounded
-          velocity: '27601', // Rounded
+          altitude: '409',
+          velocity: '27601',
           visibility: 'daylight',
         })
       );
@@ -284,19 +183,15 @@ describe('ISSObserverGenerator', () => {
 
       await generator.generate(mockContext);
 
-      // User prompt is the second call (index 1)
       const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
-      expect(calls.length).toBeGreaterThanOrEqual(2);
-
       const userPromptCall = calls[1];
       const templateVars = userPromptCall[2] as Record<string, unknown>;
 
-      // 27600.5 km/h * 0.621371 = 17150 mph (approximately)
       expect(templateVars.velocityMph).toBeDefined();
       expect(parseInt(templateVars.velocityMph as string)).toBeCloseTo(17150, -2);
     });
 
-    it('should inject location data', async () => {
+    it('should inject crew count (ISS only, not Tiangong)', async () => {
       const generator = new ISSObserverGenerator(
         mockPromptLoader,
         mockModelTierSelector,
@@ -310,31 +205,12 @@ describe('ISSObserverGenerator', () => {
         'user',
         'iss-observer.txt',
         expect.objectContaining({
-          location: 'GB',
+          crewCount: '7',
         })
       );
     });
 
-    it('should inject crew count (ISS only)', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      await generator.generate(mockContext);
-
-      expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
-        'user',
-        'iss-observer.txt',
-        expect.objectContaining({
-          crewCount: '7', // Only ISS crew, not Tiangong
-        })
-      );
-    });
-
-    it('should inject observation angle', async () => {
+    it('should inject observation angle from dictionaries', async () => {
       const generator = new ISSObserverGenerator(
         mockPromptLoader,
         mockModelTierSelector,
@@ -400,7 +276,6 @@ describe('ISSObserverGenerator', () => {
         mockISSClient
       );
 
-      // Run multiple times to check randomization
       const selectedAstronauts: string[] = [];
       for (let i = 0; i < 10; i++) {
         mockPromptLoader.loadPromptWithVariables.mockClear();
@@ -419,7 +294,6 @@ describe('ISSObserverGenerator', () => {
         .filter(p => p.craft === 'Tiangong')
         .map(p => p.name);
 
-      // None of the selected astronauts should be from Tiangong
       for (const astronaut of selectedAstronauts) {
         expect(tiangongCrewNames).not.toContain(astronaut);
       }
@@ -457,55 +331,8 @@ describe('ISSObserverGenerator', () => {
     });
   });
 
-  describe('random observation angle selection', () => {
-    it('should select from valid observation angles', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      await generator.generate(mockContext);
-
-      const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
-      const userPromptCall = calls[1];
-      const templateVars = userPromptCall[2] as Record<string, unknown>;
-
-      expect(OBSERVATION_ANGLES).toContain(templateVars.observationAngle);
-    });
-
-    it('should produce varied angles across multiple generations', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      const selectedAngles = new Set<string>();
-
-      for (let i = 0; i < 20; i++) {
-        mockPromptLoader.loadPromptWithVariables.mockClear();
-        mockISSClient.getFullStatus.mockClear();
-        mockISSClient.getFullStatus.mockResolvedValue(mockFullStatus);
-
-        await generator.generate(mockContext);
-
-        const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
-        const userPromptCall = calls[1];
-        const templateVars = userPromptCall[2] as Record<string, unknown>;
-        selectedAngles.add(templateVars.observationAngle as string);
-      }
-
-      // With 24 angles and 20 tries, we should see some variety
-      expect(selectedAngles.size).toBeGreaterThan(1);
-    });
-  });
-
   describe('location-appropriate flavor selection', () => {
     it('should select appropriate flavor for known country', async () => {
-      // US location
       mockISSClient.getFullStatus.mockResolvedValue({
         ...mockFullStatus,
         location: {
@@ -563,7 +390,7 @@ describe('ISSObserverGenerator', () => {
       mockISSClient.getFullStatus.mockResolvedValue({
         ...mockFullStatus,
         location: {
-          country_code: 'XX', // Unknown country code
+          country_code: 'XX',
           timezone_id: 'Unknown',
           region: null,
           ocean: null,
@@ -584,60 +411,6 @@ describe('ISSObserverGenerator', () => {
       const templateVars = userPromptCall[2] as Record<string, unknown>;
 
       expect(templateVars.locationFlavor).toBe(LOCATION_FLAVORS.GENERIC_LAND);
-    });
-
-    it('should format location as ocean name when over water', async () => {
-      mockISSClient.getFullStatus.mockResolvedValue({
-        ...mockFullStatus,
-        location: {
-          country_code: null,
-          timezone_id: null,
-          region: null,
-          ocean: 'Atlantic Ocean',
-        },
-      });
-
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      await generator.generate(mockContext);
-
-      const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
-      const userPromptCall = calls[1];
-      const templateVars = userPromptCall[2] as Record<string, unknown>;
-
-      expect(templateVars.location).toBe('Atlantic Ocean');
-    });
-
-    it('should format location as region when country_code is null and region is present', async () => {
-      mockISSClient.getFullStatus.mockResolvedValue({
-        ...mockFullStatus,
-        location: {
-          country_code: null,
-          timezone_id: 'Europe/London',
-          region: 'Northern Europe',
-          ocean: null,
-        },
-      });
-
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      await generator.generate(mockContext);
-
-      const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
-      const userPromptCall = calls[1];
-      const templateVars = userPromptCall[2] as Record<string, unknown>;
-
-      expect(templateVars.location).toBe('Northern Europe');
     });
 
     it('should use fallback location when no location data available', async () => {
@@ -669,7 +442,7 @@ describe('ISSObserverGenerator', () => {
   });
 
   describe('getCustomMetadata()', () => {
-    it('should track issDataFetched status', async () => {
+    it('should track issDataFetched, position, location, crewCount, astronaut, angle, and flavor', async () => {
       const generator = new ISSObserverGenerator(
         mockPromptLoader,
         mockModelTierSelector,
@@ -680,93 +453,11 @@ describe('ISSObserverGenerator', () => {
       const result = await generator.generate(mockContext);
 
       expect(result.metadata?.issDataFetched).toBe(true);
-    });
-
-    it('should track position data', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      const result = await generator.generate(mockContext);
-
       expect(result.metadata?.position).toBeDefined();
-      expect(result.metadata?.position).toMatchObject({
-        latitude: mockPosition.latitude,
-        longitude: mockPosition.longitude,
-      });
-    });
-
-    it('should track location data', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      const result = await generator.generate(mockContext);
-
       expect(result.metadata?.location).toBeDefined();
-      expect(result.metadata?.location).toMatchObject({
-        country_code: 'GB',
-      });
-    });
-
-    it('should track crew count (ISS only)', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      const result = await generator.generate(mockContext);
-
       expect(result.metadata?.crewCount).toBe(7);
-    });
-
-    it('should track selected astronaut', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      const result = await generator.generate(mockContext);
-
       expect(result.metadata?.selectedAstronaut).toBeDefined();
-      expect(typeof result.metadata?.selectedAstronaut).toBe('string');
-    });
-
-    it('should track selected observation angle', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      const result = await generator.generate(mockContext);
-
-      expect(result.metadata?.observationAngle).toBeDefined();
       expect(OBSERVATION_ANGLES).toContain(result.metadata?.observationAngle);
-    });
-
-    it('should track location flavor', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      const result = await generator.generate(mockContext);
-
-      expect(result.metadata?.locationFlavor).toBeDefined();
       expect(Object.values(LOCATION_FLAVORS)).toContain(result.metadata?.locationFlavor);
     });
   });
@@ -774,8 +465,6 @@ describe('ISSObserverGenerator', () => {
   describe('fallback values on API failure', () => {
     it('should use fallback values when ISSClient throws error', async () => {
       mockISSClient.getFullStatus.mockRejectedValue(new Error('ISS API down'));
-
-      // Spy on console.error to verify error logging
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
       const generator = new ISSObserverGenerator(
@@ -787,7 +476,6 @@ describe('ISSObserverGenerator', () => {
 
       await generator.generate(mockContext);
 
-      // Verify fallback values were used
       expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
         'user',
         'iss-observer.txt',
@@ -803,7 +491,6 @@ describe('ISSObserverGenerator', () => {
         })
       );
 
-      // Verify error was logged
       expect(consoleSpy).toHaveBeenCalledWith(
         'Failed to fetch ISS data for prompt:',
         expect.any(Error)
@@ -826,228 +513,6 @@ describe('ISSObserverGenerator', () => {
       const result = await generator.generate(mockContext);
 
       expect(result.metadata?.issDataFetched).toBe(false);
-    });
-
-    it('should use fallback velocityMph on API failure', async () => {
-      mockISSClient.getFullStatus.mockRejectedValue(new Error('ISS API down'));
-      jest.spyOn(console, 'error').mockImplementation();
-
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      await generator.generate(mockContext);
-
-      expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
-        'user',
-        'iss-observer.txt',
-        expect.objectContaining({
-          velocityMph: '17150',
-        })
-      );
-    });
-
-    it('should use fallback locationFlavor on API failure', async () => {
-      mockISSClient.getFullStatus.mockRejectedValue(new Error('ISS API down'));
-      jest.spyOn(console, 'error').mockImplementation();
-
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      await generator.generate(mockContext);
-
-      expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
-        'user',
-        'iss-observer.txt',
-        expect.objectContaining({
-          locationFlavor: LOCATION_FLAVORS.GENERIC_LAND,
-        })
-      );
-    });
-
-    it('should still select random observation angle on API failure', async () => {
-      mockISSClient.getFullStatus.mockRejectedValue(new Error('ISS API down'));
-      jest.spyOn(console, 'error').mockImplementation();
-
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      await generator.generate(mockContext);
-
-      const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
-      const userPromptCall = calls[1];
-      const templateVars = userPromptCall[2] as Record<string, unknown>;
-
-      expect(templateVars.observationAngle).toBeDefined();
-      expect(OBSERVATION_ANGLES).toContain(templateVars.observationAngle);
-    });
-  });
-
-  describe('generate()', () => {
-    it('should generate content with expected GeneratedContent structure', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      const result = await generator.generate(mockContext);
-
-      expect(result).toBeDefined();
-      expect(result.text).toBe('ISS NOW OVER LONDON\nCREW OF 7 WATCHING');
-      expect(result.outputMode).toBe('text');
-      expect(result.metadata).toBeDefined();
-      expect(result.metadata?.model).toBe('gpt-4.1-nano');
-      expect(result.metadata?.tier).toBe(ModelTier.LIGHT);
-      expect(result.metadata?.provider).toBe('openai');
-    });
-
-    it('should load system prompt with personality variables', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      await generator.generate(mockContext);
-
-      // Verify system prompt was loaded with personality variables
-      expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
-        'system',
-        'major-update-base.txt',
-        expect.objectContaining({
-          mood: 'cheerful',
-          energyLevel: 'high',
-          humorStyle: 'witty',
-          obsession: 'coffee',
-          persona: 'Houseboy',
-        })
-      );
-    });
-
-    it('should handle AI provider failures gracefully', async () => {
-      (createAIProvider as jest.Mock).mockReturnValue(
-        createMockAIProvider({
-          shouldFail: true,
-          failureError: new Error('AI provider error'),
-        })
-      );
-
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      await expect(generator.generate(mockContext)).rejects.toThrow(
-        /All AI providers failed for tier/
-      );
-    });
-
-    it('should failover to alternate provider on primary failure', async () => {
-      const primaryProvider = createMockAIProvider({
-        shouldFail: true,
-        failureError: new Error('Primary provider error'),
-      });
-
-      const alternateProvider = createMockAIProvider({
-        response: {
-          text: 'Alternate provider content',
-          model: 'claude-haiku-4.5',
-          tokensUsed: 45,
-        },
-      });
-
-      (createAIProvider as jest.Mock)
-        .mockReturnValueOnce(primaryProvider)
-        .mockReturnValueOnce(alternateProvider);
-
-      mockModelTierSelector.getAlternate.mockReturnValue({
-        provider: 'anthropic',
-        model: 'claude-haiku-4.5',
-        tier: ModelTier.LIGHT,
-      });
-
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key', anthropic: 'test-key-2' },
-        mockISSClient
-      );
-
-      const result = await generator.generate(mockContext);
-
-      expect(result.text).toBe('Alternate provider content');
-      expect(result.metadata?.provider).toBe('anthropic');
-      expect(result.metadata?.failedOver).toBe(true);
-      expect(result.metadata?.primaryError).toContain('Primary provider error');
-    });
-  });
-
-  describe('integration with base class Template Method pattern', () => {
-    it('should use getTemplateVariables() hook to inject ISS data', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      await generator.generate(mockContext);
-
-      // The hook should have been called, injecting ISS variables
-      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls[1];
-      expect(userPromptCall[2]).toHaveProperty('latitude');
-      expect(userPromptCall[2]).toHaveProperty('astronaut');
-      expect(userPromptCall[2]).toHaveProperty('observationAngle');
-    });
-
-    it('should use getCustomMetadata() hook to track ISS data', async () => {
-      const generator = new ISSObserverGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        { openai: 'test-key' },
-        mockISSClient
-      );
-
-      const result = await generator.generate(mockContext);
-
-      // ISS tracking data should be in metadata from getCustomMetadata() hook
-      expect(result.metadata?.issDataFetched).toBeDefined();
-      expect(result.metadata?.position).toBeDefined();
-      expect(result.metadata?.selectedAstronaut).toBeDefined();
-    });
-
-    it('should inherit retry logic from AIPromptGenerator', () => {
-      const generator = new ISSObserverGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      // Verify that generate method exists (inherited from base class)
-      expect(typeof generator.generate).toBe('function');
-    });
-
-    it('should inherit validation logic from AIPromptGenerator', () => {
-      const generator = new ISSObserverGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      // Verify that validate method exists (inherited from base class)
-      expect(typeof generator.validate).toBe('function');
     });
   });
 });

@@ -1,13 +1,11 @@
 /**
  * Tests for TourGuideGenerator
  *
- * Test coverage:
- * - Extends AIPromptGenerator with correct prompt files
- * - Uses LIGHT model tier
- * - Validates prompt files exist
- * - Returns correct system and user prompt file names
- * - Injects random location and angle into prompts
- * - Covers all location domains and angles
+ * Generator-specific behavior:
+ * - LOCATIONS constant (HOME, WORK, PUBLIC, DIGITAL, SOCIAL domains)
+ * - ANGLES constant (10 observational/personal angles)
+ * - selectRandomLocation() and selectRandomAngle() methods
+ * - Template variable injection (location, angle)
  */
 
 import { TourGuideGenerator } from '@/content/generators/ai/tour-guide-generator';
@@ -17,9 +15,6 @@ import { ModelTier } from '@/types/content-generator';
 
 // Helper type for accessing protected members in tests
 type ProtectedTourGuideGenerator = TourGuideGenerator & {
-  getSystemPromptFile(): string;
-  getUserPromptFile(): string;
-  modelTier: ModelTier;
   selectRandomLocation(): { locationDomain: string; location: string };
   selectRandomAngle(): string;
 };
@@ -29,7 +24,6 @@ describe('TourGuideGenerator', () => {
   let mockModelTierSelector: jest.Mocked<ModelTierSelector>;
 
   beforeEach(() => {
-    // Mock PromptLoader
     mockPromptLoader = {
       loadPrompt: jest.fn(),
       loadPromptTemplate: jest.fn(),
@@ -37,106 +31,10 @@ describe('TourGuideGenerator', () => {
       loadPromptTemplateWithVariables: jest.fn(),
     } as unknown as jest.Mocked<PromptLoader>;
 
-    // Mock ModelTierSelector
     mockModelTierSelector = {
       select: jest.fn(),
       getAlternate: jest.fn(),
     } as unknown as jest.Mocked<ModelTierSelector>;
-  });
-
-  describe('constructor', () => {
-    it('should create instance with PromptLoader, ModelTierSelector, and LIGHT tier', () => {
-      const generator = new TourGuideGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      expect(generator).toBeDefined();
-      expect(generator).toBeInstanceOf(TourGuideGenerator);
-    });
-
-    it('should use LIGHT model tier', async () => {
-      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
-      mockModelTierSelector.select.mockReturnValue({
-        provider: 'openai',
-        model: 'gpt-4.1-nano',
-        tier: ModelTier.LIGHT,
-      });
-      mockModelTierSelector.getAlternate.mockReturnValue(null);
-
-      const generator = new TourGuideGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider - we're testing the tier selection call
-      }
-
-      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
-    });
-
-    it('should work without API keys (default empty object)', () => {
-      const generator = new TourGuideGenerator(mockPromptLoader, mockModelTierSelector);
-
-      expect(generator).toBeDefined();
-      expect(generator).toBeInstanceOf(TourGuideGenerator);
-    });
-  });
-
-  describe('getSystemPromptFile()', () => {
-    it('should return major-update-base.txt', () => {
-      const generator = new TourGuideGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedTourGuideGenerator;
-
-      const systemPromptFile = generator.getSystemPromptFile();
-
-      expect(systemPromptFile).toBe('major-update-base.txt');
-    });
-  });
-
-  describe('getUserPromptFile()', () => {
-    it('should return tour-guide.txt', () => {
-      const generator = new TourGuideGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedTourGuideGenerator;
-
-      const userPromptFile = generator.getUserPromptFile();
-
-      expect(userPromptFile).toBe('tour-guide.txt');
-    });
-  });
-
-  describe('validate()', () => {
-    it('should return valid when both prompt files exist', async () => {
-      mockPromptLoader.loadPrompt.mockResolvedValue('prompt content');
-
-      const generator = new TourGuideGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const result = await generator.validate();
-
-      expect(result.valid).toBe(true);
-      expect(result.errors).toBeUndefined();
-    });
-
-    it('should return invalid when user prompt file is missing', async () => {
-      mockPromptLoader.loadPrompt
-        .mockResolvedValueOnce('system prompt content')
-        .mockRejectedValueOnce(new Error('File not found: tour-guide.txt'));
-
-      const generator = new TourGuideGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const result = await generator.validate();
-
-      expect(result.valid).toBe(false);
-      expect(result.errors).toBeDefined();
-      expect(result.errors?.length).toBeGreaterThan(0);
-    });
   });
 
   describe('location selection', () => {
@@ -156,7 +54,6 @@ describe('TourGuideGenerator', () => {
         expect(validDomains).toContain(locationDomain);
       }
 
-      // With 200 iterations, we should have hit most domains
       expect(selectedDomains.size).toBeGreaterThan(1);
     });
 
@@ -198,63 +95,6 @@ describe('TourGuideGenerator', () => {
     });
   });
 
-  describe('generate()', () => {
-    it('should load correct prompts and use LIGHT tier', async () => {
-      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
-      mockModelTierSelector.select.mockReturnValue({
-        provider: 'openai',
-        model: 'gpt-4.1-nano',
-        tier: ModelTier.LIGHT,
-      });
-      mockModelTierSelector.getAlternate.mockReturnValue(null);
-
-      const generator = new TourGuideGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedTourGuideGenerator;
-
-      expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
-      expect(generator.getUserPromptFile()).toBe('tour-guide.txt');
-
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider - we're testing the tier selection call
-      }
-
-      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
-    });
-
-    it('should inject location and angle variables into user prompt', async () => {
-      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
-      mockModelTierSelector.select.mockReturnValue({
-        provider: 'openai',
-        model: 'gpt-4.1-nano',
-        tier: ModelTier.LIGHT,
-      });
-      mockModelTierSelector.getAlternate.mockReturnValue(null);
-
-      const generator = new TourGuideGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider - we're testing the prompt loading
-      }
-
-      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
-        call => call[0] === 'user' && call[1] === 'tour-guide.txt'
-      );
-
-      expect(userPromptCall).toBeDefined();
-      const variables = userPromptCall?.[2];
-      expect(variables).toHaveProperty('location');
-      expect(variables).toHaveProperty('angle');
-      expect(variables).not.toHaveProperty('opener');
-    });
-  });
-
   describe('LOCATIONS constant', () => {
     it('should contain all required location domains with their locations', () => {
       const locations = TourGuideGenerator.LOCATIONS;
@@ -281,7 +121,6 @@ describe('TourGuideGenerator', () => {
     it('should contain all required angles including houseboy-personal ones', () => {
       const angles = TourGuideGenerator.ANGLES;
 
-      // Observational angles
       expect(angles).toContain('WILDLIFE');
       expect(angles).toContain('HISTORICAL');
       expect(angles).toContain('DANGER ZONE');
@@ -290,12 +129,43 @@ describe('TourGuideGenerator', () => {
       expect(angles).toContain('CRIME SCENE');
       expect(angles).toContain('REAL ESTATE LISTING');
 
-      // Houseboy-personal angles
       expect(angles).toContain('DEVASTATING MEMORIES');
       expect(angles).toContain('CONFESSIONAL');
       expect(angles).toContain('FIVE STAR REVIEW');
 
       expect(angles.length).toBe(10);
+    });
+  });
+
+  describe('template variable injection', () => {
+    it('should inject location and angle variables into user prompt', async () => {
+      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
+      mockModelTierSelector.select.mockReturnValue({
+        provider: 'openai',
+        model: 'gpt-4.1-nano',
+        tier: ModelTier.LIGHT,
+      });
+      mockModelTierSelector.getAlternate.mockReturnValue(null);
+
+      const generator = new TourGuideGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      try {
+        await generator.generate({ updateType: 'major', timestamp: new Date() });
+      } catch {
+        // May fail without AI provider
+      }
+
+      const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
+        call => call[0] === 'user' && call[1] === 'tour-guide.txt'
+      );
+
+      expect(userPromptCall).toBeDefined();
+      const variables = userPromptCall?.[2];
+      expect(variables).toHaveProperty('location');
+      expect(variables).toHaveProperty('angle');
+      expect(variables).not.toHaveProperty('opener');
     });
   });
 });

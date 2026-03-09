@@ -11,7 +11,6 @@
  * @group integration
  */
 
-import { jest } from '@jest/globals';
 import type { ContentOrchestrator } from '@/content/orchestrator';
 import type { HomeAssistantClient } from '@/api/data-sources/home-assistant';
 import type { HomeAssistantEvent } from '@/types/home-assistant';

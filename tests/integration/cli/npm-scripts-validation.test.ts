@@ -7,16 +7,7 @@
  * These tests validate command structure and functionality without spawning processes.
  */
 
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  afterEach,
-  jest,
-} from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
 import { dbMigrateCommand } from '@/cli/commands/db-migrate.js';
 import { dbResetCommand } from '@/cli/commands/db-reset.js';
 import type { DbResetOptions } from '@/cli/commands/db-reset.js';

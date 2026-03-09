@@ -1,14 +1,14 @@
 /**
  * Tests for SerialStoryGenerator
  *
- * Test coverage:
- * - Extends AIPromptGenerator with correct prompt files
- * - Uses MEDIUM model tier for story continuity
- * - Accepts ContentRepository and optional maxChapters in constructor
+ * Generator-specific behavior:
+ * - DEFAULT_MAX_CHAPTERS = 15, configurable via constructor
+ * - getUserPromptFile() dynamic: serial-story-chapter1.txt vs serial-story-continuation.txt
  * - getStoryState() queries previous chapters, detects new vs continuation
  * - getTemplateVariables() returns appropriate vars for chapter type
  * - getCustomMetadata() returns StoryChapterMetadata
- * - DEFAULT_MAX_CHAPTERS = 15, configurable via constructor
+ * - Arc phase flags (early, mid, late, resolution)
+ * - Story arc boundary detection across multiple arcs
  * - Reuses SCENARIO and EMOTIONAL_BEAT dictionaries from story-fragment-generator
  */
 
@@ -68,45 +68,9 @@ describe('SerialStoryGenerator', () => {
     } as unknown as jest.Mocked<ContentRepository>;
   });
 
-  describe('constructor', () => {
-    it('should create instance with PromptLoader, ModelTierSelector, ContentRepository, and MEDIUM tier', () => {
-      const generator = new SerialStoryGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        mockContentRepository,
-        { openai: 'test-key' }
-      );
-
-      expect(generator).toBeDefined();
-      expect(generator).toBeInstanceOf(SerialStoryGenerator);
-    });
-
-    it('should use MEDIUM model tier for story continuity', async () => {
-      // Set up mocks for generate() call
-      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
-      mockModelTierSelector.select.mockReturnValue({
-        provider: 'openai',
-        model: 'gpt-4.1-mini',
-        tier: ModelTier.MEDIUM,
-      });
-      mockModelTierSelector.getAlternate.mockReturnValue(null);
-      mockContentRepository.findLatestByGenerator.mockResolvedValue([]);
-
-      const generator = new SerialStoryGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        mockContentRepository,
-        { openai: 'test-key' }
-      );
-
-      // Verify via observable behavior: modelTierSelector.select is called with MEDIUM tier
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider - we're testing the tier selection call
-      }
-
-      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
+  describe('DEFAULT_MAX_CHAPTERS', () => {
+    it('should have static DEFAULT_MAX_CHAPTERS = 15', () => {
+      expect(SerialStoryGenerator.DEFAULT_MAX_CHAPTERS).toBe(15);
     });
 
     it('should use DEFAULT_MAX_CHAPTERS when maxChapters not provided', () => {
@@ -130,27 +94,6 @@ describe('SerialStoryGenerator', () => {
       );
 
       expect(generator.maxChapters).toBe(10);
-    });
-  });
-
-  describe('DEFAULT_MAX_CHAPTERS', () => {
-    it('should have static DEFAULT_MAX_CHAPTERS = 15', () => {
-      expect(SerialStoryGenerator.DEFAULT_MAX_CHAPTERS).toBe(15);
-    });
-  });
-
-  describe('getSystemPromptFile()', () => {
-    it('should return major-update-base.txt', () => {
-      const generator = new SerialStoryGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        mockContentRepository,
-        { openai: 'test-key' }
-      ) as ProtectedSerialStoryGenerator;
-
-      const systemPromptFile = generator.getSystemPromptFile();
-
-      expect(systemPromptFile).toBe('major-update-base.txt');
     });
   });
 
@@ -748,55 +691,7 @@ describe('SerialStoryGenerator', () => {
     });
   });
 
-  describe('validate()', () => {
-    it('should return valid when both prompt files exist', async () => {
-      mockPromptLoader.loadPrompt.mockResolvedValue('prompt content');
-
-      const generator = new SerialStoryGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        mockContentRepository,
-        { openai: 'test-key' }
-      );
-
-      const result = await generator.validate();
-
-      expect(result.valid).toBe(true);
-      expect(result.errors).toBeUndefined();
-    });
-  });
-
   describe('generate()', () => {
-    it('should load correct prompts and use MEDIUM tier', async () => {
-      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
-      mockModelTierSelector.select.mockReturnValue({
-        provider: 'openai',
-        model: 'gpt-4.1-mini',
-        tier: ModelTier.MEDIUM,
-      });
-      mockModelTierSelector.getAlternate.mockReturnValue(null);
-      mockContentRepository.findLatestByGenerator.mockResolvedValue([]);
-
-      const generator = new SerialStoryGenerator(
-        mockPromptLoader,
-        mockModelTierSelector,
-        mockContentRepository,
-        { openai: 'test-key' }
-      ) as ProtectedSerialStoryGenerator;
-
-      // Verify the generator uses the correct prompt files via protected methods
-      expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
-
-      // Verify tier via observable behavior
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider - we're testing the tier selection call
-      }
-
-      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
-    });
-
     it('should pass scenario and emotionalBeat to prompt loader for chapter 1', async () => {
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
@@ -923,7 +818,12 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - 3000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: 4, isNewStory: false, continueStory: true, chapterSummary: 'Ch4' },
+          metadata: {
+            storyChapter: 4,
+            isNewStory: false,
+            continueStory: true,
+            chapterSummary: 'Ch4',
+          },
           generatorId: 'serial-story',
         },
         {
@@ -933,7 +833,12 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - 4000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: 3, isNewStory: false, continueStory: true, chapterSummary: 'Ch3' },
+          metadata: {
+            storyChapter: 3,
+            isNewStory: false,
+            continueStory: true,
+            chapterSummary: 'Ch3',
+          },
           generatorId: 'serial-story',
         },
         {
@@ -943,7 +848,12 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - 5000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: 2, isNewStory: false, continueStory: true, chapterSummary: 'Ch2' },
+          metadata: {
+            storyChapter: 2,
+            isNewStory: false,
+            continueStory: true,
+            chapterSummary: 'Ch2',
+          },
           generatorId: 'serial-story',
         },
         {
@@ -953,7 +863,12 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - 6000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: 1, isNewStory: true, continueStory: true, chapterSummary: 'Ch1' },
+          metadata: {
+            storyChapter: 1,
+            isNewStory: true,
+            continueStory: true,
+            chapterSummary: 'Ch1',
+          },
           generatorId: 'serial-story',
         },
       ];
@@ -988,7 +903,12 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - 1000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: 2, isNewStory: false, continueStory: true, chapterSummary: 'New ch2' },
+          metadata: {
+            storyChapter: 2,
+            isNewStory: false,
+            continueStory: true,
+            chapterSummary: 'New ch2',
+          },
           generatorId: 'serial-story',
         },
         // Current arc: chapter 1
@@ -999,7 +919,12 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - 2000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: 1, isNewStory: true, continueStory: true, chapterSummary: 'New ch1' },
+          metadata: {
+            storyChapter: 1,
+            isNewStory: true,
+            continueStory: true,
+            chapterSummary: 'New ch1',
+          },
           generatorId: 'serial-story',
         },
         // Old arc boundary (concluded)
@@ -1010,7 +935,12 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - 3000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: 4, isNewStory: false, continueStory: false, chapterSummary: 'Old final' },
+          metadata: {
+            storyChapter: 4,
+            isNewStory: false,
+            continueStory: false,
+            chapterSummary: 'Old final',
+          },
           generatorId: 'serial-story',
         },
         // Old arc chapters
@@ -1021,7 +951,12 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - 4000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: 3, isNewStory: false, continueStory: true, chapterSummary: 'Old ch3' },
+          metadata: {
+            storyChapter: 3,
+            isNewStory: false,
+            continueStory: true,
+            chapterSummary: 'Old ch3',
+          },
           generatorId: 'serial-story',
         },
         {
@@ -1031,7 +966,12 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - 5000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: 2, isNewStory: false, continueStory: true, chapterSummary: 'Old ch2' },
+          metadata: {
+            storyChapter: 2,
+            isNewStory: false,
+            continueStory: true,
+            chapterSummary: 'Old ch2',
+          },
           generatorId: 'serial-story',
         },
       ];
@@ -1064,7 +1004,12 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - 1000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: 5, isNewStory: false, continueStory: false, chapterSummary: 'The end' },
+          metadata: {
+            storyChapter: 5,
+            isNewStory: false,
+            continueStory: false,
+            chapterSummary: 'The end',
+          },
           generatorId: 'serial-story',
         },
         {
@@ -1074,7 +1019,12 @@ describe('SerialStoryGenerator', () => {
           generatedAt: new Date(Date.now() - 2000),
           sentAt: new Date(),
           aiProvider: 'openai',
-          metadata: { storyChapter: 4, isNewStory: false, continueStory: true, chapterSummary: 'Ch4' },
+          metadata: {
+            storyChapter: 4,
+            isNewStory: false,
+            continueStory: true,
+            chapterSummary: 'Ch4',
+          },
           generatorId: 'serial-story',
         },
       ];

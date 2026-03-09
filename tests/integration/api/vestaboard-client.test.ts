@@ -11,7 +11,7 @@
  * 3. Error handling flows through properly
  */
 
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { VestaboardClientImpl } from '@/api/vestaboard/client';
 import { textToLayout, charToCode } from '@/api/vestaboard/character-converter';
 import type { VestaboardHTTPClient } from '@/api/vestaboard/http-client';

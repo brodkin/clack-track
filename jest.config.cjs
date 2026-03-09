@@ -1,20 +1,15 @@
 /** @type {import('jest').Config} */
 
 // Set NODE_ENV to 'test' BEFORE any imports happen
-// This must come before ts-jest loads files, which may import dotenv
+// This must come before @swc/jest loads files, which may import dotenv
 process.env.NODE_ENV = 'test';
 
 module.exports = {
-  preset: 'ts-jest',
-
   // ESM support for TypeScript files
   extensionsToTreatAsEsm: ['.ts'],
 
   // Module file extensions
   moduleFileExtensions: ['ts', 'js', 'json'],
-
-  // Global setup file
-  setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.setup.ts'],
 
   // Coverage configuration
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/**/types.ts', '!src/**/index.ts'],
@@ -58,23 +53,13 @@ module.exports = {
     {
       displayName: 'unit',
       testEnvironment: 'node',
+      setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.unit.setup.ts'],
       testMatch: ['<rootDir>/tests/unit/**/*.test.ts'],
       testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
       // Exclude worktrees from haste-map crawl to prevent duplicate mock warnings
       modulePathIgnorePatterns: ['<rootDir>/trees'],
       transform: {
-        '^.+\\.ts$': [
-          'ts-jest',
-          {
-            diagnostics: {
-              ignoreCodes: [151002, 2339, 2307],
-            },
-            tsconfig: {
-              module: 'commonjs',
-              esModuleInterop: true,
-            },
-          },
-        ],
+        '^.+\\.ts$': ['@swc/jest'],
       },
       moduleNameMapper: {
         '^@/(.*)\\.js$': '<rootDir>/src/$1',
@@ -85,26 +70,15 @@ module.exports = {
     },
     {
       displayName: 'integration',
-      preset: 'ts-jest',
       testEnvironment: 'node',
+      setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.setup.ts'],
       testMatch: ['<rootDir>/tests/integration/**/*.test.ts'],
       testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
       // Exclude worktrees from haste-map crawl to prevent duplicate mock warnings
       modulePathIgnorePatterns: ['<rootDir>/trees'],
       extensionsToTreatAsEsm: ['.ts'],
       transform: {
-        '^.+\\.ts$': [
-          'ts-jest',
-          {
-            diagnostics: {
-              ignoreCodes: [151002, 2339, 2307, 7016, 2322, 2345],
-            },
-            tsconfig: {
-              module: 'commonjs',
-              esModuleInterop: true,
-            },
-          },
-        ],
+        '^.+\\.ts$': ['@swc/jest'],
       },
       moduleNameMapper: {
         '^@/(.*)\\.js$': '<rootDir>/src/$1',
@@ -115,8 +89,8 @@ module.exports = {
     },
     {
       displayName: 'e2e',
-      preset: 'ts-jest',
       testEnvironment: 'node',
+      setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.setup.ts'],
       testMatch: ['<rootDir>/tests/e2e/**/*.test.ts'],
       testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
       // Exclude worktrees from haste-map crawl to prevent duplicate mock warnings
@@ -124,18 +98,7 @@ module.exports = {
       testTimeout: 60000, // E2E tests may take longer
       extensionsToTreatAsEsm: ['.ts'],
       transform: {
-        '^.+\\.ts$': [
-          'ts-jest',
-          {
-            diagnostics: {
-              ignoreCodes: [151002, 2339, 2307, 7016, 2322, 2345],
-            },
-            tsconfig: {
-              module: 'commonjs',
-              esModuleInterop: true,
-            },
-          },
-        ],
+        '^.+\\.ts$': ['@swc/jest'],
       },
       moduleNameMapper: {
         '^@/(.*)\\.js$': '<rootDir>/src/$1',
@@ -146,7 +109,6 @@ module.exports = {
     },
     {
       displayName: 'web',
-      preset: 'ts-jest',
       testEnvironment: 'jsdom', // Web UI tests need DOM
       testMatch: ['<rootDir>/tests/web/**/*.test.ts', '<rootDir>/tests/web/**/*.test.tsx'],
       testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
@@ -163,19 +125,7 @@ module.exports = {
       },
       setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.web.setup.ts'],
       transform: {
-        '^.+\\.tsx?$': [
-          'ts-jest',
-          {
-            useESM: true,
-            tsconfig: {
-              jsx: 'react-jsx',
-              module: 'esnext',
-              target: 'es2022',
-              lib: ['ES2022', 'DOM', 'DOM.Iterable'],
-              types: ['jest', 'node', 'dom'],
-            },
-          },
-        ],
+        '^.+\\.tsx?$': ['@swc/jest'],
       },
     },
   ],

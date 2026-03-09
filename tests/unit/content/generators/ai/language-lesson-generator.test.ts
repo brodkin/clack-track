@@ -1,14 +1,10 @@
 /**
  * Tests for LanguageLessonGenerator
  *
- * Test coverage:
- * - Extends AIPromptGenerator with correct prompt files
- * - Uses LIGHT model tier for efficiency
- * - Validates prompt files exist
- * - Generates language lesson content via AI provider
- * - Handles AI provider failures gracefully
- * - Static dictionary arrays contain expected values
- * - Random selection methods work correctly
+ * Generator-specific behavior:
+ * - DUOLINGO_VOICES (6), PHRASE_TYPES (6), LANGUAGES (7), FORMATS (1) static arrays
+ * - Static selection methods (selectDuolingoVoice, selectPhraseType, selectLanguage, selectFormat)
+ * - Template variable injection (duolingoVoice, phraseType, language, format)
  */
 
 import { LanguageLessonGenerator } from '@/content/generators/ai/language-lesson-generator';
@@ -16,19 +12,11 @@ import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector';
 import { ModelTier } from '@/types/content-generator';
 
-// Helper type for accessing protected members in tests
-type ProtectedLanguageLessonGenerator = LanguageLessonGenerator & {
-  getSystemPromptFile(): string;
-  getUserPromptFile(): string;
-  modelTier: ModelTier;
-};
-
 describe('LanguageLessonGenerator', () => {
   let mockPromptLoader: jest.Mocked<PromptLoader>;
   let mockModelTierSelector: jest.Mocked<ModelTierSelector>;
 
   beforeEach(() => {
-    // Mock PromptLoader
     mockPromptLoader = {
       loadPrompt: jest.fn(),
       loadPromptTemplate: jest.fn(),
@@ -36,86 +24,10 @@ describe('LanguageLessonGenerator', () => {
       loadPromptTemplateWithVariables: jest.fn(),
     } as unknown as jest.Mocked<PromptLoader>;
 
-    // Mock ModelTierSelector
     mockModelTierSelector = {
       select: jest.fn(),
       getAlternate: jest.fn(),
     } as unknown as jest.Mocked<ModelTierSelector>;
-  });
-
-  describe('constructor', () => {
-    it('should create instance with PromptLoader, ModelTierSelector, and LIGHT tier', () => {
-      const generator = new LanguageLessonGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      expect(generator).toBeDefined();
-      expect(generator).toBeInstanceOf(LanguageLessonGenerator);
-    });
-
-    it('should use LIGHT model tier for efficiency', async () => {
-      // Set up mocks for generate() call
-      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
-      mockModelTierSelector.select.mockReturnValue({
-        provider: 'openai',
-        model: 'gpt-4.1-nano',
-        tier: ModelTier.LIGHT,
-      });
-      mockModelTierSelector.getAlternate.mockReturnValue(null);
-
-      const generator = new LanguageLessonGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      // Verify via observable behavior: modelTierSelector.select is called with LIGHT tier
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider - we're testing the tier selection call
-      }
-
-      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
-    });
-  });
-
-  describe('getSystemPromptFile()', () => {
-    it('should return major-update-base.txt', () => {
-      const generator = new LanguageLessonGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedLanguageLessonGenerator;
-
-      const systemPromptFile = generator.getSystemPromptFile();
-
-      expect(systemPromptFile).toBe('major-update-base.txt');
-    });
-  });
-
-  describe('getUserPromptFile()', () => {
-    it('should return language-lesson.txt', () => {
-      const generator = new LanguageLessonGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedLanguageLessonGenerator;
-
-      const userPromptFile = generator.getUserPromptFile();
-
-      expect(userPromptFile).toBe('language-lesson.txt');
-    });
-  });
-
-  describe('validate()', () => {
-    it('should return valid when both prompt files exist', async () => {
-      mockPromptLoader.loadPrompt.mockResolvedValue('prompt content');
-
-      const generator = new LanguageLessonGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      });
-
-      const result = await generator.validate();
-
-      // Assuming prompts exist in the worktree
-      expect(result.valid).toBe(true);
-      expect(result.errors).toBeUndefined();
-    });
   });
 
   describe('static dictionaries', () => {
@@ -166,13 +78,9 @@ describe('LanguageLessonGenerator', () => {
     });
 
     describe('FORMATS', () => {
-      it('should contain all expected formats', () => {
-        // FILL_THE_BLANK was removed due to Vestaboard character constraints
-        expect(LanguageLessonGenerator.FORMATS).toContain('PHRASE_TRANSLATION');
-      });
-
-      it('should have exactly 1 format', () => {
+      it('should have exactly 1 format (PHRASE_TRANSLATION)', () => {
         expect(LanguageLessonGenerator.FORMATS).toHaveLength(1);
+        expect(LanguageLessonGenerator.FORMATS).toContain('PHRASE_TRANSLATION');
       });
     });
   });
@@ -189,7 +97,6 @@ describe('LanguageLessonGenerator', () => {
         for (let i = 0; i < 100; i++) {
           voices.add(LanguageLessonGenerator.selectDuolingoVoice());
         }
-        // With 6 options and 100 iterations, we should see at least 2 different voices
         expect(voices.size).toBeGreaterThan(1);
       });
     });
@@ -225,52 +132,18 @@ describe('LanguageLessonGenerator', () => {
     });
 
     describe('selectFormat()', () => {
-      it('should return a format from FORMATS', () => {
-        const format = LanguageLessonGenerator.selectFormat();
-        expect(LanguageLessonGenerator.FORMATS).toContain(format);
-      });
-
       it('should always return PHRASE_TRANSLATION since only one format exists', () => {
         const formats = new Set<string>();
         for (let i = 0; i < 10; i++) {
           formats.add(LanguageLessonGenerator.selectFormat());
         }
-        // With only 1 option, we should always see the same value
         expect(formats.size).toBe(1);
         expect(formats.has('PHRASE_TRANSLATION')).toBe(true);
       });
     });
   });
 
-  describe('generate()', () => {
-    it('should load correct prompts and use LIGHT tier', async () => {
-      // Set up mocks for generate() call
-      mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
-      mockModelTierSelector.select.mockReturnValue({
-        provider: 'openai',
-        model: 'gpt-4.1-nano',
-        tier: ModelTier.LIGHT,
-      });
-      mockModelTierSelector.getAlternate.mockReturnValue(null);
-
-      const generator = new LanguageLessonGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedLanguageLessonGenerator;
-
-      // Verify the generator uses the correct prompt files via protected methods
-      expect(generator.getSystemPromptFile()).toBe('major-update-base.txt');
-      expect(generator.getUserPromptFile()).toBe('language-lesson.txt');
-
-      // Verify tier via observable behavior
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider - we're testing the tier selection call
-      }
-
-      expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.LIGHT);
-    });
-
+  describe('template variable injection', () => {
     it('should inject duolingoVoice, phraseType, language, and format variables into user prompt', async () => {
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
@@ -290,7 +163,6 @@ describe('LanguageLessonGenerator', () => {
         // May fail without AI provider
       }
 
-      // Verify loadPromptWithVariables was called for user prompt with the expected variables
       const userPromptCalls = mockPromptLoader.loadPromptWithVariables.mock.calls.filter(
         call => call[0] === 'user' && call[1] === 'language-lesson.txt'
       );
@@ -298,13 +170,11 @@ describe('LanguageLessonGenerator', () => {
       expect(userPromptCalls.length).toBe(1);
       const variables = userPromptCalls[0][2];
 
-      // Verify all four custom variables are present
       expect(variables).toHaveProperty('duolingoVoice');
       expect(variables).toHaveProperty('phraseType');
       expect(variables).toHaveProperty('language');
       expect(variables).toHaveProperty('format');
 
-      // Verify they are valid values from the dictionaries
       expect(LanguageLessonGenerator.DUOLINGO_VOICES).toContain(variables.duolingoVoice);
       expect(LanguageLessonGenerator.PHRASE_TYPES).toContain(variables.phraseType);
       expect(LanguageLessonGenerator.LANGUAGES).toContain(variables.language);

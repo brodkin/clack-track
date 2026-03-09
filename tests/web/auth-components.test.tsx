@@ -17,7 +17,7 @@
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import type React from 'react';
 import { AuthProvider } from '@/web/frontend/context/AuthContext';
 import { ProtectedRoute } from '@/web/frontend/components/ProtectedRoute';

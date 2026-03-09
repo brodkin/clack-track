@@ -5,7 +5,6 @@
  * error handling function, and retry logic utilities.
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import {
   AppError,
   ValidationError,
@@ -16,6 +15,9 @@ import {
 } from '@/utils/error-handler';
 
 // Mock the logger module
+// Note: Do not import jest from @jest/globals here - it shadows the global jest
+// and causes issues with @swc/jest mock hoisting (jest.fn() in factory produces
+// non-mock functions).
 jest.mock('@/utils/logger.js', () => ({
   error: jest.fn(),
 }));

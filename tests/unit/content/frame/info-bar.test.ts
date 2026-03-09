@@ -2,8 +2,32 @@ import { formatInfoBar } from '../../../../src/content/frame/info-bar.js';
 import { charToCode } from '../../../../src/api/vestaboard/character-converter.js';
 import type { InfoBarData } from '../../../../src/content/frame/info-bar.js';
 import type { WeatherData } from '../../../../src/services/weather-service.js';
-import * as timezoneUtils from '../../../../src/utils/timezone.js';
 import { withTimezone, TEST_TIMEZONES } from '../../../__helpers__/timezone.js';
+
+// Mock timezone utils module so we can control return values in timezone awareness tests.
+// @swc/jest compiles imports as non-configurable properties, preventing jest.spyOn() from
+// redefining them. Instead, we mock the module with jest.fn() wrappers that delegate to
+// the real implementations by default.
+const actualTimezoneUtils = jest.requireActual<typeof import('../../../../src/utils/timezone.js')>(
+  '../../../../src/utils/timezone.js'
+);
+
+jest.mock('../../../../src/utils/timezone.js', () => ({
+  ...jest.requireActual<typeof import('../../../../src/utils/timezone.js')>(
+    '../../../../src/utils/timezone.js'
+  ),
+  formatDayName: jest.fn((...args: Parameters<typeof actualTimezoneUtils.formatDayName>) =>
+    actualTimezoneUtils.formatDayName(...args)
+  ),
+  formatDateMonth: jest.fn((...args: Parameters<typeof actualTimezoneUtils.formatDateMonth>) =>
+    actualTimezoneUtils.formatDateMonth(...args)
+  ),
+  formatTime: jest.fn((...args: Parameters<typeof actualTimezoneUtils.formatTime>) =>
+    actualTimezoneUtils.formatTime(...args)
+  ),
+}));
+
+import * as timezoneUtils from '../../../../src/utils/timezone.js';
 
 // Helper function to convert character codes back to string for testing
 function codesToString(codes: number[]): string {
@@ -391,33 +415,47 @@ describe('Info Bar Formatter', () => {
   });
 
   describe('timezone awareness', () => {
-    it('should use timezone utility functions for formatting', () => {
-      const formatDayNameSpy = jest.spyOn(timezoneUtils, 'formatDayName');
-      const formatDateMonthSpy = jest.spyOn(timezoneUtils, 'formatDateMonth');
-      const formatTimeSpy = jest.spyOn(timezoneUtils, 'formatTime');
+    // Cast mocked module functions to jest.Mock for type-safe mock control.
+    // The module is mocked above with jest.fn() wrappers that delegate to real implementations.
+    const mockFormatDayName = timezoneUtils.formatDayName as jest.Mock;
+    const mockFormatDateMonth = timezoneUtils.formatDateMonth as jest.Mock;
+    const mockFormatTime = timezoneUtils.formatTime as jest.Mock;
 
+    afterEach(() => {
+      // Restore default pass-through behavior after each test
+      mockFormatDayName.mockImplementation((...args: unknown[]) =>
+        actualTimezoneUtils.formatDayName(
+          ...(args as Parameters<typeof actualTimezoneUtils.formatDayName>)
+        )
+      );
+      mockFormatDateMonth.mockImplementation((...args: unknown[]) =>
+        actualTimezoneUtils.formatDateMonth(
+          ...(args as Parameters<typeof actualTimezoneUtils.formatDateMonth>)
+        )
+      );
+      mockFormatTime.mockImplementation((...args: unknown[]) =>
+        actualTimezoneUtils.formatTime(
+          ...(args as Parameters<typeof actualTimezoneUtils.formatTime>)
+        )
+      );
+    });
+
+    it('should use timezone utility functions for formatting', () => {
       const data: InfoBarData = {
         dateTime: new Date('2024-11-26T10:30:00Z'),
       };
 
       formatInfoBar(data);
 
-      expect(formatDayNameSpy).toHaveBeenCalledWith(data.dateTime);
-      expect(formatDateMonthSpy).toHaveBeenCalledWith(data.dateTime);
-      expect(formatTimeSpy).toHaveBeenCalledWith(data.dateTime);
-
-      formatDayNameSpy.mockRestore();
-      formatDateMonthSpy.mockRestore();
-      formatTimeSpy.mockRestore();
+      expect(mockFormatDayName).toHaveBeenCalledWith(data.dateTime);
+      expect(mockFormatDateMonth).toHaveBeenCalledWith(data.dateTime);
+      expect(mockFormatTime).toHaveBeenCalledWith(data.dateTime);
     });
 
     it('should respect timezone when formatting day names', () => {
-      // Mock formatDayName to return a specific value
-      const formatDayNameSpy = jest.spyOn(timezoneUtils, 'formatDayName').mockReturnValue('TUE');
-      const formatDateMonthSpy = jest
-        .spyOn(timezoneUtils, 'formatDateMonth')
-        .mockReturnValue('26NOV');
-      const formatTimeSpy = jest.spyOn(timezoneUtils, 'formatTime').mockReturnValue('10:30');
+      mockFormatDayName.mockReturnValue('TUE');
+      mockFormatDateMonth.mockReturnValue('26NOV');
+      mockFormatTime.mockReturnValue('10:30');
 
       const data: InfoBarData = {
         dateTime: new Date('2024-11-26T10:30:00Z'),
@@ -427,18 +465,12 @@ describe('Info Bar Formatter', () => {
       const dayPortion = codesToString(result.slice(0, 3));
 
       expect(dayPortion).toBe('TUE');
-
-      formatDayNameSpy.mockRestore();
-      formatDateMonthSpy.mockRestore();
-      formatTimeSpy.mockRestore();
     });
 
     it('should respect timezone when formatting dates', () => {
-      const formatDayNameSpy = jest.spyOn(timezoneUtils, 'formatDayName').mockReturnValue('WED');
-      const formatDateMonthSpy = jest
-        .spyOn(timezoneUtils, 'formatDateMonth')
-        .mockReturnValue('27NOV');
-      const formatTimeSpy = jest.spyOn(timezoneUtils, 'formatTime').mockReturnValue('14:45');
+      mockFormatDayName.mockReturnValue('WED');
+      mockFormatDateMonth.mockReturnValue('27NOV');
+      mockFormatTime.mockReturnValue('14:45');
 
       const data: InfoBarData = {
         dateTime: new Date('2024-11-27T06:45:00Z'), // Early UTC time
@@ -448,18 +480,12 @@ describe('Info Bar Formatter', () => {
       const dateMonthPortion = codesToString(result.slice(4, 10));
 
       expect(dateMonthPortion).toBe('27NOV ');
-
-      formatDayNameSpy.mockRestore();
-      formatDateMonthSpy.mockRestore();
-      formatTimeSpy.mockRestore();
     });
 
     it('should respect timezone when formatting time', () => {
-      const formatDayNameSpy = jest.spyOn(timezoneUtils, 'formatDayName').mockReturnValue('WED');
-      const formatDateMonthSpy = jest
-        .spyOn(timezoneUtils, 'formatDateMonth')
-        .mockReturnValue('27NOV');
-      const formatTimeSpy = jest.spyOn(timezoneUtils, 'formatTime').mockReturnValue('23:45');
+      mockFormatDayName.mockReturnValue('WED');
+      mockFormatDateMonth.mockReturnValue('27NOV');
+      mockFormatTime.mockReturnValue('23:45');
 
       const data: InfoBarData = {
         dateTime: new Date('2024-11-27T07:45:00Z'), // Morning UTC
@@ -469,10 +495,6 @@ describe('Info Bar Formatter', () => {
       const timePortion = codesToString(result.slice(10, 15));
 
       expect(timePortion).toBe('23:45');
-
-      formatDayNameSpy.mockRestore();
-      formatDateMonthSpy.mockRestore();
-      formatTimeSpy.mockRestore();
     });
   });
 });

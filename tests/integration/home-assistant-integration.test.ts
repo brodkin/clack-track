@@ -16,7 +16,6 @@
  * @group integration
  */
 
-import { jest } from '@jest/globals';
 import { HomeAssistantClient } from '@/api/data-sources/home-assistant';
 import type {
   HomeAssistantConnectionConfig,

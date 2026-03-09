@@ -11,7 +11,7 @@
 
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { VotingButtons } from '@/web/frontend/components/VotingButtons';
 import * as animations from '@/web/frontend/lib/animations';
 

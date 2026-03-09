@@ -8,8 +8,26 @@
  * - POST /api/push/test (development only)
  */
 
-// Set environment variables BEFORE importing push router
-// (VAPID keys are captured at module load time)
+// With @swc/jest, imports are hoisted above process.env assignments.
+// Mock the secrets utility so the push router captures test VAPID keys at module load time.
+jest.mock('@/utils/secrets.js', () => ({
+  getSecretOrEnv: jest.fn((secretName: string, _envName: string, defaultValue: string = '') => {
+    const secrets: Record<string, string> = {
+      vapid_public_key: 'test-public-key-base64',
+      vapid_private_key: 'test-private-key-base64',
+      vapid_subject: 'mailto:test@example.com',
+    };
+    return secrets[secretName] || defaultValue;
+  }),
+}));
+
+// Mock web-push module
+jest.mock('web-push', () => ({
+  setVapidDetails: jest.fn(),
+  sendNotification: jest.fn().mockResolvedValue({}),
+}));
+
+// Also set env vars for any code that reads them directly
 process.env.VAPID_PUBLIC_KEY = 'test-public-key-base64';
 process.env.VAPID_PRIVATE_KEY = 'test-private-key-base64';
 process.env.VAPID_SUBJECT = 'mailto:test@example.com';
@@ -18,12 +36,6 @@ process.env.NODE_ENV = 'test';
 import request from 'supertest';
 import express from 'express';
 import { pushRouter } from '@/web/routes/push';
-
-// Mock web-push module
-jest.mock('web-push', () => ({
-  setVapidDetails: jest.fn(),
-  sendNotification: jest.fn().mockResolvedValue({}),
-}));
 
 describe('Push Routes', () => {
   let app: express.Application;
@@ -144,8 +156,18 @@ describe('Push Routes', () => {
       // Reset module cache to force re-import with empty key
       jest.resetModules();
 
-      // Re-import router with empty VAPID key using absolute path
-      const { pushRouter: testRouter } = await import('/workspace/src/web/routes/push.ts');
+      // Mock secrets utility to return empty for VAPID keys
+      jest.mock('@/utils/secrets.js', () => ({
+        getSecretOrEnv: jest.fn(() => ''),
+      }));
+      // Re-mock web-push since modules were reset
+      jest.mock('web-push', () => ({
+        setVapidDetails: jest.fn(),
+        sendNotification: jest.fn().mockResolvedValue({}),
+      }));
+
+      // Re-import router with empty VAPID key
+      const { pushRouter: testRouter } = await import('@/web/routes/push');
 
       // Create app with re-imported router
       const testApp = express();

@@ -6,7 +6,7 @@
 
 /// <reference types="@testing-library/jest-dom" />
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { CircuitBreakerCard } from '@/web/frontend/components/CircuitBreakerCard';
 
 describe('CircuitBreakerCard Component', () => {
