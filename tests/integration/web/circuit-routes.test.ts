@@ -121,6 +121,22 @@ const MOCK_PROVIDER_CIRCUIT: CircuitBreakerState = {
   updatedAt: '2025-01-15T10:00:00Z',
 };
 
+/**
+ * Helper to create the expected mapped circuit data shape
+ * (matches toCircuitData in circuit.ts route)
+ */
+function expectedCircuitData(circuit: CircuitBreakerState) {
+  return {
+    id: circuit.circuitId,
+    name: circuit.circuitId,
+    description: circuit.description,
+    type: circuit.circuitType,
+    state: circuit.state,
+    failureCount: circuit.failureCount,
+    failureThreshold: circuit.failureThreshold,
+  };
+}
+
 describe('Circuit Breaker API Routes', () => {
   let mockRequest: Request;
   let mockResponse: Response;
@@ -172,7 +188,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockGetAllCircuits).toHaveBeenCalledTimes(1);
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: mockCircuits,
+        data: mockCircuits.map(expectedCircuitData),
       });
       expect(statusSpy).not.toHaveBeenCalled();
     });
@@ -231,7 +247,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockGetCircuitStatus).toHaveBeenCalledWith('MASTER');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: MOCK_MASTER_CIRCUIT,
+        data: expectedCircuitData(MOCK_MASTER_CIRCUIT),
       });
       expect(statusSpy).not.toHaveBeenCalled();
     });
@@ -301,7 +317,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockGetCircuitStatus).toHaveBeenCalledWith('MASTER');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: MOCK_MASTER_CIRCUIT,
+        data: expectedCircuitData(MOCK_MASTER_CIRCUIT),
         message: 'Circuit MASTER enabled',
       });
       expect(statusSpy).not.toHaveBeenCalled();
@@ -375,7 +391,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockGetCircuitStatus).toHaveBeenCalledWith('MASTER');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: disabledCircuit,
+        data: expectedCircuitData(disabledCircuit as CircuitBreakerState),
         message: 'Circuit MASTER disabled',
       });
       expect(statusSpy).not.toHaveBeenCalled();
@@ -450,7 +466,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockResetProviderCircuit).toHaveBeenCalledWith('PROVIDER_OPENAI');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: MOCK_PROVIDER_CIRCUIT,
+        data: expectedCircuitData(MOCK_PROVIDER_CIRCUIT),
         message: 'Circuit PROVIDER_OPENAI reset',
       });
       expect(statusSpy).not.toHaveBeenCalled();
@@ -606,7 +622,7 @@ describe('Circuit Breaker API Routes', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-      expect(response.body.data).toEqual([MOCK_MASTER_CIRCUIT]);
+      expect(response.body.data).toEqual([expectedCircuitData(MOCK_MASTER_CIRCUIT)]);
     });
 
     it('should protect POST routes with database-backed auth', async () => {
@@ -762,7 +778,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockGetAllCircuits).toHaveBeenCalledTimes(1);
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: mockCircuits,
+        data: mockCircuits.map(expectedCircuitData),
       });
     });
 
@@ -813,7 +829,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockGetCircuitStatus).toHaveBeenCalledWith('MASTER');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: MOCK_MASTER_CIRCUIT,
+        data: expectedCircuitData(MOCK_MASTER_CIRCUIT),
       });
     });
 
@@ -866,7 +882,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockSetCircuitState).toHaveBeenCalledWith('MASTER', 'on');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: MOCK_MASTER_CIRCUIT,
+        data: expectedCircuitData(MOCK_MASTER_CIRCUIT),
         message: 'Circuit MASTER enabled',
       });
     });
@@ -921,7 +937,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockSetCircuitState).toHaveBeenCalledWith('MASTER', 'off');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: disabledCircuit,
+        data: expectedCircuitData(disabledCircuit as CircuitBreakerState),
         message: 'Circuit MASTER disabled',
       });
     });
@@ -978,7 +994,7 @@ describe('Circuit Breaker API Routes', () => {
       expect(mockResetProviderCircuit).toHaveBeenCalledWith('PROVIDER_OPENAI');
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
-        data: MOCK_PROVIDER_CIRCUIT,
+        data: expectedCircuitData(MOCK_PROVIDER_CIRCUIT),
         message: 'Circuit PROVIDER_OPENAI reset',
       });
     });

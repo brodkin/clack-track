@@ -14,7 +14,24 @@ import { Router } from 'express';
 import cookieParser from 'cookie-parser';
 import { Request, Response, WebDependencies } from '../types.js';
 import type { CircuitBreakerService } from '../../services/circuit-breaker-service.js';
+import type { CircuitBreakerState } from '../../types/circuit-breaker.js';
 import { requireAuth } from '../middleware/session.js';
+
+/**
+ * Map backend CircuitBreakerState to frontend CircuitData shape.
+ * Backend uses circuitId/circuitType; frontend expects id/name/type.
+ */
+function toCircuitData(circuit: CircuitBreakerState) {
+  return {
+    id: circuit.circuitId,
+    name: circuit.circuitId,
+    description: circuit.description,
+    type: circuit.circuitType,
+    state: circuit.state,
+    failureCount: circuit.failureCount,
+    failureThreshold: circuit.failureThreshold,
+  };
+}
 
 /**
  * Extended WebDependencies with circuit breaker service
@@ -54,7 +71,7 @@ export async function getAllCircuits(
 
     res.json({
       success: true,
-      data: circuits,
+      data: circuits.map(toCircuitData),
     });
   } catch (error) {
     console.error('Error retrieving circuits:', error);
@@ -101,7 +118,7 @@ export async function getCircuitById(
 
     res.json({
       success: true,
-      data: circuit,
+      data: toCircuitData(circuit),
     });
   } catch (error) {
     console.error('Error retrieving circuit:', error);
@@ -152,7 +169,7 @@ export async function enableCircuit(
 
     res.json({
       success: true,
-      data: circuit,
+      data: toCircuitData(circuit),
       message: `Circuit ${circuitId} enabled`,
     });
   } catch (error) {
@@ -204,7 +221,7 @@ export async function disableCircuit(
 
     res.json({
       success: true,
-      data: circuit,
+      data: toCircuitData(circuit),
       message: `Circuit ${circuitId} disabled`,
     });
   } catch (error) {
@@ -270,7 +287,7 @@ export async function resetCircuit(
 
     res.json({
       success: true,
-      data: circuit,
+      data: circuit ? toCircuitData(circuit) : null,
       message: `Circuit ${circuitId} reset`,
     });
   } catch (error) {
