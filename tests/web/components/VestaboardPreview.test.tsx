@@ -413,7 +413,7 @@ describe('VestaboardPreview Component', () => {
 
       const cell = screen.getByTestId('vestaboard-cell-0-0');
       // @ts-expect-error - jest-dom matchers
-      expect(cell).toHaveClass('bg-[#c23a3a]');
+      expect(cell).toHaveStyle({ backgroundColor: '#c23a3a' });
       // Color tiles should NOT display text
       expect(cell.textContent?.trim()).toBe('');
     });
@@ -423,7 +423,7 @@ describe('VestaboardPreview Component', () => {
 
       const cell = screen.getByTestId('vestaboard-cell-0-1');
       // @ts-expect-error - jest-dom matchers
-      expect(cell).toHaveClass('bg-[#d4804a]');
+      expect(cell).toHaveStyle({ backgroundColor: '#d4804a' });
       expect(cell.textContent?.trim()).toBe('');
     });
 
@@ -432,7 +432,7 @@ describe('VestaboardPreview Component', () => {
 
       const cell = screen.getByTestId('vestaboard-cell-0-2');
       // @ts-expect-error - jest-dom matchers
-      expect(cell).toHaveClass('bg-[#d4c94a]');
+      expect(cell).toHaveStyle({ backgroundColor: '#d4c94a' });
       expect(cell.textContent?.trim()).toBe('');
     });
 
@@ -441,7 +441,7 @@ describe('VestaboardPreview Component', () => {
 
       const cell = screen.getByTestId('vestaboard-cell-0-3');
       // @ts-expect-error - jest-dom matchers
-      expect(cell).toHaveClass('bg-[#4aad4a]');
+      expect(cell).toHaveStyle({ backgroundColor: '#4aad4a' });
       expect(cell.textContent?.trim()).toBe('');
     });
 
@@ -450,7 +450,7 @@ describe('VestaboardPreview Component', () => {
 
       const cell = screen.getByTestId('vestaboard-cell-0-4');
       // @ts-expect-error - jest-dom matchers
-      expect(cell).toHaveClass('bg-[#4a6aad]');
+      expect(cell).toHaveStyle({ backgroundColor: '#4a6aad' });
       expect(cell.textContent?.trim()).toBe('');
     });
 
@@ -459,7 +459,7 @@ describe('VestaboardPreview Component', () => {
 
       const cell = screen.getByTestId('vestaboard-cell-0-5');
       // @ts-expect-error - jest-dom matchers
-      expect(cell).toHaveClass('bg-[#8a4aad]');
+      expect(cell).toHaveStyle({ backgroundColor: '#8a4aad' });
       expect(cell.textContent?.trim()).toBe('');
     });
 
@@ -469,7 +469,7 @@ describe('VestaboardPreview Component', () => {
 
         const cell = screen.getByTestId('vestaboard-cell-0-6');
         // @ts-expect-error - jest-dom matchers
-        expect(cell).toHaveClass('bg-[#ffffff]');
+        expect(cell).toHaveStyle({ backgroundColor: '#ffffff' });
         expect(cell.textContent?.trim()).toBe('');
       });
 
@@ -478,7 +478,7 @@ describe('VestaboardPreview Component', () => {
 
         const cell = screen.getByTestId('vestaboard-cell-0-6');
         // @ts-expect-error - jest-dom matchers
-        expect(cell).toHaveClass('bg-[#000000]');
+        expect(cell).toHaveStyle({ backgroundColor: '#000000' });
         expect(cell.textContent?.trim()).toBe('');
       });
 
@@ -488,28 +488,28 @@ describe('VestaboardPreview Component', () => {
         const cell = screen.getByTestId('vestaboard-cell-0-6');
         // Default model is 'black', so code 69 should be white
         // @ts-expect-error - jest-dom matchers
-        expect(cell).toHaveClass('bg-[#ffffff]');
+        expect(cell).toHaveStyle({ backgroundColor: '#ffffff' });
       });
     });
 
     it('should render all color tiles in a row correctly', () => {
       render(<VestaboardPreview content={colorCodesContent} />);
 
-      // Verify each color tile has the expected background color class
+      // Verify each color tile has the expected inline background color
       const expectedColors = [
-        'bg-[#c23a3a]', // 63 = red
-        'bg-[#d4804a]', // 64 = orange
-        'bg-[#d4c94a]', // 65 = yellow
-        'bg-[#4aad4a]', // 66 = green
-        'bg-[#4a6aad]', // 67 = blue
-        'bg-[#8a4aad]', // 68 = violet
-        'bg-[#ffffff]', // 69 = white (on default black model)
+        '#c23a3a', // 63 = red
+        '#d4804a', // 64 = orange
+        '#d4c94a', // 65 = yellow
+        '#4aad4a', // 66 = green
+        '#4a6aad', // 67 = blue
+        '#8a4aad', // 68 = violet
+        '#ffffff', // 69 = white (on default black model)
       ];
 
       for (let col = 0; col < 7; col++) {
         const cell = screen.getByTestId(`vestaboard-cell-0-${col}`);
         // @ts-expect-error - jest-dom matchers
-        expect(cell).toHaveClass(expectedColors[col]);
+        expect(cell).toHaveStyle({ backgroundColor: expectedColors[col] });
         // Color tiles should not display any text character
         expect(cell.textContent?.trim()).toBe('');
       }

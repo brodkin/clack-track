@@ -316,12 +316,11 @@ export function VestaboardPreview({ content, className, model = 'black' }: Vesta
                   className={cn(
                     'flex items-center justify-center',
                     'w-6 h-8 sm:w-8 sm:h-10 md:w-10 md:h-12',
-                    // Use color tile background if applicable, otherwise default cell styling
-                    colorTileBg
-                      ? `bg-[${colorTileBg}]`
-                      : isWhiteModel
+                    // Default cell styling when not a color tile
+                    !colorTileBg &&
+                      (isWhiteModel
                         ? 'bg-[#e8e8e8] text-[#1a1a1a]'
-                        : 'bg-[#1a1a1a] text-[#ffffff]',
+                        : 'bg-[#1a1a1a] text-[#ffffff]'),
                     'font-mono font-bold text-xs sm:text-sm md:text-base',
                     'rounded shadow-inner',
                     'transition-all duration-200',
@@ -329,6 +328,9 @@ export function VestaboardPreview({ content, className, model = 'black' }: Vesta
                     isAnimating && 'animate-split-flap'
                   )}
                   style={{
+                    // Color tile backgrounds use inline styles because Tailwind
+                    // can't statically analyze dynamic bg-[${color}] classes
+                    ...(colorTileBg ? { backgroundColor: colorTileBg } : {}),
                     animationDelay: animationDelay,
                   }}
                 >
