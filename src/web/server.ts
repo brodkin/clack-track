@@ -2,6 +2,7 @@ import express, { Express } from 'express';
 import cors from 'cors';
 import compression from 'compression';
 import helmet from 'helmet';
+import path from 'path';
 import { Server } from 'http';
 import { log } from '../utils/logger.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
@@ -173,6 +174,11 @@ export class WebServer {
 
     // Register API routes
     this.setupRoutes();
+
+    // SPA fallback: serve index.html for client-side routes (must be after API routes)
+    this.app.get('{*path}', (req, res) => {
+      res.sendFile(path.join(this.staticPath, 'index.html'));
+    });
   }
 
   private setupRoutes(): void {
