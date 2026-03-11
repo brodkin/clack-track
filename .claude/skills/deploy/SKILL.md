@@ -64,11 +64,15 @@ docker info --format '{{.ServerVersion}}'
 ### Step 1: Build Production Image
 
 ```bash
-# Build with production tag
-docker build -t clack-track:latest -t clack-track:$(git rev-parse --short HEAD) .
+# Capture commit SHA for tagging
+COMMIT_SHA=$(git rev-parse --short HEAD)
+
+# Build with commit SHA tag (primary) and latest (convenience alias)
+docker build -t clack-track:$COMMIT_SHA -t clack-track:latest .
 
 # Verify build succeeded
-docker images clack-track:latest --format "{{.ID}} {{.CreatedAt}}"
+docker images clack-track:$COMMIT_SHA --format "{{.ID}} {{.CreatedAt}}"
+echo "Built image tagged: clack-track:$COMMIT_SHA"
 ```
 
 ### Step 2: Run Migrations
@@ -83,7 +87,7 @@ docker run --rm \
   --network clack-track_clack-network \
   -e DATABASE_URL="$DATABASE_URL" \
   -e DATABASE_TYPE="$DATABASE_TYPE" \
-  clack-track:latest \
+  clack-track:$COMMIT_SHA \
   node dist/cli/index.js db:migrate
 
 # Verify migrations succeeded (exit code check is automatic with set -e)
@@ -99,10 +103,14 @@ echo "Migrations completed successfully"
 ### Step 3: Deploy to Swarm
 
 ```bash
-# Deploy stack with production compose
+# Deploy stack (creates/updates services, networks, volumes)
 docker stack deploy -c docker-compose.prod.yml clack-track
 
-# Wait for service to stabilize (30 seconds)
+# Update the app service to use the specific commit SHA image
+# This ensures Swarm detects the change (unlike :latest which may be cached)
+docker service update --image clack-track:$COMMIT_SHA clack-track_app
+
+# Wait for service to converge
 echo "Waiting for deployment to stabilize..."
 sleep 30
 ```
@@ -142,12 +150,9 @@ If deployment fails or issues are detected:
    # Check migration status in the database
    docker run --rm \
      --network clack-track_clack-network \
-     -e DB_HOST="$DB_HOST" \
-     -e DB_PORT="$DB_PORT" \
-     -e DB_NAME="$DB_NAME" \
-     -e DB_USER="$DB_USER" \
-     -e DB_PASSWORD="$DB_PASSWORD" \
-     clack-track:latest \
+     -e DATABASE_URL="$DATABASE_URL" \
+     -e DATABASE_TYPE="$DATABASE_TYPE" \
+     clack-track:$COMMIT_SHA \
      node dist/cli/index.js db:migrate --status
    ```
 
@@ -163,11 +168,24 @@ If deployment fails or issues are detected:
 
 **Note**: The `db:migrate` command only runs forward migrations. There is no automatic rollback command. Plan migrations carefully and consider backward compatibility.
 
-### Quick Rollback (Previous Image)
+### Quick Rollback (Swarm Auto-Rollback)
 
 ```bash
-# Rollback to previous version
+# Rollback to the previous service version (Swarm remembers the last image)
 docker service rollback clack-track_app
+
+# Verify rollback
+docker service ps clack-track_app --format "{{.Image}} {{.CurrentState}}"
+```
+
+### Rollback to Specific Commit SHA
+
+```bash
+# List available image tags to find the target version
+docker images clack-track --format "{{.Tag}} {{.CreatedAt}}" | head -10
+
+# Update service to a specific known-good commit SHA
+docker service update --image clack-track:<COMMIT_SHA> clack-track_app
 
 # Verify rollback
 docker service ps clack-track_app --format "{{.Image}} {{.CurrentState}}"
@@ -182,8 +200,9 @@ docker stack rm clack-track
 # Wait for cleanup
 sleep 10
 
-# Redeploy with previous known-good tag
+# Redeploy stack and pin to known-good image
 docker stack deploy -c docker-compose.prod.yml clack-track
+docker service update --image clack-track:<COMMIT_SHA> clack-track_app
 ```
 
 ## Environment Variables
