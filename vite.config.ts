@@ -42,37 +42,12 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // Google Fonts are NOT cached by the SW. The SW's fetch() for
+        // cross-origin resources is evaluated against connect-src CSP, which
+        // blocks the request even when the page's style-src/font-src allow it.
+        // Google's CDN sets proper cache headers (max-age=31536000 on font files),
+        // so the browser's HTTP cache handles this without SW involvement.
         runtimeCaching: [
-          {
-            // Google Fonts CSS (User-Agent dependent, must revalidate)
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-              },
-              cacheableResponse: {
-                statuses: [200],
-              },
-            },
-          },
-          {
-            // Font files (immutable content-addressed, safe to cache aggressively)
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'gstatic-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-              },
-              cacheableResponse: {
-                statuses: [200],
-              },
-            },
-          },
           {
             urlPattern: /^\/api\/.*/i,
             handler: 'NetworkFirst',

@@ -112,7 +112,7 @@ export class WebServer {
             styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
             imgSrc: ["'self'", 'data:', 'https:'],
             fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-            connectSrc: ["'self'", 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'],
+            connectSrc: ["'self'"],
           },
         },
       })
