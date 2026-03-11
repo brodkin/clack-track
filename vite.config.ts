@@ -39,10 +39,6 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Force immediate activation — critical for transitioning users
-        // from the old auto-injected registerSW.js to the new virtual:pwa-register
-        // registration. Without this, the new SW would wait for a SKIP_WAITING
-        // message that the old registration code never sends.
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],

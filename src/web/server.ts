@@ -134,7 +134,18 @@ export class WebServer {
     const rateLimiter = createRateLimiter();
     this.app.use('/api', rateLimiter);
 
-    // Static file serving with long-lived cache for Vite hashed assets
+    // Service worker must never be HTTP-cached — browsers check for SW updates
+    // on navigation but respect Cache-Control. If sw.js is cached, the browser
+    // serves the stale copy and never discovers the new version.
+    this.app.use('/sw.js', (req, res, next) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      next();
+    });
+
+    // Static file serving with long-lived cache for Vite hashed assets.
+    // Safe for assets/* (content hash in filename) but index.html and
+    // manifest.webmanifest use revisioned precaching so Workbox handles
+    // their freshness via the SW update cycle.
     this.app.use(express.static(this.staticPath, { maxAge: '1y', immutable: true }));
 
     // JSON body parsing
