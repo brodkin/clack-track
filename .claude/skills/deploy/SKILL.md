@@ -64,8 +64,8 @@ docker info --format '{{.ServerVersion}}'
 ### Step 1: Build Production Image
 
 ```bash
-# Capture commit SHA for tagging
-COMMIT_SHA=$(git rev-parse --short HEAD)
+# Capture and export commit SHA — used by docker-compose.prod.yml image tag
+export COMMIT_SHA=$(git rev-parse --short HEAD)
 
 # Build with commit SHA tag (primary) and latest (convenience alias)
 docker build -t clack-track:$COMMIT_SHA -t clack-track:latest .
@@ -74,6 +74,8 @@ docker build -t clack-track:$COMMIT_SHA -t clack-track:latest .
 docker images clack-track:$COMMIT_SHA --format "{{.ID}} {{.CreatedAt}}"
 echo "Built image tagged: clack-track:$COMMIT_SHA"
 ```
+
+**CRITICAL**: `COMMIT_SHA` must remain exported for Step 3. The compose file uses `${COMMIT_SHA:-latest}` as the image tag — without it, Swarm won't detect image changes between deploys.
 
 ### Step 2: Run Migrations
 
@@ -103,12 +105,10 @@ echo "Migrations completed successfully"
 ### Step 3: Deploy to Swarm
 
 ```bash
-# Deploy stack (creates/updates services, networks, volumes)
+# Deploy stack — COMMIT_SHA must be exported from Step 1
+# docker-compose.prod.yml uses image: clack-track:${COMMIT_SHA:-latest}
+# The SHA tag ensures Swarm detects image changes between deploys
 docker stack deploy -c docker-compose.prod.yml clack-track
-
-# Update the app service to use the specific commit SHA image
-# This ensures Swarm detects the change (unlike :latest which may be cached)
-docker service update --image clack-track:$COMMIT_SHA clack-track_app
 
 # Wait for service to converge
 echo "Waiting for deployment to stabilize..."
@@ -200,9 +200,9 @@ docker stack rm clack-track
 # Wait for cleanup
 sleep 10
 
-# Redeploy stack and pin to known-good image
+# Redeploy stack pinned to known-good image
+export COMMIT_SHA=<KNOWN_GOOD_SHA>
 docker stack deploy -c docker-compose.prod.yml clack-track
-docker service update --image clack-track:<COMMIT_SHA> clack-track_app
 ```
 
 ## Environment Variables

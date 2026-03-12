@@ -3,7 +3,7 @@
 
 services:
   app:
-    image: clack-track:latest
+    image: clack-track:${COMMIT_SHA:-latest}
     ports:
       - '3030:3000'
     environment:
