@@ -155,7 +155,7 @@ export function FilterBar({
       <div className="min-w-[160px]">
         <Select value={sortOrder} onValueChange={v => onSortChange(v as SortOrder)}>
           <SelectTrigger aria-label="Sort order">
-            <SelectValue />
+            <SelectValue placeholder="Sort" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="newest">Newest first</SelectItem>
@@ -190,10 +190,10 @@ function FilterDropdown({
         disabled={disabled}
       >
         <SelectTrigger aria-label={label}>
-          <SelectValue placeholder={`All ${label.toLowerCase()}s`} />
+          <SelectValue placeholder={label} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="__all__">All</SelectItem>
+          <SelectItem value="__all__">All {label.toLowerCase()}s</SelectItem>
           {options.map(option => (
             <SelectItem key={option} value={option}>
               {option}
