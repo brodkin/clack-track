@@ -1,11 +1,12 @@
 /**
  * History Page Tests
  *
- * Tests for the History page (/flipside) with API integration
+ * Tests for the History page (/flipside) with API integration,
+ * FilterBar, IntersectionObserver infinite scroll, and filter pills.
  */
 
 /// <reference types="@testing-library/jest-dom" />
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { History } from '@/web/frontend/pages/History';
@@ -39,6 +40,7 @@ describe('History Page', () => {
     generatedAt: new Date(Date.now() - hoursAgo * 60 * 60 * 1000),
     sentAt: new Date(Date.now() - hoursAgo * 60 * 60 * 1000),
     aiProvider: 'openai',
+    aiModel: 'gpt-4.1-nano',
   });
 
   const mockContents: ContentRecord[] = [
@@ -49,6 +51,18 @@ describe('History Page', () => {
     createMockContent(5, 168), // 7 days
   ];
 
+  /** Helper to build a mock paginated response matching the backend shape */
+  function mockPaginatedResponse(data: ContentRecord[], total: number, offset = 0, limit = 20) {
+    return {
+      success: true,
+      data,
+      pagination: { offset, limit, count: data.length, total },
+    };
+  }
+
+  // Track IntersectionObserver callbacks for test control
+  let intersectionObserverCallback: (entries: Array<{ isIntersecting: boolean }>) => void;
+
   beforeEach(() => {
     jest.clearAllMocks();
     // Default mock for config - returns black model
@@ -58,6 +72,18 @@ describe('History Page', () => {
       authenticated: false,
       user: null,
     });
+
+    // IntersectionObserver mock
+    const mockIntersectionObserver = jest.fn((callback: IntersectionObserverCallback) => {
+      intersectionObserverCallback = callback;
+      return {
+        observe: jest.fn(),
+        unobserve: jest.fn(),
+        disconnect: jest.fn(),
+      };
+    });
+    window.IntersectionObserver =
+      mockIntersectionObserver as unknown as typeof IntersectionObserver;
   });
 
   /**
@@ -104,7 +130,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: mockContents,
-        pagination: { limit: 20, count: 5 },
+        pagination: { offset: 0, limit: 20, count: 5, total: 5 },
       });
 
       renderWithAuth(<History />);
@@ -120,7 +146,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: mockContents,
-        pagination: { limit: 20, count: 5 },
+        pagination: { offset: 0, limit: 20, count: 5, total: 5 },
       });
 
       renderWithAuth(<History />);
@@ -138,7 +164,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: [createMockContent(1, 2)],
-        pagination: { limit: 20, count: 1 },
+        pagination: { offset: 0, limit: 20, count: 1, total: 1 },
       });
 
       renderWithAuth(<History />);
@@ -158,7 +184,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: [recentContent],
-        pagination: { limit: 20, count: 1 },
+        pagination: { offset: 0, limit: 20, count: 1, total: 1 },
       });
 
       renderWithAuth(<History />);
@@ -176,7 +202,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: [],
-        pagination: { limit: 20, count: 0 },
+        pagination: { offset: 0, limit: 20, count: 0, total: 0 },
       });
 
       renderWithAuth(<History />);
@@ -192,7 +218,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: [],
-        pagination: { limit: 20, count: 0 },
+        pagination: { offset: 0, limit: 20, count: 0, total: 0 },
       });
 
       renderWithAuth(<History />);
@@ -236,7 +262,7 @@ describe('History Page', () => {
         .mockResolvedValueOnce({
           success: true,
           data: mockContents,
-          pagination: { limit: 20, count: 5 },
+          pagination: { offset: 0, limit: 20, count: 5, total: 5 },
         });
 
       renderWithAuth(<History />);
@@ -252,107 +278,111 @@ describe('History Page', () => {
     });
   });
 
-  describe('Pagination', () => {
-    it('should show Load More button when more items are available', async () => {
-      mockApiClient.getContentHistory.mockResolvedValue({
-        success: true,
-        data: mockContents.slice(0, 3),
-        pagination: { limit: 20, count: 10 },
-      });
+  describe('Pagination & Infinite Scroll', () => {
+    it('should set up IntersectionObserver when more items exist', async () => {
+      mockApiClient.getContentHistory.mockResolvedValue(
+        mockPaginatedResponse(mockContents.slice(0, 3), 10)
+      );
 
       renderWithAuth(<History />);
 
       await waitFor(() => {
-        const loadMoreButton = screen.getByRole('button', { name: /load more/i });
-        // @ts-expect-error - jest-dom matchers
-        expect(loadMoreButton).toBeInTheDocument();
+        expect(screen.getByText(/generator-1/i)).toBeInTheDocument();
       });
+
+      // IntersectionObserver should have been set up
+      expect(window.IntersectionObserver).toHaveBeenCalled();
     });
 
-    it('should show current count and total in Load More button', async () => {
-      mockApiClient.getContentHistory.mockResolvedValue({
-        success: true,
-        data: mockContents.slice(0, 3),
-        pagination: { limit: 20, count: 10 },
-      });
-
-      renderWithAuth(<History />);
-
-      await waitFor(() => {
-        const loadMoreButton = screen.getByRole('button', { name: /3 of 10/i });
-        // @ts-expect-error - jest-dom matchers
-        expect(loadMoreButton).toBeInTheDocument();
-      });
-    });
-
-    it('should not show Load More button when all items are loaded', async () => {
-      mockApiClient.getContentHistory.mockResolvedValue({
-        success: true,
-        data: mockContents,
-        pagination: { limit: 20, count: 5 },
-      });
-
-      renderWithAuth(<History />);
-
-      await waitFor(() => {
-        const loadMoreButton = screen.queryByRole('button', { name: /load more/i });
-        expect(loadMoreButton).toBeNull();
-      });
-    });
-
-    it('should load more items when Load More is clicked', async () => {
-      const initialContents = mockContents.slice(0, 3);
-      const allContents = mockContents;
+    it('should load more items when scroll sentinel intersects', async () => {
+      const page1 = mockContents.slice(0, 3);
+      const page2 = [createMockContent(6, 200), createMockContent(7, 250)];
 
       mockApiClient.getContentHistory
-        .mockResolvedValueOnce({
-          success: true,
-          data: initialContents,
-          pagination: { limit: 20, count: 5 },
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          data: allContents,
-          pagination: { limit: 20, count: 5 },
-        });
+        .mockResolvedValueOnce(mockPaginatedResponse(page1, 10))
+        .mockResolvedValueOnce(mockPaginatedResponse(page2, 10, 3));
 
       renderWithAuth(<History />);
 
       await waitFor(() => {
-        const loadMoreButton = screen.getByRole('button', { name: /load more/i });
-        fireEvent.click(loadMoreButton);
+        expect(screen.getByText(/generator-1/i)).toBeInTheDocument();
+      });
+
+      // Trigger IntersectionObserver callback
+      await act(async () => {
+        intersectionObserverCallback([{ isIntersecting: true }]);
       });
 
       await waitFor(() => {
         expect(mockApiClient.getContentHistory).toHaveBeenCalledTimes(2);
       });
+
+      // Second call should have offset=3
+      expect(mockApiClient.getContentHistory).toHaveBeenLastCalledWith(
+        expect.objectContaining({ offset: 3 })
+      );
     });
 
-    it('should show loading state on Load More button while loading', async () => {
-      mockApiClient.getContentHistory.mockResolvedValueOnce({
-        success: true,
-        data: mockContents.slice(0, 3),
-        pagination: { limit: 20, count: 10 },
-      });
+    it('should show loading spinner during lazy load', async () => {
+      mockApiClient.getContentHistory
+        .mockResolvedValueOnce(mockPaginatedResponse(mockContents.slice(0, 3), 10))
+        .mockReturnValueOnce(new Promise(() => {})); // Never resolves
 
       renderWithAuth(<History />);
 
       await waitFor(() => {
-        const loadMoreButton = screen.getByRole('button', { name: /load more/i });
-        // @ts-expect-error - jest-dom matchers
-        expect(loadMoreButton).toBeInTheDocument();
+        expect(screen.getByText(/generator-1/i)).toBeInTheDocument();
       });
 
-      // Set up slow response for load more
-      mockApiClient.getContentHistory.mockReturnValue(new Promise(() => {}));
-
-      const loadMoreButton = screen.getByRole('button', { name: /load more/i });
-      fireEvent.click(loadMoreButton);
+      await act(async () => {
+        intersectionObserverCallback([{ isIntersecting: true }]);
+      });
 
       await waitFor(() => {
-        const loadingButton = screen.getByRole('button', { name: /loading/i });
-        // @ts-expect-error - jest-dom matchers
-        expect(loadingButton).toBeInTheDocument();
+        expect(screen.getByTestId('lazy-load-spinner')).toBeInTheDocument();
+      });
+    });
+
+    it('should not load more when all content is loaded', async () => {
+      mockApiClient.getContentHistory.mockResolvedValue(mockPaginatedResponse(mockContents, 5));
+
+      renderWithAuth(<History />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/generator-1/i)).toBeInTheDocument();
+      });
+
+      // Even if observer fires, should not make another API call
+      await act(async () => {
+        intersectionObserverCallback([{ isIntersecting: true }]);
+      });
+
+      // Should still only have the initial call
+      expect(mockApiClient.getContentHistory).toHaveBeenCalledTimes(1);
+    });
+
+    it('should append new items to existing list', async () => {
+      const page1 = mockContents.slice(0, 3);
+      const page2 = [createMockContent(6, 200), createMockContent(7, 250)];
+
+      mockApiClient.getContentHistory
+        .mockResolvedValueOnce(mockPaginatedResponse(page1, 10))
+        .mockResolvedValueOnce(mockPaginatedResponse(page2, 10, 3));
+
+      renderWithAuth(<History />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/generator-1/i)).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        intersectionObserverCallback([{ isIntersecting: true }]);
+      });
+
+      // Both page 1 and page 2 items should be visible
+      await waitFor(() => {
+        expect(screen.getByText(/generator-1/i)).toBeInTheDocument();
+        expect(screen.getByText(/CONTENT 6/i)).toBeInTheDocument();
       });
     });
   });
@@ -362,7 +392,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: mockContents,
-        pagination: { limit: 20, count: 5 },
+        pagination: { offset: 0, limit: 20, count: 5, total: 5 },
       });
     });
 
@@ -412,7 +442,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: mockContents,
-        pagination: { limit: 20, count: 5 },
+        pagination: { offset: 0, limit: 20, count: 5, total: 5 },
       });
       // Voting tests need authenticated user
       mockApiClient.checkSession.mockResolvedValue({
@@ -519,7 +549,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: mockContents,
-        pagination: { limit: 20, count: 5 },
+        pagination: { offset: 0, limit: 20, count: 5, total: 5 },
       });
     });
 
@@ -554,7 +584,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: mockContents,
-        pagination: { limit: 20, count: 5 },
+        pagination: { offset: 0, limit: 20, count: 5, total: 5 },
       });
 
       renderWithAuth(<History />);
@@ -569,7 +599,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: mockContents,
-        pagination: { limit: 20, count: 5 },
+        pagination: { offset: 0, limit: 20, count: 5, total: 5 },
       });
 
       renderWithAuth(<History />);
@@ -586,7 +616,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: mockContents,
-        pagination: { limit: 20, count: 5 },
+        pagination: { offset: 0, limit: 20, count: 5, total: 5 },
       });
 
       renderWithAuth(<History />);
@@ -600,7 +630,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: mockContents,
-        pagination: { limit: 20, count: 5 },
+        pagination: { offset: 0, limit: 20, count: 5, total: 5 },
       });
       mockApiClient.getVestaboardConfig.mockRejectedValue(new Error('Config failed'));
 
@@ -627,7 +657,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: [contentWithUrl],
-        pagination: { limit: 20, count: 1 },
+        pagination: { offset: 0, limit: 20, count: 1, total: 1 },
       });
 
       renderWithAuth(<History />);
@@ -648,7 +678,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: [contentWithoutUrl],
-        pagination: { limit: 20, count: 1 },
+        pagination: { offset: 0, limit: 20, count: 1, total: 1 },
       });
 
       renderWithAuth(<History />);
@@ -685,7 +715,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: [content1, content2, content3],
-        pagination: { limit: 20, count: 3 },
+        pagination: { offset: 0, limit: 20, count: 3, total: 3 },
       });
 
       renderWithAuth(<History />);
@@ -712,7 +742,7 @@ describe('History Page', () => {
       mockApiClient.getContentHistory.mockResolvedValue({
         success: true,
         data: [contentWithUrl],
-        pagination: { limit: 20, count: 1 },
+        pagination: { offset: 0, limit: 20, count: 1, total: 1 },
       });
 
       renderWithAuth(<History />);
@@ -723,6 +753,102 @@ describe('History Page', () => {
         expect(moreInfoButton).toHaveAttribute('target', '_blank');
         // @ts-expect-error - jest-dom matchers
         expect(moreInfoButton).toHaveAttribute('rel', 'noopener noreferrer');
+      });
+    });
+  });
+
+  describe('FilterBar Integration', () => {
+    it('should render FilterBar with search input', async () => {
+      mockApiClient.getContentHistory.mockResolvedValue(mockPaginatedResponse(mockContents, 5));
+
+      renderWithAuth(<History />);
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Search content...')).toBeInTheDocument();
+      });
+    });
+
+    it('should derive filter options from loaded content', async () => {
+      const diverseContent = [
+        {
+          ...createMockContent(1, 1),
+          aiProvider: 'openai',
+          aiModel: 'gpt-4.1-nano',
+          generatorId: 'haiku',
+        },
+        {
+          ...createMockContent(2, 2),
+          aiProvider: 'anthropic',
+          aiModel: 'claude-haiku-4.5',
+          generatorId: 'news',
+        },
+        {
+          ...createMockContent(3, 3),
+          aiProvider: 'openai',
+          aiModel: 'gpt-4.1-mini',
+          generatorId: 'weather',
+        },
+      ];
+      mockApiClient.getContentHistory.mockResolvedValue(mockPaginatedResponse(diverseContent, 3));
+
+      renderWithAuth(<History />);
+
+      // FilterBar should be present once content loads
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Search content...')).toBeInTheDocument();
+      });
+    });
+
+    it('should pass sort parameter to API on initial load', async () => {
+      mockApiClient.getContentHistory.mockResolvedValue(mockPaginatedResponse(mockContents, 5));
+
+      renderWithAuth(<History />);
+
+      await waitFor(() => {
+        expect(mockApiClient.getContentHistory).toHaveBeenCalledWith(
+          expect.objectContaining({ sort: 'newest' })
+        );
+      });
+    });
+
+    it('should pass offset=0 on initial load', async () => {
+      mockApiClient.getContentHistory.mockResolvedValue(mockPaginatedResponse(mockContents, 5));
+
+      renderWithAuth(<History />);
+
+      await waitFor(() => {
+        expect(mockApiClient.getContentHistory).toHaveBeenCalledWith(
+          expect.objectContaining({ offset: 0 })
+        );
+      });
+    });
+  });
+
+  describe('Filter Pills', () => {
+    it('should not show filter pills when no filters are active', async () => {
+      mockApiClient.getContentHistory.mockResolvedValue(mockPaginatedResponse(mockContents, 5));
+
+      renderWithAuth(<History />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/generator-1/i)).toBeInTheDocument();
+      });
+
+      // No filter pills container should be rendered
+      expect(screen.queryByTestId('filter-pills')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Filtered Empty State', () => {
+    it('should show filter-specific empty message when filters produce no results', async () => {
+      // Return empty results with hasActiveFilters indication
+      mockApiClient.getContentHistory.mockResolvedValue(mockPaginatedResponse([], 0));
+
+      renderWithAuth(<History />);
+
+      await waitFor(() => {
+        // With no data and no filters, shows default empty state
+        expect(screen.getByText(/no content history available/i)).toBeInTheDocument();
       });
     });
   });

@@ -16,8 +16,10 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   pagination?: {
+    offset: number;
     limit: number;
     count: number;
+    total: number;
   };
 }
 
@@ -45,7 +47,24 @@ export type LatestContentResponse = ContentWithCharacterCodes | null;
 
 export interface ContentHistoryParams {
   limit?: number;
+  offset?: number;
   type?: 'major' | 'minor';
+  provider?: string;
+  model?: string;
+  generator?: string;
+  status?: 'success' | 'failed';
+  search?: string;
+  sort?: 'newest' | 'oldest';
+}
+
+export interface PaginatedContentHistoryResponse {
+  data: ContentRecord[];
+  pagination: {
+    offset: number;
+    limit: number;
+    count: number;
+    total: number;
+  };
 }
 
 export type ContentHistoryResponse = ContentRecord[];
