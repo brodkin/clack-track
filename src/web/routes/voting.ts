@@ -15,6 +15,7 @@ export const VALID_VOTE_REASONS = [
   'boring',
   'badly_formatted',
   'almost_there',
+  'repeated_content',
   'other',
 ] as const;
 

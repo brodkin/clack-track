@@ -20,7 +20,7 @@ interface DownvoteReason {
 }
 
 /**
- * The 8 predefined downvote reasons.
+ * The 9 predefined downvote reasons.
  * Keys must match the values accepted by POST /api/vote.
  */
 const DOWNVOTE_REASONS: DownvoteReason[] = [
@@ -31,6 +31,7 @@ const DOWNVOTE_REASONS: DownvoteReason[] = [
   { label: 'Boring', key: 'boring' },
   { label: 'Badly formatted', key: 'badly_formatted' },
   { label: 'Almost there', key: 'almost_there' },
+  { label: 'Repeated content', key: 'repeated_content' },
   { label: 'Other', key: 'other' },
 ];
 
@@ -46,7 +47,7 @@ interface DownvoteReasonMenuProps {
 }
 
 /**
- * DownvoteReasonMenu renders a popover with 8 reason options.
+ * DownvoteReasonMenu renders a popover with 9 reason options.
  * Each option is a touch-friendly button (min 44px height).
  * Selecting a reason calls onSelect with the reason key and closes the popover.
  */

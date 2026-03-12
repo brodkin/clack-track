@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { RouteLoading } from './components/RouteLoading';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { Toaster } from './components/ui/sonner';
 import './index.css';
 
 const Welcome = lazy(() => import('./pages/Welcome'));
@@ -16,6 +17,7 @@ const Admin = lazy(() => import('./pages/Admin'));
 function App() {
   return (
     <AuthProvider>
+      <Toaster position="bottom-center" duration={2000} />
       <Suspense fallback={<RouteLoading />}>
         <Routes>
           <Route path="/" element={<Welcome />} />

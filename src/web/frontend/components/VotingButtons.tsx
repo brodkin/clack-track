@@ -12,6 +12,7 @@
 
 import { useState, useRef } from 'react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { cn } from '../lib/utils';
 import { Confetti } from './Confetti';
@@ -64,6 +65,7 @@ export function VotingButtons({ onVote, isLoading = false, className }: VotingBu
     setVoted('bad');
     setReasonMenuOpen(false);
     onVote('bad', reasonKey);
+    toast('Thanks for the feedback');
   };
 
   /**
