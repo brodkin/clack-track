@@ -333,6 +333,318 @@ describe('Content Routes Integration Tests - moreInfoUrl', () => {
     });
   });
 
+  describe('GET /api/content/history - filtering, search, sort, pagination', () => {
+    // Helper to insert test content records with distinct attributes
+    async function seedFilterData() {
+      const base = new Date('2025-06-01T12:00:00Z');
+
+      const records = [
+        {
+          text: 'Weather report sunny skies',
+          type: 'major',
+          generatedAt: new Date(base.getTime() - 5000).toISOString().slice(0, 19).replace('T', ' '),
+          sentAt: new Date(base.getTime() - 4900).toISOString().slice(0, 19).replace('T', ' '),
+          aiProvider: 'openai',
+          aiModel: 'gpt-4.1-mini',
+          generatorId: 'weather-focus',
+          status: 'success',
+          outputMode: 'text',
+          metadata: JSON.stringify({ provider: 'openai' }),
+        },
+        {
+          text: 'Haiku about spring flowers',
+          type: 'major',
+          generatedAt: new Date(base.getTime() - 4000).toISOString().slice(0, 19).replace('T', ' '),
+          sentAt: new Date(base.getTime() - 3900).toISOString().slice(0, 19).replace('T', ' '),
+          aiProvider: 'anthropic',
+          aiModel: 'claude-haiku-4.5',
+          generatorId: 'haiku',
+          status: 'success',
+          outputMode: 'text',
+          metadata: JSON.stringify({ provider: 'anthropic' }),
+        },
+        {
+          text: 'Breaking news headlines today',
+          type: 'major',
+          generatedAt: new Date(base.getTime() - 3000).toISOString().slice(0, 19).replace('T', ' '),
+          sentAt: new Date(base.getTime() - 2900).toISOString().slice(0, 19).replace('T', ' '),
+          aiProvider: 'openai',
+          aiModel: 'gpt-4.1-nano',
+          generatorId: 'news-summary',
+          status: 'failed',
+          outputMode: 'text',
+          metadata: JSON.stringify({ provider: 'openai' }),
+        },
+        {
+          text: 'Minor time update',
+          type: 'minor',
+          generatedAt: new Date(base.getTime() - 2000).toISOString().slice(0, 19).replace('T', ' '),
+          sentAt: new Date(base.getTime() - 1900).toISOString().slice(0, 19).replace('T', ' '),
+          aiProvider: 'programmatic',
+          aiModel: null,
+          generatorId: 'minor-update',
+          status: 'success',
+          outputMode: 'text',
+          metadata: null,
+        },
+        {
+          text: 'Motivational quote for the day',
+          type: 'major',
+          generatedAt: new Date(base.getTime() - 1000).toISOString().slice(0, 19).replace('T', ' '),
+          sentAt: new Date(base.getTime() - 900).toISOString().slice(0, 19).replace('T', ' '),
+          aiProvider: 'anthropic',
+          aiModel: 'claude-sonnet-4.5',
+          generatorId: 'haiku',
+          status: 'success',
+          outputMode: 'text',
+          metadata: JSON.stringify({ provider: 'anthropic' }),
+        },
+      ];
+
+      for (const record of records) {
+        await db('content').insert(record);
+      }
+    }
+
+    beforeEach(async () => {
+      await seedFilterData();
+    });
+
+    describe('backward compatibility', () => {
+      it('returns all records with default pagination when no filters provided', async () => {
+        const response = await request(app).get('/api/content/history');
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.length).toBe(5);
+        expect(response.body.pagination).toBeDefined();
+        expect(response.body.pagination.total).toBe(5);
+        expect(response.body.pagination.offset).toBe(0);
+        expect(response.body.pagination.limit).toBe(20);
+        expect(response.body.pagination.count).toBe(5);
+      });
+
+      it('still supports the limit parameter as before', async () => {
+        const response = await request(app).get('/api/content/history?limit=2');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(2);
+        expect(response.body.pagination.limit).toBe(2);
+        expect(response.body.pagination.total).toBe(5);
+      });
+    });
+
+    describe('provider filter', () => {
+      it('filters by aiProvider', async () => {
+        const response = await request(app).get('/api/content/history?provider=openai');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(2);
+        response.body.data.forEach((item: { aiProvider: string }) => {
+          expect(item.aiProvider).toBe('openai');
+        });
+        expect(response.body.pagination.total).toBe(2);
+      });
+    });
+
+    describe('model filter', () => {
+      it('filters by aiModel', async () => {
+        const response = await request(app).get('/api/content/history?model=claude-haiku-4.5');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(1);
+        expect(response.body.data[0].aiModel).toBe('claude-haiku-4.5');
+        expect(response.body.pagination.total).toBe(1);
+      });
+    });
+
+    describe('generator filter', () => {
+      it('filters by generatorId', async () => {
+        const response = await request(app).get('/api/content/history?generator=haiku');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(2);
+        response.body.data.forEach((item: { generatorId: string }) => {
+          expect(item.generatorId).toBe('haiku');
+        });
+        expect(response.body.pagination.total).toBe(2);
+      });
+    });
+
+    describe('status filter', () => {
+      it('filters by status', async () => {
+        const response = await request(app).get('/api/content/history?status=failed');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(1);
+        expect(response.body.data[0].status).toBe('failed');
+        expect(response.body.pagination.total).toBe(1);
+      });
+    });
+
+    describe('type filter', () => {
+      it('filters by content type', async () => {
+        const response = await request(app).get('/api/content/history?type=minor');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(1);
+        expect(response.body.data[0].type).toBe('minor');
+        expect(response.body.pagination.total).toBe(1);
+      });
+    });
+
+    describe('text search', () => {
+      it('searches text field with LIKE matching', async () => {
+        const response = await request(app).get('/api/content/history?search=haiku');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(1);
+        expect(response.body.data[0].text).toContain('Haiku');
+        expect(response.body.pagination.total).toBe(1);
+      });
+
+      it('performs case-insensitive search', async () => {
+        const response = await request(app).get('/api/content/history?search=WEATHER');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(1);
+        expect(response.body.data[0].text).toContain('Weather');
+      });
+    });
+
+    describe('sort', () => {
+      it('sorts newest first by default', async () => {
+        const response = await request(app).get('/api/content/history');
+
+        expect(response.status).toBe(200);
+        const texts = response.body.data.map((item: { text: string }) => item.text);
+        expect(texts[0]).toBe('Motivational quote for the day');
+        expect(texts[texts.length - 1]).toBe('Weather report sunny skies');
+      });
+
+      it('sorts oldest first when sort=oldest', async () => {
+        const response = await request(app).get('/api/content/history?sort=oldest');
+
+        expect(response.status).toBe(200);
+        const texts = response.body.data.map((item: { text: string }) => item.text);
+        expect(texts[0]).toBe('Weather report sunny skies');
+        expect(texts[texts.length - 1]).toBe('Motivational quote for the day');
+      });
+
+      it('sorts newest first when sort=newest', async () => {
+        const response = await request(app).get('/api/content/history?sort=newest');
+
+        expect(response.status).toBe(200);
+        const texts = response.body.data.map((item: { text: string }) => item.text);
+        expect(texts[0]).toBe('Motivational quote for the day');
+      });
+    });
+
+    describe('offset-based pagination', () => {
+      it('skips records when offset is provided', async () => {
+        const response = await request(app).get('/api/content/history?offset=2&limit=2');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(2);
+        expect(response.body.pagination.offset).toBe(2);
+        expect(response.body.pagination.limit).toBe(2);
+        expect(response.body.pagination.total).toBe(5);
+      });
+
+      it('returns remaining records when offset near end', async () => {
+        const response = await request(app).get('/api/content/history?offset=4&limit=10');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(1);
+        expect(response.body.pagination.total).toBe(5);
+      });
+
+      it('returns empty when offset exceeds total', async () => {
+        const response = await request(app).get('/api/content/history?offset=100&limit=10');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(0);
+        expect(response.body.pagination.total).toBe(5);
+      });
+    });
+
+    describe('combined filters with pagination', () => {
+      it('applies multiple filters simultaneously', async () => {
+        const response = await request(app).get(
+          '/api/content/history?provider=anthropic&status=success'
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(2);
+        response.body.data.forEach((item: { aiProvider: string; status: string }) => {
+          expect(item.aiProvider).toBe('anthropic');
+          expect(item.status).toBe('success');
+        });
+        expect(response.body.pagination.total).toBe(2);
+      });
+
+      it('applies filters with offset pagination', async () => {
+        // 2 anthropic success records; get page 2 with limit=1
+        const response = await request(app).get(
+          '/api/content/history?provider=anthropic&status=success&offset=1&limit=1'
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(1);
+        expect(response.body.pagination.total).toBe(2);
+        expect(response.body.pagination.offset).toBe(1);
+      });
+
+      it('applies search with sort', async () => {
+        // Add another record with 'quote' text for searching
+        await db('content').insert({
+          text: 'Another quote from the universe',
+          type: 'major',
+          generatedAt: new Date('2025-06-01T11:50:00Z')
+            .toISOString()
+            .slice(0, 19)
+            .replace('T', ' '),
+          sentAt: new Date('2025-06-01T11:50:01Z').toISOString().slice(0, 19).replace('T', ' '),
+          aiProvider: 'openai',
+          generatorId: 'haiku',
+          status: 'success',
+          outputMode: 'text',
+        });
+
+        const response = await request(app).get('/api/content/history?search=quote&sort=oldest');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(2);
+        // Oldest first
+        expect(response.body.data[0].text).toBe('Another quote from the universe');
+        expect(response.body.data[1].text).toBe('Motivational quote for the day');
+      });
+    });
+
+    describe('invalid parameters', () => {
+      it('ignores invalid sort value and uses default', async () => {
+        const response = await request(app).get('/api/content/history?sort=invalid');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.length).toBe(5);
+      });
+
+      it('treats non-numeric offset as 0', async () => {
+        const response = await request(app).get('/api/content/history?offset=abc');
+
+        expect(response.status).toBe(200);
+        expect(response.body.pagination.offset).toBe(0);
+      });
+
+      it('treats negative offset as 0', async () => {
+        const response = await request(app).get('/api/content/history?offset=-5');
+
+        expect(response.status).toBe(200);
+        expect(response.body.pagination.offset).toBe(0);
+      });
+    });
+  });
+
   describe('Database Round-trip - moreInfoUrl persistence', () => {
     it('should persist moreInfoUrl through save and retrieve cycle', async () => {
       // Test the complete cycle: save → retrieve via repository

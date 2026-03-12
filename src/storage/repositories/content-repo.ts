@@ -151,6 +151,32 @@ export class ContentRepository {
   }
 
   /**
+   * Find content records with dynamic filtering, search, sort, and offset pagination.
+   * Returns matching records and total count for lazy-load awareness.
+   *
+   * @param filters - Filter, search, sort, and pagination parameters
+   * @returns Object with data array and total count, or empty result on error
+   */
+  async findFiltered(filters: {
+    provider?: string;
+    model?: string;
+    generator?: string;
+    status?: string;
+    type?: string;
+    search?: string;
+    sort?: string;
+    offset?: number;
+    limit?: number;
+  }): Promise<{ data: ContentRecord[]; total: number }> {
+    try {
+      return await this.model.findFiltered(filters);
+    } catch (error) {
+      console.warn('Failed to fetch filtered content:', error);
+      return { data: [], total: 0 };
+    }
+  }
+
+  /**
    * Clean up old content records to maintain retention policy
    * Deletes records older than the specified retention period
    *

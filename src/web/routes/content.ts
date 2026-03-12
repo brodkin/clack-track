@@ -131,9 +131,28 @@ async function getCharacterCodes(
 }
 
 /**
- * GET /api/content/history?limit=20
- * Returns paginated content history
+ * Parse a numeric query parameter with a default value and minimum of 0.
+ */
+function parseIntParam(value: string | undefined, defaultValue: number): number {
+  if (!value) return defaultValue;
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed) || parsed < 0) return defaultValue;
+  return parsed;
+}
+
+/**
+ * GET /api/content/history
+ * Returns paginated, filterable content history with total count for lazy loading.
+ *
  * Query params:
+ *   - provider: filter by aiProvider (exact match)
+ *   - model: filter by aiModel (exact match)
+ *   - generator: filter by generatorId (exact match)
+ *   - status: filter by status ('success' | 'failed')
+ *   - type: filter by content type ('major' | 'minor')
+ *   - search: text search (LIKE matching on text column)
+ *   - sort: 'newest' (default) or 'oldest'
+ *   - offset: number of records to skip (default: 0)
  *   - limit: number of records to return (default: 20, max: 100)
  *
  * @param req - Express request object
@@ -155,25 +174,31 @@ export async function getContentHistory(
   }
 
   try {
-    // Parse and validate limit parameter
-    const limitParam = req.query.limit;
-    let limit = 20; // Default limit
+    const limit = Math.min(parseIntParam(req.query.limit, 20), 100);
+    const offset = parseIntParam(req.query.offset, 0);
 
-    if (limitParam) {
-      const parsed = parseInt(limitParam, 10);
-      if (!isNaN(parsed) && parsed > 0) {
-        limit = Math.min(parsed, 100); // Enforce maximum limit
-      }
-    }
+    const filters = {
+      provider: req.query.provider || undefined,
+      model: req.query.model || undefined,
+      generator: req.query.generator || undefined,
+      status: req.query.status || undefined,
+      type: req.query.type || undefined,
+      search: req.query.search || undefined,
+      sort: req.query.sort || undefined,
+      offset,
+      limit,
+    };
 
-    const history = await repository.getContentHistory(limit);
+    const { data, total } = await repository.findFiltered(filters);
 
     res.json({
       success: true,
-      data: history,
+      data,
       pagination: {
+        offset,
         limit,
-        count: history.length,
+        count: data.length,
+        total,
       },
     });
   } catch (error) {

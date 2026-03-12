@@ -365,6 +365,75 @@ export class ContentModel {
   }
 
   /**
+   * Filter options for findFiltered()
+   */
+  static readonly ALLOWED_SORT_VALUES = ['newest', 'oldest'] as const;
+
+  /**
+   * Find content records with dynamic filtering, search, sort, and pagination.
+   * Returns both the matching records and the total count for pagination awareness.
+   *
+   * @param filters - Filter criteria
+   * @returns Object with data array and total count
+   */
+  async findFiltered(filters: {
+    provider?: string;
+    model?: string;
+    generator?: string;
+    status?: string;
+    type?: string;
+    search?: string;
+    sort?: string;
+    offset?: number;
+    limit?: number;
+  }): Promise<{ data: ContentRecord[]; total: number }> {
+    const limit = this.safeLimit(filters.limit ?? 20);
+    const offset = Math.max(0, Math.floor(Number(filters.offset) || 0));
+    const sortDirection =
+      filters.sort && ContentModel.ALLOWED_SORT_VALUES.includes(filters.sort as 'newest' | 'oldest')
+        ? filters.sort === 'oldest'
+          ? ('asc' as const)
+          : ('desc' as const)
+        : ('desc' as const);
+
+    // Build base query with WHERE clauses
+    const applyFilters = (query: Knex.QueryBuilder): Knex.QueryBuilder => {
+      if (filters.provider) {
+        query = query.where('aiProvider', filters.provider);
+      }
+      if (filters.model) {
+        query = query.where('aiModel', filters.model);
+      }
+      if (filters.generator) {
+        query = query.where('generatorId', filters.generator);
+      }
+      if (filters.status) {
+        query = query.where('status', filters.status);
+      }
+      if (filters.type) {
+        query = query.where('type', filters.type);
+      }
+      if (filters.search) {
+        query = query.where('text', 'like', `%${filters.search}%`);
+      }
+      return query;
+    };
+
+    // Get total count matching filters
+    const countQuery = applyFilters(this.knex('content'));
+    const countResult = await countQuery.count('* as total').first();
+    const total = Number(countResult?.total ?? 0);
+
+    // Get paginated data
+    const dataQuery = applyFilters(this.knex('content').select(ContentModel.SELECT_FIELDS));
+    const rows = await dataQuery.orderBy('generatedAt', sortDirection).offset(offset).limit(limit);
+
+    const data = rows.map((row: Record<string, unknown>) => this.mapRowToContentRecord(row));
+
+    return { data, total };
+  }
+
+  /**
    * Find content records with validation attempts above threshold
    * Useful for analytics and debugging tool-based generation
    *

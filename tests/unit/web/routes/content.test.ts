@@ -434,22 +434,26 @@ describe('Content API Routes', () => {
         },
       ];
 
-      const mockGetContentHistory = jest.fn().mockResolvedValue(mockHistory);
+      const mockFindFiltered = jest.fn().mockResolvedValue({ data: mockHistory, total: 1 });
       const mockRepository = {
         getLatestContent: jest.fn(),
-        getContentHistory: mockGetContentHistory,
+        findFiltered: mockFindFiltered,
         saveContent: jest.fn(),
       } as unknown as ContentRepository;
 
       await getContentHistory(mockRequest, mockResponse, mockRepository);
 
-      expect(mockGetContentHistory).toHaveBeenCalledWith(20);
+      expect(mockFindFiltered).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 20, offset: 0 })
+      );
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
         data: mockHistory,
         pagination: {
+          offset: 0,
           limit: 20,
           count: 1,
+          total: 1,
         },
       });
     });
@@ -458,22 +462,26 @@ describe('Content API Routes', () => {
       mockRequest.query = { limit: '50' };
       const mockHistory: ContentRecord[] = [];
 
-      const mockGetContentHistory = jest.fn().mockResolvedValue(mockHistory);
+      const mockFindFiltered = jest.fn().mockResolvedValue({ data: mockHistory, total: 0 });
       const mockRepository = {
         getLatestContent: jest.fn(),
-        getContentHistory: mockGetContentHistory,
+        findFiltered: mockFindFiltered,
         saveContent: jest.fn(),
       } as unknown as ContentRepository;
 
       await getContentHistory(mockRequest, mockResponse, mockRepository);
 
-      expect(mockGetContentHistory).toHaveBeenCalledWith(50);
+      expect(mockFindFiltered).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 50, offset: 0 })
+      );
       expect(jsonSpy).toHaveBeenCalledWith({
         success: true,
         data: mockHistory,
         pagination: {
+          offset: 0,
           limit: 50,
           count: 0,
+          total: 0,
         },
       });
     });
@@ -482,39 +490,41 @@ describe('Content API Routes', () => {
       mockRequest.query = { limit: '500' };
       const mockHistory: ContentRecord[] = [];
 
-      const mockGetContentHistory = jest.fn().mockResolvedValue(mockHistory);
+      const mockFindFiltered = jest.fn().mockResolvedValue({ data: mockHistory, total: 0 });
       const mockRepository = {
         getLatestContent: jest.fn(),
-        getContentHistory: mockGetContentHistory,
+        findFiltered: mockFindFiltered,
         saveContent: jest.fn(),
       } as unknown as ContentRepository;
 
       await getContentHistory(mockRequest, mockResponse, mockRepository);
 
-      expect(mockGetContentHistory).toHaveBeenCalledWith(100);
+      expect(mockFindFiltered).toHaveBeenCalledWith(expect.objectContaining({ limit: 100 }));
     });
 
     it('should handle invalid limit parameter', async () => {
       mockRequest.query = { limit: 'invalid' };
       const mockHistory: ContentRecord[] = [];
 
-      const mockGetContentHistory = jest.fn().mockResolvedValue(mockHistory);
+      const mockFindFiltered = jest.fn().mockResolvedValue({ data: mockHistory, total: 0 });
       const mockRepository = {
         getLatestContent: jest.fn(),
-        getContentHistory: mockGetContentHistory,
+        findFiltered: mockFindFiltered,
         saveContent: jest.fn(),
       } as unknown as ContentRepository;
 
       await getContentHistory(mockRequest, mockResponse, mockRepository);
 
-      expect(mockGetContentHistory).toHaveBeenCalledWith(20);
+      expect(mockFindFiltered).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 20, offset: 0 })
+      );
     });
 
     it('should return 500 on repository error', async () => {
-      const mockGetContentHistory = jest.fn().mockRejectedValue(new Error('DB error'));
+      const mockFindFiltered = jest.fn().mockRejectedValue(new Error('DB error'));
       const mockRepository = {
         getLatestContent: jest.fn(),
-        getContentHistory: mockGetContentHistory,
+        findFiltered: mockFindFiltered,
         saveContent: jest.fn(),
       } as unknown as ContentRepository;
 
