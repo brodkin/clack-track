@@ -23,6 +23,12 @@ jest.mock('@/web/frontend/lib/animations', () => ({
   CONFETTI_COLORS: ['#FFB800', '#FF8C00', '#FFD700'],
 }));
 
+// Mock sonner toast
+const mockToast = jest.fn();
+jest.mock('sonner', () => ({
+  toast: (...args: unknown[]) => mockToast(...args),
+}));
+
 describe('VotingButtons Component', () => {
   const mockOnVote = jest.fn();
   const mockTriggerHaptic = animations.triggerHaptic as jest.Mock;
@@ -32,6 +38,7 @@ describe('VotingButtons Component', () => {
     mockOnVote.mockClear();
     mockTriggerHaptic.mockClear();
     mockTriggerSuccessHaptic.mockClear();
+    mockToast.mockClear();
   });
 
   describe('Button Rendering', () => {
@@ -345,6 +352,41 @@ describe('VotingButtons Component', () => {
 
       expect(mockTriggerSuccessHaptic).not.toHaveBeenCalled();
       expect(mockTriggerHaptic).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Toast Confirmation', () => {
+    it('should show a confirmation toast after selecting a downvote reason', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      // Open popover
+      const downButton = screen.getByRole('button', { name: /thumbs down|bad/i });
+      fireEvent.click(downButton);
+
+      // Select a reason
+      const option = screen.getByText('Boring');
+      fireEvent.click(option);
+
+      expect(mockToast).toHaveBeenCalledTimes(1);
+      expect(mockToast).toHaveBeenCalledWith('Thanks for the feedback');
+    });
+
+    it('should not show a toast on thumbs up vote', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      const upButton = screen.getByRole('button', { name: /thumbs up|good/i });
+      fireEvent.click(upButton);
+
+      expect(mockToast).not.toHaveBeenCalled();
+    });
+
+    it('should not show a toast when just opening the downvote menu', () => {
+      render(<VotingButtons onVote={mockOnVote} />);
+
+      const downButton = screen.getByRole('button', { name: /thumbs down|bad/i });
+      fireEvent.click(downButton);
+
+      expect(mockToast).not.toHaveBeenCalled();
     });
   });
 

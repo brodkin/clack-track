@@ -109,6 +109,16 @@ describe('VoteRepository reason field', () => {
     expect(vote.reason).toBeUndefined();
   });
 
+  test('should accept repeated_content as a valid vote reason', async () => {
+    const contentId = await createContent();
+
+    const vote = await voteRepository.submitVote(contentId, 'bad', {
+      reason: 'repeated_content',
+    });
+
+    expect(vote.reason).toBe('repeated_content');
+  });
+
   test('should retrieve reason when getting votes by content', async () => {
     const contentId = await createContent();
 

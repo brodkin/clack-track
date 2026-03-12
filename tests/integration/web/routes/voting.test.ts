@@ -186,6 +186,7 @@ describe('Voting Routes - authentication and reason field', () => {
       'boring',
       'badly_formatted',
       'almost_there',
+      'repeated_content',
       'other',
     ];
 

@@ -11,7 +11,7 @@ import { describe, it, expect, beforeEach } from '@jest/globals';
 import { DownvoteReasonMenu } from '@/web/frontend/components/DownvoteReasonMenu';
 
 /**
- * The 8 predefined downvote reason options.
+ * The 9 predefined downvote reason options.
  * These must match the stored keys accepted by the API.
  */
 const EXPECTED_REASONS = [
@@ -22,6 +22,7 @@ const EXPECTED_REASONS = [
   { label: 'Boring', key: 'boring' },
   { label: 'Badly formatted', key: 'badly_formatted' },
   { label: 'Almost there', key: 'almost_there' },
+  { label: 'Repeated content', key: 'repeated_content' },
   { label: 'Other', key: 'other' },
 ];
 
@@ -35,7 +36,7 @@ describe('DownvoteReasonMenu Component', () => {
   });
 
   describe('Rendering', () => {
-    it('should render all 8 reason options when open', () => {
+    it('should render all 9 reason options when open', () => {
       render(
         <DownvoteReasonMenu open={true} onOpenChange={mockOnOpenChange} onSelect={mockOnSelect}>
           <button>Trigger</button>
@@ -103,6 +104,36 @@ describe('DownvoteReasonMenu Component', () => {
       fireEvent.click(otherOption);
 
       expect(mockOnSelect).toHaveBeenCalledWith('other');
+    });
+
+    it('should call onSelect with "repeated_content" when Repeated content is clicked', () => {
+      render(
+        <DownvoteReasonMenu open={true} onOpenChange={mockOnOpenChange} onSelect={mockOnSelect}>
+          <button>Trigger</button>
+        </DownvoteReasonMenu>
+      );
+
+      const option = screen.getByText('Repeated content');
+      fireEvent.click(option);
+
+      expect(mockOnSelect).toHaveBeenCalledWith('repeated_content');
+    });
+
+    it('should render Repeated content before Other', () => {
+      render(
+        <DownvoteReasonMenu open={true} onOpenChange={mockOnOpenChange} onSelect={mockOnSelect}>
+          <button>Trigger</button>
+        </DownvoteReasonMenu>
+      );
+
+      const repeatedOption = screen.getByText('Repeated content');
+      const otherOption = screen.getByText('Other');
+
+      // Repeated content should appear before Other in DOM order
+      const allButtons = screen.getAllByRole('button');
+      const repeatedIndex = allButtons.indexOf(repeatedOption.closest('button')!);
+      const otherIndex = allButtons.indexOf(otherOption.closest('button')!);
+      expect(repeatedIndex).toBeLessThan(otherIndex);
     });
 
     it('should call onSelect with "factually_wrong" when Factually wrong is clicked', () => {
