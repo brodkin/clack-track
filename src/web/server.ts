@@ -52,7 +52,7 @@ export class WebServer {
     this.port = config.port ?? 3000;
     this.host = config.host ?? '0.0.0.0';
     this.corsEnabled = config.corsEnabled ?? false;
-    this.staticPath = config.staticPath ?? './src/web/frontend/dist';
+    this.staticPath = path.resolve(config.staticPath ?? './src/web/frontend/dist');
     this.app = express();
     this.dependencies = dependencies;
   }
