@@ -152,6 +152,30 @@ describe('DailyRoastGenerator', () => {
       expect(domains.LIFESTYLE).toContain('gym memberships');
       expect(domains.DATING).toContain('dating apps');
     });
+
+    it('should have at least 8 topics in MORNING_RITUALS to reduce repeat probability', () => {
+      const domains = DailyRoastGenerator.TOPIC_DOMAINS;
+      expect(domains.MORNING_RITUALS.length).toBeGreaterThanOrEqual(8);
+    });
+
+    it('should have MORNING_RITUALS topics that are broad everyday situations', () => {
+      const domains = DailyRoastGenerator.TOPIC_DOMAINS;
+
+      // Original 3 topics must still be present
+      expect(domains.MORNING_RITUALS).toContain('snooze button');
+      expect(domains.MORNING_RITUALS).toContain('coffee dependency');
+      expect(domains.MORNING_RITUALS).toContain('alarm clocks');
+
+      // All topics should be non-empty strings
+      for (const topic of domains.MORNING_RITUALS) {
+        expect(typeof topic).toBe('string');
+        expect(topic.length).toBeGreaterThan(0);
+      }
+
+      // No duplicate topics
+      const uniqueTopics = new Set(domains.MORNING_RITUALS);
+      expect(uniqueTopics.size).toBe(domains.MORNING_RITUALS.length);
+    });
   });
 
   describe('ROAST_FORMATS constant', () => {

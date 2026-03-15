@@ -22,7 +22,7 @@ ROAST FORMAT GUIDANCE:
 - OBSERVATION: Notice an absurd truth everyone ignores ("Meetings that could have been emails exist in a parallel universe")
 - ACCUSATION: Call out universal behavior with love ("We all pretend to read terms and conditions")
 - CONFESSION: Admit shared guilt ("My plants and I have an understanding - I buy them they die")
-- COMPARISON: Draw absurd parallels ("Captchas are just robots testing if humans are robots")
+- COMPARISON: Draw absurd parallels ("Captchas are just robots testing if humans are robots"). Never compare a physical action or object to a relationship dynamic.
 
 TONE:
 - Affectionate, not mean-spirited

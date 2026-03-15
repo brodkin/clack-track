@@ -53,7 +53,16 @@ import { ModelTier as ModelTierEnum } from '../../../types/content-generator.js'
  */
 export const TOPIC_DOMAINS = {
   WORK_LIFE: ['meetings', 'reply-all', 'inbox zero', 'slack', 'zoom fatigue'],
-  MORNING_RITUALS: ['snooze button', 'coffee dependency', 'alarm clocks'],
+  MORNING_RITUALS: [
+    'snooze button',
+    'coffee dependency',
+    'alarm clocks',
+    'shower temperature',
+    'breakfast indecision',
+    'finding keys',
+    'toothpaste choices',
+    'picking an outfit',
+  ],
   TECHNOLOGY: ['passwords', 'captchas', 'updates', 'wifi', 'charging cables'],
   SOCIAL: ['small talk', 'networking', 'linkedin', 'group chats'],
   LIFESTYLE: ['gym memberships', 'meal prep', 'plants dying', 'laundry'],
