@@ -140,35 +140,39 @@ export const BARISTA_SCENARIOS = {
  * Delivery style types for comedic variety
  */
 export const DELIVERY_STYLES = [
-  'DEADPAN',
-  'VENTING',
-  'WAR_CORRESPONDENT',
-  'THERAPIST_NOTES',
-  'NATURE_DOCUMENTARY',
-  'SURVIVAL_GUIDE',
-  'SPORTS_COMMENTARY',
+  'HEADSET_CHATTER',
+  'GROUP_CHAT',
+  'GREEN_BEAN_TRAINING',
+  'SHIFT_NOTES',
+  'REGULAR_WATCH',
+  'GEN_Z_BARISTA',
+  'SSV_ENERGY',
+  'SM_CORPORATE_SPEAK',
 ] as const;
 
 /**
  * Style-specific guidance injected into prompts
  *
- * Each style produces structurally different output. Only the
- * selected style's guidance is injected to keep prompts lean.
+ * Each style produces structurally different output rooted in
+ * Starbucks partner culture. Only the selected style's guidance
+ * is injected to keep prompts lean.
  */
 export const STYLE_GUIDANCE: Record<(typeof DELIVERY_STYLES)[number], string> = {
-  DEADPAN: `Flat, matter-of-fact delivery. No emotional inflection. "47 mobile orders. One blender. This is fine." Let the absurdity speak for itself.`,
+  HEADSET_CHATTER: `Clipped drive-thru headset callouts during a rush — short bursts, interruptions, callouts between positions. "FOUR FRAPS ON BAR / WHO TOOK THE MOCHA DRIZZLE / SIX CARS DEEP AND SOMEONE WANTS A POUR OVER"`,
 
-  VENTING: `Unfiltered shift-end energy. The kind of thing you text your coworker from the parking lot. Exasperated but funny, not bitter.`,
+  GROUP_CHAT: `The unhinged partner group text after hours — casual, dramatic, one escalating thought. "OK WHO TOLD THE LADY WE CAN BLEND A CAKE POP INTO A FRAP BECAUSE SHE CAME BACK TODAY AND BROUGHT HER SISTER"`,
 
-  WAR_CORRESPONDENT: `Reporting from the front lines of the morning rush. Urgent, dramatic dispatches from behind the espresso bar. "Day 47. The oat milk supply has fallen."`,
+  GREEN_BEAN_TRAINING: `Veteran partner explaining something to a new hire with war-weary resignation. Mix genuine help with exhaustion. "WHEN THEY SAY EXTRA CARAMEL THEY MEAN COAT THE CUP LIKE YOURE FROSTING A WINDOW"`,
 
-  THERAPIST_NOTES: `Clinical observations about coffee shop chaos. "Patient reports hearing blender sounds in dreams. Session 47 of ongoing barista recovery."`,
+  SHIFT_NOTES: `Passive-aggressive shift supervisor log entries — starts professional then reveals frustration through increasingly specific instructions. "PLEASE REMIND PARTNERS THAT REFRESHERS GET WATER NOT LEMONADE UNLESS CHARGED ALSO THE OVEN IS MAKING THAT NOISE AGAIN"`,
 
-  NATURE_DOCUMENTARY: `Observing baristas and customers in their natural habitat. "The customer approaches the counter. They have not decided what to order. They never do."`,
+  REGULAR_WATCH: `Cataloguing a regular customer's unhinged routine with field-journal specificity. "TRENTA PINK DRINK GUY IS HERE AGAIN HE PARKS IN THE FIRE LANE AT SEVEN AND SAYS GOOD MORNING BEAUTIFUL TO THE SPEAKER BOX"`,
 
-  SURVIVAL_GUIDE: `Practical survival tips for working in a coffee shop. Field manual energy. "Rule 1: The drive-thru timer is not your friend. Rule 2: See rule 1."`,
+  GEN_Z_BARISTA: `The terminally online barista narrating their shift with deadpan gen z energy — no cap, unhinged observations, chronically understated reactions to chaos. "TWELVE FRAPS IN QUEUE AND THE VIBE IS GIVING COLLAPSE BUT LIKE IN A CUTE WAY"`,
 
-  SPORTS_COMMENTARY: `Play-by-play coverage of coffee shop moments. "And she's pulling the shots - double espresso - the crowd goes wild - wait, the customer wants it remade!"`,
+  SSV_ENERGY: `Shift supervisor holding it together by a thread — juggling call-outs, broken equipment, and corporate standards while running a floor with two partners. "THREE CALL OUTS AND HAPPY HOUR STARTS IN TWENTY AND THE WARMING OVEN JUST DIED SO THATS FUN"`,
+
+  SM_CORPORATE_SPEAK: `Store manager translating corporate initiatives into store reality with forced enthusiasm masking exhaustion. "GREAT NEWS TEAM WE ARE PILOTING A NEW WORKFLOW THAT ELIMINATES THE SECOND BAR POSITION DURING PEAK PLEASE STAY POSITIVE"`,
 };
 
 export type BaristaScenarioCategory = keyof typeof BARISTA_SCENARIOS;
