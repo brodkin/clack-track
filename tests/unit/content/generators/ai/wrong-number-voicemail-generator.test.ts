@@ -2,7 +2,7 @@
  * Tests for WrongNumberVoicemailGenerator
  *
  * Generator-specific behavior:
- * - CALLER_ARCHETYPES (15), SITUATION_DOMAINS (20), URGENCY_LEVELS (4) arrays
+ * - CALLER_ARCHETYPES (15), SITUATION_DOMAINS (50), URGENCY_LEVELS (4) arrays
  * - selectRandomItem() utility function
  * - getTemplateVariables() returning { callerArchetype, situationDomain, urgencyLevel }
  * - Instance property storage and getCustomMetadata()
@@ -75,8 +75,8 @@ describe('WrongNumberVoicemailGenerator', () => {
       expect(unique.size).toBe(CALLER_ARCHETYPES.length);
     });
 
-    it('should have SITUATION_DOMAINS array with 20 unique items', () => {
-      expect(SITUATION_DOMAINS).toHaveLength(20);
+    it('should have SITUATION_DOMAINS array with 50 unique items', () => {
+      expect(SITUATION_DOMAINS).toHaveLength(50);
       const unique = new Set(SITUATION_DOMAINS);
       expect(unique.size).toBe(SITUATION_DOMAINS.length);
     });

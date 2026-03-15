@@ -4,7 +4,7 @@
  * Provides variability seeds for the Wrong Number Voicemail Generator.
  * These dictionaries ensure high content variability by combining:
  * - 15 caller archetypes (voice energy, not specific characters)
- * - 20 situation domains (category of chaos, not specific scenarios)
+ * - 50 situation domains (category of chaos, not specific scenarios)
  * - 4 urgency levels (emotional tone of the message)
  *
  * Design principles:
@@ -82,47 +82,89 @@ export const CALLER_ARCHETYPES = [
  * based on the domain's general territory.
  *
  * Categories:
- * - Creature chaos (animals, insects, wildlife)
- * - Domestic disasters (appliances, plumbing, deliveries)
- * - Social chaos (events, family, neighbors)
- * - Logistical nightmares (transport, scheduling, lost items)
- * - Mysterious situations (phenomena, identity, bureaucracy)
- * - Escalating problems (spiraling, favors, DIY, food, tech)
+ * - Creature chaos (animals, insects)
+ * - Domestic disasters (appliances, deliveries, renovations, furniture, cleaning, storage)
+ * - Social chaos (events, family, neighbors, dating, traditions, pranks)
+ * - Logistical nightmares (transport, lost items, financial, parking, rental, relocation)
+ * - Mysterious situations (phenomena, identity, bureaucracy, smell, noise, superstition)
+ * - Escalating problems (spiraling, food, tech, bets, contests, gifts)
+ * - Personal crises (medical, wardrobe, hobby, bathroom, sleep, sports)
+ * - Environmental chaos (weather, outdoor, plants)
+ * - Communication tangles (language, photos, online, celebrity, classroom)
+ * - Structural conflicts (security, utility, inheritance, purchase)
  *
- * 20 domains = 5% chance per domain
+ * 50 domains = 2% chance per domain
  */
 export const SITUATION_DOMAINS = [
-  // Creature chaos (3)
+  // Creature chaos (2)
   'ANIMAL_INCIDENT',
   'INSECT_SITUATION',
-  'WILDLIFE_ENCOUNTER',
 
-  // Domestic disasters (3)
+  // Domestic disasters (6)
   'APPLIANCE_MALFUNCTION',
-  'PLUMBING_CATASTROPHE',
   'MYSTERIOUS_DELIVERY',
+  'RENOVATION_CATASTROPHE',
+  'FURNITURE_INCIDENT',
+  'CLEANING_GONE_WRONG',
+  'STORAGE_OVERFLOW',
 
-  // Social chaos (3)
+  // Social chaos (6)
   'EVENT_GONE_WRONG',
   'FAMILY_DRAMA',
   'NEIGHBOR_DISPUTE',
+  'DATING_MISHAP',
+  'TRADITION_MISHAP',
+  'PRANK_BACKFIRE',
 
-  // Logistical nightmares (3)
+  // Logistical nightmares (6)
   'TRANSPORTATION_CHAOS',
-  'SCHEDULING_DISASTER',
   'LOST_ITEM_CRISIS',
+  'FINANCIAL_MIXUP',
+  'PARKING_PREDICAMENT',
+  'RENTAL_MIXUP',
+  'RELOCATION_CHAOS',
 
-  // Mysterious situations (3)
+  // Mysterious situations (6)
   'UNEXPLAINED_PHENOMENON',
   'MISTAKEN_IDENTITY',
   'BUREAUCRATIC_NIGHTMARE',
+  'SMELL_MYSTERY',
+  'NOISE_SITUATION',
+  'SUPERSTITION_SPIRAL',
 
-  // Escalating problems (5)
+  // Escalating problems (6)
   'MINOR_ISSUE_SPIRALED',
-  'FAVOR_GONE_WRONG',
-  'DIY_DISASTER',
   'FOOD_SITUATION',
   'TECH_MELTDOWN',
+  'BET_ESCALATION',
+  'CONTEST_COMPLICATION',
+  'GIFT_BACKFIRE',
+
+  // Personal crises (6)
+  'MEDICAL_OVERREACTION',
+  'WARDROBE_EMERGENCY',
+  'HOBBY_GONE_WRONG',
+  'BATHROOM_EMERGENCY',
+  'SLEEP_DISTURBANCE',
+  'SPORTS_INCIDENT',
+
+  // Environmental chaos (3)
+  'WEATHER_COMPLICATION',
+  'OUTDOOR_MISADVENTURE',
+  'PLANT_SITUATION',
+
+  // Communication tangles (5)
+  'LANGUAGE_BARRIER',
+  'PHOTO_CONFUSION',
+  'ONLINE_DEBACLE',
+  'CELEBRITY_SIGHTING',
+  'CLASSROOM_INCIDENT',
+
+  // Structural conflicts (4)
+  'SECURITY_INCIDENT',
+  'UTILITY_DISPUTE',
+  'INHERITANCE_SURPRISE',
+  'PURCHASE_REGRET',
 ] as const;
 
 /**
