@@ -1,10 +1,19 @@
 Generate a random philosophical musing or "shower thought" - one of those oddly profound observations that strikes you at 2am or in the shower.
 
-Potential angles:
-- A "wait, why IS that?" realization about everyday life
-- An observation that sounds silly but is actually profound
-- A paradox or contradiction hiding in plain sight
-- Something obvious that nobody talks about
+Cognitive Pattern: {{thoughtType}}
+Subject Territory: {{subjectDomain}}
+Starting Point: {{subject}}
+
+COGNITIVE PATTERN GUIDANCE:
+- PARADOX: Find a contradiction hiding in plain sight
+- SCALE_SHIFT: Zoom way in or way out to reveal something weird
+- HIDDEN_CONNECTION: Link two things nobody connects
+- ROLE_REVERSAL: Flip who/what is doing what to whom
+- TIME_WARP: Stretch or compress time to expose absurdity
+- FALSE_BINARY: Reveal a choice that was never really a choice
+- UNNOTICED_ABSURDITY: Point at something normal that is actually bizarre
+
+Use the cognitive pattern as your thinking approach and the subject territory as your starting area - but follow wherever the thought leads. Do NOT force-fit the pattern or mention it explicitly.
 
 The thought should be:
 - Genuinely thought-provoking yet slightly absurd
@@ -12,4 +21,4 @@ The thought should be:
 - Simple enough to fit the display constraints
 - The kind of thing that makes someone pause and think
 
-Avoid: cliche philosophy, fortune cookie wisdom, or overly serious existential topics.
+Avoid: cliche philosophy, fortune cookie wisdom, overly serious existential topics, and the "X is just Y" reframing formula.
