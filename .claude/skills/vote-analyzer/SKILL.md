@@ -50,9 +50,27 @@ For each generator with downvotes, check these diagnostic lenses. These are anal
 
 If no generator shows a clear pattern, skip to Step 5 and report no actionable issues.
 
-## Step 4: Read Relevant Prompts
+## Step 4: Check Change History
 
-For generators you'll recommend changes to, read:
+Before recommending a fix, check whether the generator was already updated since the downvoted content was produced:
+
+```bash
+${CLAUDE_SKILL_DIR}/scripts/fetch-generator-history.sh <generator-id>
+```
+
+This shows recent commits to the generator's prompt, source, and system prompt with diffs.
+
+**Compare the dates**: If the generator's prompt or source was modified AFTER the most recent downvoted content was generated, the issue may already be fixed. In that case:
+
+- Read the diff to understand what changed
+- If the change directly addresses the pattern you found, **drop the recommendation** — note it as "likely already fixed" in your output instead
+- If the change is unrelated to the pattern, proceed with the recommendation
+
+This prevents recommending fixes that have already shipped.
+
+## Step 5: Read Relevant Prompts
+
+For generators you'll still recommend changes to, read:
 
 ```bash
 ${CLAUDE_SKILL_DIR}/scripts/fetch-prompts.sh <generator-id>
@@ -65,7 +83,7 @@ For dictionary issues, read the generator source to examine array sizes:
 # Generator sources follow: src/content/generators/ai/<generator-id>-generator.ts
 ```
 
-## Step 5: Present Results
+## Step 6: Present Results
 
 ### Output Rules
 
@@ -91,15 +109,16 @@ For each (up to 3), present one compact block:
 **Evidence**: [1-2 sentences with specific counts or metadata values. At most one content sample.]
 **Root cause**: [Which prompt instruction or dictionary gap causes this]
 **Fix**: [One concrete, actionable change]
+**Status**: [OPEN — still present in current code | LIKELY FIXED — prompt/source updated on <date>, change addresses this pattern]
 ```
 
-Only surface patterns that produced findings.
+Only surface patterns that produced findings. Issues marked LIKELY FIXED are informational — don't count toward the 3-recommendation cap.
 
 ### Insufficient Data
 
 One line listing generators with <2 total votes. No analysis.
 
-## Step 6: Act on Findings
+## Step 7: Act on Findings
 
 Ask the user:
 
