@@ -90,7 +90,7 @@ docker run --rm \
   -e DATABASE_URL="$DATABASE_URL" \
   -e DATABASE_TYPE="$DATABASE_TYPE" \
   clack-track:$COMMIT_SHA \
-  node dist/cli/index.js db:migrate
+  node dist/index.js db:migrate
 
 # Verify migrations succeeded (exit code check is automatic with set -e)
 echo "Migrations completed successfully"
@@ -153,7 +153,7 @@ If deployment fails or issues are detected:
      -e DATABASE_URL="$DATABASE_URL" \
      -e DATABASE_TYPE="$DATABASE_TYPE" \
      clack-track:$COMMIT_SHA \
-     node dist/cli/index.js db:migrate --status
+     node dist/index.js db:migrate --status
    ```
 
 2. **Manual rollback options:**
