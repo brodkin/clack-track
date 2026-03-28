@@ -2,7 +2,7 @@
  * Tests for DailyRoastGenerator
  *
  * Generator-specific behavior:
- * - Topic selection (6 domains with topics)
+ * - Topic selection (8 domains with topics)
  * - Roast format selection (4 formats)
  * - TOPIC_DOMAINS and ROAST_FORMATS constants
  * - Template variable injection (topicDomain, topic, roastFormat)
@@ -52,6 +52,8 @@ describe('DailyRoastGenerator', () => {
         'SOCIAL',
         'LIFESTYLE',
         'DATING',
+        'FOOD_AND_COOKING',
+        'ADULTING',
       ];
 
       const selectedDomains = new Set<string>();
@@ -135,7 +137,7 @@ describe('DailyRoastGenerator', () => {
   });
 
   describe('TOPIC_DOMAINS constant', () => {
-    it('should contain all required topic domains with their topics', () => {
+    it('should contain all required topic domains with anchor topics', () => {
       const domains = DailyRoastGenerator.TOPIC_DOMAINS;
 
       expect(domains).toHaveProperty('WORK_LIFE');
@@ -144,37 +146,36 @@ describe('DailyRoastGenerator', () => {
       expect(domains).toHaveProperty('SOCIAL');
       expect(domains).toHaveProperty('LIFESTYLE');
       expect(domains).toHaveProperty('DATING');
+      expect(domains).toHaveProperty('FOOD_AND_COOKING');
+      expect(domains).toHaveProperty('ADULTING');
 
-      expect(domains.WORK_LIFE).toContain('meetings');
+      expect(domains.WORK_LIFE).toContain('reply-all');
       expect(domains.MORNING_RITUALS).toContain('snooze button');
       expect(domains.TECHNOLOGY).toContain('passwords');
       expect(domains.SOCIAL).toContain('small talk');
       expect(domains.LIFESTYLE).toContain('gym memberships');
       expect(domains.DATING).toContain('dating apps');
+      expect(domains.FOOD_AND_COOKING).toContain('delivery app guilt');
+      expect(domains.ADULTING).toContain('furniture assembly');
     });
 
-    it('should have at least 8 topics in MORNING_RITUALS to reduce repeat probability', () => {
+    it('should have at least 10 topics in every domain to reduce repeat probability', () => {
       const domains = DailyRoastGenerator.TOPIC_DOMAINS;
-      expect(domains.MORNING_RITUALS.length).toBeGreaterThanOrEqual(8);
-    });
-
-    it('should have MORNING_RITUALS topics that are broad everyday situations', () => {
-      const domains = DailyRoastGenerator.TOPIC_DOMAINS;
-
-      // Original 3 topics must still be present
-      expect(domains.MORNING_RITUALS).toContain('snooze button');
-      expect(domains.MORNING_RITUALS).toContain('coffee dependency');
-      expect(domains.MORNING_RITUALS).toContain('alarm clocks');
-
-      // All topics should be non-empty strings
-      for (const topic of domains.MORNING_RITUALS) {
-        expect(typeof topic).toBe('string');
-        expect(topic.length).toBeGreaterThan(0);
+      for (const [, topics] of Object.entries(domains)) {
+        expect(topics.length).toBeGreaterThanOrEqual(10);
       }
+    });
 
-      // No duplicate topics
-      const uniqueTopics = new Set(domains.MORNING_RITUALS);
-      expect(uniqueTopics.size).toBe(domains.MORNING_RITUALS.length);
+    it('should have topics that are non-empty unique strings in every domain', () => {
+      const domains = DailyRoastGenerator.TOPIC_DOMAINS;
+      for (const [, topics] of Object.entries(domains)) {
+        for (const topic of topics) {
+          expect(typeof topic).toBe('string');
+          expect(topic.length).toBeGreaterThan(0);
+        }
+        const uniqueTopics = new Set(topics);
+        expect(uniqueTopics.size).toBe(topics.length);
+      }
     });
   });
 

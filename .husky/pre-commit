@@ -34,10 +34,10 @@ fi
 git add -u
 
 # Flush beads changes after all quality gates pass
-if command -v bd >/dev/null 2>&1 && [ -d .beads ]; then
-    if ! bd sync --flush-only >/dev/null 2>&1; then
-        echo "Error: Failed to flush bd changes to JSONL" >&2
-        echo "Run 'bd sync --flush-only' manually to diagnose" >&2
+if command -v bd >/dev/null 2>&1 && ls .beads/*.db >/dev/null 2>&1; then
+    if ! bd export -o .beads/issues.jsonl >/dev/null 2>&1; then
+        echo "Error: Failed to export bd changes to JSONL" >&2
+        echo "Run 'bd export -o .beads/issues.jsonl' manually to diagnose" >&2
         exit 1
     fi
     if [ -f .beads/issues.jsonl ]; then

@@ -69,7 +69,6 @@ All files in `tests/unit/content/generators/ai/` should move to `tests/integrati
 | `shower-thought-generator.test.ts`     | Arbitrary existence checks                                                                | Move to integration; test behavior                              |
 | `paradox-engine-generator.test.ts`     | Arbitrary existence checks                                                                | Move to integration; test behavior                              |
 | `news-generator.test.ts`               | Arbitrary existence checks                                                                | Move to integration; test behavior                              |
-| `time-perspective-generator.test.ts`   | Fixed count: `toHaveLength(5)` L48                                                        | Move to integration; use presence assertion                     |
 | `iss-observer-generator.test.ts`       | Mocks createAIProvider, personality, ISSClient                                            | Move to integration; mock only ISS API                          |
 | `sleep-greeting-generator.test.ts`     | Arbitrary existence checks                                                                | Move to integration; test behavior                              |
 | `global-news-generator.test.ts`        | Fixed count: `toHaveLength(2)` L148                                                       | Move to integration; use presence assertion                     |

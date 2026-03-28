@@ -82,6 +82,49 @@ const ZODIAC_SIGNS = [
 ] as const;
 
 /**
+ * Corporate buzzword pool
+ *
+ * A random subset of 5 is selected per generation to prevent
+ * the LLM from gravitating to the same high-frequency terms.
+ */
+const CORPORATE_BUZZWORDS = [
+  'synergy',
+  'leverage',
+  'bandwidth',
+  'deliverables',
+  'circle back',
+  'take offline',
+  'low-hanging fruit',
+  'move the needle',
+  'deep dive',
+  'pivot',
+  'actionable',
+  'stakeholder',
+  'optimize',
+  'scalable',
+  'runway',
+  'align',
+  'unpack',
+  'ecosystem',
+  'paradigm shift',
+  'value proposition',
+  'thought leadership',
+  'boil the ocean',
+  'net-net',
+  'tiger team',
+  'north star',
+  'right-size',
+  'ideate',
+  'cross-pollinate',
+  'cadence',
+  'guardrails',
+  'swim lane',
+  'table stakes',
+  'headwinds',
+  'double-click',
+] as const;
+
+/**
  * Generates corporate jargon horoscopes
  *
  * Extends AIPromptGenerator with horoscope-specific prompts,
@@ -98,6 +141,11 @@ export class CorporateHoroscopeGenerator extends AIPromptGenerator {
    * Selected business context for the current generation
    */
   private selectedContext: string = '';
+
+  /**
+   * Selected buzzwords for the current generation
+   */
+  private selectedBuzzwords: string[] = [];
 
   /**
    * Creates a new CorporateHoroscopeGenerator instance
@@ -163,6 +211,24 @@ export class CorporateHoroscopeGenerator extends AIPromptGenerator {
   }
 
   /**
+   * Selects a random subset of buzzwords without replacement
+   *
+   * @returns Array of 5 unique buzzword strings
+   */
+  private selectRandomBuzzwords(): string[] {
+    const pool = [...CORPORATE_BUZZWORDS];
+    const selected: string[] = [];
+
+    for (let i = 0; i < 5; i++) {
+      const randomIndex = Math.floor(Math.random() * pool.length);
+      selected.push(pool[randomIndex]);
+      pool.splice(randomIndex, 1);
+    }
+
+    return selected;
+  }
+
+  /**
    * Hook: Returns template variables for prompt injection
    *
    * Selects a random zodiac sign and business context
@@ -176,10 +242,12 @@ export class CorporateHoroscopeGenerator extends AIPromptGenerator {
   ): Promise<Record<string, string>> {
     this.selectedSign = this.getRandomZodiacSign();
     this.selectedContext = this.getRandomBusinessContext();
+    this.selectedBuzzwords = this.selectRandomBuzzwords();
 
     return {
       zodiacSign: this.selectedSign,
       businessContext: this.selectedContext,
+      selectedBuzzwords: this.selectedBuzzwords.join(', '),
     };
   }
 
@@ -195,6 +263,7 @@ export class CorporateHoroscopeGenerator extends AIPromptGenerator {
     return {
       zodiacSign: this.selectedSign,
       businessContext: this.selectedContext,
+      selectedBuzzwords: this.selectedBuzzwords,
     };
   }
 }

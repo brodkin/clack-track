@@ -76,8 +76,6 @@ export interface CoreGenerators {
   dailyRoast: ContentGenerator;
   /** Serial story generator (P2, MEDIUM, AI-powered) */
   serialStory: ContentGenerator;
-  /** Time perspective generator (P2, MEDIUM, AI-powered) */
-  timePerspective: ContentGenerator;
   /** Hot take generator (P2, LIGHT, AI-powered) */
   hotTake: ContentGenerator;
   /** Novel insight generator (P2, MEDIUM, AI-powered) */
@@ -285,17 +283,6 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.serialStory
-  );
-
-  registry.register(
-    {
-      id: 'time-perspective',
-      name: 'Time Perspective Generator',
-      priority: ContentPriority.NORMAL,
-      modelTier: ModelTier.MEDIUM,
-      applyFrame: true,
-    },
-    generators.timePerspective
   );
 
   registry.register(

@@ -4,7 +4,8 @@
  * Generator-specific behavior:
  * - Zodiac sign selection (12 signs)
  * - Business context randomization (12 contexts)
- * - Template variable injection (zodiacSign, businessContext)
+ * - Buzzword selection (5 from pool of 34)
+ * - Template variable injection (zodiacSign, businessContext, selectedBuzzwords)
  * - Custom metadata tracking
  */
 
@@ -143,6 +144,7 @@ describe('CorporateHoroscopeGenerator', () => {
         expect.objectContaining({
           zodiacSign: expect.any(String),
           businessContext: expect.any(String),
+          selectedBuzzwords: expect.any(String),
         })
       );
     });
@@ -181,8 +183,104 @@ describe('CorporateHoroscopeGenerator', () => {
     });
   });
 
+  describe('buzzword selection', () => {
+    const validBuzzwords = [
+      'synergy',
+      'leverage',
+      'bandwidth',
+      'deliverables',
+      'circle back',
+      'take offline',
+      'low-hanging fruit',
+      'move the needle',
+      'deep dive',
+      'pivot',
+      'actionable',
+      'stakeholder',
+      'optimize',
+      'scalable',
+      'runway',
+      'align',
+      'unpack',
+      'ecosystem',
+      'paradigm shift',
+      'value proposition',
+      'thought leadership',
+      'boil the ocean',
+      'net-net',
+      'tiger team',
+      'north star',
+      'right-size',
+      'ideate',
+      'cross-pollinate',
+      'cadence',
+      'guardrails',
+      'swim lane',
+      'table stakes',
+      'headwinds',
+      'double-click',
+    ];
+
+    it('should inject 5 valid buzzwords as a comma-separated string', async () => {
+      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      await generator.generate(mockContext);
+
+      const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
+      const userPromptCall = calls[1];
+      const templateVars = userPromptCall[2] as Record<string, unknown>;
+      const buzzwordString = templateVars.selectedBuzzwords as string;
+      const buzzwords = buzzwordString.split(', ');
+
+      expect(buzzwords).toHaveLength(5);
+      buzzwords.forEach(bw => {
+        expect(validBuzzwords).toContain(bw);
+      });
+    });
+
+    it('should select unique buzzwords with no duplicates within one generation', async () => {
+      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      for (let i = 0; i < 10; i++) {
+        mockPromptLoader.loadPromptWithVariables.mockClear();
+        await generator.generate(mockContext);
+
+        const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
+        const templateVars = calls[1][2] as Record<string, unknown>;
+        const buzzwords = (templateVars.selectedBuzzwords as string).split(', ');
+        const unique = new Set(buzzwords);
+
+        expect(unique.size).toBe(buzzwords.length);
+      }
+    });
+
+    it('should produce variety in buzzword selection over multiple generations', async () => {
+      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      const allSelected = new Set<string>();
+
+      for (let i = 0; i < 20; i++) {
+        mockPromptLoader.loadPromptWithVariables.mockClear();
+        await generator.generate(mockContext);
+
+        const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
+        const templateVars = calls[1][2] as Record<string, unknown>;
+        const buzzwords = (templateVars.selectedBuzzwords as string).split(', ');
+        buzzwords.forEach(bw => allSelected.add(bw));
+      }
+
+      expect(allSelected.size).toBeGreaterThan(10);
+    });
+  });
+
   describe('custom metadata tracking', () => {
-    it('should include zodiacSign and businessContext in metadata', async () => {
+    it('should include zodiacSign, businessContext, and selectedBuzzwords in metadata', async () => {
       const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
@@ -193,6 +291,9 @@ describe('CorporateHoroscopeGenerator', () => {
       expect(typeof result.metadata?.zodiacSign).toBe('string');
       expect(result.metadata?.businessContext).toBeDefined();
       expect(typeof result.metadata?.businessContext).toBe('string');
+      expect(result.metadata?.selectedBuzzwords).toBeDefined();
+      expect(Array.isArray(result.metadata?.selectedBuzzwords)).toBe(true);
+      expect((result.metadata?.selectedBuzzwords as string[]).length).toBe(5);
     });
   });
 });

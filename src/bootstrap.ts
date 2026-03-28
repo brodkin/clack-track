@@ -33,7 +33,6 @@ import { DailyRoastGenerator } from './content/generators/ai/daily-roast-generat
 import { HotTakeGenerator } from './content/generators/ai/hot-take-generator.js';
 import { NovelInsightGenerator } from './content/generators/ai/novel-insight-generator.js';
 import { SerialStoryGenerator } from './content/generators/ai/serial-story-generator.js';
-import { TimePerspectiveGenerator } from './content/generators/ai/time-perspective-generator.js';
 import { LanguageLessonGenerator } from './content/generators/ai/language-lesson-generator.js';
 import { AlienFieldReportGenerator } from './content/generators/ai/alien-field-report-generator.js';
 import { HappyToSeeMeGenerator } from './content/generators/ai/happy-to-see-me-generator.js';
@@ -227,7 +226,6 @@ function createCoreGenerators(
     serialStory: contentRepository
       ? new SerialStoryGenerator(promptLoader, modelTierSelector, contentRepository, apiKeys)
       : new StaticFallbackGenerator('prompts/static'), // Fallback when no repository
-    timePerspective: new TimePerspectiveGenerator(promptLoader, modelTierSelector, apiKeys),
     hotTake: new HotTakeGenerator(promptLoader, modelTierSelector, apiKeys),
     novelInsight: new NovelInsightGenerator(promptLoader, modelTierSelector, apiKeys),
     languageLesson: new LanguageLessonGenerator(promptLoader, modelTierSelector, apiKeys),

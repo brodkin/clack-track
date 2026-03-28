@@ -26,7 +26,6 @@ export { SerialStoryGenerator } from './serial-story-generator.js';
 export { ShowerThoughtGenerator } from './shower-thought-generator.js';
 export { SleepGreetingGenerator } from './sleep-greeting-generator.js';
 export { TechNewsGenerator } from './tech-news-generator.js';
-export { TimePerspectiveGenerator } from './time-perspective-generator.js';
 export { TourGuideGenerator } from './tour-guide-generator.js';
 export { WakeupGreetingGenerator } from './wakeup-greeting-generator.js';
 export { WeatherGenerator } from './weather-generator.js';

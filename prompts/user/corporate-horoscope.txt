@@ -11,7 +11,7 @@ CORPORATE ASTROLOGY TRANSLATION:
 - Trines = "Natural synergies"
 
 REQUIRED BUZZWORDS (use at least 3):
-synergy, leverage, bandwidth, deliverables, circle back, take offline, low-hanging fruit, move the needle, deep dive, pivot, actionable, stakeholder, optimize, scalable, runway, align, unpack, ecosystem
+{{selectedBuzzwords}}
 
 TONE:
 - Deadpan serious - this IS legitimate business guidance from the cosmos
