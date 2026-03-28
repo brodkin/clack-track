@@ -110,6 +110,8 @@ export interface CoreGenerators {
   castMemberRadio: ContentGenerator;
   /** Zayde Wisdom generator (P2, MEDIUM, AI-powered) */
   zaydeWisdom: ContentGenerator;
+  /** Fake Gay News generator (P2, MEDIUM, AI-powered) */
+  fakeGayNews: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -470,6 +472,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.zaydeWisdom
+  );
+
+  registry.register(
+    {
+      id: 'fake-gay-news',
+      name: 'Fake Gay News',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.fakeGayNews
   );
 
   // Register P3 fallback generator (FALLBACK priority)
