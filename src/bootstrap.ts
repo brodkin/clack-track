@@ -49,6 +49,7 @@ import { BaristaLifeGenerator } from './content/generators/ai/barista-life-gener
 import { CastMemberRadioGenerator } from './content/generators/ai/cast-member-radio-generator.js';
 import { ZaydeWisdomGenerator } from './content/generators/ai/zayde-wisdom-generator.js';
 import { FakeGayNewsGenerator } from './content/generators/ai/fake-gay-news-generator.js';
+import { AppleKeynoteFoodGenerator } from './content/generators/ai/apple-keynote-food-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { SleepModeGenerator } from './content/generators/programmatic/sleep-mode-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
@@ -252,6 +253,7 @@ function createCoreGenerators(
     castMemberRadio: new CastMemberRadioGenerator(promptLoader, modelTierSelector, apiKeys),
     zaydeWisdom: new ZaydeWisdomGenerator(promptLoader, modelTierSelector, apiKeys),
     fakeGayNews: new FakeGayNewsGenerator(promptLoader, modelTierSelector, apiKeys),
+    appleKeynoteFood: new AppleKeynoteFoodGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }
