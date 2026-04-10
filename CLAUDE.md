@@ -685,6 +685,37 @@ DATABASE_URL=mysql://root:devpassword@mysql:3306/clack_track
 - `src/storage/models/` - Data access layer (ContentModel, VoteModel, etc.)
 - `src/storage/repositories/` - Repository pattern wrappers with error handling
 
+## Proxy Environments (Claude Code Remote)
+
+When running in environments where API keys are set via environment variables (not `.env` files) and outbound traffic goes through an `HTTPS_PROXY`, the Anthropic Node SDK (v0.x) **does not route requests through the proxy**. This causes `content:test` and other CLI commands that call the AI API to fail with `Request timed out`.
+
+**Symptom:** `curl` to `api.anthropic.com` works, but the app's Anthropic SDK calls time out.
+
+**Root cause:** The SDK uses Node's native `fetch` which doesn't honor `HTTPS_PROXY`. The `GLOBAL_AGENT_*` env vars are set but `global-agent` is not installed or bootstrapped.
+
+**Workaround for testing content generators:** Use `https-proxy-agent` with Node's `https` module directly:
+
+```typescript
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import https from 'https';
+
+const agent = new HttpsProxyAgent(process.env.HTTPS_PROXY);
+const req = https.request({
+  hostname: 'api.anthropic.com',
+  port: 443,
+  path: '/v1/messages',
+  method: 'POST',
+  agent,
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': process.env.ANTHROPIC_API_KEY,
+    'anthropic-version': '2023-06-01',
+  }
+}, /* ... */);
+```
+
+**Note:** This only affects proxy environments (e.g., Claude Code remote containers). In most development environments, `.env` is used and there is no proxy - the SDK works normally.
+
 ## Quick Reference
 
 | Need              | Source                                                                            |

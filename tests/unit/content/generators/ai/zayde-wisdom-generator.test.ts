@@ -96,6 +96,13 @@ WHAT DO I KNOW`;
       });
       mockModelTierSelector.getAlternate.mockReturnValue(null);
 
+      jest
+        .spyOn(
+          ZaydeWisdomGenerator.prototype as { createProviderForSelection: () => unknown },
+          'createProviderForSelection'
+        )
+        .mockReturnValue(mockAIProvider);
+
       const generator = new ZaydeWisdomGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
@@ -107,6 +114,8 @@ WHAT DO I KNOW`;
       }
 
       expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
+
+      jest.restoreAllMocks();
     });
 
     it('should work without API keys (default empty object)', () => {

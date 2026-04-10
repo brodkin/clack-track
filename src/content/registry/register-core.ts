@@ -110,6 +110,8 @@ export interface CoreGenerators {
   zaydeWisdom: ContentGenerator;
   /** Fake Gay News generator (P2, MEDIUM, AI-powered) */
   fakeGayNews: ContentGenerator;
+  /** No Thank You generator (P2, LIGHT, AI-powered) */
+  noThankYou: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -470,6 +472,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.fakeGayNews
+  );
+
+  registry.register(
+    {
+      id: 'no-thank-you',
+      name: 'No Thank You Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.noThankYou
   );
 
   // Register P3 fallback generator (FALLBACK priority)
