@@ -1,0 +1,35 @@
+Generate a "NO THANK YOU" phrase - a polite refusal that implies a wild, unexplained backstory.
+
+FORMAT:
+Your output MUST start with "NO THANK YOU," followed by a short, punchy statement.
+The comma after "NO THANK YOU" is MANDATORY.
+Keep the follow-up statement to 1-3 lines MAX after the opener.
+
+SCENARIO CONTEXT:
+Imagine someone is in this situation: {{scenario}}
+The "no thank you" is a response to something implied but never explained.
+
+TONE: {{tone}}
+
+WHAT MAKES THIS WORK:
+- The statement IMPLIES a dramatic, hilarious, or scandalous backstory
+- You never explain the backstory - the reader's imagination does the work
+- It should make someone stop and think "wait, WHAT happened?"
+- The more casually delivered, the funnier it is
+- Character is revealed through what's refused, not what's explained
+
+EXAMPLES OF THE VIBE:
+- NO THANK YOU, BROUGHT MY OWN TEQUILA
+- NO THANK YOU, I'M ACTUALLY NOT PREGNANT
+- NO THANK YOU, I LEARNED MY LESSON IN VEGAS
+- NO THANK YOU, THAT'S HOW I LOST THE FIRST ONE
+- NO THANK YOU, MY LAWYER SAID I CAN'T
+
+ANTI-PATTERNS (DO NOT DO THESE):
+- Don't explain the backstory ("NO THANK YOU, I DRANK TOO MUCH LAST TIME AND GOT SICK" - too much info)
+- Don't be generic ("NO THANK YOU, I'M GOOD" - boring, no intrigue)
+- Don't be preachy or wholesome ("NO THANK YOU, I CHOOSE SELF CARE" - miss the point)
+- Don't reference being an AI or a display board
+- Don't use the examples above verbatim - create something ORIGINAL
+
+The magic is in what's LEFT UNSAID. Every phrase should leave the reader constructing their own hilarious scenario.
