@@ -13,7 +13,12 @@
  * - Dual dictionary randomization produces valid combinations
  */
 
-import { ZaydeWisdomGenerator, TOPICS, APPROACHES, APPROACH_GUIDANCE } from '@/content/generators/ai/zayde-wisdom-generator';
+import {
+  ZaydeWisdomGenerator,
+  TOPICS,
+  APPROACHES,
+  APPROACH_GUIDANCE,
+} from '@/content/generators/ai/zayde-wisdom-generator';
 import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector';
 import { ModelTier } from '@/types/content-generator';
@@ -78,6 +83,30 @@ WHAT DO I KNOW`;
   });
 
   describe('constructor', () => {
+    let constructorMockAIProvider: jest.Mocked<AIProvider>;
+
+    beforeEach(() => {
+      constructorMockAIProvider = {
+        generate: jest.fn().mockResolvedValue({
+          text: 'MOCK CONTENT',
+          model: 'gpt-4.1-mini',
+          tokensUsed: 50,
+        }),
+        validateConnection: jest.fn().mockResolvedValue(true),
+      } as unknown as jest.Mocked<AIProvider>;
+
+      jest
+        .spyOn(
+          ZaydeWisdomGenerator.prototype as { createProviderForSelection: () => unknown },
+          'createProviderForSelection'
+        )
+        .mockReturnValue(constructorMockAIProvider);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('should create instance with PromptLoader, ModelTierSelector, and MEDIUM tier', () => {
       const generator = new ZaydeWisdomGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
@@ -100,11 +129,7 @@ WHAT DO I KNOW`;
         openai: 'test-key',
       });
 
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider - we're testing the tier selection call
-      }
+      await generator.generate({ updateType: 'major', timestamp: new Date() });
 
       expect(mockModelTierSelector.select).toHaveBeenCalledWith(ModelTier.MEDIUM);
     });

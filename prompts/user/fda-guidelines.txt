@@ -1,0 +1,114 @@
+Share a specific, factual food regulation fact.
+
+PARAMETERS:
+- Regulatory Body: {{regulatoryBody}}
+- Topic Area: {{topicArea}}
+- Presentation Angle: {{presentationAngle}}
+
+YOUR MISSION:
+Present a REAL, SPECIFIC regulatory fact from the given body and topic area through the lens of the given angle. The fact must be TRUE - do not fabricate regulations. Present it dry and factual. No editorial commentary, no punchlines, no reactions. The regulation's own absurdity or precision speaks for itself.
+
+COMPLETENESS IS CRITICAL:
+Each fact must be fully self-contained and completely explained. Do not tease a topic without delivering the specific detail. Better to narrow the scope and fully explain one specific rule than to vaguely gesture at a broad topic.
+
+Be specific: name the exact substances, percentages, grades, thresholds, or measurements. Do not say "several dyes" when you can say "RED 3 AND RED 40." Do not say "strict requirements" when you can say "AT LEAST 10% MILKFAT BY WEIGHT."
+
+REGULATORY BODY GUIDANCE:
+- US_FDA: Food and Drug Administration (21 CFR standards of identity, food labeling, GRAS, defect action levels)
+- USDA: Dept of Agriculture (meat/poultry inspection, grading, organic, free range definitions)
+- EU_COMMISSION: European Commission (protected designations, novel foods, additive limits, classification rules)
+- JAPAN_MHLW: Ministry of Health Labour and Welfare (banned additives, food safety standards, unique restrictions)
+- CANADA_CFIA: Canadian Food Inspection Agency (bilingual labeling, maple syrup standards, dairy composition)
+- UK_FSA: UK Food Standards Agency (post-Brexit rules, allergen law, compositional standards)
+- AUSTRALIA_FSANZ: Food Standards Australia New Zealand (unique risk assessments, labeling standards)
+- CODEX_ALIMENTARIUS: UN/WHO international food code (global baseline definitions, trade standards)
+- SOUTH_KOREA_MFDS: Korean food safety (health functional food categories, kimchi standards, labeling)
+- INDIA_FSSAI: Food Safety Standards Authority of India (vegetarian marking, fortification, standards)
+- BRAZIL_ANVISA: Brazilian health surveillance (front-of-pack warnings, functional food claims)
+- MEXICO_COFEPRIS: Mexican food regulation (octagonal warning labels, junk food advertising rules)
+
+PRESENTATION ANGLE GUIDANCE:
+- SURPRISING_DEFINITION: Lead with the unexpected legal definition. What does the law say this food actually IS?
+- WEIRD_LOOPHOLE: Focus on what the rule accidentally allows or a gap that creates strange outcomes
+- GRADING_TRIVIA: Focus on the specific grading or scoring process - what each level means, how its measured
+- INTERNATIONAL_COMPARISON: Contrast how two countries define or regulate the same food differently
+- HISTORICAL_ORIGIN: What specific incident, scandal, or lobbying effort caused this rule to exist
+- INDUSTRY_INSIDER: A fact that people who work in the food industry know but consumers typically do not
+- CONSUMER_PROTECTION: A specific rule that protects people in a way they never think about
+- ABSURD_PRECISION: Focus on hilariously specific numbers, measurements, or testing procedures in regulations
+
+FACTUAL ACCURACY:
+- Reference REAL regulations with specific numbers
+- If uncertain about a specific detail, choose a different well-known fact from the same domain
+- Better to share a well-known accurate fact than an impressive-sounding false one
+- Do not cite legal code numbers - keep it conversational but precise
+
+EXAMPLES:
+
+THE FDA DEFINES AN
+OMELETTE AS AT LEAST
+3 WHOLE EGGS WITH NO
+MORE THAN 30% ADDED
+INGREDIENTS BY WEIGHT
+
+USDA PRIME IS THE TOP
+BEEF GRADE REQUIRING
+ABUNDANT FAT MARBLING
+THROUGH THE MEAT AND
+ONLY 2% QUALIFIES
+
+EU LAW CLASSIFIES
+CARROTS AS A FRUIT
+SPECIFICALLY FOR THE
+PURPOSE OF REGULATING
+JAM AND MARMALADE
+
+THE FDA ALLOWS UP TO
+30 INSECT FRAGMENTS
+PER 100 GRAMS IN
+PEANUT BUTTER UNDER
+DEFECT ACTION LEVELS
+
+JAPAN BANS RED 3 AND
+RED 40 - TWO OF THE
+MOST COMMON FOOD DYES
+IN AMERICAN CANDY
+CEREAL AND SODA
+
+FDA: ICE CREAM MUST
+CONTAIN 10% MILKFAT
+WEIGH 4.5 LBS PER
+GALLON AND HAVE LESS
+THAN 100% OVERRUN
+
+USDA FREE RANGE MEANS
+CHICKENS MUST HAVE
+ACCESS TO OUTDOORS
+BUT THERES NO RULE ON
+SIZE OR TIME OUTSIDE
+
+CANADA GRADES MAPLE
+SYRUP BY LIGHT
+TRANSMITTANCE - GOLDEN
+AMBER DARK AND VERY
+DARK ARE THE 4 GRADES
+
+"JUICE" UNDER FDA
+RULES MUST BE 100%
+FRUIT JUICE - ANYTHING
+LESS IS A "JUICE DRINK"
+OR "JUICE COCKTAIL"
+
+PARMIGIANO REGGIANO
+HAS BEEN MADE UNDER
+THE SAME RULES SINCE
+1934 - ONLY 3
+INGREDIENTS ALLOWED
+
+DO NOT:
+- Make up fake regulations or invent numbers
+- Add editorial commentary, punchlines, or reactions to the fact
+- Use vague language when specific numbers or names are available
+- Start every fact with the same opening structure - vary your approach
+- Include legal code citations (no "21 CFR 131.110")
+- Editorialize with phrases like "BELIEVE IT OR NOT" or "YOU WONT BELIEVE"
