@@ -1,7 +1,7 @@
 /**
  * Commitlint Configuration
  *
- * Enforces SPICE commit message standards with Beads reference requirement
+ * Enforces SPICE commit message standards.
  *
  * Format: <type>(<scope>): <subject>
  *
@@ -16,28 +16,10 @@
  * - chore: Maintenance tasks
  * - ci: CI/CD changes
  * - BREAKING CHANGE: in footer triggers MAJOR version bump
- *
- * Beads Reference Required:
- * - Footer must include a reference starting with "clack-"
- * - Format: Refs: clack-123 or Closes: clack-456
  */
-
-// Custom plugin to validate Beads references
-const beadsRefPlugin = {
-  rules: {
-    'beads-ref-required': ({ raw }) => {
-      // Match clack- followed by digits or alphanumeric ID
-      const beadsRefPattern = /\bclack-[a-z0-9]+\b/i;
-      const hasBeadsRef = beadsRefPattern.test(raw);
-
-      return [hasBeadsRef, 'Commit must include a Beads reference (e.g., "Refs: clack-123")'];
-    },
-  },
-};
 
 module.exports = {
   extends: ['@commitlint/config-conventional'],
-  plugins: [beadsRefPlugin],
   rules: {
     // Enforce conventional types
     'type-enum': [
@@ -78,8 +60,5 @@ module.exports = {
 
     // Header (first line) rules
     'header-max-length': [2, 'always', 72], // Total header max 72 chars
-
-    // Beads reference required in commit message
-    'beads-ref-required': [2, 'always'],
   },
 };

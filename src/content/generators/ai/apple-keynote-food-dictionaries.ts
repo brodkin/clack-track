@@ -135,11 +135,11 @@ export const FOOD_ITEMS = {
     'chicago dog',
     'coney island dog',
     'bratwurst',
-    'corn dog',
     'slaw dog',
     'bacon wrapped dog',
     'sonoran hot dog',
     'new york dirty water dog',
+    'polish sausage',
   ],
 
   DESSERTS: [
@@ -208,7 +208,7 @@ export const KEYNOTE_STYLES = [
   'paradigm_shift',
   'seamless_ecosystem',
   'health_feature',
-  'subscription_pitch',
+  'tier_announcement',
   'design_superlative',
   'camera_feature',
 ] as const;
@@ -220,31 +220,31 @@ export const KEYNOTE_STYLES = [
 export const STYLE_GUIDANCE: Record<(typeof KEYNOTE_STYLES)[number], string> = {
   product_launch: `Grand unveiling energy. "Introducing X. The most advanced Y we've ever created." Reverent pause before the name drop. This is the moment the audience has been waiting for.`,
 
-  spec_reveal: `Oddly specific stats delivered with profound gravity. "With 47% more Z than the previous generation." The more mundane the stat, the more seriously it must be presented. Bar charts energy.`,
+  spec_reveal: `Oddly specific stats delivered with profound gravity. Pattern: "With [odd number]% more [quality] than the previous generation." The more mundane the stat, the more seriously it must be presented. Bar charts energy. Invent your own number - do not default to common ones.`,
 
   one_more_thing: `The legendary surprise reveal. Build anticipation, then drop the bombshell. "And one more thing..." Pause. Let it breathe. Then unveil something absurdly mundane as if it changes everything.`,
 
   environmental_claim: `Sustainability theater. "Made with 100% recycled W. Our most sustainable X yet." Carbon neutral condiments. Post-consumer packaging pride. Earnest commitment to saving the planet through burger innovation.`,
 
-  lineup_reveal: `The product family announcement. "X. X Max. X Ultra." Three tiers of the same food, each more ridiculous. Size, power, and premium positioning for something from a drive-thru.`,
+  lineup_reveal: `The product family announcement. State the tier trio on ONE opener line: "CHEESEBURGER. PRO. ULTRA." or "FRIES. FRIES MAX. FRIES ULTRA." (one line maximum - never stack across multiple lines). Then use remaining lines for the spec and landing as normal. Do NOT consume the entire output on the lineup; the stat and landing still apply.`,
 
-  courage_moment: `The bold, polarizing move. "We believe in a world without Y. And we think you will too." Removing something beloved and framing it as brave innovation. Controversial. Necessary. Courageous.`,
+  courage_moment: `The confident subtraction. Remove a beloved element of the food and treat its absence as progress - but NEVER name the removal as brave, bold, or courageous. State it as quiet inevitability. "It no longer needs [removed element]. Everything it needs is already here." Let the audience draw the conclusion themselves.`,
 
-  developer_pitch: `Empowerment rhetoric. "We can't wait to see what you create with X." Addressing the food as a platform. Developer tools for condiments. An SDK for sandwiches. Open source toppings.`,
+  developer_pitch: `The platform framing. Treat the food as an extensible surface for builders - an SDK for condiments, an API for toppings, a developer kit for bun architecture. Speak to creators, not consumers. Avoid "pairs with", "all your favorites", or any language that addresses the end viewer directly. Describe what's now possible with architectural seriousness.`,
 
-  magical_reveal: `Pure wonder. "It's magical. And we think you're going to love it." Childlike delight about something entirely ordinary. The demo moment where everyone gasps at a french fry.`,
+  magical_reveal: `Pure wonder, delivered flatly. "Magical" stated as simple fact. Describe an ordinary mechanic - the sizzle, the drip, the crunch, the melt - as if witnessing it for the first time. Understatement carries the awe. No direct address to the viewer, no "you're going to love it".`,
 
-  chip_announcement: `Processing power flex. "Powered by the all-new X chip. Up to 3x faster than anything." Technical jargon about food performance. Benchmark scores for flavor. Thermal efficiency of a griddle.`,
+  chip_announcement: `Processing power flex. "Powered by the all-new [name] chip. Up to [N]x faster than anything." Technical jargon about food performance. Benchmark scores for flavor. Thermal efficiency of a griddle. Choose a fresh multiplier each time.`,
 
   privacy_focus: `Data protection but for food. "What happens in your X stays in your X." Serious commitment to protecting the sanctity of a meal. End-to-end encrypted toppings. On-device digestion.`,
 
   paradigm_shift: `World-changing gravitas. "This changes everything. Again." Framing a minor menu addition as a civilization-defining moment. Before and after this burger, history is divided.`,
 
-  seamless_ecosystem: `Integration pitch. "It just works. With all your favorite sides." Everything connects. Your fries talk to your shake. The condiments sync automatically. One unified dining experience.`,
+  seamless_ecosystem: `Integration without the pitch. "It just works." Describe silent connections - fries aware of the shake, condiments synced to the burger, sides that anticipate. Architectural calm, not feature bullets. Avoid "all your favorites" or any consumer-facing language.`,
 
   health_feature: `Wellness technology. "X can now detect when you need Z." Health monitoring for cravings. Calorie awareness that somehow makes you feel good about eating more. Biometric dipping sauce.`,
 
-  subscription_pitch: `Service tier announcement. "X+. All your favorites. One monthly price." Premium membership for condiments. Family sharing plan for fries. Exclusive subscriber-only menu items.`,
+  tier_announcement: `The premium tier reveal. Introduce a distinct Pro/Max/+ edition of the food ("CHEESEBURGER PRO", "FRIES MAX", "MILKSHAKE+") and describe the ONE concrete refinement that distinguishes it from the base model: thicker construction, rarer ingredient, extended process. Architectural language, not marketing. Do NOT use "membership", "monthly", "subscription", "all your favorites". The tier is a product, not a service.`,
 
   design_superlative: `Industrial design worship. "The thinnest X we've ever made." Obsessive attention to physical form. Millimeter measurements. Weight comparisons. The taper. The finish. The hand feel of a burger.`,
 

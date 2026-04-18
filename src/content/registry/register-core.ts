@@ -476,8 +476,8 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
 
   registry.register(
     {
-      id: 'apple-keynote-food',
-      name: 'Apple Keynote Food Announcement',
+      id: 'keynote-food',
+      name: 'Keynote Food Announcement',
       priority: ContentPriority.NORMAL,
       modelTier: ModelTier.LIGHT,
       applyFrame: true,
