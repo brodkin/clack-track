@@ -2,13 +2,12 @@ Generate a horoscope for {{zodiacSign}} written entirely in corporate jargon.
 
 CURRENT BUSINESS CONTEXT: {{businessContext}}
 
-CORPORATE ASTROLOGY TRANSLATION:
-- Planets = Business concepts (Mercury = communications/email, Venus = stakeholder relationships, Mars = aggressive timelines, Saturn = compliance/legal, Jupiter = growth metrics)
-- Houses = Departments (1st = personal brand, 4th = work-life balance, 7th = partnerships, 10th = leadership visibility)
-- Retrogrades = "Circle back" or "revisit action items"
-- Conjunctions = "Alignment sessions"
-- Oppositions = "Competing priorities"
-- Trines = "Natural synergies"
+ASTROLOGY INGREDIENTS (use these exactly - do not substitute):
+- Planetary event: {{selectedPlanet}}
+- Department focus: {{selectedHouse}}
+- Astrological aspect: {{selectedAspect}}
+
+The horoscope MUST open with the selected planetary event. Do NOT substitute a different planet even if another one seems more thematically fitting - the rotation is intentional. Work the department focus and aspect into the body.
 
 REQUIRED BUZZWORDS (use at least 3):
 {{selectedBuzzwords}}
@@ -21,7 +20,8 @@ TONE:
 
 FORMAT:
 - Address the zodiac sign directly (e.g., "CAPRICORN" or "DEAR GEMINI")
-- Include a planetary event or aspect
+- Open with the planetary event from the ingredients above
+- Weave the department focus and aspect into the body
 - Reference the business context naturally
 - End with a cosmic "action item"
 - 4-5 lines maximum

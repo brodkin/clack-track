@@ -125,6 +125,60 @@ const CORPORATE_BUZZWORDS = [
 ] as const;
 
 /**
+ * Planet pool with corporate mappings
+ *
+ * Rotated per-generation to prevent Mercury/Saturn dominance.
+ * Each entry pairs a planet with its corporate concept — the LLM
+ * receives one per generation and must anchor the horoscope on it.
+ */
+const PLANETS = [
+  'Mercury (communications/email)',
+  'Venus (stakeholder relationships)',
+  'Mars (aggressive timelines)',
+  'Jupiter (growth metrics)',
+  'Saturn (compliance/legal)',
+  'Uranus (disruptive innovation)',
+  'Neptune (vision alignment)',
+  'Pluto (organizational transformation)',
+] as const;
+
+/**
+ * House pool with department mappings
+ *
+ * All 12 astrological houses mapped to plausible corporate departments.
+ * One is selected per generation as the department focus.
+ */
+const HOUSES = [
+  '1st house (personal brand)',
+  '2nd house (compensation/salary)',
+  '3rd house (internal communications)',
+  '4th house (work-life balance)',
+  '5th house (creative deliverables)',
+  '6th house (daily operations)',
+  '7th house (partnerships)',
+  '8th house (shared resources/M&A)',
+  '9th house (corporate philosophy)',
+  '10th house (leadership visibility)',
+  '11th house (team alignment)',
+  '12th house (hidden blockers)',
+] as const;
+
+/**
+ * Aspect pool with corporate mappings
+ *
+ * Astrological aspects paired with corporate concepts. One is selected
+ * per generation to vary the tension/alignment angle of the horoscope.
+ */
+const ASPECTS = [
+  'Retrograde (circle back / revisit action items)',
+  'Conjunction (alignment session)',
+  'Opposition (competing priorities)',
+  'Trine (natural synergies)',
+  'Square (friction with stakeholders)',
+  'Sextile (productive collaboration opportunity)',
+] as const;
+
+/**
  * Generates corporate jargon horoscopes
  *
  * Extends AIPromptGenerator with horoscope-specific prompts,
@@ -146,6 +200,21 @@ export class CorporateHoroscopeGenerator extends AIPromptGenerator {
    * Selected buzzwords for the current generation
    */
   private selectedBuzzwords: string[] = [];
+
+  /**
+   * Selected planet for the current generation
+   */
+  private selectedPlanet: string = '';
+
+  /**
+   * Selected house for the current generation
+   */
+  private selectedHouse: string = '';
+
+  /**
+   * Selected aspect for the current generation
+   */
+  private selectedAspect: string = '';
 
   /**
    * Creates a new CorporateHoroscopeGenerator instance
@@ -229,6 +298,33 @@ export class CorporateHoroscopeGenerator extends AIPromptGenerator {
   }
 
   /**
+   * Selects a random planet with its corporate mapping
+   *
+   * @returns A random planet string (e.g., "Jupiter (growth metrics)")
+   */
+  private getRandomPlanet(): string {
+    return PLANETS[Math.floor(Math.random() * PLANETS.length)];
+  }
+
+  /**
+   * Selects a random house with its department mapping
+   *
+   * @returns A random house string (e.g., "4th house (work-life balance)")
+   */
+  private getRandomHouse(): string {
+    return HOUSES[Math.floor(Math.random() * HOUSES.length)];
+  }
+
+  /**
+   * Selects a random astrological aspect with its corporate mapping
+   *
+   * @returns A random aspect string (e.g., "Opposition (competing priorities)")
+   */
+  private getRandomAspect(): string {
+    return ASPECTS[Math.floor(Math.random() * ASPECTS.length)];
+  }
+
+  /**
    * Hook: Returns template variables for prompt injection
    *
    * Selects a random zodiac sign and business context
@@ -243,11 +339,17 @@ export class CorporateHoroscopeGenerator extends AIPromptGenerator {
     this.selectedSign = this.getRandomZodiacSign();
     this.selectedContext = this.getRandomBusinessContext();
     this.selectedBuzzwords = this.selectRandomBuzzwords();
+    this.selectedPlanet = this.getRandomPlanet();
+    this.selectedHouse = this.getRandomHouse();
+    this.selectedAspect = this.getRandomAspect();
 
     return {
       zodiacSign: this.selectedSign,
       businessContext: this.selectedContext,
       selectedBuzzwords: this.selectedBuzzwords.join(', '),
+      selectedPlanet: this.selectedPlanet,
+      selectedHouse: this.selectedHouse,
+      selectedAspect: this.selectedAspect,
     };
   }
 
@@ -264,6 +366,9 @@ export class CorporateHoroscopeGenerator extends AIPromptGenerator {
       zodiacSign: this.selectedSign,
       businessContext: this.selectedContext,
       selectedBuzzwords: this.selectedBuzzwords,
+      selectedPlanet: this.selectedPlanet,
+      selectedHouse: this.selectedHouse,
+      selectedAspect: this.selectedAspect,
     };
   }
 }

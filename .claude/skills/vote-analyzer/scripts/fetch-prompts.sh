@@ -1,42 +1,65 @@
 #!/usr/bin/env bash
-# fetch-prompts.sh — Read the user prompt file for a given generator ID
+# fetch-prompts.sh — Dump all prompt + source context for a generator
 #
 # Usage: fetch-prompts.sh <generator-id>
-#   Maps generator IDs (e.g. "daily-roast") to prompt files in prompts/user/
 #
-# Outputs: The prompt file content to stdout
+# Emits (each in its own === section ===):
+#   1. User prompt        prompts/user/<id>.txt
+#   2. System prompt      prompts/system/major-update-base.txt
+#   3. Generator source   src/content/generators/ai/<id>-generator.ts
+#   4. Dictionaries       src/content/generators/ai/<id>-dictionaries.ts  (if present)
+#   5. Registry entry     block in src/content/registry/register-core.ts referencing the id
 
 set -euo pipefail
 
 GENERATOR_ID="${1:?Usage: fetch-prompts.sh <generator-id>}"
 PROJECT_ROOT="$(git rev-parse --show-toplevel)"
-PROMPTS_DIR="$PROJECT_ROOT/prompts/user"
 
-# Map generator ID to prompt filename (most are direct kebab-to-kebab)
-PROMPT_FILE="$PROMPTS_DIR/$GENERATOR_ID.txt"
+emit_section() {
+  local title="$1"
+  local path="$2"
+  echo ""
+  echo "=== $title ==="
+  if [[ -f "$path" ]]; then
+    cat "$path"
+  else
+    echo "(not found at $path)"
+  fi
+}
 
-if [[ -f "$PROMPT_FILE" ]]; then
-  echo "=== User Prompt: $GENERATOR_ID ==="
-  cat "$PROMPT_FILE"
-  exit 0
+# 1. User prompt (try kebab-case, then underscore fallback)
+USER_PROMPT="$PROJECT_ROOT/prompts/user/$GENERATOR_ID.txt"
+if [[ ! -f "$USER_PROMPT" ]]; then
+  ALT="$PROJECT_ROOT/prompts/user/${GENERATOR_ID//-/_}.txt"
+  if [[ -f "$ALT" ]]; then
+    USER_PROMPT="$ALT"
+  fi
+fi
+emit_section "User Prompt ($GENERATOR_ID)" "$USER_PROMPT"
+
+# 2. System prompt (shared by all major-update generators)
+emit_section "System Prompt (major-update-base)" "$PROJECT_ROOT/prompts/system/major-update-base.txt"
+
+# 3. Generator TypeScript source — holds dictionaries, tier, selection logic
+emit_section "Generator Source" "$PROJECT_ROOT/src/content/generators/ai/${GENERATOR_ID}-generator.ts"
+
+# 4. Co-located dictionaries file (only some generators have one)
+DICT_FILE="$PROJECT_ROOT/src/content/generators/ai/${GENERATOR_ID}-dictionaries.ts"
+if [[ -f "$DICT_FILE" ]]; then
+  emit_section "Dictionaries" "$DICT_FILE"
 fi
 
-# Some generators have different file names than their IDs
-# Try common variations
-VARIATIONS=(
-  "$PROMPTS_DIR/${GENERATOR_ID//-/_}.txt"
-  "$PROMPTS_DIR/${GENERATOR_ID}.txt"
-)
-
-for variant in "${VARIATIONS[@]}"; do
-  if [[ -f "$variant" ]]; then
-    echo "=== User Prompt: $GENERATOR_ID ($(basename "$variant")) ==="
-    cat "$variant"
-    exit 0
+# 5. Registry entry — tier, priority, toolBasedOptions
+REGISTRY="$PROJECT_ROOT/src/content/registry/register-core.ts"
+echo ""
+echo "=== Registry Entry ($GENERATOR_ID) ==="
+if [[ -f "$REGISTRY" ]]; then
+  if grep -q "id: '$GENERATOR_ID'" "$REGISTRY"; then
+    # Grab ~20 lines around the id line for full registration block
+    grep -n -B 2 -A 18 "id: '$GENERATOR_ID'" "$REGISTRY"
+  else
+    echo "(generator id '$GENERATOR_ID' not referenced in register-core.ts)"
   fi
-done
-
-echo "No user prompt file found for generator '$GENERATOR_ID'" >&2
-echo "Available prompts:" >&2
-ls "$PROMPTS_DIR"/*.txt 2>/dev/null | xargs -I{} basename {} .txt >&2
-exit 1
+else
+  echo "(register-core.ts not found)"
+fi

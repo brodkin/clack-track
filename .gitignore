@@ -51,9 +51,6 @@ trees/
 # Husky
 .husky/_
 
-# Beads issue tracking (synced via beads/sync branch)
-.beads/
-
 # Playwright MCP
 .playwright-mcp/
 
@@ -62,7 +59,4 @@ data/clack-track-dev.sqlite
 .claude/settings.local.json
 .claude/plans
 
-# Beads / Dolt files (added by bd init)
-.dolt/
 *.db
-.beads-credential-key

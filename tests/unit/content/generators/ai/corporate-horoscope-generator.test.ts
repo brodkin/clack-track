@@ -279,8 +279,102 @@ describe('CorporateHoroscopeGenerator', () => {
     });
   });
 
+  describe('planet / house / aspect rotation', () => {
+    it('should inject selectedPlanet, selectedHouse, and selectedAspect as template vars', async () => {
+      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      await generator.generate(mockContext);
+
+      expect(mockPromptLoader.loadPromptWithVariables).toHaveBeenCalledWith(
+        'user',
+        'corporate-horoscope.txt',
+        expect.objectContaining({
+          selectedPlanet: expect.any(String),
+          selectedHouse: expect.any(String),
+          selectedAspect: expect.any(String),
+        })
+      );
+    });
+
+    it('should produce variety in planet selection over multiple generations', async () => {
+      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      const selectedPlanets = new Set<string>();
+
+      for (let i = 0; i < 40; i++) {
+        mockPromptLoader.loadPromptWithVariables.mockClear();
+        await generator.generate(mockContext);
+
+        const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
+        const templateVars = calls[1][2] as Record<string, unknown>;
+        selectedPlanets.add(templateVars.selectedPlanet as string);
+      }
+
+      expect(selectedPlanets.size).toBeGreaterThanOrEqual(5);
+    });
+
+    it('should produce variety in house selection over multiple generations', async () => {
+      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      const selectedHouses = new Set<string>();
+
+      for (let i = 0; i < 40; i++) {
+        mockPromptLoader.loadPromptWithVariables.mockClear();
+        await generator.generate(mockContext);
+
+        const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
+        const templateVars = calls[1][2] as Record<string, unknown>;
+        selectedHouses.add(templateVars.selectedHouse as string);
+      }
+
+      expect(selectedHouses.size).toBeGreaterThanOrEqual(6);
+    });
+
+    it('should produce variety in aspect selection over multiple generations', async () => {
+      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      const selectedAspects = new Set<string>();
+
+      for (let i = 0; i < 30; i++) {
+        mockPromptLoader.loadPromptWithVariables.mockClear();
+        await generator.generate(mockContext);
+
+        const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
+        const templateVars = calls[1][2] as Record<string, unknown>;
+        selectedAspects.add(templateVars.selectedAspect as string);
+      }
+
+      expect(selectedAspects.size).toBeGreaterThanOrEqual(4);
+    });
+
+    it('should pair each planet with its corporate mapping', async () => {
+      const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
+        openai: 'test-key',
+      });
+
+      for (let i = 0; i < 20; i++) {
+        mockPromptLoader.loadPromptWithVariables.mockClear();
+        await generator.generate(mockContext);
+
+        const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
+        const templateVars = calls[1][2] as Record<string, unknown>;
+        const planet = templateVars.selectedPlanet as string;
+
+        expect(planet).toMatch(/^[A-Z][a-z]+ \(.+\)$/);
+      }
+    });
+  });
+
   describe('custom metadata tracking', () => {
-    it('should include zodiacSign, businessContext, and selectedBuzzwords in metadata', async () => {
+    it('should include all selected dimensions in metadata', async () => {
       const generator = new CorporateHoroscopeGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
@@ -294,6 +388,9 @@ describe('CorporateHoroscopeGenerator', () => {
       expect(result.metadata?.selectedBuzzwords).toBeDefined();
       expect(Array.isArray(result.metadata?.selectedBuzzwords)).toBe(true);
       expect((result.metadata?.selectedBuzzwords as string[]).length).toBe(5);
+      expect(typeof result.metadata?.selectedPlanet).toBe('string');
+      expect(typeof result.metadata?.selectedHouse).toBe('string');
+      expect(typeof result.metadata?.selectedAspect).toBe('string');
     });
   });
 });

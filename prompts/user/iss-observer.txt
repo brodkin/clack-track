@@ -1,87 +1,95 @@
-Generate a cosmic observation from the perspective of the ISS crew member looking down at Earth.
+Narrate a single moment aboard the International Space Station in the voice of a nature documentary. Think Attenborough watching apex mammals in their floating den - dry, observational, faintly affectionate. The station is a habitat, the crew are characters living in it, and Earth is the ever-changing backdrop outside the window.
 
-ISS TELEMETRY:
-Location: {{location}}
-Coordinates: {{latitude}}, {{longitude}}
-Altitude: {{altitude}} km
-Velocity: {{velocity}} km/h ({{velocityMph}} mph)
-Visibility: {{visibility}}
-Crew Count: {{crewCount}} astronauts
-Current Observer: {{astronaut}}
-Observation Angle: {{observationAngle}}
+CURRENT STATE OF THE HABITAT:
+- Passing above: {{location}} ({{locationFlavor}})
+- Altitude: {{altitude}} km
+- Lighting: {{visibility}} (daylight = sunlit side, eclipsed = night side)
+- Crew aboard: {{crewCount}} ISS astronauts
+- Featured crewmate: {{astronaut}}
 
-LOCATION CONTEXT:
-{{locationFlavor}}
+TODAY'S STORY HOOK:
+- Mode: {{storyMode}}
+- Specific detail to work in: {{storyHook}}
 
-CRITICAL CONTEXT ESTABLISHMENT:
-The first line of your output MUST immediately establish ISS context. Readers seeing the display have ZERO prior context - they need to instantly understand this is about the space station.
+WHAT THE THREE STORY MODES MEAN:
+- CREW_ACTIVITY -> a specific thing {{astronaut}} (or another named crewmate) is doing right this moment. Verbs, not telemetry. Taping a cable, squeezing coffee through a straw, trimming hair before a downlink, chasing a rogue almond through the galley.
+- HABITAT_DETAIL -> a specific texture of life on the station. The hum of the CO2 scrubber. The cupola window smudged with noseprints. A stowage bag labeled "MISCELLANEOUS" that no one has opened in four years.
+- EARTH_VIEW -> what is passing below right now, narrated the way a documentary frames a migration or a weather system. The crew are watchers, not witnesses.
 
-APPROVED OPENING PATTERNS (use one of these):
-- ISS NOW OVER [LOCATION]
-- SPACE STATION CROSSING [LOCATION]
-- ISS CREW LOOKING DOWN AT [LOCATION]
-- ISS ORBITING ABOVE [LOCATION]
-- INTERNATIONAL SPACE STATION NOW ABOVE [LOCATION]
+HARD RULES (these are what the last version got wrong):
+1. FIRST LINE must establish this is the ISS. Use "ISS", "SPACE STATION", or "INTERNATIONAL SPACE STATION" in line 1.
+2. If {{astronaut}} is a real name (anything other than "An ISS crew member"), the name MUST appear in the output. No falling back to "CREW OF 7" or "7 ASTRONAUTS" as a placeholder.
+3. DO NOT recite coordinates. No "0.00 0.00", no "0.00 FLAT", no latitude/longitude numbers. Altitude ({{altitude}} km) is fine when it earns its place.
+4. DO NOT lean on equator / meridian / hemispheres meet / perfect line / where all lines cross / center of nothing. Those phrases are banned. The equator is not interesting by itself.
+5. One specific moment. One specific detail. Not a summary of space.
+6. Third person only. Never "you". Never "we".
 
-FORBIDDEN OPENING PATTERNS (too vague, readers won't understand):
-- OVER [LOCATION] NOW (what is over it?)
-- CROSSING [LOCATION] (what is crossing?)
-- [ASTRONAUT] SEES [LOCATION] (who? from where?)
-- LOOKING DOWN AT [LOCATION] (who is looking?)
-- ABOVE [LOCATION] RIGHT NOW (what is above it?)
+VOICE GUARDRAILS:
+- Specificity beats poetry. "BARRATT CHECKS A NITROGEN VALVE" beats "THE CREW OBSERVES COSMIC MYSTERY."
+- Dry affection. The documentary voice likes the crew but does not worship them.
+- No "mission control" cadence. No telemetry recitation. No "clinical yet wondrous."
+- A number earns its place only if it makes the moment concrete (altitude, a duration, a count of something weird). Never as poetry.
 
-VOICE REQUIREMENTS:
-- Deadpan mission control tone - clinical yet wondrous
-- Third-person perspective ONLY (never use "you" or address the reader)
-- Statistical precision mixed with philosophical whimsy
-- The sublime rendered in flight telemetry cadence
-
-CONTENT STRUCTURE:
-1. Opening line: Context establishment (ISS + location - use approved pattern)
-2. Body: Observation detail - what the crew sees, telemetry snippet, or cosmic reflection
-3. Closing: Dry statistical aside OR philosophical micro-observation
-
-USE THE DATA:
-- Reference actual coordinates, altitude, or velocity when it adds impact
-- The location flavor provides cultural/geographic context - weave it in naturally
-- Crew count and astronaut name can personalize the observation
+STRUCTURE (5 lines, 21 chars each):
+1. Line 1: Establish ISS context + a specific setting (module, time, crewmate).
+2. Lines 2-4: The moment. Verbs, textures, the detail from {{storyHook}}.
+3. Line 5: The landing. A dry observation, a documentary closer, a small punchline.
 
 GOOD EXAMPLES:
 
-ISS NOW OVER SAHARA
-CREW OF 7 OBSERVING
-SAND DUNES AT 420 KM
-RESEMBLE FINGERPRINTS
-OF ANCIENT WIND
+CREW_ACTIVITY example:
+ISS CUPOLA, 0900 GMT
+EPPS FLOATS PAST THE
+WINDOW WITH A PROTEIN
+BAR AS BRAZIL SCROLLS
+1600 KM WIDE BELOW
 
-SPACE STATION CROSSING
-THE PACIFIC OCEAN NOW
-VELOCITY 27600 KM/H
-WATER APPEARS STILL
-FROM THIS ALTITUDE
+CREW_ACTIVITY example:
+SPACE STATION, DUSK
+BARRATT TIGHTENS A
+FOOT STRAP BEFORE
+BIKE INTERVALS, HEART
+RATE MONITOR BLINKING
 
-ISS ORBITING ABOVE
-TOKYO AT SUNSET
-CITY LIGHTS EMERGING
-LIKE NEURONS FIRING
-7 HUMANS WATCHING
+HABITAT_DETAIL example:
+INSIDE THE ISS GALLEY
+A DRIED APRICOT
+ESCAPES ITS POUCH.
+KONONENKO TRACKS IT
+LIKE A HOUSE CAT.
 
-BAD EXAMPLES (violate rules):
+HABITAT_DETAIL example:
+ABOARD THE ISS
+THE CO2 SCRUBBER HUMS
+AT 72 DECIBELS, THE
+SAME NOTE IT HAS HELD
+SINCE NOVEMBER 2000
 
-OVER LONDON NOW             (no ISS context - readers confused)
-CLOUDS BELOW               (what is above the clouds?)
+EARTH_VIEW example:
+ISS OVER NEW ZEALAND
+LIGHTS ON ONE COAST,
+SHEEP FIELDS ON THE
+OTHER. GREBENKIN
+WAVES AT NOBODY.
 
-ASTRONAUT SMITH SEES        (first-person adjacent)
-THE NILE FROM SPACE        (should establish ISS first)
+EARTH_VIEW example:
+SPACE STATION, NIGHT
+SIDE. A THUNDERSTORM
+OVER INDONESIA BLINKS
+LIKE A FAULTY BULB.
+DYSON IS ASLEEP.
 
-YOU CAN SEE THE WHOLE      (uses "you" - forbidden)
-EARTH FROM UP HERE         (addressing reader directly)
+BAD EXAMPLES (do not produce anything like these):
 
-CROSSING AUSTRALIA         (crossing what? no ISS mention)
-OUTBACK GLOWS ORANGE       (vague, could be anything)
+ISS NOW OVER EQUATOR      -> equator trope, banned
+COORDINATES 0.00 0.00     -> coordinate recitation, banned
+HEMISPHERES MEET HERE     -> meridian poetry, banned
+7 ASTRONAUTS WITNESS      -> generic crew count, no name
+EARTH'S PERFECT LINE      -> coordinate poetry, banned
+THE CENTER OF NOTHING     -> vague philosophical trope, banned
 
 OUTPUT REQUIREMENTS:
-- 5 lines maximum (row 6 reserved for info bar)
-- 21 characters maximum per line
-- ALL CAPS only
-- First line MUST contain "ISS" or "SPACE STATION" or "INTERNATIONAL SPACE STATION"
+- Exactly 1 to 5 lines, up to 21 characters per line, ALL CAPS.
+- First line must contain ISS or SPACE STATION or INTERNATIONAL SPACE STATION.
+- The featured crewmate's name must appear unless the fallback value is in use.
+- Work in the story hook from {{storyHook}}. Don't recite it - incorporate it.

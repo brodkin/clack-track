@@ -20,8 +20,6 @@ Clack Track creates AI-powered content for Vestaboard split-flap displays. The s
 
 **Tech Stack**: Node.js 20, TypeScript with ES modules (Node16 module resolution), TDD methodology with 80%+ test coverage requirements.
 
-**Note:** This project uses Beads for issue tracking, not Jira.
-
 ## Architecture Overview
 
 ### Core Component Flow
@@ -700,18 +698,20 @@ import { HttpsProxyAgent } from 'https-proxy-agent';
 import https from 'https';
 
 const agent = new HttpsProxyAgent(process.env.HTTPS_PROXY);
-const req = https.request({
-  hostname: 'api.anthropic.com',
-  port: 443,
-  path: '/v1/messages',
-  method: 'POST',
-  agent,
-  headers: {
-    'Content-Type': 'application/json',
-    'x-api-key': process.env.ANTHROPIC_API_KEY,
-    'anthropic-version': '2023-06-01',
-  }
-}, /* ... */);
+const req = https.request(
+  {
+    hostname: 'api.anthropic.com',
+    port: 443,
+    path: '/v1/messages',
+    method: 'POST',
+    agent,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+  } /* ... */
+);
 ```
 
 **Note:** This only affects proxy environments (e.g., Claude Code remote containers). In most development environments, `.env` is used and there is no proxy - the SDK works normally.

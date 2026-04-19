@@ -98,6 +98,8 @@ export interface CoreGenerators {
   corporateHoroscope: ContentGenerator;
   /** Wrong number voicemail generator (P2, LIGHT, AI-powered) */
   wrongNumberVoicemail: ContentGenerator;
+  /** Wikipedia fact generator (P2, MEDIUM, AI-powered) */
+  wikipediaFact: ContentGenerator;
   /** Priceless parody generator (P2, MEDIUM, AI-powered) */
   priceless: ContentGenerator;
   /** Tour guide generator (P2, LIGHT, AI-powered) */
@@ -112,6 +114,10 @@ export interface CoreGenerators {
   fakeGayNews: ContentGenerator;
   /** No Thank You generator (P2, LIGHT, AI-powered) */
   noThankYou: ContentGenerator;
+  /** FDA Guidelines generator (P2, MEDIUM, AI-powered) */
+  fdaGuidelines: ContentGenerator;
+  /** Apple Keynote Food generator (P2, LIGHT, AI-powered) */
+  appleKeynoteFood: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
   staticFallback: ContentGenerator;
 }
@@ -410,6 +416,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
 
   registry.register(
     {
+      id: 'wikipedia-fact',
+      name: 'Wikipedia Fact Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.wikipediaFact
+  );
+
+  registry.register(
+    {
       id: 'priceless',
       name: 'Priceless Parody Generator',
       priority: ContentPriority.NORMAL,
@@ -483,6 +500,28 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.noThankYou
+  );
+
+  registry.register(
+    {
+      id: 'fda-guidelines',
+      name: 'FDA Guidelines Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.fdaGuidelines
+  );
+
+  registry.register(
+    {
+      id: 'keynote-food',
+      name: 'Keynote Food Announcement',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.LIGHT,
+      applyFrame: true,
+    },
+    generators.appleKeynoteFood
   );
 
   // Register P3 fallback generator (FALLBACK priority)

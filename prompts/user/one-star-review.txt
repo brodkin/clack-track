@@ -1,22 +1,39 @@
-Generate a one-star review of something that cannot actually be rated - a concept, phenomenon, or universal experience treated as a disappointing product or service.
+Generate a one-star review of {{reviewSubject}} - a concept, phenomenon, or universal experience treated as a disappointing product or service.
 
-INSPIRATION (pivot freely for humor): {{reviewSubject}}
+YOUR SUBJECT IS: {{reviewSubject}}
+
+The review MUST be about this specific subject. Do not substitute a different topic, no matter how tempting. If the subject is abstract, make its failings concrete. If the subject is mundane, find its absurd corners. Commit to the subject you were given.
 
 STYLE: {{reviewStyle}}
 {{styleGuidance}}
 
 REQUIREMENTS:
+- The review must clearly be about {{reviewSubject}} - readers should instantly know what is being reviewed
 - MUST include "1 STAR" or "ONE STAR" somewhere
-- Specific grievances, not vague complaints
+- Specific grievances about {{reviewSubject}}, not generic complaints
 - Review structure (setup + punchline)
 
-GOOD:
+OVERUSED TROPES - DO NOT DEFAULT TO THESE:
+- GRAVITY (unless it is literally your subject)
+- SLEEP / 8 HOURS / MANDATORY SLEEP (unless it is literally your subject)
+- WEEKEND BEING ONLY 2 DAYS (unless it is literally your subject)
+Readers are tired of these. If your {{reviewSubject}} is none of the above, commit to your actual subject and ignore these tropes entirely.
+
+GOOD (subject: "reply all emails"):
 1 STAR
-ORDERED CONSCIOUSNESS
-ARRIVED WITH ANXIETY
-NO RETURN POLICY
-WOULD NOT RECOMMEND
+REPLY ALL CULTURE
+UNWANTED DIGEST OF
+EVERYONE'S OPINIONS
+UNSUBSCRIBE UNAVAILABLE
+
+GOOD (subject: "captchas"):
+ONE STAR: CAPTCHAS
+SELECTED EVERY BUS,
+STILL NOT A ROBOT
+APPARENTLY. HUMILIATED
+BY A TRAFFIC LIGHT.
 
 BAD:
 - "LIFE IS BAD" (too vague, no review structure)
 - Missing the rating (readers need format clarity)
+- Substituting a different topic when given {{reviewSubject}}

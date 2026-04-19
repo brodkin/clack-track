@@ -29,6 +29,9 @@ import { createMockAIProvider } from '@tests/__helpers__/mockAIProvider';
 import {
   OBSERVATION_ANGLES,
   LOCATION_FLAVORS,
+  STORY_MODES,
+  CREW_ACTIVITIES,
+  HABITAT_MOMENTS,
 } from '@/content/generators/ai/iss-observer-dictionaries';
 
 // Mock createAIProvider function to avoid real API calls
@@ -441,6 +444,92 @@ describe('ISSObserverGenerator', () => {
     });
   });
 
+  describe('story mode and hook selection', () => {
+    it('should inject a story mode from STORY_MODES into template variables', async () => {
+      const generator = new ISSObserverGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        { openai: 'test-key' },
+        mockISSClient
+      );
+
+      await generator.generate(mockContext);
+
+      const calls = mockPromptLoader.loadPromptWithVariables.mock.calls;
+      const templateVars = calls[1][2] as Record<string, unknown>;
+
+      expect(templateVars.storyMode).toBeDefined();
+      expect(STORY_MODES).toContain(templateVars.storyMode);
+    });
+
+    it('should pair CREW_ACTIVITY mode with a CREW_ACTIVITIES hook', async () => {
+      const generator = new ISSObserverGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        { openai: 'test-key' },
+        mockISSClient
+      );
+
+      // Run enough times to observe each mode at least once
+      const seenModes = new Set<string>();
+      for (let i = 0; i < 60; i++) {
+        mockPromptLoader.loadPromptWithVariables.mockClear();
+        await generator.generate(mockContext);
+
+        const templateVars = mockPromptLoader.loadPromptWithVariables.mock.calls[1][2] as Record<
+          string,
+          string
+        >;
+        seenModes.add(templateVars.storyMode);
+
+        if (templateVars.storyMode === 'CREW_ACTIVITY') {
+          expect(CREW_ACTIVITIES).toContain(templateVars.storyHook);
+        } else if (templateVars.storyMode === 'HABITAT_DETAIL') {
+          expect(HABITAT_MOMENTS).toContain(templateVars.storyHook);
+        } else if (templateVars.storyMode === 'EARTH_VIEW') {
+          expect(Object.values(LOCATION_FLAVORS)).toContain(templateVars.storyHook);
+        }
+      }
+
+      // Sanity check: across 60 runs we should hit at least 2 of 3 modes
+      expect(seenModes.size).toBeGreaterThanOrEqual(2);
+    });
+
+    it('uses the resolved location flavor for EARTH_VIEW hook, not the fallback', async () => {
+      mockISSClient.getFullStatus.mockResolvedValue({
+        ...mockFullStatus,
+        location: {
+          country_code: 'JP',
+          timezone_id: 'Asia/Tokyo',
+          region: null,
+          ocean: null,
+        },
+      });
+
+      const generator = new ISSObserverGenerator(
+        mockPromptLoader,
+        mockModelTierSelector,
+        { openai: 'test-key' },
+        mockISSClient
+      );
+
+      // Run until we land on EARTH_VIEW
+      for (let i = 0; i < 100; i++) {
+        mockPromptLoader.loadPromptWithVariables.mockClear();
+        await generator.generate(mockContext);
+        const templateVars = mockPromptLoader.loadPromptWithVariables.mock.calls[1][2] as Record<
+          string,
+          string
+        >;
+        if (templateVars.storyMode === 'EARTH_VIEW') {
+          expect(templateVars.storyHook).toBe(LOCATION_FLAVORS.JAPAN);
+          return;
+        }
+      }
+      throw new Error('Never landed on EARTH_VIEW across 100 runs');
+    });
+  });
+
   describe('getCustomMetadata()', () => {
     it('should track issDataFetched, position, location, crewCount, astronaut, angle, and flavor', async () => {
       const generator = new ISSObserverGenerator(
@@ -459,6 +548,9 @@ describe('ISSObserverGenerator', () => {
       expect(result.metadata?.selectedAstronaut).toBeDefined();
       expect(OBSERVATION_ANGLES).toContain(result.metadata?.observationAngle);
       expect(Object.values(LOCATION_FLAVORS)).toContain(result.metadata?.locationFlavor);
+      expect(STORY_MODES).toContain(result.metadata?.storyMode);
+      expect(typeof result.metadata?.storyHook).toBe('string');
+      expect((result.metadata?.storyHook as string).length).toBeGreaterThan(0);
     });
   });
 

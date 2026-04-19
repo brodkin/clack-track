@@ -43,6 +43,7 @@ import { OneStarReviewGenerator } from './content/generators/ai/one-star-review-
 import { HouseboyVentGenerator } from './content/generators/ai/houseboy-vent-generator.js';
 import { CorporateHoroscopeGenerator } from './content/generators/ai/corporate-horoscope-generator.js';
 import { WrongNumberVoicemailGenerator } from './content/generators/ai/wrong-number-voicemail-generator.js';
+import { WikipediaFactGenerator } from './content/generators/ai/wikipedia-fact-generator.js';
 import { PricelessGenerator } from './content/generators/ai/priceless-generator.js';
 import { TourGuideGenerator } from './content/generators/ai/tour-guide-generator.js';
 import { BaristaLifeGenerator } from './content/generators/ai/barista-life-generator.js';
@@ -50,10 +51,12 @@ import { CastMemberRadioGenerator } from './content/generators/ai/cast-member-ra
 import { ZaydeWisdomGenerator } from './content/generators/ai/zayde-wisdom-generator.js';
 import { FakeGayNewsGenerator } from './content/generators/ai/fake-gay-news-generator.js';
 import { NoThankYouGenerator } from './content/generators/ai/no-thank-you-generator.js';
+import { FdaGuidelinesGenerator } from './content/generators/ai/fda-guidelines-generator.js';
+import { AppleKeynoteFoodGenerator } from './content/generators/ai/apple-keynote-food-generator.js';
 import { PatternGenerator } from './content/generators/programmatic/pattern-generator.js';
 import { SleepModeGenerator } from './content/generators/programmatic/sleep-mode-generator.js';
 import { NotificationGenerator } from './content/generators/notification-generator.js';
-import { RSSClient, ISSClient } from './api/data-sources/index.js';
+import { RSSClient, ISSClient, WikipediaClient } from './api/data-sources/index.js';
 import { PromptLoader } from './content/prompt-loader.js';
 import { MinorUpdateGenerator } from './content/generators/minor-update.js';
 import { ContentDataProvider } from './services/content-data-provider.js';
@@ -247,6 +250,12 @@ function createCoreGenerators(
       modelTierSelector,
       apiKeys
     ),
+    wikipediaFact: new WikipediaFactGenerator(
+      promptLoader,
+      modelTierSelector,
+      apiKeys,
+      new WikipediaClient()
+    ),
     priceless: new PricelessGenerator(promptLoader, modelTierSelector, apiKeys),
     tourGuide: new TourGuideGenerator(promptLoader, modelTierSelector, apiKeys),
     baristaLife: new BaristaLifeGenerator(promptLoader, modelTierSelector, apiKeys),
@@ -254,6 +263,8 @@ function createCoreGenerators(
     zaydeWisdom: new ZaydeWisdomGenerator(promptLoader, modelTierSelector, apiKeys),
     fakeGayNews: new FakeGayNewsGenerator(promptLoader, modelTierSelector, apiKeys),
     noThankYou: new NoThankYouGenerator(promptLoader, modelTierSelector, apiKeys),
+    fdaGuidelines: new FdaGuidelinesGenerator(promptLoader, modelTierSelector, apiKeys),
+    appleKeynoteFood: new AppleKeynoteFoodGenerator(promptLoader, modelTierSelector, apiKeys),
     staticFallback: new StaticFallbackGenerator('prompts/static'),
   };
 }

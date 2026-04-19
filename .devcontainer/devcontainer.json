@@ -5,8 +5,7 @@
   "workspaceFolder": "/workspace",
   "remoteUser": "vscode",
   "containerEnv": {
-    "NODE_OPTIONS": "--max-old-space-size=6144",
-    "BEADS_SYNC_BRANCH": "beads-sync"
+    "NODE_OPTIONS": "--max-old-space-size=6144"
   },
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {},
@@ -32,7 +31,6 @@
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "updateContentCommand": "bash .devcontainer/update-content.sh",
-  "postStartCommand": "bd daemon start --auto-commit --auto-push --interval 5m 2>/dev/null || true",
   "customizations": {
     "vscode": {
       "extensions": [

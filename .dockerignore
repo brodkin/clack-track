@@ -47,6 +47,4 @@ secrets.sh
 docker-compose.prod.yml
 stack.yml
 
-# Beads issue tracking
-.beads/
 trees/

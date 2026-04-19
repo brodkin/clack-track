@@ -12,6 +12,7 @@ import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector';
 import { RSSClient } from '@/api/data-sources/rss-client';
 import { ModelTier } from '@/types/content-generator';
+import type { AIProvider } from '@/types/ai';
 
 // Helper type for accessing protected members in tests
 type ProtectedLocalNewsGenerator = LocalNewsGenerator & {
@@ -80,6 +81,30 @@ describe('LocalNewsGenerator', () => {
   });
 
   describe('integration with base class', () => {
+    let mockAIProvider: jest.Mocked<AIProvider>;
+
+    beforeEach(() => {
+      mockAIProvider = {
+        generate: jest.fn().mockResolvedValue({
+          text: 'MOCK CONTENT',
+          model: 'gpt-4.1-mini',
+          tokensUsed: 50,
+        }),
+        validateConnection: jest.fn().mockResolvedValue(true),
+      } as unknown as jest.Mocked<AIProvider>;
+
+      jest
+        .spyOn(
+          LocalNewsGenerator.prototype as { createProviderForSelection: () => unknown },
+          'createProviderForSelection'
+        )
+        .mockReturnValue(mockAIProvider);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('should use RSS client for fetching news items during generation', async () => {
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
@@ -99,11 +124,7 @@ describe('LocalNewsGenerator', () => {
         mockRSSClient
       );
 
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider
-      }
+      await generator.generate({ updateType: 'major', timestamp: new Date() });
 
       expect(mockRSSClient.getLatestItems).toHaveBeenCalled();
     });
