@@ -1,23 +1,11 @@
 /**
  * Tests for FdaGuidelinesGenerator
- *
- * Generator-specific behavior:
- * - REGULATORY_BODIES (12), TOPIC_CATEGORIES (10 categories, ~80 sub-topics),
- *   PRESENTATION_ANGLES (8) arrays
- * - getTemplateVariables() returning { regulatoryBody, topicArea, presentationAngle }
- * - Instance property storage and getCustomMetadata()
- * - Template variable passing in generate()
  */
 
 import { FdaGuidelinesGenerator } from '@/content/generators/ai/fda-guidelines-generator';
 import {
-  REGULATORY_BODIES,
-  TOPIC_CATEGORIES,
-  PRESENTATION_ANGLES,
-  selectRandomItem,
-  selectRandomCategory,
-  selectRandomTopic,
-  type TopicCategory,
+  FOOD_CODE_PROVISIONS,
+  selectRandomProvision,
 } from '@/content/generators/ai/fda-guidelines-dictionaries';
 import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector';
@@ -25,14 +13,10 @@ import { ModelTier } from '@/types/content-generator';
 import type { GenerationContext } from '@/types/content-generator';
 import type { AIProvider } from '@/types/ai';
 
-// Helper type for accessing protected members in tests
 type ProtectedFdaGuidelinesGenerator = FdaGuidelinesGenerator & {
   getTemplateVariables(context: GenerationContext): Promise<Record<string, string>>;
   getCustomMetadata(): Record<string, unknown>;
-  selectedBody: string;
-  selectedCategory: string;
-  selectedTopic: string;
-  selectedAngle: string;
+  selectedProvision: { section: string; topic: string; facet: string };
 };
 
 describe('FdaGuidelinesGenerator', () => {
@@ -55,8 +39,8 @@ describe('FdaGuidelinesGenerator', () => {
 
     mockModelTierSelector = {
       select: jest.fn().mockReturnValue({
-        provider: 'openai',
-        model: 'gpt-4.1-mini',
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5-20250929',
         tier: ModelTier.MEDIUM,
       }),
       getAlternate: jest.fn().mockReturnValue(null),
@@ -64,175 +48,94 @@ describe('FdaGuidelinesGenerator', () => {
 
     mockAIProvider = {
       generate: jest.fn().mockResolvedValue({
-        text: 'FDA: ICE CREAM MUST\nCONTAIN 10% MILKFAT',
-        model: 'gpt-4.1-mini',
+        text: 'COLD HOLDING MUST BE\nAT 41 F OR BELOW',
+        model: 'claude-sonnet-4-5-20250929',
         tokensUsed: 50,
       }),
       validateConnection: jest.fn().mockResolvedValue(true),
     } as unknown as jest.Mocked<AIProvider>;
   });
 
-  describe('dictionary arrays', () => {
-    it('should have REGULATORY_BODIES array with 12 unique items', () => {
-      expect(REGULATORY_BODIES).toHaveLength(12);
-      const unique = new Set(REGULATORY_BODIES);
-      expect(unique.size).toBe(REGULATORY_BODIES.length);
-    });
-
-    it('should have TOPIC_CATEGORIES with 10 category keys', () => {
-      const categoryKeys = Object.keys(TOPIC_CATEGORIES);
-      expect(categoryKeys).toHaveLength(10);
-    });
-
-    it('should have at least 8 sub-topics per category', () => {
-      const categoryKeys = Object.keys(TOPIC_CATEGORIES) as TopicCategory[];
-      categoryKeys.forEach(category => {
-        expect(TOPIC_CATEGORIES[category].length).toBeGreaterThanOrEqual(8);
-      });
-    });
-
-    it('should have PRESENTATION_ANGLES array with 8 unique items', () => {
-      expect(PRESENTATION_ANGLES).toHaveLength(8);
-      const unique = new Set(PRESENTATION_ANGLES);
-      expect(unique.size).toBe(PRESENTATION_ANGLES.length);
-    });
-
-    it('should have non-empty string values in REGULATORY_BODIES', () => {
-      REGULATORY_BODIES.forEach((body: string) => {
-        expect(typeof body).toBe('string');
-        expect(body.length).toBeGreaterThan(0);
-      });
-    });
-
-    it('should have non-empty string values in all TOPIC_CATEGORIES sub-topics', () => {
-      const categoryKeys = Object.keys(TOPIC_CATEGORIES) as TopicCategory[];
-      categoryKeys.forEach(category => {
-        TOPIC_CATEGORIES[category].forEach((topic: string) => {
-          expect(typeof topic).toBe('string');
-          expect(topic.length).toBeGreaterThan(0);
+  describe('FOOD_CODE_PROVISIONS', () => {
+    it('should contain unique well-formed sections each with topic and facets', () => {
+      const sections = new Set(FOOD_CODE_PROVISIONS.map(p => p.section));
+      expect(sections.size).toBe(FOOD_CODE_PROVISIONS.length);
+      FOOD_CODE_PROVISIONS.forEach(({ section, topic, facets }) => {
+        expect(section).toMatch(/^\d-\d{3}\.\d{2,3}$/);
+        expect(typeof topic).toBe('string');
+        expect(topic.length).toBeGreaterThan(0);
+        expect(facets.length).toBeGreaterThanOrEqual(1);
+        facets.forEach(f => {
+          expect(typeof f).toBe('string');
+          expect(f.length).toBeGreaterThan(0);
         });
       });
     });
 
-    it('should have non-empty string values in PRESENTATION_ANGLES', () => {
-      PRESENTATION_ANGLES.forEach((angle: string) => {
-        expect(typeof angle).toBe('string');
-        expect(angle.length).toBeGreaterThan(0);
-      });
-    });
-
-    it('should have at least 7000 total combinations', () => {
-      const categoryKeys = Object.keys(TOPIC_CATEGORIES) as TopicCategory[];
-      const totalSubTopics = categoryKeys.reduce(
-        (sum, cat) => sum + TOPIC_CATEGORIES[cat].length,
-        0
-      );
-      const totalCombinations =
-        REGULATORY_BODIES.length * totalSubTopics * PRESENTATION_ANGLES.length;
-      expect(totalCombinations).toBeGreaterThanOrEqual(7000);
+    it('should produce at least 200 distinct section+facet combinations', () => {
+      const total = FOOD_CODE_PROVISIONS.reduce((sum, p) => sum + p.facets.length, 0);
+      expect(total).toBeGreaterThanOrEqual(200);
     });
   });
 
-  describe('selectRandomItem()', () => {
-    it('should return an item from the provided array', () => {
-      const result = selectRandomItem(REGULATORY_BODIES);
-      expect(REGULATORY_BODIES).toContain(result);
+  describe('selectRandomProvision()', () => {
+    it('should return a valid section+topic+facet combination', () => {
+      const sel = selectRandomProvision();
+      const match = FOOD_CODE_PROVISIONS.find(p => p.section === sel.section);
+      expect(match).toBeDefined();
+      expect(match?.topic).toBe(sel.topic);
+      expect(match?.facets).toContain(sel.facet);
     });
 
-    it('should throw error for empty array', () => {
-      expect(() => selectRandomItem([])).toThrow('Cannot select from empty array');
-    });
-  });
-
-  describe('selectRandomCategory()', () => {
-    it('should return a valid TopicCategory key', () => {
-      const category = selectRandomCategory();
-      expect(Object.keys(TOPIC_CATEGORIES)).toContain(category);
-    });
-  });
-
-  describe('selectRandomTopic()', () => {
-    it('should return a string from the correct category array', () => {
-      const category: TopicCategory = 'FOOD_DEFINITIONS';
-      const topic = selectRandomTopic(category);
-      expect(TOPIC_CATEGORIES[category]).toContain(topic);
+    it('should vary selections across calls', () => {
+      const seenFacets = new Set<string>();
+      for (let i = 0; i < 80; i++) {
+        seenFacets.add(selectRandomProvision().facet);
+      }
+      expect(seenFacets.size).toBeGreaterThan(5);
     });
   });
 
   describe('getTemplateVariables()', () => {
-    it('should return regulatoryBody, topicArea, and presentationAngle', async () => {
+    it('should return section topicArea and facet', async () => {
       const generator = new FdaGuidelinesGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
+        anthropic: 'test-key',
       }) as ProtectedFdaGuidelinesGenerator;
 
       const templateVars = await generator.getTemplateVariables(mockContext);
 
-      expect(templateVars.regulatoryBody).toBeDefined();
-      expect(templateVars.topicArea).toBeDefined();
-      expect(templateVars.presentationAngle).toBeDefined();
+      expect(Object.keys(templateVars).sort()).toEqual(['facet', 'section', 'topicArea']);
+      const match = FOOD_CODE_PROVISIONS.find(p => p.section === templateVars.section);
+      expect(match?.topic).toBe(templateVars.topicArea);
+      expect(match?.facets).toContain(templateVars.facet);
     });
 
-    it('should return values from valid arrays', async () => {
+    it('should cache the selection on the instance', async () => {
       const generator = new FdaGuidelinesGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
+        anthropic: 'test-key',
       }) as ProtectedFdaGuidelinesGenerator;
 
       const templateVars = await generator.getTemplateVariables(mockContext);
-
-      expect(REGULATORY_BODIES).toContain(templateVars.regulatoryBody);
-      expect(PRESENTATION_ANGLES).toContain(templateVars.presentationAngle);
-      // topicArea comes from a nested category, verify it's a non-empty string
-      expect(typeof templateVars.topicArea).toBe('string');
-      expect(templateVars.topicArea.length).toBeGreaterThan(0);
-    });
-
-    it('should store selections in instance properties', async () => {
-      const generator = new FdaGuidelinesGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedFdaGuidelinesGenerator;
-
-      const templateVars = await generator.getTemplateVariables(mockContext);
-
-      expect(generator.selectedBody).toBe(templateVars.regulatoryBody);
-      expect(generator.selectedTopic).toBe(templateVars.topicArea);
-      expect(generator.selectedAngle).toBe(templateVars.presentationAngle);
-    });
-
-    it('should generate different selections on multiple calls', async () => {
-      const generator = new FdaGuidelinesGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
-      }) as ProtectedFdaGuidelinesGenerator;
-
-      const bodyResults = new Set<string>();
-      const topicResults = new Set<string>();
-      const angleResults = new Set<string>();
-
-      for (let i = 0; i < 20; i++) {
-        const templateVars = await generator.getTemplateVariables(mockContext);
-        bodyResults.add(templateVars.regulatoryBody);
-        topicResults.add(templateVars.topicArea);
-        angleResults.add(templateVars.presentationAngle);
-      }
-
-      expect(bodyResults.size).toBeGreaterThan(1);
-      expect(topicResults.size).toBeGreaterThan(1);
-      expect(angleResults.size).toBeGreaterThan(1);
+      expect(generator.selectedProvision.section).toBe(templateVars.section);
+      expect(generator.selectedProvision.topic).toBe(templateVars.topicArea);
+      expect(generator.selectedProvision.facet).toBe(templateVars.facet);
     });
   });
 
   describe('getCustomMetadata()', () => {
-    it('should match instance properties', async () => {
+    it('should expose the selected provision', async () => {
       const generator = new FdaGuidelinesGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
+        anthropic: 'test-key',
       }) as ProtectedFdaGuidelinesGenerator;
 
       await generator.getTemplateVariables(mockContext);
       const metadata = generator.getCustomMetadata();
 
-      expect(metadata.regulatoryBody).toBe(generator.selectedBody);
-      expect(metadata.topicCategory).toBe(generator.selectedCategory);
-      expect(metadata.topicArea).toBe(generator.selectedTopic);
-      expect(metadata.presentationAngle).toBe(generator.selectedAngle);
+      expect(metadata).toEqual({
+        section: generator.selectedProvision.section,
+        topicArea: generator.selectedProvision.topic,
+        facet: generator.selectedProvision.facet,
+      });
     });
   });
 
@@ -250,9 +153,9 @@ describe('FdaGuidelinesGenerator', () => {
       jest.restoreAllMocks();
     });
 
-    it('should pass template variables to PromptLoader', async () => {
+    it('passes section topicArea and facet to the user prompt', async () => {
       const generator = new FdaGuidelinesGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
+        anthropic: 'test-key',
       });
 
       await generator.generate(mockContext);
@@ -260,25 +163,23 @@ describe('FdaGuidelinesGenerator', () => {
       const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
         call => call[0] === 'user' && call[1] === 'fda-guidelines.txt'
       );
-
       expect(userPromptCall).toBeDefined();
       const templateVars = userPromptCall?.[2] as Record<string, string>;
-      expect(templateVars.regulatoryBody).toBeDefined();
-      expect(templateVars.topicArea).toBeDefined();
-      expect(templateVars.presentationAngle).toBeDefined();
+      const match = FOOD_CODE_PROVISIONS.find(p => p.section === templateVars.section);
+      expect(match?.topic).toBe(templateVars.topicArea);
+      expect(match?.facets).toContain(templateVars.facet);
     });
 
-    it('should include selections in result metadata', async () => {
+    it('includes section topicArea and facet in result metadata', async () => {
       const generator = new FdaGuidelinesGenerator(mockPromptLoader, mockModelTierSelector, {
-        openai: 'test-key',
+        anthropic: 'test-key',
       });
 
       const result = await generator.generate(mockContext);
-
-      expect(result.metadata?.regulatoryBody).toBeDefined();
-      expect(result.metadata?.topicCategory).toBeDefined();
-      expect(result.metadata?.topicArea).toBeDefined();
-      expect(result.metadata?.presentationAngle).toBeDefined();
+      const section = result.metadata?.section as string;
+      const match = FOOD_CODE_PROVISIONS.find(p => p.section === section);
+      expect(match?.topic).toBe(result.metadata?.topicArea as string);
+      expect(match?.facets).toContain(result.metadata?.facet as string);
     });
   });
 });
