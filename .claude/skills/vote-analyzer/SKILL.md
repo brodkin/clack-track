@@ -5,130 +5,147 @@ description: Analyze production vote data to identify underperforming generators
 
 # Vote Analyzer
 
-Analyze production vote data to surface the top 3 highest-priority generator improvements backed by clear evidence from voting patterns and metadata.
+Surface up to 3 high-impact generator fixes, each backed by user-written reasons, metadata diversity, or body-of-work patterns. Present as a single glanceable report.
 
-## Step 1: Fetch Vote Data
+## Step 1: Fetch Data
 
 ```bash
 ${CLAUDE_SKILL_DIR}/scripts/fetch-votes.sh $ARGUMENTS
 ```
 
-Default lookback is 60 days. Pass a number to override (e.g., `/vote-analyzer 90`).
+Default: 60-day window, 15 samples per generator. Override: `/vote-analyzer 90 20`.
 
-The output contains two TSV result sets separated by `---SEPARATOR---`:
+Four TSV result sets, separated by `---SEPARATOR---`:
 
-1. **Voted content** — individual votes joined with content details and `metadata_selections` JSON
-2. **Generator aggregates** — per-generator totals including unvoted content counts
+1. **Voted content** — verdicts joined with content + `metadata_selections`
+2. **Aggregates** — per-generator totals, including `downvotes_on_failover` / `failover_generations`
+3. **Samples** — up to N most-recent content rows per generator, voted or not. This is the body-of-work view; pattern analysis runs on this, not on the votes alone.
+4. **Reasons** — downvotes with non-empty user-written reasons, newest first. Ground truth.
 
-If empty, tell the user no votes were found and stop.
+If all four sets are empty, tell the user nothing was found and stop.
 
-## Step 2: Build Generator Profiles
+## Step 2: Build the Numbers
 
-For each `generator_id`, compute:
+From set 2:
 
-- Total generations, vote coverage, upvotes, downvotes, approval rate
-- Average validation attempts (high = prompt fights display constraints)
+- `approval = upvotes / (upvotes + downvotes)` per generator
+- `median_approval` across generators that have ≥2 votes
+- `failover_rate = downvotes_on_failover / downvotes`
 
-From result set 1, collect per generator:
+From set 3 (samples):
 
-- Content text samples (upvoted vs downvoted)
-- Parsed `metadata_selections` — extract dictionary values (`style`, `theme`, `subject`, `topic`, `approach`, `category`, vibes, and similar keys present in the data)
-- `vote_reason` values from downvotes (user-written — treat as ground truth)
+- For each generator, parse `metadata_selections` JSON. Count distinct values per top-level key (`topic`, `theme`, `style`, `subject`, `angle`, `vibe`, etc. — whatever the generator emits).
+- First-token frequency: tally the opening word/phrase of each output.
+- Exact-duplicate detection across the sample.
 
-**With only 1-2 active users, individual votes are anecdotal. Look for patterns across a generator's full output body, not individual verdicts.**
+From set 4:
 
-## Step 3: Pattern Analysis
+- Group verbatim reasons by generator_id.
 
-For each generator with downvotes, check these diagnostic lenses. These are analysis tools, not an output checklist — only carry forward patterns backed by 2+ data points.
+## Step 3: Diagnose
 
-- **Metadata Concentration** — Downvotes cluster on specific dictionary values? Namespace underpopulated (3 values vs 15+)?
-- **Textual Repetition** — Same structures/vocabulary/formulas across outputs? Prompt too prescriptive or insufficient variability sources.
-- **Failure Mode Clustering** — Classify downvotes: repetitive, off-tone, generic, format violation, cringe, confusing, topic exhaustion. One dominant mode = systemic fix. Scattered = better dictionaries.
-- **Model Tier Mismatch** — LIGHT tier producing low-quality nuanced content? Quality drops on failover?
-- **Validation Struggle** — `avg_validation_attempts` > 1.5 = prompt fights display constraints.
-- **Upvote Signals** — Which metadata values correlate with liked content? Amplify what works.
+Apply lenses in order. A generator is a fix candidate only if **≥2 lenses hit**.
 
-If no generator shows a clear pattern, skip to Step 5 and report no actionable issues.
+1. **User reasons (set 4)** — what did users literally say? These outrank everything below.
+2. **Metadata concentration (set 3 vs generator source)** — distinct values used ÷ dictionary size from the TS source. Below 40% over 10+ gens → collapsed pool.
+3. **Textual repetition (set 3)** — same opener in >30% of samples, or any exact duplicates → over-prescriptive prompt or undersized dictionary.
+4. **Failover correlation (set 2)** — `failover_rate > 40%` → the alt provider is the bug, not the prompt.
+5. **Validation struggle (set 2)** — `avg_validation_attempts > 1.5` → prompt fights display constraints.
+6. **Tier mismatch** — LIGHT tier producing nuanced content that consistently gets downvoted.
 
-## Step 4: Check Change History
+If no generator hits ≥2 lenses, skip to Step 6 and report no actionable issues.
 
-Before recommending a fix, check whether the generator was already updated since the downvoted content was produced:
+## Step 4: Prioritize
+
+For each candidate:
+
+```
+priority = downvotes + |approval − median| × voted_generations
+```
+
+Rank descending. Take the top 3. If fewer have ≥2 lenses hitting, present fewer. **Never pad.**
+
+## Step 5: Verify & Read Prompts
+
+For each of the top 3, run in parallel:
 
 ```bash
 ${CLAUDE_SKILL_DIR}/scripts/fetch-generator-history.sh <generator-id>
-```
-
-This shows recent commits to the generator's prompt, source, and system prompt with diffs.
-
-**Compare the dates**: If the generator's prompt or source was modified AFTER the most recent downvoted content was generated, the issue may already be fixed. In that case:
-
-- Read the diff to understand what changed
-- If the change directly addresses the pattern you found, **drop the recommendation** — note it as "likely already fixed" in your output instead
-- If the change is unrelated to the pattern, proceed with the recommendation
-
-This prevents recommending fixes that have already shipped.
-
-## Step 5: Read Relevant Prompts
-
-For generators you'll still recommend changes to, read:
-
-```bash
 ${CLAUDE_SKILL_DIR}/scripts/fetch-prompts.sh <generator-id>
-cat prompts/system/major-update-base.txt
 ```
 
-For dictionary issues, read the generator source to examine array sizes:
+`fetch-prompts.sh` returns user prompt, system prompt, generator source, dictionaries file (if any), and the `register-core.ts` block — everything needed to compute dict coverage and write a fix.
 
-```bash
-# Generator sources follow: src/content/generators/ai/<generator-id>-generator.ts
-```
+If the prompt or source was modified **after** the most recent downvoted content in the evidence, read the diff. If the change directly addresses the pattern, mark the fix `LIKELY FIXED` with the date and drop it from the 3-cap (informational only).
 
 ## Step 6: Present Results
 
-### Output Rules
-
-- **Maximum 3 recommendations total** — only the highest-impact, best-evidenced issues.
-- **Skip generators where the evidence is weak** — a single downvote with no discernible pattern is not actionable.
-- **Be terse** — the user ran this skill to get answers, not a research paper.
-
-### High Performers (brief)
-
-One table, no prose per generator:
+Use exactly this format. No emoji, no bold for decoration, no raw priority scores, no "status: OPEN".
 
 ```
-| Generator | Approval | Up/Down | Gens |
-|-----------|----------|---------|------|
+VOTE ANALYZER · <Nd> · <V> votes (<U>↑ <D>↓) · median <M>%
+
+
+REASONS
+
+  "<verbatim reason>"
+      <generator-id> · <MM-DD>
+
+  (up to 5 reasons, newest first. Omit this block entirely if set 4 is empty.)
+
+
+HEALTH
+
+  <glyph> <generator-id>   <bar> <pct>%    <N> gens    <dict hint>
+
+  glyph: ▲ if approval > median+10pp, ▼ if < median−10pp, ─ otherwise
+  bar: 10 chars, filled = round(pct/10), use █ and ░
+  show: every generator below median, plus top 2 above
+  dict hint: "<used>/<total> <key>" for the most-concentrated key; omit if even
+
+
+<N> · <generator-id> — <one-line problem>
+
+      (optional histogram when the evidence is distributional)
+      <value>   <bar>  <count>
+      ...                     <used> of <total> <key> used
+
+  "<user reason if any>"
+
+  <root cause in one sentence>
+  Fix: <single concrete action>
+  <file:line>
+
+
+(repeat up to 3 times. For LIKELY FIXED add a line:
+  already fixed on <YYYY-MM-DD>: <brief>
+and do not count against the cap.)
+
+
+no data: <gen> · <gen> · <gen>   (0 votes AND <5 gens in window)
+
+ship 1 · 2 · 3 · or 1,3 →
 ```
 
-### Top 3 Issues
+**Output discipline**
 
-For each (up to 3), present one compact block:
+- One fewer fix is better than three padded ones.
+- Omit the REASONS block when there are no user-written reasons.
+- `no data:` line goes away if every generator has ≥5 gens or ≥1 vote.
 
-```
-### 1. [Generator Name] — [One-line problem summary]
-**Evidence**: [1-2 sentences with specific counts or metadata values. At most one content sample.]
-**Root cause**: [Which prompt instruction or dictionary gap causes this]
-**Fix**: [One concrete, actionable change]
-**Status**: [OPEN — still present in current code | LIKELY FIXED — prompt/source updated on <date>, change addresses this pattern]
-```
+## Step 7: Act
 
-Only surface patterns that produced findings. Issues marked LIKELY FIXED are informational — don't count toward the 3-recommendation cap.
+Wait for the user's reply (`1`, `1,3`, `all`, `none`). For each selected fix, invoke `/content-generator-designer` with:
 
-### Insufficient Data
+- generator id
+- the evidence block (counts, verbatim reason, dict-coverage numbers)
+- the recommended fix
 
-One line listing generators with <2 total votes. No analysis.
-
-## Step 7: Act on Findings
-
-Ask the user:
-
-> Want me to implement any of these fixes? I'll use `/content-generator-designer` to ensure changes follow content design standards.
-
-If yes, invoke `/content-generator-designer` per generator. Pass the specific evidence and recommended fix. Do NOT edit prompts or generator source directly.
+Do NOT edit prompts or generator source directly from this skill.
 
 ## Constraints
 
-- **Read-only** — modifies nothing unless the user requests changes in Step 6.
-- **Metadata is the diagnostic key** — `metadata_selections` reveals which dictionary values were in play. This connects output quality back to variability inputs.
-- **Vote reasons outrank your interpretation** — if the user wrote a reason, that's the ground truth.
-- **3 recommendations max** — if fewer than 3 issues have strong evidence, present fewer. Never pad.
+- Read-only until the user ships.
+- User reasons (set 4) outrank interpretation.
+- 3 fixes max; fewer is fine.
+- Pattern across the body of work beats a single-vote anecdote.
