@@ -112,6 +112,8 @@ export interface CoreGenerators {
   zaydeWisdom: ContentGenerator;
   /** Fake Gay News generator (P2, MEDIUM, AI-powered) */
   fakeGayNews: ContentGenerator;
+  /** FDA Guidelines generator (P2, MEDIUM, AI-powered) */
+  fdaGuidelines: ContentGenerator;
   /** Apple Keynote Food generator (P2, LIGHT, AI-powered) */
   appleKeynoteFood: ContentGenerator;
   /** Static fallback generator (P3, LIGHT, no AI) */
@@ -485,6 +487,17 @@ export function registerCoreContent(registry: ContentRegistry, generators: CoreG
       applyFrame: true,
     },
     generators.fakeGayNews
+  );
+
+  registry.register(
+    {
+      id: 'fda-guidelines',
+      name: 'FDA Guidelines Generator',
+      priority: ContentPriority.NORMAL,
+      modelTier: ModelTier.MEDIUM,
+      applyFrame: true,
+    },
+    generators.fdaGuidelines
   );
 
   registry.register(

@@ -1,0 +1,74 @@
+State the specific rule from FDA Food Code section {{section}} (covering {{topicArea}}) that applies to: {{facet}}.
+
+OPENING FORMAT:
+Line 1 must begin with the section number, a space, and then a SHORT SUBJECT WORD or PHRASE naming the regulatory domain (the thing being regulated). A casual viewer who reads ONLY line 1 must understand what the rule is about. Then continue the rule on the same line or the next lines.
+
+Pattern: {{section}} SUBJECT, then rule body
+
+Examples of strong subject openings:
+- HANDWASHING
+- COOKING
+- COOLING
+- REHEATING
+- HOT HOLDING
+- COLD HOLDING
+- DATE MARKING
+- FOOD STORAGE
+- PEST CONTROL
+- SANITIZER
+- WAREWASHING
+- THAWING
+- GLOVES
+- UTENSILS
+- TOXIC CHEMICALS
+
+Do not add "PER" or a colon. Do not put the section on a line by itself.
+
+TONE OVERRIDE:
+Ignore the usual voice. Be dry, rigid, unfeeling. You are a regulatory inspector reading aloud from a binder. No jokes, no framing, no reactions, no personality, no opinions. Flat bureaucratic prose.
+
+SPECIFICITY:
+Name the exact temperature, time, concentration, or percentage. Never say "proper" or "adequate" or "sufficient" - give the number. If the provision is procedural rather than numeric, state the explicit procedural requirement.
+
+ACCURACY:
+The rule must be a real provision from the cited Food Code section. If unsure of a specific figure, state a different specific rule that falls within the same section.
+
+DO NOT:
+- Add commentary, reactions, or framing
+- Invent or modify the section number (use {{section}} exactly as given)
+- Use "PER" or a colon after the section number
+- Put the section on a line by itself
+- Open with a verb or mid-sentence fragment like "VIGOROUS FRICTION" or "MUST REACH"
+- Use "BELIEVE IT OR NOT," "DID YOU KNOW," or similar
+- Add flourish words like "OFFICIALLY" or "LEGALLY"
+
+EXAMPLES:
+
+3-401.11 COOKING POULTRY
+MUST REACH 165 F FOR
+1 SECOND BEFORE
+SERVICE
+
+3-501.16 COLD HOLDING
+OF TCS FOOD MUST BE
+AT 41 F OR BELOW
+
+2-301.12 HANDWASHING
+REQUIRES VIGOROUS
+FRICTION FOR AT LEAST
+10 TO 15 SECONDS
+
+4-501.114 CHLORINE
+SANITIZER MUST BE
+50 TO 100 PPM AT A
+MINIMUM OF 75 F
+
+3-304.12 IN-USE
+UTENSIL HANDLES MUST
+EXTEND ABOVE THE
+FOOD AND CONTAINER
+
+3-302.11 RAW POULTRY
+MUST BE STORED BELOW
+ALL OTHER RAW ANIMAL
+FOODS
