@@ -98,6 +98,103 @@ export const OBSERVATION_ANGLES = [
 export type ObservationAngle = (typeof OBSERVATION_ANGLES)[number];
 
 /**
+ * Story modes for ISS content generation.
+ *
+ * Each generation picks one mode, which determines what the content is ABOUT:
+ * - CREW_ACTIVITY: a specific thing a named crewmate is doing right now
+ * - HABITAT_DETAIL: a specific texture of life on the station
+ * - EARTH_VIEW: what is passing below, narrated documentary-style
+ *
+ * Story modes replace the old "observation angle" abstraction, which produced
+ * coordinate poetry and equator tropes. Each mode pairs with a concrete hook
+ * from CREW_ACTIVITIES or HABITAT_MOMENTS (or the location flavor for EARTH_VIEW)
+ * so the LLM always has a specific subject rather than a free-floating angle.
+ */
+export const STORY_MODES = ['CREW_ACTIVITY', 'HABITAT_DETAIL', 'EARTH_VIEW'] as const;
+
+export type StoryMode = (typeof STORY_MODES)[number];
+
+/**
+ * Concrete crew activities for CREW_ACTIVITY story mode.
+ *
+ * Specific, plausible things astronauts do aboard the ISS. Each is a verb phrase
+ * the AI can build a scene around. Real-world microgravity habits included
+ * (velcro, foot loops, straws, tortillas instead of bread) to ground the content.
+ */
+export const CREW_ACTIVITIES = [
+  'cutting another crewmate\'s hair before a downlink',
+  'taping down a floating cable',
+  'squeezing coffee through a straw from a foil pouch',
+  'eating a tortilla because bread crumbs are banned',
+  'checking the CO2 scrubber readout',
+  'logging the day\'s water consumption',
+  'scheduling a video call with family',
+  'trimming fingernails into a vacuum bag',
+  'swapping a filter in the oxygen generator',
+  'doing a downlink with schoolkids in Ohio',
+  'strapping into the ARED for resistance exercise',
+  'pedaling the seatless CEVIS bicycle',
+  'running on the treadmill with a bungee harness',
+  'writing in a personal log tablet',
+  'listening to music through wireless earbuds',
+  'reviewing tomorrow\'s flight plan',
+  'chasing a rogue almond through the galley',
+  'tucking tools into a foot loop',
+  'photographing a typhoon through the cupola',
+  'rehydrating a pouch of lasagna',
+  'swapping SD cards on an Earth-facing camera',
+  'resetting a smoke-detector false alarm',
+  'zipping into a sleeping bag strapped to the wall',
+  'shaving with a no-rinse razor and a damp cloth',
+  'tending tiny green shoots in a plant experiment',
+  'retrieving a wristwatch lost in the air circulation',
+  'pointing a long lens at a lightning storm',
+  'stowing a drill in a velcro pouch',
+  'checking email between experiments',
+  'watching a movie strapped to a wall mount',
+  'swallowing toothpaste because you cannot spit in microgravity',
+  'calibrating a blood-pressure cuff for a biomed run',
+  'changing out a rodent-habitat water valve',
+  'scrolling through photos from yesterday\'s pass over home',
+  'waiting twelve seconds for an email to round-trip through TDRSS',
+] as const;
+
+/**
+ * Concrete habitat details for HABITAT_DETAIL story mode.
+ *
+ * Specific textures of life aboard the ISS. Each is a noun phrase or
+ * sensory detail the AI can build a scene around.
+ */
+export const HABITAT_MOMENTS = [
+  'the 72-decibel hum of the air handlers that never stops',
+  'the cupola window smudged with 25 years of noseprints',
+  'the toilet that cost 23 million dollars',
+  'the Russian segment smelling faintly of rubber and steel',
+  'the US segment smelling faintly of coffee and filtered air',
+  'trash bagged and tucked into the next reentry cargo ship',
+  'the CEVIS exercise bike with no seat because there is no point',
+  'walls covered in velcro like a hardware-store sample wall',
+  'sleeping bags bungeed vertically to the wall',
+  'handrails every 18 inches in every direction',
+  'ceiling is floor is wall, depending on which way you face',
+  'a flashlight velcroed within reach of every module',
+  'twelve modules each the size of a city bus',
+  'nothing ever stays still for more than a few seconds',
+  'a fridge the size of a college dorm mini-fridge',
+  'shadows sweeping through the cupola every 90 minutes',
+  'the Canadarm2 parked outside the window like a sleeping insect',
+  'seedlings growing sideways in a small gel cartridge',
+  'solar arrays tracking the sun with a faint motor whine',
+  'the airlock no bigger than a walk-in closet',
+  'a stowage bag labeled MISCELLANEOUS that no one has opened in four years',
+  'a cargo sticker from a 2019 resupply still stuck to a panel',
+  'the smell of a freshly opened foil pouch of beef stew',
+  'a piece of duct tape holding a loose panel in place since 2014',
+  'a handwritten crew-list taped next to the dispatch printer',
+] as const;
+
+
+/**
  * Location flavor descriptions organized by region type.
  *
  * Each flavor provides regional character that can be injected into prompts

@@ -65,18 +65,27 @@ priority = downvotes + |approval − median| × voted_generations
 
 Rank descending. Take the top 3. If fewer have ≥2 lenses hitting, present fewer. **Never pad.**
 
-## Step 5: Verify & Read Prompts
+## Step 5: Verify Not-Already-Fixed, Then Read Prompts
 
-For each of the top 3, run in parallel:
+For each of the top 3, run in parallel. Pass a `since-date` older than your analysis window so no commits get hidden:
 
 ```bash
-${CLAUDE_SKILL_DIR}/scripts/fetch-generator-history.sh <generator-id>
+${CLAUDE_SKILL_DIR}/scripts/fetch-generator-history.sh <generator-id> <YYYY-MM-DD>
 ${CLAUDE_SKILL_DIR}/scripts/fetch-prompts.sh <generator-id>
 ```
 
-`fetch-prompts.sh` returns user prompt, system prompt, generator source, dictionaries file (if any), and the `register-core.ts` block — everything needed to compute dict coverage and write a fix.
+`fetch-generator-history.sh` reports commits (with diffs) touching any file that can change this generator's output: user prompt, generator source, dictionaries file, registry entry (filtered to this id only), and the shared system prompt.
 
-If the prompt or source was modified **after** the most recent downvoted content in the evidence, read the diff. If the change directly addresses the pattern, mark the fix `LIKELY FIXED` with the date and drop it from the 3-cap (informational only).
+`fetch-prompts.sh` returns the same files' current contents — needed to compute dict coverage and draft the fix.
+
+**Already-fixed check.** For each candidate:
+
+1. Take `anchor = max(content.generatedAt)` across downvoted content in the evidence. (Use content-generation time, not vote time — a late vote on old content is still commenting on old code.)
+2. Find `latest_change = max(commit.date)` across the files above.
+3. If `latest_change > anchor`, read the diff. If it directly addresses the pattern you found, **drop the candidate from the top 3** and list it in the `already addressed:` footer instead. Do not render it as a fix card.
+4. If the diff is unrelated to the pattern, proceed with the recommendation.
+
+This protects against recommending a change that already shipped.
 
 ## Step 6: Present Results
 
@@ -117,9 +126,14 @@ HEALTH
   <file:line>
 
 
-(repeat up to 3 times. For LIKELY FIXED add a line:
-  already fixed on <YYYY-MM-DD>: <brief>
-and do not count against the cap.)
+(repeat up to 3 times. Never include already-shipped fixes here.)
+
+
+already addressed:
+  <generator-id> — <pattern> → fixed <YYYY-MM-DD> in <file>
+
+  (one line per candidate displaced by Step 5's already-fixed check.
+   omit the block entirely if nothing was displaced.)
 
 
 no data: <gen> · <gen> · <gen>   (0 votes AND <5 gens in window)
