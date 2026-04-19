@@ -11,6 +11,7 @@ import { WordOfTheDayGenerator } from '@/content/generators/ai/word-of-the-day-g
 import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector';
 import { ModelTier } from '@/types/content-generator';
+import type { AIProvider } from '@/types/ai';
 
 describe('WordOfTheDayGenerator', () => {
   let mockPromptLoader: jest.Mocked<PromptLoader>;
@@ -31,6 +32,30 @@ describe('WordOfTheDayGenerator', () => {
   });
 
   describe('template variable injection', () => {
+    let mockAIProvider: jest.Mocked<AIProvider>;
+
+    beforeEach(() => {
+      mockAIProvider = {
+        generate: jest.fn().mockResolvedValue({
+          text: 'MOCK CONTENT',
+          model: 'gpt-4.1-nano',
+          tokensUsed: 50,
+        }),
+        validateConnection: jest.fn().mockResolvedValue(true),
+      } as unknown as jest.Mocked<AIProvider>;
+
+      jest
+        .spyOn(
+          WordOfTheDayGenerator.prototype as { createProviderForSelection: () => unknown },
+          'createProviderForSelection'
+        )
+        .mockReturnValue(mockAIProvider);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('should inject wordDomain and wordVibe template variables', async () => {
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
@@ -44,11 +69,7 @@ describe('WordOfTheDayGenerator', () => {
         openai: 'test-key',
       });
 
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider
-      }
+      await generator.generate({ updateType: 'major', timestamp: new Date() });
 
       const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
         call => call[0] === 'user' && call[1] === 'word-of-the-day.txt'
@@ -100,11 +121,7 @@ describe('WordOfTheDayGenerator', () => {
       for (let i = 0; i < 10; i++) {
         mockPromptLoader.loadPromptWithVariables.mockClear();
 
-        try {
-          await generator.generate({ updateType: 'major', timestamp: new Date() });
-        } catch {
-          // Expected - no real AI provider
-        }
+        await generator.generate({ updateType: 'major', timestamp: new Date() });
 
         const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
           call => call[0] === 'user' && call[1] === 'word-of-the-day.txt'

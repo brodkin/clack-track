@@ -14,6 +14,7 @@ import {
 import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector';
 import { ModelTier } from '@/types/content-generator';
+import type { AIProvider } from '@/types/ai';
 
 // Helper type for accessing protected members in tests
 type ProtectedSleepGreetingGenerator = SleepGreetingGenerator & {
@@ -109,6 +110,10 @@ describe('SleepGreetingGenerator', () => {
   });
 
   describe('template variable injection', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('should inject theme template variable into user prompt', async () => {
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
@@ -118,15 +123,27 @@ describe('SleepGreetingGenerator', () => {
       });
       mockModelTierSelector.getAlternate.mockReturnValue(null);
 
+      const mockAIProvider = {
+        generate: jest.fn().mockResolvedValue({
+          text: 'MOCK CONTENT',
+          model: 'gpt-4.1-nano',
+          tokensUsed: 50,
+        }),
+        validateConnection: jest.fn().mockResolvedValue(true),
+      } as unknown as jest.Mocked<AIProvider>;
+
+      jest
+        .spyOn(
+          SleepGreetingGenerator.prototype as { createProvider: () => unknown },
+          'createProvider'
+        )
+        .mockReturnValue(mockAIProvider);
+
       const generator = new SleepGreetingGenerator(mockPromptLoader, mockModelTierSelector, {
         openai: 'test-key',
       });
 
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider
-      }
+      await generator.generate({ updateType: 'major', timestamp: new Date() });
 
       const userPromptCalls = mockPromptLoader.loadPromptWithVariables.mock.calls.filter(
         call => call[0] === 'user' && call[1] === 'sleep-greeting.txt'

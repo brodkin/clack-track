@@ -12,6 +12,7 @@ import { DailyRoastGenerator } from '@/content/generators/ai/daily-roast-generat
 import { PromptLoader } from '@/content/prompt-loader';
 import { ModelTierSelector } from '@/api/ai/model-tier-selector';
 import { ModelTier } from '@/types/content-generator';
+import type { AIProvider } from '@/types/ai';
 
 // Helper type for accessing protected members in tests
 type ProtectedDailyRoastGenerator = DailyRoastGenerator & {
@@ -105,6 +106,30 @@ describe('DailyRoastGenerator', () => {
   });
 
   describe('template variable injection', () => {
+    let mockAIProvider: jest.Mocked<AIProvider>;
+
+    beforeEach(() => {
+      mockAIProvider = {
+        generate: jest.fn().mockResolvedValue({
+          text: 'MOCK CONTENT',
+          model: 'gpt-4.1-mini',
+          tokensUsed: 50,
+        }),
+        validateConnection: jest.fn().mockResolvedValue(true),
+      } as unknown as jest.Mocked<AIProvider>;
+
+      jest
+        .spyOn(
+          DailyRoastGenerator.prototype as { createProviderForSelection: () => unknown },
+          'createProviderForSelection'
+        )
+        .mockReturnValue(mockAIProvider);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('should inject topic variables into user prompt', async () => {
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
@@ -118,11 +143,7 @@ describe('DailyRoastGenerator', () => {
         openai: 'test-key',
       });
 
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider
-      }
+      await generator.generate({ updateType: 'major', timestamp: new Date() });
 
       const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
         call => call[0] === 'user' && call[1] === 'daily-roast.txt'

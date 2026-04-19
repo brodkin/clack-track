@@ -24,6 +24,7 @@ import { ContentRepository } from '@/storage/repositories/content-repo';
 import { ModelTier } from '@/types/content-generator';
 import type { GenerationContext } from '@/types/content-generator';
 import type { ContentRecord } from '@/storage/models/content';
+import type { AIProvider } from '@/types/ai';
 
 // Helper type for accessing protected members in tests
 type ProtectedSerialStoryGenerator = SerialStoryGenerator & {
@@ -692,6 +693,30 @@ describe('SerialStoryGenerator', () => {
   });
 
   describe('generate()', () => {
+    let mockAIProvider: jest.Mocked<AIProvider>;
+
+    beforeEach(() => {
+      mockAIProvider = {
+        generate: jest.fn().mockResolvedValue({
+          text: 'THE DOOR OPENED\nTO REVEAL NOTHING',
+          model: 'gpt-4.1-mini',
+          tokensUsed: 50,
+        }),
+        validateConnection: jest.fn().mockResolvedValue(true),
+      } as unknown as jest.Mocked<AIProvider>;
+
+      jest
+        .spyOn(
+          SerialStoryGenerator.prototype as { createProviderForSelection: () => unknown },
+          'createProviderForSelection'
+        )
+        .mockReturnValue(mockAIProvider);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('should pass scenario and emotionalBeat to prompt loader for chapter 1', async () => {
       mockPromptLoader.loadPromptWithVariables.mockResolvedValue('test prompt');
       mockModelTierSelector.select.mockReturnValue({
@@ -709,11 +734,7 @@ describe('SerialStoryGenerator', () => {
         { openai: 'test-key' }
       );
 
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider - we're testing the variable injection
-      }
+      await generator.generate({ updateType: 'major', timestamp: new Date() });
 
       // Verify loadPromptWithVariables was called for user prompt with scenario and emotionalBeat
       const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(
@@ -755,11 +776,7 @@ describe('SerialStoryGenerator', () => {
         { openai: 'test-key' }
       );
 
-      try {
-        await generator.generate({ updateType: 'major', timestamp: new Date() });
-      } catch {
-        // May fail without AI provider - we're testing the variable injection
-      }
+      await generator.generate({ updateType: 'major', timestamp: new Date() });
 
       // Verify loadPromptWithVariables was called for user prompt with continuation vars
       const userPromptCall = mockPromptLoader.loadPromptWithVariables.mock.calls.find(

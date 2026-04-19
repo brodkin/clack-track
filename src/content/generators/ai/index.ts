@@ -39,3 +39,4 @@ export { PricelessGenerator } from './priceless-generator.js';
 export { WrongNumberVoicemailGenerator } from './wrong-number-voicemail-generator.js';
 export { CastMemberRadioGenerator } from './cast-member-radio-generator.js';
 export { ZaydeWisdomGenerator } from './zayde-wisdom-generator.js';
+export { FdaGuidelinesGenerator } from './fda-guidelines-generator.js';
