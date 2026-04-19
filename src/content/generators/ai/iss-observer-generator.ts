@@ -47,7 +47,10 @@ import {
 import {
   getRandomObservationAngle,
   getLocationFlavor,
+  getRandomStoryMode,
+  getStoryHook,
   LOCATION_FLAVORS,
+  type StoryMode,
 } from './iss-observer-dictionaries.js';
 import type { GenerationContext } from '../../../types/content-generator.js';
 import { ModelTier as ModelTierEnum } from '../../../types/content-generator.js';
@@ -104,9 +107,26 @@ export class ISSObserverGenerator extends AIPromptGenerator {
   private selectedAstronaut: string = FALLBACK_VALUES.astronaut;
 
   /**
-   * Selected observation angle for content variety
+   * Selected observation angle for content variety.
+   *
+   * Retained for metadata and backward compatibility; the active prompt
+   * now drives variety through storyMode + storyHook instead.
    */
   private observationAngle: string = '';
+
+  /**
+   * Selected story mode for this generation.
+   *
+   * Determines what the content is ABOUT (crew activity, habitat detail,
+   * or Earth view) and pairs with a concrete storyHook.
+   */
+  private storyMode: StoryMode = 'CREW_ACTIVITY';
+
+  /**
+   * Concrete detail to work into the output - an activity, habitat detail,
+   * or location flavor, chosen based on the selected storyMode.
+   */
+  private storyHook: string = '';
 
   /**
    * Location flavor text based on ISS position
@@ -214,8 +234,12 @@ export class ISSObserverGenerator extends AIPromptGenerator {
     this.selectedAstronaut = FALLBACK_VALUES.astronaut;
     this.locationFlavor = FALLBACK_VALUES.locationFlavor;
 
-    // Always select a random observation angle
+    // Always select a random observation angle (retained for metadata / back-compat)
     this.observationAngle = getRandomObservationAngle();
+
+    // Pick the story mode and a concrete hook that pairs with it
+    this.storyMode = getRandomStoryMode();
+    this.storyHook = getStoryHook(this.storyMode, this.locationFlavor);
 
     // Default template variables using fallback values
     let templateVars: Record<string, string> = {
@@ -230,6 +254,8 @@ export class ISSObserverGenerator extends AIPromptGenerator {
       astronaut: FALLBACK_VALUES.astronaut,
       observationAngle: this.observationAngle,
       locationFlavor: FALLBACK_VALUES.locationFlavor,
+      storyMode: this.storyMode,
+      storyHook: this.storyHook,
     };
 
     try {
@@ -255,6 +281,11 @@ export class ISSObserverGenerator extends AIPromptGenerator {
         timezone_id: status.location.timezone_id ?? '',
       });
 
+      // Re-resolve story hook now that we have the real location flavor
+      // (EARTH_VIEW hook depends on locationFlavor, which only becomes
+      // available after the live fetch completes)
+      this.storyHook = getStoryHook(this.storyMode, this.locationFlavor);
+
       // Convert velocity from km/h to mph (1 km = 0.621371 miles)
       const velocityMph = Math.round(status.position.velocity * 0.621371);
 
@@ -271,6 +302,8 @@ export class ISSObserverGenerator extends AIPromptGenerator {
         astronaut: this.selectedAstronaut,
         observationAngle: this.observationAngle,
         locationFlavor: this.locationFlavor,
+        storyMode: this.storyMode,
+        storyHook: this.storyHook,
       };
     } catch (error) {
       console.error('Failed to fetch ISS data for prompt:', error);
@@ -294,6 +327,8 @@ export class ISSObserverGenerator extends AIPromptGenerator {
       selectedAstronaut: this.selectedAstronaut,
       observationAngle: this.observationAngle,
       locationFlavor: this.locationFlavor,
+      storyMode: this.storyMode,
+      storyHook: this.storyHook,
     };
   }
 }

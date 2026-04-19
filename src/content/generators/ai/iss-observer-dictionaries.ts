@@ -122,12 +122,12 @@ export type StoryMode = (typeof STORY_MODES)[number];
  * (velcro, foot loops, straws, tortillas instead of bread) to ground the content.
  */
 export const CREW_ACTIVITIES = [
-  'cutting another crewmate\'s hair before a downlink',
+  "cutting another crewmate's hair before a downlink",
   'taping down a floating cable',
   'squeezing coffee through a straw from a foil pouch',
   'eating a tortilla because bread crumbs are banned',
   'checking the CO2 scrubber readout',
-  'logging the day\'s water consumption',
+  "logging the day's water consumption",
   'scheduling a video call with family',
   'trimming fingernails into a vacuum bag',
   'swapping a filter in the oxygen generator',
@@ -137,7 +137,7 @@ export const CREW_ACTIVITIES = [
   'running on the treadmill with a bungee harness',
   'writing in a personal log tablet',
   'listening to music through wireless earbuds',
-  'reviewing tomorrow\'s flight plan',
+  "reviewing tomorrow's flight plan",
   'chasing a rogue almond through the galley',
   'tucking tools into a foot loop',
   'photographing a typhoon through the cupola',
@@ -155,7 +155,7 @@ export const CREW_ACTIVITIES = [
   'swallowing toothpaste because you cannot spit in microgravity',
   'calibrating a blood-pressure cuff for a biomed run',
   'changing out a rodent-habitat water valve',
-  'scrolling through photos from yesterday\'s pass over home',
+  "scrolling through photos from yesterday's pass over home",
   'waiting twelve seconds for an email to round-trip through TDRSS',
 ] as const;
 
@@ -192,7 +192,6 @@ export const HABITAT_MOMENTS = [
   'a piece of duct tape holding a loose panel in place since 2014',
   'a handwritten crew-list taped next to the dispatch printer',
 ] as const;
-
 
 /**
  * Location flavor descriptions organized by region type.
@@ -554,4 +553,43 @@ export function getRandomObservationAngle(): ObservationAngle {
 export function getLocationFlavor(location: ISSLocationData): string {
   const key = getFlavorKey(location);
   return LOCATION_FLAVORS[key];
+}
+
+/**
+ * Gets a random story mode for the next generation.
+ */
+export function getRandomStoryMode(): StoryMode {
+  return selectRandomItem(STORY_MODES);
+}
+
+/**
+ * Gets a random crew activity (for CREW_ACTIVITY mode).
+ */
+export function getRandomCrewActivity(): string {
+  return selectRandomItem(CREW_ACTIVITIES);
+}
+
+/**
+ * Gets a random habitat moment (for HABITAT_DETAIL mode).
+ */
+export function getRandomHabitatMoment(): string {
+  return selectRandomItem(HABITAT_MOMENTS);
+}
+
+/**
+ * Picks a concrete story hook to pair with the selected mode.
+ *
+ * - CREW_ACTIVITY pulls from CREW_ACTIVITIES
+ * - HABITAT_DETAIL pulls from HABITAT_MOMENTS
+ * - EARTH_VIEW reuses the location flavor (the subject is what's below)
+ */
+export function getStoryHook(mode: StoryMode, locationFlavor: string): string {
+  switch (mode) {
+    case 'CREW_ACTIVITY':
+      return getRandomCrewActivity();
+    case 'HABITAT_DETAIL':
+      return getRandomHabitatMoment();
+    case 'EARTH_VIEW':
+      return locationFlavor;
+  }
 }
