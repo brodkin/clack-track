@@ -20,8 +20,6 @@ Clack Track creates AI-powered content for Vestaboard split-flap displays. The s
 
 **Tech Stack**: Node.js 20, TypeScript with ES modules (Node16 module resolution), TDD methodology with 80%+ test coverage requirements.
 
-**Note:** This project uses Beads for issue tracking, not Jira.
-
 ## Architecture Overview
 
 ### Core Component Flow

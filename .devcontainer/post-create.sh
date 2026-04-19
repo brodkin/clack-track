@@ -11,10 +11,4 @@ sudo apt-get install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
 echo "=== Installing Claude Code (native) ==="
 curl -fsSL https://claude.ai/install.sh | bash
 
-echo "=== Installing Beads CLI ==="
-sudo npm install -g @beads/bd
-
-echo "=== Fixing Beads volume permissions ==="
-sudo chown -R vscode:vscode /workspace/.beads
-
 echo "=== System Setup Complete ==="

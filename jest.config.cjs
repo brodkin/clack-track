@@ -55,7 +55,7 @@ module.exports = {
       testEnvironment: 'node',
       setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.unit.setup.ts'],
       testMatch: ['<rootDir>/tests/unit/**/*.test.ts'],
-      testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
+      testPathIgnorePatterns: ['/node_modules/', '/dist/'],
       // Exclude worktrees from haste-map crawl to prevent duplicate mock warnings
       modulePathIgnorePatterns: ['<rootDir>/trees'],
       transform: {
@@ -73,7 +73,7 @@ module.exports = {
       testEnvironment: 'node',
       setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.setup.ts'],
       testMatch: ['<rootDir>/tests/integration/**/*.test.ts'],
-      testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
+      testPathIgnorePatterns: ['/node_modules/', '/dist/'],
       // Exclude worktrees from haste-map crawl to prevent duplicate mock warnings
       modulePathIgnorePatterns: ['<rootDir>/trees'],
       extensionsToTreatAsEsm: ['.ts'],
@@ -92,7 +92,7 @@ module.exports = {
       testEnvironment: 'node',
       setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.setup.ts'],
       testMatch: ['<rootDir>/tests/e2e/**/*.test.ts'],
-      testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
+      testPathIgnorePatterns: ['/node_modules/', '/dist/'],
       // Exclude worktrees from haste-map crawl to prevent duplicate mock warnings
       modulePathIgnorePatterns: ['<rootDir>/trees'],
       testTimeout: 60000, // E2E tests may take longer
@@ -111,7 +111,7 @@ module.exports = {
       displayName: 'web',
       testEnvironment: 'jsdom', // Web UI tests need DOM
       testMatch: ['<rootDir>/tests/web/**/*.test.ts', '<rootDir>/tests/web/**/*.test.tsx'],
-      testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.beads/'],
+      testPathIgnorePatterns: ['/node_modules/', '/dist/'],
       // Exclude worktrees from haste-map crawl to prevent duplicate mock warnings
       modulePathIgnorePatterns: ['<rootDir>/trees'],
       extensionsToTreatAsEsm: ['.ts', '.tsx'],
@@ -140,11 +140,7 @@ module.exports = {
   // Ignore patterns for test discovery (clack-od7z)
   // Note: These are regex patterns, not glob patterns
   // Note: /trees/ pattern removed because this config IS IN a worktree
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    '/dist/',
-    '/.beads/', // Ignore beads database
-  ],
+  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
 
   // Coverage ignore patterns (clack-od7z)
   // Note: /trees/ pattern removed because this config IS IN a worktree
@@ -153,7 +149,6 @@ module.exports = {
     '/dist/',
     '/__mocks__/', // Ignore mock files
     '/__fixtures__/', // Ignore fixture files
-    '/.beads/', // Ignore beads database
   ],
 
   // Slow test threshold - warn if test takes > 5 seconds (clack-od7z)
