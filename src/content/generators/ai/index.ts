@@ -9,6 +9,7 @@
  */
 
 export { AlienFieldReportGenerator } from './alien-field-report-generator.js';
+export { AppleKeynoteFoodGenerator } from './apple-keynote-food-generator.js';
 export { BaristaLifeGenerator } from './barista-life-generator.js';
 export { DailyRoastGenerator } from './daily-roast-generator.js';
 export { HappyToSeeMeGenerator } from './happy-to-see-me-generator.js';
@@ -29,6 +30,7 @@ export { TechNewsGenerator } from './tech-news-generator.js';
 export { TourGuideGenerator } from './tour-guide-generator.js';
 export { WakeupGreetingGenerator } from './wakeup-greeting-generator.js';
 export { WeatherGenerator } from './weather-generator.js';
+export { WikipediaFactGenerator } from './wikipedia-fact-generator.js';
 export { WordOfTheDayGenerator } from './word-of-the-day-generator.js';
 export { ISSObserverGenerator } from './iss-observer-generator.js';
 export { OneStarReviewGenerator } from './one-star-review-generator.js';

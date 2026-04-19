@@ -1,0 +1,11 @@
+Extract ONE specific, interesting fact from this Wikipedia article and present it in an engaging way. Find the detail that would make someone say "Huh, I didn't know that!"
+
+Article: {{articleTitle}}
+
+{{articleSummary}}
+
+Choose the most novel, surprising, or unusual detail from the article. Avoid generic descriptions - dig for the unexpected tidbit. Present it with personality and flair that fits your current mood.
+
+DO NOT summarize the entire article. Pick ONE specific fact and make it shine.
+
+FIRST LINE RULE: Line 1 must clearly name the subject — the specific person, place, thing, or concept the fact is about. The reader should know WHAT you're talking about before reading line 2. Do NOT start with vague openers like "OKAY BUT...", "THIS MOVIE...", or "OVER ONE HUNDRED..." — lead with the name.

@@ -10,3 +10,5 @@ export type {
   SpaceCrew,
   ISSFullStatus,
 } from './iss-client.js';
+export { WikipediaClient } from './wikipedia.js';
+export type { WikipediaArticle } from './wikipedia.js';
